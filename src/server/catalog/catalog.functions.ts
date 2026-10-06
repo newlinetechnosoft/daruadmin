@@ -1,12 +1,37 @@
 import { createServerFn } from '@tanstack/react-start'
-import { listLiquorSchema, listGrocerySchema } from './catalog.schemas'
+import { z } from 'zod'
+import {
+  listLiquorSchema,
+  listGrocerySchema,
+  upsertLiquorProductSchema,
+  upsertGroceryProductSchema,
+  toggleProductStatusSchema,
+  upsertCategorySchema,
+  upsertBrandSchema,
+  deleteItemSchema,
+} from './catalog.schemas'
 import {
   getLiquorCategoriesQuery,
+  getAllLiquorCategoriesQuery,
   getLiquorBrandsQuery,
+  getAllLiquorBrandsQuery,
   getLiquorProductsQuery,
   getGroceryCategoriesQuery,
+  getAllGroceryCategoriesQuery,
   getGroceryProductsQuery,
+  getAdminStatsQuery,
+  getAdminLiquorProductsQuery,
+  getAdminGroceryProductsQuery,
+  upsertLiquorProductQuery,
+  upsertGroceryProductQuery,
+  toggleProductStatusQuery,
+  upsertCategoryQuery,
+  upsertBrandQuery,
+  deleteItemQuery,
+  getAdminUsersQuery,
+  updateUserRoleQuery,
 } from './catalog.queries'
+import { requireAdmin, getServerSession } from '../middleware/auth'
 
 export const getLiquorCategoriesFn = createServerFn({ method: 'GET' }).handler(
   async () => {
@@ -55,6 +80,132 @@ export const getFrontpageDataFn = createServerFn({ method: 'GET' }).handler(
       featuredLiquor: liquorProducts,
       featuredGrocery: groceryProducts,
       brands,
+    }
+  },
+)
+
+// -------------------------------------------------------------
+// ADMIN SERVER FUNCTIONS
+// -------------------------------------------------------------
+
+export const getAdminStatsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    await requireAdmin()
+    return getAdminStatsQuery()
+  },
+)
+
+export const getAdminLiquorProductsFn = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  await requireAdmin()
+  return getAdminLiquorProductsQuery()
+})
+
+export const getAdminGroceryProductsFn = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  await requireAdmin()
+  return getAdminGroceryProductsQuery()
+})
+
+export const getAllTaxonomyFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const [liquorCategories, groceryCategories, liquorBrands] =
+      await Promise.all([
+        getAllLiquorCategoriesQuery(),
+        getAllGroceryCategoriesQuery(),
+        getAllLiquorBrandsQuery(),
+      ])
+
+    return {
+      liquorCategories,
+      groceryCategories,
+      liquorBrands,
+    }
+  },
+)
+
+export const upsertLiquorProductFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => upsertLiquorProductSchema.parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin()
+    return upsertLiquorProductQuery(data)
+  })
+
+export const upsertGroceryProductFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => upsertGroceryProductSchema.parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin()
+    return upsertGroceryProductQuery(data)
+  })
+
+export const toggleProductStatusFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => toggleProductStatusSchema.parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin()
+    return toggleProductStatusQuery(data)
+  })
+
+export const upsertCategoryFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => upsertCategorySchema.parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin()
+    return upsertCategoryQuery(data)
+  })
+
+export const upsertBrandFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => upsertBrandSchema.parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin()
+    return upsertBrandQuery(data)
+  })
+
+export const deleteItemFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => deleteItemSchema.parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin()
+    return deleteItemQuery(data)
+  })
+
+export const getAdminUsersFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    await requireAdmin()
+    return getAdminUsersQuery()
+  },
+)
+
+export const updateUserRoleFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        userId: z.string(),
+        role: z.string(),
+        isActive: z.boolean().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin()
+    return updateUserRoleQuery(data)
+  })
+
+export const checkAdminSessionFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const session = await getServerSession()
+    if (!session?.user) {
+      return { authenticated: false, isAdmin: false, user: null }
+    }
+    const user = session.user as typeof session.user & { role?: string }
+    return {
+      authenticated: true,
+      isAdmin: user.role === 'admin',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     }
   },
 )

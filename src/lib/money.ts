@@ -11,6 +11,8 @@ export function fromPaisa(paisa: number): number {
   return paisa / 100
 }
 
+export const toRupees = fromPaisa
+
 const nprFormatter = new Intl.NumberFormat('en-IN', {
   style: 'currency',
   currency: 'NPR',
