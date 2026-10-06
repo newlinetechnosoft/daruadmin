@@ -13,30 +13,30 @@ Dynamic e-commerce + ERP back-office for the **Nepal** market (NPR, VAT, English
 - **Age gate:** visitors confirm 18+ on opening the site.
 - **Out of scope for now:** branches, warehouses, multi-language, online payment (eSewa is planned, Phase 6).
 
-| Role | Summary |
-|---|---|
-| `admin` | Manages everything (users, catalog, dealers, settings, gateway, ledger, reports). |
-| `manager` | Orders, dealer/rider assignment, stock, settlements, limited ledger entries. |
-| `rider` | Sees only orders assigned to them; notified; updates delivery; collects cash. |
-| `customer` | Browses, orders, tracks own orders. |
+| Role       | Summary                                                                           |
+| ---------- | --------------------------------------------------------------------------------- |
+| `admin`    | Manages everything (users, catalog, dealers, settings, gateway, ledger, reports). |
+| `manager`  | Orders, dealer/rider assignment, stock, settlements, limited ledger entries.      |
+| `rider`    | Sees only orders assigned to them; notified; updates delivery; collects cash.     |
+| `customer` | Browses, orders, tracks own orders.                                               |
 
 Full permission matrix: `src/lib/AGENT.md`.
 
 ## 2. Task router — read ONLY what applies
 
-| If your task involves… | Read |
-|---|---|
-| Pages, URLs, layouts, route guards, loaders, search params, storefront behavior (age gate, cart) | `src/routes/AGENT.md` |
-| **Any UI**: forms, tables, dialogs, sidebar, toasts, loading/empty states, Tailwind, mobile layout | `src/components/AGENT.md` |
-| Adding/updating a shadcn component | `src/components/ui/AGENT.md` (+ `src/components/AGENT.md`) |
-| How to write a server function, middleware, errors, transactions | `src/server/AGENT.md` |
-| Products, categories, brands, variants, product images | `src/server/catalog/AGENT.md` |
-| Cart→order, checkout, order status, assign dealer/rider, rider delivery actions | `src/server/orders/AGENT.md` |
-| Dealers, dealer stock, stock movements, low-stock | `src/server/inventory/AGENT.md` |
-| Ledger, VAT, invoices, dealer settlement, rider cash, payments/eSewa, reports | `src/server/finance/AGENT.md` |
-| Activate/deactivate users, staff accounts, site settings, gateway config, notifications, audit log | `src/server/platform/AGENT.md` |
-| Tables, columns, migrations, DB drivers | `src/db/AGENT.md` |
-| Auth config, roles/permissions, money/VAT helpers, order-status machine, storage adapter, utils | `src/lib/AGENT.md` |
+| If your task involves…                                                                             | Read                                                       |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Pages, URLs, layouts, route guards, loaders, search params, storefront behavior (age gate, cart)   | `src/routes/AGENT.md`                                      |
+| **Any UI**: forms, tables, dialogs, sidebar, toasts, loading/empty states, Tailwind, mobile layout | `src/components/AGENT.md`                                  |
+| Adding/updating a shadcn component                                                                 | `src/components/ui/AGENT.md` (+ `src/components/AGENT.md`) |
+| How to write a server function, middleware, errors, transactions                                   | `src/server/AGENT.md`                                      |
+| Products, categories, brands, variants, product images                                             | `src/server/catalog/AGENT.md`                              |
+| Cart→order, checkout, order status, assign dealer/rider, rider delivery actions                    | `src/server/orders/AGENT.md`                               |
+| Dealers, dealer stock, stock movements, low-stock                                                  | `src/server/inventory/AGENT.md`                            |
+| Ledger, VAT, invoices, dealer settlement, rider cash, payments/eSewa, reports                      | `src/server/finance/AGENT.md`                              |
+| Activate/deactivate users, staff accounts, site settings, gateway config, notifications, audit log | `src/server/platform/AGENT.md`                             |
+| Tables, columns, migrations, DB drivers                                                            | `src/db/AGENT.md`                                          |
+| Auth config, roles/permissions, money/VAT helpers, order-status machine, storage adapter, utils    | `src/lib/AGENT.md`                                         |
 
 A task that spans areas (e.g. "new admin page for dealers") → read each relevant file (`routes` + `components` + `server/inventory`), nothing else.
 
@@ -74,15 +74,15 @@ bunx tsc --noEmit
 
 ## 6. Progress (phase level — details are in each directory file)
 
-| Phase | Scope | Status |
-|---|---|---|
-| 0 Foundation | Remove demo files (`src/db.ts`, `db/init.sql`, `.cursorrules`, todos schema, `pg`); new db drivers; better-auth + Drizzle + roles; install base shadcn set; role middleware; panel layouts + guards; seed first admin; `typecheck` script | ⬜ |
-| 1 Catalog (admin) | Categories/brands, liquor + grocery products/variants, images | ⬜ |
-| 2 Storefront | Age gate, listings, detail, cart, COD checkout, customer account | ⬜ |
-| 3 Operations | Manager panel, dealers, nearest-dealer, rider assignment, rider mobile panel, notifications | ⬜ |
-| 4 Stock & Finance | Stock tracking, ledger, invoices, cash handover, dealer settlements | ⬜ |
-| 5 Admin ERP | User management, settings, reports, audit log, dashboards | ⬜ |
-| 6 Growth | eSewa, Web Push, SMS, coupons, SEO, tests | ⬜ |
+| Phase             | Scope                                                                                                                                                                                                                                     | Status |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 0 Foundation      | Remove demo files (`src/db.ts`, `db/init.sql`, `.cursorrules`, todos schema, `pg`); new db drivers; better-auth + Drizzle + roles; install base shadcn set; role middleware; panel layouts + guards; seed first admin; `typecheck` script | ✅     |
+| 1 Catalog (admin) | Categories/brands, liquor + grocery products/variants, images                                                                                                                                                                             | 🟨     |
+| 2 Storefront      | Age gate, listings, detail, cart, COD checkout, customer account                                                                                                                                                                          | 🟨     |
+| 3 Operations      | Manager panel, dealers, nearest-dealer, rider assignment, rider mobile panel, notifications                                                                                                                                               | ⬜     |
+| 4 Stock & Finance | Stock tracking, ledger, invoices, cash handover, dealer settlements                                                                                                                                                                       | ⬜     |
+| 5 Admin ERP       | User management, settings, reports, audit log, dashboards                                                                                                                                                                                 | ⬜     |
+| 6 Growth          | eSewa, Web Push, SMS, coupons, SEO, tests                                                                                                                                                                                                 | ⬜     |
 
 Legend: ⬜ not started · 🟨 in progress · ✅ done · 🗑 remove
 
@@ -94,6 +94,6 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · 🗑 remove
 
 ## 8. Changelog
 
-| Date | Change |
-|---|---|
+| Date         | Change                             |
+| ------------ | ---------------------------------- |
 | _YYYY-MM-DD_ | Initial docs created from scaffold |

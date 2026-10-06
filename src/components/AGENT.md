@@ -5,19 +5,22 @@
 **Not here:** routes/URLs → `src/routes/AGENT.md` · data/API → `src/server/AGENT.md`.
 
 ## The rule
+
 **Never build UI primitives from scratch.** Buttons, inputs, selects, checkboxes, switches, dialogs, sheets, drawers, popovers, tooltips, dropdowns, tabs, tables, cards, badges, avatars, calendars, pagination, skeletons, toasts, sidebars, breadcrumbs, charts — all come from **shadcn/ui**.
 
 Workflow: need a UI piece → check `src/components/ui/` → if missing: `bunx --bun shadcn@latest add <name>` → use it. Browse https://ui.shadcn.com/docs/components first. Custom components are allowed **only as compositions** of shadcn primitives (e.g. `OrderStatusBadge` = `Badge` + status map).
 
 ## Folders
-| Folder | Contents | Status |
-|---|---|---|
-| `ui/` | shadcn-generated only (see `ui/AGENT.md`) | ⬜ none installed |
-| `shared/` | cross-panel compositions: `DataTable`, `PageHeader`, `ConfirmDialog`, `StatusBadge`, `MoneyText`, `EmptyState`, `ImageUploader`, `PhoneInput` | ⬜ |
-| `store/` | storefront: `AgeGate`, `ProductCard`, `VariantPicker`, `CartSheet`, `CheckoutForm`, `AddressPicker` | ⬜ |
-| `admin/`, `manager/`, `rider/` | panel-specific compositions (sidebar config, order cards, dashboards) | ⬜ |
+
+| Folder                         | Contents                                                                                                                                      | Status                |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `ui/`                          | shadcn-generated only (see `ui/AGENT.md`)                                                                                                     | ✅ base set installed |
+| `shared/`                      | cross-panel compositions: `DataTable`, `PageHeader`, `ConfirmDialog`, `StatusBadge`, `MoneyText`, `EmptyState`, `ImageUploader`, `PhoneInput` | ⬜                    |
+| `store/`                       | storefront: `AgeGate`, `ProductCard`, `CartSheet`, `Header`, `Footer`, `VariantPicker`, `CheckoutForm`, `AddressPicker`                       | 🟨 landing components |
+| `admin/`, `manager/`, `rider/` | panel-specific compositions (sidebar config, order cards, dashboards)                                                                         | ⬜                    |
 
 ## Patterns
+
 - **Forms:** shadcn `Form` (react-hook-form + `@hookform/resolvers/zod`). **Reuse the same Zod schema as the server function** (export from `src/server/<domain>/*.schemas.ts`). Show field errors, disable submit while pending, toast via **Sonner** on success/failure.
 - **Tables:** shadcn Data Table pattern on `@tanstack/react-table`. **Check the installed version (9.x)** — shadcn docs/examples target v8; adapt or pin v8 if the API differs. Use **server-side pagination/sort/filter** driven by URL search params; column visibility + row actions via `DropdownMenu`.
 - **Destructive actions:** `AlertDialog` confirmation (deactivate user, cancel order, archive product).
@@ -28,17 +31,21 @@ Workflow: need a UI piece → check `src/components/ui/` → if missing: `bunx -
 - **Notifications bell:** `Popover` + `Badge` count; new items also surface via Sonner.
 
 ## Required states for every list/page
+
 Loading (`Skeleton`) · Empty (message + primary action) · Error (retry) · Pending mutation (disabled button + spinner).
 
 ## Layout rules
+
 - Admin/Manager: desktop-first with shadcn `Sidebar` (collapsible); must remain usable on tablets.
 - **Rider: mobile-first** — large tap targets, sticky bottom action bar, `Drawer` over `Dialog`, one-tap call/navigate links.
 - Storefront: responsive grid, sticky header with cart; age gate must not flash on load.
 
 ## Styling
+
 Tailwind utilities + CSS-variable tokens in `src/styles.css`. Use `cn()` from `#/lib/utils`. No inline hex colors, no extra CSS/UI libraries. Icons: `lucide-react` only. Keep labels on inputs, keyboard access, and visible focus.
 
 ## Base shadcn set to install in Phase 0
+
 button, input, label, form, select, checkbox, radio-group, switch, textarea, dialog, alert-dialog, sheet, drawer, dropdown-menu, table, tabs, card, badge, sidebar, breadcrumb, separator, skeleton, sonner, tooltip, popover, command, calendar, pagination, chart, avatar, scroll-area, aspect-ratio. Also add deps: `zod`, `react-hook-form`, `@hookform/resolvers`, `sonner`.
 
 _Update the folder/status table when you add shared components._

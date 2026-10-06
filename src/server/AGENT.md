@@ -5,16 +5,18 @@
 **Not here:** UI → `src/components/AGENT.md` · tables → `src/db/AGENT.md`.
 
 ## Domains (read only the one you need)
-| Dir | Covers | Doc |
-|---|---|---|
-| `middleware/` | auth + role middleware | this file |
-| `catalog/` | products, categories, brands, variants, images | `catalog/AGENT.md` |
-| `orders/` | placing orders, manager ops, rider ops, status machine usage | `orders/AGENT.md` |
-| `inventory/` | dealers, dealer stock, stock movements | `inventory/AGENT.md` |
-| `finance/` | ledger, VAT, invoices, settlements, cash, payments, reports | `finance/AGENT.md` |
-| `platform/` | users, site settings, gateway config, notifications, audit | `platform/AGENT.md` |
+
+| Dir           | Covers                                                       | Doc                  |
+| ------------- | ------------------------------------------------------------ | -------------------- |
+| `middleware/` | auth + role middleware                                       | this file            |
+| `catalog/`    | products, categories, brands, variants, images               | `catalog/AGENT.md`   |
+| `orders/`     | placing orders, manager ops, rider ops, status machine usage | `orders/AGENT.md`    |
+| `inventory/`  | dealers, dealer stock, stock movements                       | `inventory/AGENT.md` |
+| `finance/`    | ledger, VAT, invoices, settlements, cash, payments, reports  | `finance/AGENT.md`   |
+| `platform/`   | users, site settings, gateway config, notifications, audit   | `platform/AGENT.md`  |
 
 ## File layout per domain
+
 ```
 <domain>/
   <topic>.schemas.ts     # Zod schemas (shared with forms in the UI)
@@ -24,16 +26,18 @@
 ```
 
 ## Writing a server function (shape — verify against the installed TanStack Start version)
+
 ```ts
 export const assignRider = createServerFn({ method: 'POST' })
   .middleware([requireRole('admin', 'manager')])
-  .inputValidator(assignRiderSchema)          // Zod
+  .inputValidator(assignRiderSchema) // Zod
   .handler(async ({ data, context }) => {
     return assignRiderQuery(data, context.user) // db work lives in *.queries.ts
   })
 ```
 
 ## Rules
+
 1. **Every function** has a role middleware (`requireRole(...)`). The only exceptions are explicitly public storefront reads (catalog list/detail, public site settings).
 2. **Validate all input with Zod.** Never accept prices, totals, user IDs, or roles from the client — derive from DB/session.
 3. Use **`dbTx.transaction()`** for anything touching money, stock, ledger, or multiple tables; use `db` (neon-http) for plain reads. See `src/db/AGENT.md`.
@@ -46,9 +50,10 @@ export const assignRider = createServerFn({ method: 'POST' })
 10. Keep functions small; shared logic goes in `*.queries.ts` or `#/lib`.
 
 ## middleware/ (status)
-| File | Purpose | Status |
-|---|---|---|
-| `middleware/auth.ts` | `authMiddleware` — loads session, rejects missing/deactivated/banned users | ⬜ |
-| `middleware/role.ts` | `requireRole(...roles)` — wraps auth, 403 on mismatch | ⬜ |
+
+| File                 | Purpose                                                                    | Status |
+| -------------------- | -------------------------------------------------------------------------- | ------ |
+| `middleware/auth.ts` | `authMiddleware` — loads session, rejects missing/deactivated/banned users | ⬜     |
+| `middleware/role.ts` | `requireRole(...roles)` — wraps auth, 403 on mismatch                      | ⬜     |
 
 _Update this file's conventions or middleware table when they change; domain specifics go in the domain's AGENT.md._
