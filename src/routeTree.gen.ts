@@ -10,15 +10,26 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as DrinksRouteImport } from './routes/drinks'
 import { Route as GroceryRouteImport } from './routes/grocery'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminGroceryRouteImport } from './routes/admin/grocery'
+import { Route as AdminLiquorRouteImport } from './routes/admin/liquor'
+import { Route as AdminTaxonomyRouteImport } from './routes/admin/taxonomy'
+import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DrinksRoute = DrinksRouteImport.update({
@@ -41,6 +52,31 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminGroceryRoute = AdminGroceryRouteImport.update({
+  id: '/grocery',
+  path: '/grocery',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminLiquorRoute = AdminLiquorRouteImport.update({
+  id: '/liquor',
+  path: '/liquor',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminTaxonomyRoute = AdminTaxonomyRouteImport.update({
+  id: '/taxonomy',
+  path: '/taxonomy',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -49,10 +85,16 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/drinks': typeof DrinksRoute
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/admin/grocery': typeof AdminGroceryRoute
+  '/admin/liquor': typeof AdminLiquorRoute
+  '/admin/taxonomy': typeof AdminTaxonomyRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin/': typeof AdminIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -61,34 +103,75 @@ export interface FileRoutesByTo {
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/admin/grocery': typeof AdminGroceryRoute
+  '/admin/liquor': typeof AdminLiquorRoute
+  '/admin/taxonomy': typeof AdminTaxonomyRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin': typeof AdminIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/drinks': typeof DrinksRoute
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/admin/grocery': typeof AdminGroceryRoute
+  '/admin/liquor': typeof AdminLiquorRoute
+  '/admin/taxonomy': typeof AdminTaxonomyRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin/': typeof AdminIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/drinks' | '/grocery' | '/login' | '/signup' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/drinks'
+    | '/grocery'
+    | '/login'
+    | '/signup'
+    | '/admin/grocery'
+    | '/admin/liquor'
+    | '/admin/taxonomy'
+    | '/admin/users'
+    | '/admin/'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/drinks' | '/grocery' | '/login' | '/signup' | '/api/auth/$'
-  id:
-    | '__root__'
+  to:
     | '/'
     | '/drinks'
     | '/grocery'
     | '/login'
     | '/signup'
+    | '/admin/grocery'
+    | '/admin/liquor'
+    | '/admin/taxonomy'
+    | '/admin/users'
+    | '/admin'
+    | '/api/auth/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/drinks'
+    | '/grocery'
+    | '/login'
+    | '/signup'
+    | '/admin/grocery'
+    | '/admin/liquor'
+    | '/admin/taxonomy'
+    | '/admin/users'
+    | '/admin/'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   DrinksRoute: typeof DrinksRoute
   GroceryRoute: typeof GroceryRoute
   LoginRoute: typeof LoginRoute
@@ -103,6 +186,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/drinks': {
@@ -133,6 +223,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/grocery': {
+      id: '/admin/grocery'
+      path: '/grocery'
+      fullPath: '/admin/grocery'
+      preLoaderRoute: typeof AdminGroceryRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/liquor': {
+      id: '/admin/liquor'
+      path: '/liquor'
+      fullPath: '/admin/liquor'
+      preLoaderRoute: typeof AdminLiquorRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/taxonomy': {
+      id: '/admin/taxonomy'
+      path: '/taxonomy'
+      fullPath: '/admin/taxonomy'
+      preLoaderRoute: typeof AdminTaxonomyRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -143,8 +268,29 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteRouteChildren {
+  AdminGroceryRoute: typeof AdminGroceryRoute
+  AdminLiquorRoute: typeof AdminLiquorRoute
+  AdminTaxonomyRoute: typeof AdminTaxonomyRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminGroceryRoute: AdminGroceryRoute,
+  AdminLiquorRoute: AdminLiquorRoute,
+  AdminTaxonomyRoute: AdminTaxonomyRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   DrinksRoute: DrinksRoute,
   GroceryRoute: GroceryRoute,
   LoginRoute: LoginRoute,

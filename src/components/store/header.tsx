@@ -145,6 +145,18 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                         {session.user.role}
                       </span>
                     )}
+                    {session.user.role === 'admin' && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="w-full text-left px-3 py-2 text-[#181818] hover:bg-[#f8f5ef] rounded-[2px] font-semibold transition-colors flex items-center justify-between mt-1"
+                      >
+                        <span>Admin Portal</span>
+                        <span className="text-[9px] font-mono px-1 rounded bg-[#d8ff38] text-black font-bold">
+                          OPS
+                        </span>
+                      </Link>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -256,6 +268,18 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
           </div>
 
           <nav className="flex flex-col gap-2.5 text-sm font-semibold text-[#181818]">
+            {session?.user.role === 'admin' && (
+              <Link
+                to="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-1 border-b border-[#f0eee9] text-[#181818] flex items-center justify-between"
+              >
+                <span>Admin Operations Portal</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#d8ff38] text-black font-bold">
+                  ADMIN
+                </span>
+              </Link>
+            )}
             <Link
               to="/drinks"
               onClick={() => setMobileMenuOpen(false)}
