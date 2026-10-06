@@ -408,7 +408,9 @@ function GroceryPage() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-7">{filterPanel}</div>
+            <div className="flex-1 overflow-y-auto px-6 py-7">
+              {filterPanel}
+            </div>
 
             <div className="grid grid-cols-2 gap-3 border-t border-black/10 p-6">
               <button

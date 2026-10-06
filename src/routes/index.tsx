@@ -12,7 +12,14 @@ export const Route = createFileRoute('/')({
   component: HomePage,
 })
 
-const FOOD_ITEMS = ['Momo', 'Biryani', 'Spaghetti', 'Pizza', 'Wings', 'Chowmein']
+const FOOD_ITEMS = [
+  'Momo',
+  'Biryani',
+  'Spaghetti',
+  'Pizza',
+  'Wings',
+  'Chowmein',
+]
 
 const FEATURES = [
   { title: '40 minute delivery', body: 'Fast delivery whenever you need it.' },
@@ -49,8 +56,9 @@ function TileContent({
   return (
     <>
       <div
-        className={`relative z-10 p-5 font-black uppercase leading-[0.95] tracking-tight sm:p-7 ${large ? 'text-3xl sm:text-5xl' : 'text-xl sm:text-3xl'
-          }`}
+        className={`relative z-10 p-5 font-black uppercase leading-[0.95] tracking-tight sm:p-7 ${
+          large ? 'text-3xl sm:text-5xl' : 'text-xl sm:text-3xl'
+        }`}
       >
         {label}
       </div>
@@ -249,7 +257,10 @@ export function HomePage() {
         </section>
 
         {/* SHOP BY DRINKS — BENTO */}
-        <section className="scroll-mt-24 bg-black py-16 text-white sm:py-24" id="drinks">
+        <section
+          className="scroll-mt-24 bg-black py-16 text-white sm:py-24"
+          id="drinks"
+        >
           <div className={wrap}>
             <div className="mb-10 flex items-end justify-between gap-6 sm:mb-14">
               <div>
@@ -350,7 +361,9 @@ export function HomePage() {
 
         {/* FOOD */}
         <section className="scroll-mt-24 py-16 sm:py-24" id="food">
-          <div className={`${wrap} grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20`}>
+          <div
+            className={`${wrap} grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20`}
+          >
             <div>
               <p className={eyebrow}>Hungry?</p>
               <h2 className="mt-3 text-4xl font-black uppercase leading-none tracking-tighter sm:text-6xl">

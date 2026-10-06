@@ -2,13 +2,17 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useCart } from '#/lib/cart-context'
-import { Menu, X, PhoneCall } from 'lucide-react'
+import { authClient } from '#/lib/auth-client'
+import { toast } from 'sonner'
+import { Menu, X, PhoneCall, User, LogOut } from 'lucide-react'
 
 export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   const { itemCount, setIsOpen } = useCart()
+  const { data: session } = authClient.useSession()
   const [searchVal, setSearchVal] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false)
   const navigate = useNavigate()
 
   const handleSearchSubmit = (e: FormEvent) => {
@@ -20,6 +24,18 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
         to: '/drinks',
         search: { query: searchVal.trim() },
       })
+    }
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await authClient.signOut()
+      setUserDropdownOpen(false)
+      setMobileMenuOpen(false)
+      toast.success('Signed out successfully')
+      navigate({ to: '/' })
+    } catch {
+      toast.error('Failed to sign out')
     }
   }
 
@@ -66,7 +82,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
             className={`transition-all duration-200 ${
               searchOpen
                 ? 'flex items-center w-56 sm:w-72'
-                : 'hidden md:flex md:w-48 lg:w-60'
+                : 'hidden md:flex md:w-44 lg:w-56'
             }`}
           >
             <div className="relative w-full">
@@ -98,6 +114,58 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
           >
             ⌕
           </button>
+
+          {/* User Auth Pill / Dropdown */}
+          {session?.user ? (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                className="flex items-center gap-1.5 px-3 py-2 max-sm:px-2 max-sm:py-1.5 rounded-full border border-[#dedbd4] bg-[#f8f5ef] text-xs font-semibold text-[#181818] hover:border-[#171717] transition-all cursor-pointer"
+              >
+                <div className="w-5 h-5 rounded-full bg-[#171717] text-[#d8ff38] text-[10px] font-bold grid place-items-center uppercase">
+                  {session.user.name.charAt(0)}
+                </div>
+                <span className="hidden sm:inline max-w-[90px] truncate text-xs font-semibold">
+                  {session.user.name}
+                </span>
+              </button>
+
+              {userDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-[#dedbd4] rounded-[4px] shadow-lg p-2 z-50 text-xs">
+                  <div className="px-3 py-2 border-b border-[#f0eee9]">
+                    <p className="font-bold text-[#181818] truncate">
+                      {session.user.name}
+                    </p>
+                    <p className="text-[10px] text-[#777] truncate">
+                      {session.user.email}
+                    </p>
+                    {session.user.role && (
+                      <span className="inline-block mt-1 px-1.5 py-0.5 rounded-[2px] bg-[#f1f1ed] text-[9px] font-bold uppercase tracking-wider text-[#171717]">
+                        {session.user.role}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="w-full text-left px-3 py-2 text-rose-600 hover:bg-[#f8f5ef] rounded-[2px] font-semibold transition-colors border-0 bg-transparent cursor-pointer flex items-center gap-1.5 mt-1"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="hidden sm:inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold text-[#181818] hover:opacity-60 transition-opacity"
+            >
+              <User className="h-3.5 w-3.5" />
+              <span>Sign in</span>
+            </Link>
+          )}
 
           {/* Carting Button (exact drinks.html style) */}
           <button
@@ -146,6 +214,47 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
             </button>
           </form>
 
+          {/* Mobile User Section */}
+          <div className="pb-2 border-b border-[#f0eee9]">
+            {session?.user ? (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-[#181818]">
+                    {session.user.name}
+                  </p>
+                  <p className="text-[10px] text-[#777]">
+                    {session.user.email}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="text-xs text-rose-600 font-semibold border-0 bg-transparent cursor-pointer"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-xs font-bold text-[#181818] hover:underline"
+                >
+                  Sign in
+                </Link>
+                <span className="text-[#aaa]">·</span>
+                <Link
+                  to="/signup"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-xs font-bold text-[#181818] hover:underline"
+                >
+                  Create account
+                </Link>
+              </div>
+            )}
+          </div>
+
           <nav className="flex flex-col gap-2.5 text-sm font-semibold text-[#181818]">
             <Link
               to="/drinks"
@@ -159,7 +268,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 border-b border-[#f0eee9]"
             >
-              Food & Munchies
+              Food &amp; Munchies
             </Link>
             <a
               href="/#reviews"
