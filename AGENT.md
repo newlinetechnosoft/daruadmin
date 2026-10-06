@@ -24,21 +24,22 @@ Full permission matrix: `src/lib/AGENT.md`.
 
 ## 2. Task router — read ONLY what applies
 
-| If your task involves…                                                                             | Read                                                       |
-| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| Pages, URLs, layouts, route guards, loaders, search params, storefront behavior (age gate, cart)   | `src/routes/AGENT.md`                                      |
-| **Any UI**: forms, tables, dialogs, sidebar, toasts, loading/empty states, Tailwind, mobile layout | `src/components/AGENT.md`                                  |
-| Adding/updating a shadcn component                                                                 | `src/components/ui/AGENT.md` (+ `src/components/AGENT.md`) |
-| How to write a server function, middleware, errors, transactions                                   | `src/server/AGENT.md`                                      |
-| Products, categories, brands, variants, product images                                             | `src/server/catalog/AGENT.md`                              |
-| Cart→order, checkout, order status, assign dealer/rider, rider delivery actions                    | `src/server/orders/AGENT.md`                               |
-| Dealers, dealer stock, stock movements, low-stock                                                  | `src/server/inventory/AGENT.md`                            |
-| Ledger, VAT, invoices, dealer settlement, rider cash, payments/eSewa, reports                      | `src/server/finance/AGENT.md`                              |
-| Activate/deactivate users, staff accounts, site settings, gateway config, notifications, audit log | `src/server/platform/AGENT.md`                             |
-| Tables, columns, migrations, DB drivers                                                            | `src/db/AGENT.md`                                          |
-| Auth config, roles/permissions, money/VAT helpers, order-status machine, storage adapter, utils    | `src/lib/AGENT.md`                                         |
+| If your task involves…                                                                                                                         | Read                                                       |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Anything visual** — creating/restyling a page, component, form, table, dialog, layout; colors, typography, spacing, look & feel, responsive | **`UI_APPROACH.md` first**, then `src/components/AGENT.md` |
+| Pages, URLs, layouts, route guards, loaders, search params, storefront behavior (age gate, cart)                                               | `src/routes/AGENT.md`                                      |
+| **Any UI** — component structure, forms, tables, dialogs, sidebar, toasts, loading/empty states, Tailwind, mobile layout                       | `src/components/AGENT.md` (+ `UI_APPROACH.md` for the look) |
+| Adding/updating a shadcn component                                                                                                             | `src/components/ui/AGENT.md` (+ `src/components/AGENT.md`) |
+| How to write a server function, middleware, errors, transactions                                                                               | `src/server/AGENT.md`                                      |
+| Products, categories, brands, variants, product images                                                                                         | `src/server/catalog/AGENT.md`                              |
+| Cart→order, checkout, order status, assign dealer/rider, rider delivery actions                                                                | `src/server/orders/AGENT.md`                               |
+| Dealers, dealer stock, stock movements, low-stock                                                                                              | `src/server/inventory/AGENT.md`                            |
+| Ledger, VAT, invoices, dealer settlement, rider cash, payments/eSewa, reports                                                                  | `src/server/finance/AGENT.md`                              |
+| Activate/deactivate users, staff accounts, site settings, gateway config, notifications, audit log                                             | `src/server/platform/AGENT.md`                             |
+| Tables, columns, migrations, DB drivers                                                                                                        | `src/db/AGENT.md`                                          |
+| Auth config, roles/permissions, money/VAT helpers, order-status machine, storage adapter, utils                                                | `src/lib/AGENT.md`                                         |
 
-A task that spans areas (e.g. "new admin page for dealers") → read each relevant file (`routes` + `components` + `server/inventory`), nothing else.
+A task that spans areas (e.g. "new admin page for dealers") → read each relevant file (`UI_APPROACH` + `routes` + `components` + `server/inventory`), nothing else.
 
 ## 3. Tech stack (compact)
 
@@ -62,7 +63,7 @@ bunx tsc --noEmit
 
 ## 5. Non-negotiable rules (details live in the directory files)
 
-1. **UI is built from shadcn components. Never create primitives from scratch.** (`src/components/AGENT.md`)
+1. **UI is built from shadcn components. Never create primitives from scratch.** (`src/components/AGENT.md`) **Its look (tokens, typography, shape, layouts) is defined in `UI_APPROACH.md` — follow it for every UI task.**
 2. **All server logic = `createServerFn`/server routes inside `src/server/`**, with Zod validation and role middleware on every function. UI code never imports `#/db` or secrets.
 3. **Money = integer paisa.** Format only at the UI edge.
 4. **Money / stock / ledger changes run in one DB transaction (`dbTx`).** Ledger is append-only; reverse, never edit.
@@ -71,6 +72,7 @@ bunx tsc --noEmit
 7. Don't hand-edit `src/routeTree.gen.ts` or (normally) `src/components/ui/*`.
 8. If a decision isn't documented, **ask the owner** — see "Assumptions to confirm" at the top of each directory file.
 9. Before finishing: `bun run lint`, `bun run check`, `bunx tsc --noEmit` pass.
+10. **UI tasks are visual only** unless asked: never change loaders, server functions, routing, cart logic, form state or data shapes while restyling. No emoji, no new global CSS classes or unlayered element selectors in `styles.css` (see `UI_APPROACH.md` §2).
 
 ## 6. Progress (phase level — details are in each directory file)
 
@@ -89,11 +91,13 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · 🗑 remove
 ## 7. Maintaining these docs
 
 - After finishing a task, update **only the AGENT.md of the directory you changed** (status symbols, route/API/schema tables, "Assumptions"). Update this root file only for the phase table or a new directory.
+- **Visual/design changes** (new token, recipe, page pattern, restyled screen) → update `UI_APPROACH.md` (§ Status + the relevant section), not the directory files.
 - Adding a new directory with real logic? Create its `AGENT.md` (Scope · Read when · Rules · Structure · Status) and add a row to the router in §2.
 - Keep each file focused; if one grows past ~250 lines, split it.
 
 ## 8. Changelog
 
-| Date         | Change                             |
-| ------------ | ---------------------------------- |
-| _YYYY-MM-DD_ | Initial docs created from scaffold |
+| Date       | Change                                                                                  |
+| ---------- | --------------------------------------------------------------------------------------- |
+| _YYYY-MM-DD_ | Initial docs created from scaffold                                                    |
+| 2026-10-07 | Added `UI_APPROACH.md` (visual design system); router row, rule 1/10 and §7 updated     |
