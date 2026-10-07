@@ -48,7 +48,7 @@ function LoginPage() {
         return
       }
 
-      toast.success('Welcome back to Barmandoo!')
+      toast.success('Welcome back to Mezmani!')
       navigate({
         to: search.redirect || '/',
       })

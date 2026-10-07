@@ -1,4 +1,4 @@
-# UI_APPROACH.md — Visual design system (Daru / Barmandoo)
+# UI_APPROACH.md — Visual design system (Mezmani)
 
 > **Scope:** how every screen should *look and feel* — tokens, typography, shape, class recipes, page
 > layouts, responsive + a11y rules. **Not** here: component file structure, forms/tables logic and shadcn
@@ -110,7 +110,7 @@ low stock (≤10) `border-red-700 bg-red-50 text-red-800`; empty row `py-14 text
 ### Storefront home `/`
 
 ```
-[ sticky header: BARMANDOO · Drinks Food Reviews About · search · Cart(n) ]
+[ sticky header: MEZMANI · Drinks Food Reviews About · search · Cart(n) ]
 [ HERO bg-paper: eyebrow / giant H1 / copy / boxed search / delivery note | 3 product PNGs on white circle ]
 [ SHOP BY DRINKS bg-black ]   asymmetric bento (below)
 [ SHOP BY FOOD white ]        numbered typographic rows  01 MOMO →

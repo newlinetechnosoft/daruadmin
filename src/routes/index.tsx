@@ -134,7 +134,7 @@ export function HomePage() {
             to="/"
             className="text-xl font-black uppercase tracking-tighter sm:text-2xl"
           >
-            Barmandoo
+            Mezmani
           </Link>
 
           <nav className="hidden items-center gap-9 text-sm font-medium md:flex">
@@ -413,7 +413,7 @@ export function HomePage() {
                 <div className="relative flex aspect-[9/17] flex-col justify-between overflow-hidden rounded-[2rem] bg-white p-6">
                   <div>
                     <span className="text-xs font-black uppercase tracking-tighter">
-                      Barmandoo
+                      Mezmani
                     </span>
                     <strong className="mt-4 block text-3xl font-black uppercase leading-[0.92] tracking-tighter">
                       Good times
@@ -432,7 +432,7 @@ export function HomePage() {
             </div>
 
             <div>
-              <p className={eyebrow}>Barmandoo app</p>
+              <p className={eyebrow}>Mezmani app</p>
               <h2 className="mt-3 text-4xl font-black uppercase leading-[0.92] tracking-tighter sm:text-6xl">
                 Your drinks.
                 <br />
@@ -562,7 +562,7 @@ export function HomePage() {
                 to="/"
                 className="text-3xl font-black uppercase tracking-tighter"
               >
-                Barmandoo
+                Mezmani
               </Link>
               <p className="mt-4 max-w-xs text-sm leading-relaxed text-neutral-400">
                 Food &amp; drinks delivery.
@@ -642,7 +642,7 @@ export function HomePage() {
           </div>
 
           <div className="mt-16 flex flex-col gap-5 border-t border-white/15 pt-6 text-xs text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
-            <p>© 2026 Barmandoo Pvt. Ltd. All Rights Reserved.</p>
+            <p>© 2026 Mezmani Pvt. Ltd. All Rights Reserved.</p>
 
             <div className="flex flex-wrap gap-x-5 gap-y-2 font-medium text-neutral-300">
               <span>eSewa</span>

@@ -1,9 +1,9 @@
-# AGENT.md — Daru (root index)
+# AGENT.md — Mezmani (root index)
 
 > **This file is an index, not the full manual.** Do **not** load every doc for every task.
 > Find your task in the router (§2) and read **only** the AGENT.md file(s) it points to. Each directory's AGENT.md is the source of truth for that directory (rules, structure, API, status).
 
-## 1. What Daru is
+## 1. What Mezmani is
 
 Dynamic e-commerce + ERP back-office for the **Nepal** market (NPR, VAT, English only, `Asia/Kathmandu`).
 
