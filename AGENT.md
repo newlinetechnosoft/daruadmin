@@ -38,6 +38,7 @@ Full permission matrix: `src/lib/AGENT.md`.
 | Activate/deactivate users, staff accounts, site settings, gateway config, notifications, audit log                                             | `src/server/platform/AGENT.md`                             |
 | Tables, columns, migrations, DB drivers                                                                                                        | `src/db/AGENT.md`                                          |
 | Auth config, roles/permissions, money/VAT helpers, order-status machine, storage adapter, utils                                                | `src/lib/AGENT.md`                                         |
+| **Committing** — writing a commit message or being asked to commit                                                                             | `commit_rule.md`                                           |
 
 A task that spans areas (e.g. "new admin page for dealers") → read each relevant file (`UI_APPROACH` + `routes` + `components` + `server/inventory`), nothing else.
 
@@ -73,6 +74,7 @@ bunx tsc --noEmit
 8. If a decision isn't documented, **ask the owner** — see "Assumptions to confirm" at the top of each directory file.
 9. Before finishing: `bun run lint`, `bun run check`, `bunx tsc --noEmit` pass.
 10. **UI tasks are visual only** unless asked: never change loaders, server functions, routing, cart logic, form state or data shapes while restyling. No emoji, no new global CSS classes or unlayered element selectors in `styles.css` (see `UI_APPROACH.md` §2).
+11. **Never commit (or push) on your own — only when the user explicitly asks.** When asked, follow `commit_rule.md` exactly.
 
 ## 6. Progress (phase level — details are in each directory file)
 
@@ -101,3 +103,4 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · 🗑 remove
 | ---------- | --------------------------------------------------------------------------------------- |
 | _YYYY-MM-DD_ | Initial docs created from scaffold                                                    |
 | 2026-10-07 | Added `UI_APPROACH.md` (visual design system); router row, rule 1/10 and §7 updated     |
+| 2026-10-07 | Added `commit_rule.md`; router row and rule 11 (no self-commits)                        |
