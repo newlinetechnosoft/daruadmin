@@ -47,7 +47,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
           to="/"
           className="text-[21px] font-black tracking-[-0.07em] text-[#181818] uppercase"
         >
-          BARMANDOO
+          MEZMANI
         </Link>
 
         {/* DESKTOP NAV LINKS */}
@@ -306,7 +306,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 border-b border-[#f0eee9]"
             >
-              About Barmandoo
+              About Mezmani
             </a>
           </nav>
 

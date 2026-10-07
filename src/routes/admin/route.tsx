@@ -113,7 +113,7 @@ function AdminLayout() {
           </div>
           <div className="leading-none">
             <span className="text-base font-black uppercase tracking-tighter">
-              DARU
+              Mezmani
             </span>
             <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
               Admin
@@ -151,7 +151,7 @@ function AdminLayout() {
             <div className="leading-none">
               <div className="flex items-center gap-2">
                 <span className="text-xl font-black uppercase tracking-tighter">
-                  DARU
+                  Mezmani
                 </span>
                 <span className="border border-white/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-white/80">
                   Admin
@@ -274,7 +274,7 @@ function AdminLayout() {
         {/* Desktop top bar */}
         <header className="sticky top-0 z-30 hidden items-center justify-between border-b border-black bg-white/90 px-8 py-4 backdrop-blur md:flex">
           <div className="flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
-            <span className="text-black">DARU Admin</span>
+            <span className="text-black">Mezmani Admin</span>
             <span className="text-neutral-300">/</span>
             <span className="text-black">
               {currentPath.replace('/admin', '').replace('/', '') ||
