@@ -64,7 +64,7 @@ export function Footer() {
                 to="/"
                 className="text-[21px] font-black tracking-[-0.07em] text-white uppercase inline-block"
               >
-                BARMANDOO
+                MEZMANI
               </Link>
               <p className="max-w-[260px] text-[11px] leading-[1.8] text-[#777]">
                 Food &amp; drinks delivery. Premium beverages and food delivered
@@ -168,7 +168,7 @@ export function Footer() {
 
           {/* BOTTOM ROW */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-5 border-t border-[#292929] text-[9px] text-[#555]">
-            <span>© 2026 Barmandoo Pvt. Ltd. All Rights Reserved.</span>
+            <span>© 2026 Mezmani Pvt. Ltd. All Rights Reserved.</span>
 
             <div className="flex gap-2">
               <span className="px-2 py-1 border border-[#292929] text-[#777] uppercase font-semibold">

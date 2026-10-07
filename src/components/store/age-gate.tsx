@@ -9,7 +9,7 @@ import {
 import { Button } from '#/components/ui/button'
 import { ShieldAlert, Wine } from 'lucide-react'
 
-const AGE_VERIFIED_KEY = 'daru_age_verified_18'
+const AGE_VERIFIED_KEY = 'Mezmani_age_verified_18'
 
 export function AgeGate() {
   const [isOpen, setIsOpen] = useState(false)
@@ -45,7 +45,7 @@ export function AgeGate() {
         <ShieldAlert className="mb-4 h-16 w-16 text-amber-500" />
         <h1 className="text-3xl font-bold tracking-tight">Access Restricted</h1>
         <p className="mt-3 max-w-md text-zinc-400">
-          You must be 18 years of age or older to enter Daru and view alcohol
+          You must be 18 years of age or older to enter Mezmani and view alcohol
           products in accordance with Nepal Liquor Regulations.
         </p>
         <p className="mt-6 text-sm text-zinc-500">
@@ -71,7 +71,7 @@ export function AgeGate() {
           </DialogTitle>
           <DialogDescription className="mt-2 text-zinc-400">
             Welcome to{' '}
-            <span className="font-semibold text-amber-400">Daru</span>. You must
+            <span className="font-semibold text-amber-400">Mezmani</span>. You must
             be at least{' '}
             <span className="font-semibold text-white">18 years of age</span> to
             purchase alcohol and enter this site in Nepal.

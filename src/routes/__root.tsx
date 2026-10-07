@@ -31,12 +31,12 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: "Daru | Nepal's Fastest Late-Night Liquor & Food Delivery",
+        title: "Mezmani | Nepal's Fastest Late-Night Liquor & Food Delivery",
       },
       {
         name: 'description',
         content:
-          'Daru offers the fastest late-night drinks, beer, snacks, and ice delivery across Kathmandu, Lalitpur, and Bhaktapur within 45 minutes.',
+          'Mezmani offers the fastest late-night drinks, beer, snacks, and ice delivery across Butwal within 45 minutes.',
       },
     ],
     links: [

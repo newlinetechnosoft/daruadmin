@@ -21,7 +21,7 @@ export async function seed() {
   await db
     .update(user)
     .set({ role: 'admin', phone: '+977-9800000000' })
-    .where(eq(user.email, 'admin@daru.com.np'))
+    .where(eq(user.email, 'admin@Mezmani.com.np'))
   console.log('✅ Admin user role verified.')
 
   // 2. Liquor Categories

@@ -83,7 +83,7 @@ function SignUpPage() {
         return
       }
 
-      toast.success('Account created successfully! Welcome to Barmandoo.')
+      toast.success('Account created successfully! Welcome to Mezmani.')
       navigate({
         to: search.redirect || '/',
       })
@@ -106,7 +106,7 @@ function SignUpPage() {
                 CREATE AN ACCOUNT
               </span>
               <h1 className="text-2xl sm:text-3xl font-black tracking-[-0.05em] text-[#181818] uppercase">
-                Join Barmandoo
+                Join Mezmani
               </h1>
               <p className="mt-2 text-xs text-[#777] leading-relaxed">
                 Order genuine liquor, cold beers and late-night munchies with
