@@ -50,7 +50,7 @@ function LoginPage() {
 
       toast.success('Welcome back to Mezmani!')
       navigate({
-        to: search.redirect || '/',
+        to: search.redirect || '/drinks',
       })
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Sign in failed')
