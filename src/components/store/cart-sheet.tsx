@@ -46,7 +46,7 @@ export function CartSheet() {
         <SheetHeader className="border-b border-[#dedbd4] p-5 bg-[#fdfdfc]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#171717] text-[#d8ff38]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#171717] text-white">
                 <ShoppingBag className="h-4 w-4" />
               </div>
               <div>

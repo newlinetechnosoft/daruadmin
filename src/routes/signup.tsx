@@ -85,7 +85,7 @@ function SignUpPage() {
 
       toast.success('Account created successfully! Welcome to Mezmani.')
       navigate({
-        to: search.redirect || '/',
+        to: search.redirect || '/drinks',
       })
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Sign up failed')

@@ -39,38 +39,74 @@ const REVIEWS = [
   },
 ]
 
-const tileBase =
-  'group relative isolate block overflow-hidden bg-[#161616] text-white transition-colors hover:bg-[#222] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black'
+/* ------------------------------------------------------------------ */
+/*  Drink tile primitives                                              */
+/* ------------------------------------------------------------------ */
 
-function TileContent({
-  label,
+/**
+ * Compact tile: solid color, product cutout filling the space, vertical
+ * label on the left edge. The grid needs `group/bento` so that hovering
+ * one tile softly dims the others.
+ */
+const drinkTile =
+  'group relative isolate block h-full min-w-0 overflow-hidden rounded-2xl ring-1 ring-black/10 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl hover:ring-black/40 group-hover/bento:[&:not(:hover)]:opacity-60 focus-visible:-translate-y-1 focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none'
+
+/** Vertical label scale, tuned per tile footprint */
+const LABEL_SIZE = {
+  sm: 'text-xl sm:text-2xl',
+  md: 'text-2xl sm:text-4xl',
+  lg: 'text-4xl sm:text-6xl',
+} as const
+
+type LabelSize = keyof typeof LABEL_SIZE
+
+function DrinkTileBody({
+  lines,
   src,
   alt,
-  large = false,
+  tone,
+  chip = 'bg-black text-white',
+  size = 'sm',
 }: {
-  label: React.ReactNode
+  /** label split into lines, e.g. ['Domestic', 'Spirits'] */
+  lines: string[]
   src: string
   alt: string
-  large?: boolean
+  /** label text color class */
+  tone: string
+  /** hover arrow chip colors */
+  chip?: string
+  size?: LabelSize
 }) {
   return (
     <>
-      <div
-        className={`relative z-10 p-5 font-black uppercase leading-[0.95] tracking-tight sm:p-7 ${
-          large ? 'text-3xl sm:text-5xl' : 'text-xl sm:text-3xl'
-        }`}
-      >
-        {label}
-      </div>
-      <span className="absolute right-5 top-5 z-10 text-lg opacity-0 transition-opacity group-hover:opacity-100 sm:right-7 sm:top-7">
-        →
-      </span>
+      {/* Product cutout — takes everything right of the label strip */}
       <img
         src={src}
         alt={alt}
         loading="lazy"
-        className="absolute bottom-0 right-0 -z-0 h-[78%] w-[78%] object-contain object-bottom-right p-3 transition-transform duration-500 ease-out group-hover:scale-105 sm:p-6"
+        className="absolute inset-y-0 right-0 h-full w-[calc(100%-2.5rem)] object-contain p-2 drop-shadow-[0_16px_22px_rgba(0,0,0,0.28)] transition-transform duration-500 ease-out  group-hover:-rotate-2 sm:w-[calc(100%-3rem)] sm:p-3"
       />
+
+      {/* Vertical label, reads bottom-to-top, anchored bottom-left */}
+      <span
+        className={`pointer-events-none absolute bottom-3 left-3 rotate-180 font-black uppercase leading-[0.9] tracking-tighter transition-transform duration-300 [writing-mode:vertical-rl] group-hover:-translate-y-1 sm:bottom-4 sm:left-4 ${LABEL_SIZE[size]} ${tone}`}
+      >
+        {lines.map((line, i) => (
+          <span key={line}>
+            {line}
+            {i < lines.length - 1 && <br />}
+          </span>
+        ))}
+      </span>
+
+      {/* Hover arrow chip */}
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none absolute right-3 top-3 z-10 grid h-8 w-8 -translate-y-1 place-items-center rounded-full text-sm font-bold opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 ${chip}`}
+      >
+        →
+      </span>
     </>
   )
 }
@@ -134,7 +170,15 @@ export function HomePage() {
             to="/"
             className="text-xl font-black uppercase tracking-tighter sm:text-2xl"
           >
-            Mezmani
+            {/*Mezmani */}
+            <img
+              src="/mezmani_logo.png"
+              alt="LOGO"
+              width="180"
+              height="180"
+              loading="lazy"
+              className='transition-all duration-300 hover:scale-110'
+            />
           </Link>
 
           <nav className="hidden items-center gap-9 text-sm font-medium md:flex">
@@ -156,7 +200,7 @@ export function HomePage() {
             <button
               type="button"
               aria-label="Search"
-              className="grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-neutral-100"
+              className="grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-neutral-100 cursor-pointer"
               onClick={() => {
                 const el = document.getElementById('hero-search-input')
                 el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -167,7 +211,7 @@ export function HomePage() {
             </button>
             <button
               type="button"
-              className="inline-flex h-10 items-center gap-2 rounded-full bg-black px-5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800"
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-black px-5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 cursor-pointer"
               onClick={() => setIsOpen(true)}
             >
               Cart
@@ -222,7 +266,7 @@ export function HomePage() {
                 />
                 <button
                   type="submit"
-                  className="h-14 bg-black px-6 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800 sm:px-8"
+                  className="h-14 bg-black px-6 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800 sm:px-8 cursor-pointer"
                 >
                   Search
                 </button>
@@ -256,103 +300,107 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* SHOP BY DRINKS — BENTO */}
-        <section
-          className="scroll-mt-24 bg-black py-16 text-white sm:py-24"
-          id="drinks"
-        >
+        {/* SHOP BY DRINKS */}
+        <section className="h-[90%] scroll-mt-24 bg-white py-16 sm:py-24" id="drinks">
           <div className={wrap}>
-            <div className="mb-10 flex items-end justify-between gap-6 sm:mb-14">
+            <div className="mb-8 flex items-end justify-between gap-6 sm:mb-12">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-400">
-                  Explore
-                </p>
+                <p className={eyebrow}>Explore</p>
                 <h2 className="mt-3 text-4xl font-black uppercase leading-none tracking-tighter sm:text-6xl">
                   Shop by drinks
                 </h2>
               </div>
               <Link
                 to="/drinks"
-                className="shrink-0 border-b border-white pb-0.5 text-sm font-semibold transition-opacity hover:opacity-70"
+                className="shrink-0 border-b border-black pb-0.5 text-sm font-semibold transition-opacity hover:opacity-60"
               >
                 View all →
               </Link>
             </div>
 
-            <div className="grid auto-rows-[190px] grid-cols-2 gap-3 sm:auto-rows-[240px] sm:gap-4 lg:grid-cols-12 lg:auto-rows-[230px]">
+            <div className="group/bento grid auto-rows-[11rem] grid-cols-2 gap-3 sm:auto-rows-[13rem] sm:gap-4 lg:auto-rows-[18.5rem] lg:grid-cols-12">
               <Link
                 to="/drinks"
                 search={{ category: 'whiskey' }}
-                className={`${tileBase} col-span-2 lg:col-span-5 lg:row-span-2`}
+                className={`${drinkTile} col-span-2 lg:col-span-4 lg:col-start-1 lg:row-start-1 bg-[#f3e9e4]`}
               >
-                <TileContent
-                  large
-                  label={
-                    <>
-                      Domestic
-                      <br />
-                      Spirits
-                    </>
-                  }
+                <DrinkTileBody
+                  lines={['Domestic', 'Spirits']}
                   src="/images/spirits.png"
                   alt="Domestic Spirits"
+                  tone="text-[#a1887f]"
+                  size="md"
+                />
+              </Link>
+
+              <Link
+                to="/drinks"
+                search={{ category: 'vodka' }}
+                className={`${drinkTile} lg:col-span-2 lg:col-start-1 lg:row-start-2 bg-[#eceecf]`}
+              >
+                <DrinkTileBody
+                  lines={['Vodka']}
+                  src="/images/vodka.png"
+                  alt="Vodka"
+                  tone="text-[#9a9a2e]"
+                  size="sm"
+                />
+              </Link>
+
+              <Link
+                to="/drinks"
+                search={{ category: 'whiskey' }}
+                className={`${drinkTile} lg:col-span-2 lg:col-start-3 lg:row-start-2 bg-[#fddcc2]`}
+              >
+                <DrinkTileBody
+                  lines={['Whiskey']}
+                  src="/images/whiskey.png"
+                  alt="Whiskey"
+                  tone="text-[#d1621f]"
+                  size="sm"
                 />
               </Link>
 
               <Link
                 to="/drinks"
                 search={{ category: 'beer-cider' }}
-                className={`${tileBase} col-span-2 bg-[#e9e6df] !text-black hover:!bg-[#dedad1] lg:col-span-4 lg:row-span-2`}
+                className={`${drinkTile} col-span-2 row-span-2 lg:col-span-4 lg:col-start-5 lg:row-start-1 bg-[#151515]`}
               >
-                <TileContent
-                  large
-                  label="Beer"
+                <DrinkTileBody
+                  lines={['Beer']}
                   src="/images/beer.png"
                   alt="Beer"
+                  tone="text-white/90"
+                  chip="bg-white text-black"
+                  size="lg"
                 />
               </Link>
 
               <Link
                 to="/grocery"
                 search={{ category: 'party-essentials' }}
-                className={`${tileBase} lg:col-span-3`}
+                className={`${drinkTile} lg:col-span-4 lg:col-start-9 lg:row-start-1 bg-[#fcd34d]`}
               >
-                <TileContent
-                  label="Tobacco"
+                <DrinkTileBody
+                  lines={['Tobacco']}
                   src="/images/tobacco.png"
                   alt="Tobacco"
+                  tone="text-[#6f5e12]"
+                  size="md"
                 />
               </Link>
 
               <Link
                 to="/drinks"
                 search={{ category: 'wine' }}
-                className={`${tileBase} bg-[#5a1f2b] hover:!bg-[#6b2634] lg:col-span-3`}
+                className={`${drinkTile} lg:col-span-4 lg:col-start-9 lg:row-start-2 bg-[#c3e58f]`}
               >
-                <TileContent label="Wine" src="/images/wine.png" alt="Wine" />
-              </Link>
-
-              <Link
-                to="/drinks"
-                search={{ category: 'vodka' }}
-                className={`${tileBase} bg-white !text-black hover:!bg-neutral-200 lg:col-span-6`}
-              >
-                <TileContent
-                  label="Vodka"
-                  src="/images/vodka.png"
-                  alt="Vodka"
-                />
-              </Link>
-
-              <Link
-                to="/drinks"
-                search={{ category: 'whiskey' }}
-                className={`${tileBase} bg-[#3a2a1a] hover:!bg-[#47331f] lg:col-span-6`}
-              >
-                <TileContent
-                  label="Whiskey"
-                  src="/images/whiskey.png"
-                  alt="Whiskey"
+                <DrinkTileBody
+                  lines={['Wine']}
+                  src="/images/wine.png"
+                  alt="Wine"
+                  tone="text-[#527f2c]"
+                  size="md"
                 />
               </Link>
             </div>
@@ -360,7 +408,10 @@ export function HomePage() {
         </section>
 
         {/* FOOD */}
-        <section className="scroll-mt-24 py-16 sm:py-24" id="food">
+        <section
+          className="scroll-mt-24 border-t border-black/10 py-16 sm:py-24"
+          id="food"
+        >
           <div
             className={`${wrap} grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20`}
           >
@@ -456,7 +507,7 @@ export function HomePage() {
                 />
                 <button
                   type="submit"
-                  className="h-14 bg-black px-8 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800"
+                  className="h-14 bg-black px-8 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800 cursor-pointer"
                 >
                   Get App
                 </button>
@@ -465,14 +516,14 @@ export function HomePage() {
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   type="button"
-                  className="h-11 border border-black px-5 text-sm font-semibold transition-colors hover:bg-black hover:text-white"
+                  className="h-11 border border-black px-5 text-sm font-semibold transition-colors hover:bg-black hover:text-white cursor-pointer"
                   onClick={() => toast.success('iOS App download link sent!')}
                 >
                   App Store
                 </button>
                 <button
                   type="button"
-                  className="h-11 border border-black px-5 text-sm font-semibold transition-colors hover:bg-black hover:text-white"
+                  className="h-11 border border-black px-5 text-sm font-semibold transition-colors hover:bg-black hover:text-white cursor-pointer"
                   onClick={() =>
                     toast.success('Google Play download link sent!')
                   }
@@ -562,7 +613,12 @@ export function HomePage() {
                 to="/"
                 className="text-3xl font-black uppercase tracking-tighter"
               >
-                Mezmani
+                <img
+                  src="/mezmani_logo_bg.svg"
+                  width="180"
+                  height="180"
+                  loading="lazy"
+                />
               </Link>
               <p className="mt-4 max-w-xs text-sm leading-relaxed text-neutral-400">
                 Food &amp; drinks delivery.
