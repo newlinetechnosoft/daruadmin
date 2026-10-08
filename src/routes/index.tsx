@@ -23,10 +23,12 @@ const FOOD_ITEMS = [
 ]
 
 const HERO_SLIDES = [
-  '/images/butwal-night.webp',
+  //'/images/butwal-night.webp',
   '/images/butwal_night_view.png',
   '/images/drinks-bg.jpg',
   'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=1600&auto=format&fit=crop',
+  '/images/bg_beer_butwal.png',
+  '/images/bg_bike.png',
 ]
 
 const FEATURES = [
