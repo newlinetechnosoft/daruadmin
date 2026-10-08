@@ -64,7 +64,14 @@ export function Footer() {
                 to="/"
                 className="text-[21px] font-black tracking-[-0.07em] text-white uppercase inline-block"
               >
-                MEZMANI
+                <img
+                  src="/mezmani_logo.png"
+                  alt="MEZMANI"
+                  width="180"
+                  height="180"
+                  loading="lazy"
+                  className='transition-all duration-300 hover:scale-110'
+                />
               </Link>
               <p className="max-w-[260px] text-[11px] leading-[1.8] text-[#777]">
                 Food &amp; drinks delivery. Premium beverages and food delivered
