@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { getFrontpageDataFn } from '#/server/catalog/catalog.functions'
 import { useCart } from '#/lib/cart-context'
 import { toast } from 'sonner'
+import { Sparkles, ArrowRight, ShieldCheck, Clock, Award } from 'lucide-react'
 
 export const Route = createFileRoute('/')({
   loader: async () => {
@@ -19,6 +20,13 @@ const FOOD_ITEMS = [
   'Pizza',
   'Wings',
   'Chowmein',
+]
+
+const HERO_SLIDES = [
+  '/images/butwal-night.webp',
+  '/images/butwal_night_view.png',
+  '/images/drinks-bg.jpg',
+  'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=1600&auto=format&fit=crop',
 ]
 
 const FEATURES = [
@@ -98,6 +106,16 @@ export function HomePage() {
   const { itemCount, setIsOpen } = useCart()
   const [searchQuery, setSearchQuery] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
+  const [currentSlide, setCurrentSlide] = useState(0)
+  const [isPaused, setIsPaused] = useState(false)
+
+  useEffect(() => {
+    if (isPaused) return
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [isPaused])
 
   const handleHeroSearch = (e: FormEvent) => {
     e.preventDefault()
@@ -188,70 +206,121 @@ export function HomePage() {
       </header>
 
       <main>
-        {/* HERO */}
-        <section className="bg-[#f3f2ee]">
+        {/* HERO WITH 5 AUTO-SCROLLING BACKGROUNDS IN 5-SECOND LOOP */}
+        {/* HERO SECTION MATCHING USER REFERENCE DESIGN */}
+        <section
+          className="relative min-h-[82vh] sm:min-h-[88vh] lg:min-h-[90vh] flex flex-col justify-between overflow-hidden bg-[#16082b] select-none"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          aria-label="Hero Showcase"
+        >
+          {/* 5-BACKGROUND HORIZONTAL SLIDING TRACK WITH 5-SECOND LOOP */}
           <div
-            className={`${wrap} grid items-center gap-12 py-14 sm:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:py-28`}
+            className="absolute inset-0 flex transition-transform duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]"
+            style={{ transform: `translateX(-${currentSlide * 100}%)` }}
           >
-            <div>
-              <p className={eyebrow}>Food &amp; drinks delivery</p>
-
-              <h1 className="mt-5 text-[clamp(3.25rem,10vw,7.5rem)] font-black uppercase leading-[0.88] tracking-tighter">
-                Easy. Fast.
-                <br />
-                <span className="text-neutral-400">Convenient.</span>
-              </h1>
-
-              <p className="mt-7 max-w-md text-base leading-relaxed text-neutral-600 sm:text-lg">
-                Alcohol, beverages &amp; food delivered to your doorstep. Order
-                whenever you want, wherever you are.
-              </p>
-
-              <form
-                onSubmit={handleHeroSearch}
-                className="mt-9 flex max-w-xl items-center border-2 border-black bg-white focus-within:shadow-[4px_4px_0_0_#000]"
+            {HERO_SLIDES.map((slideImg, idx) => (
+              <div
+                key={idx}
+                className="relative h-full w-full shrink-0 overflow-hidden"
               >
-                <SearchIcon className="ml-4 h-5 w-5 shrink-0 text-neutral-500" />
+                <img
+                  src={slideImg}
+                  alt={`Food & Drinks Delivery Background ${idx + 1}`}
+                  loading={idx === 0 ? 'eager' : 'lazy'}
+                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${
+                    idx === currentSlide ? 'scale-110' : 'scale-100'
+                  }`}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* HERO FOREGROUND CONTENT */}
+          <div className="mx-auto max-w-5xl px-4 sm:px-8 w-full flex-1 flex flex-col items-center justify-center text-center relative z-10 py-16 sm:py-24">
+            
+            {/* TOP PILL BADGE */}
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-4 sm:px-5 py-1.5 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-md shadow-lg mb-6">
+              <Sparkles size={15} className="text-[#ff5b00]" />
+              <span>NEPAL&apos;S #1 FASTEST DELIVERY PLATFORM</span>
+            </div>
+
+            {/* BOLD HEADLINE */}
+            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.25rem] font-black tracking-tight uppercase leading-[1.05] drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
+              <span className="text-[#ff5b00] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">FOOD &amp; </span>
+              <span className="text-[#00e5ff] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">DRINKS </span>
+              <span className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">DELIVERY</span>
+            </h1>
+
+            {/* SUBTITLE */}
+            <p className="mt-4 text-xs sm:text-sm md:text-base font-bold tracking-[0.2em] text-white uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
+              EASY, FAST &amp; CONVENIENT
+            </p>
+
+            {/* CAPSULE SEARCH BAR */}
+            <form
+              onSubmit={handleHeroSearch}
+              className="mt-8 sm:mt-10 w-full max-w-2xl"
+            >
+              <div className="relative flex items-center rounded-full border border-white/40 bg-white/95 p-1.5 sm:p-2 shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-md transition-all focus-within:border-[#ff5b00] focus-within:ring-4 focus-within:ring-orange-500/30">
+                <SearchIcon className="ml-3 sm:ml-4 h-5 w-5 sm:h-6 sm:w-6 text-slate-400 shrink-0" />
                 <input
                   id="hero-search-input"
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search for food or drinks"
-                  className="h-14 min-w-0 flex-1 bg-transparent px-3 text-base outline-none placeholder:text-neutral-400"
+                  placeholder="Search for food or drinks (beer, whisky, momo, pizza, snacks...)"
+                  className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm md:text-base font-semibold text-slate-900 outline-none placeholder:text-slate-400"
                 />
                 <button
                   type="submit"
-                  className="h-14 bg-black px-6 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800 sm:px-8"
+                  className="flex items-center gap-2 rounded-full bg-[#ff5b00] hover:bg-[#e05000] px-5 sm:px-7 py-2.5 sm:py-3 text-xs sm:text-sm font-black text-white shadow-lg transition-transform hover:scale-105 shrink-0 cursor-pointer"
                 >
-                  Search
+                  <span>SHOP</span>
+                  <ArrowRight size={16} />
                 </button>
-              </form>
+              </div>
+            </form>
 
-              <p className="mt-5 text-sm text-neutral-600">
-                Delivery within{' '}
-                <strong className="font-semibold text-black">45 minutes</strong>
-              </p>
+            {/* SPEED FOOTER */}
+            <p className="mt-5 sm:mt-6 text-xs sm:text-sm font-bold tracking-[0.18em] text-cyan-300 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
+              ALCOHOL, BEVERAGES &amp; FOOD DELIVERY WITHIN 45 MINS
+            </p>
+
+            {/* 5-SLIDE LOOP INDICATORS */}
+            <div className="mt-8 flex items-center gap-2.5 rounded-full bg-black/50 px-3.5 py-1.5 backdrop-blur-md shadow-md">
+              {HERO_SLIDES.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                    idx === currentSlide
+                      ? 'w-8 bg-[#ff5b00] shadow-md shadow-orange-500/50'
+                      : 'w-2.5 bg-white/70 hover:bg-white'
+                  }`}
+                  aria-label={`Go to slide ${idx + 1}`}
+                />
+              ))}
             </div>
 
-            {/* product composition */}
-            <div className="relative mx-auto aspect-square w-full max-w-md lg:max-w-none">
-              <div className="absolute inset-[6%] rounded-full bg-white" />
-              <img
-                src="/images/wine.png"
-                alt="Wine"
-                className="absolute bottom-[8%] left-[2%] h-[62%] w-[34%] object-contain drop-shadow-xl"
-              />
-              <img
-                src="/images/whiskey.png"
-                alt="Whiskey"
-                className="absolute bottom-[4%] left-1/2 z-10 h-[82%] w-[40%] -translate-x-1/2 object-contain drop-shadow-2xl"
-              />
-              <img
-                src="/images/spirits.png"
-                alt="Domestic spirits"
-                className="absolute bottom-[8%] right-[2%] h-[62%] w-[34%] object-contain drop-shadow-xl"
-              />
+          </div>
+
+          {/* BOTTOM TRUST BADGES */}
+          <div className="relative z-20 border-t border-white/15 bg-black/60 backdrop-blur-md py-3.5 text-xs font-semibold text-slate-200">
+            <div className="mx-auto flex max-w-7xl items-center justify-around px-4">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={16} className="text-[#ff5b00]" />
+                <span>100% Genuine Quality</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock size={16} className="text-cyan-400" />
+                <span>45 Min Express Delivery</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Award size={16} className="text-[#ff5b00]" />
+                <span>24/7 Late-Night Delivery</span>
+              </div>
             </div>
           </div>
         </section>
