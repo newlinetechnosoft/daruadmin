@@ -7,7 +7,8 @@ import {
   getAdminStatsQuery,
   getAdminUsersQuery,
 } from '#/server/catalog/catalog.queries'
-import { loadOps, mutateOps, nid } from './store'
+import { loadOps, mutateOps, nid, saveOps } from './store'
+import { seedOpsFromCatalog } from './seed-ops'
 import type {
   ActionKey,
   DateRangeKey,
@@ -744,6 +745,65 @@ export const getStaffSessionFn = createServerFn({ method: 'GET' }).handler(
       },
       grants,
     }
+  },
+)
+
+export const upsertBannerFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.string().optional(),
+        title: z.string().min(2),
+        imageUrl: z.string().url(),
+        href: z.string(),
+        placement: z.enum(['home', 'drinks', 'grocery']),
+        active: z.boolean(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requireAdmin()
+    return mutateOps((state) => {
+      if (data.id) {
+        const row = state.banners.find((b) => b.id === data.id)
+        if (row) Object.assign(row, data)
+      } else {
+        state.banners.unshift({ id: nid('bn'), ...data })
+      }
+      return state
+    })
+  })
+
+export const deleteCouponFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => z.object({ id: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin()
+    return mutateOps((state) => {
+      state.coupons = state.coupons.filter((c) => c.id !== data.id)
+      return state
+    })
+  })
+
+export const deleteBannerFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => z.object({ id: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    await requireAdmin()
+    return mutateOps((state) => {
+      state.banners = state.banners.filter((b) => b.id !== data.id)
+      return state
+    })
+  })
+
+export const resetOpsFn = createServerFn({ method: 'POST' }).handler(
+  async () => {
+    await requireAdmin()
+    const [liquor, grocery, users] = await Promise.all([
+      getAdminLiquorProductsQuery(),
+      getAdminGroceryProductsQuery(),
+      getAdminUsersQuery(),
+    ])
+    const fresh = seedOpsFromCatalog({ liquor, grocery, users })
+    return saveOps(fresh)
   },
 )
 
