@@ -199,7 +199,7 @@ export const checkAdminSessionFn = createServerFn({ method: 'GET' }).handler(
     const user = session.user as typeof session.user & { role?: string }
     return {
       authenticated: true,
-      isAdmin: user.role === 'admin',
+      isAdmin: user.role === 'admin' || user.role === 'manager',
       user: {
         id: user.id,
         name: user.name,

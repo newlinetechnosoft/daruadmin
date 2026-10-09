@@ -1,268 +1,242 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import type { LucideIcon } from 'lucide-react'
-import {
-  getAdminStatsFn,
-  getAdminLiquorProductsFn,
-  getAdminGroceryProductsFn,
-} from '#/server/catalog/catalog.functions'
+import { z } from 'zod'
+import { getDashboardFn } from '#/server/operations/operations.functions'
 import { formatNPR } from '#/lib/money'
+import { PageHeader } from '#/components/admin/page-header'
+import { KpiCard } from '#/components/admin/kpi-card'
+import { StatusBadge } from '#/components/admin/status-badge'
+import { LineChart, BarChart, DoughnutChart } from '#/components/admin/charts'
+import { pageClass, cardClass, selectClass } from '#/components/admin/styles'
 import {
-  Wine,
-  ShoppingBag,
-  Tags,
+  Wallet,
+  ShoppingCart,
+  TrendingUp,
   Users,
-  AlertTriangle,
+  Bike,
   Boxes,
-  ArrowUpRight,
+  AlertTriangle,
   Plus,
-  CheckCircle2,
-  XCircle,
-  Sparkles,
 } from 'lucide-react'
 
+const searchSchema = z.object({
+  range: z.enum(['7d', '30d', '90d', 'ytd', 'custom']).optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+})
+
 export const Route = createFileRoute('/admin/')({
-  loader: async () => {
-    const [stats, liquorProducts, groceryProducts] = await Promise.all([
-      getAdminStatsFn(),
-      getAdminLiquorProductsFn(),
-      getAdminGroceryProductsFn(),
-    ])
-    return { stats, liquorProducts, groceryProducts }
+  validateSearch: (s) => searchSchema.parse(s),
+  loaderDeps: ({ search }) => search,
+  loader: async ({ deps }) => {
+    return getDashboardFn({
+      data: {
+        range: deps.range ?? '30d',
+        from: deps.from,
+        to: deps.to,
+      },
+    })
   },
   component: AdminDashboard,
 })
 
-interface RecentItem {
-  id: string
-  name: string
-  primaryImage?: string | null
-  isFeatured: boolean
-  isActive: boolean
-  categoryName: string
-  variants: { price: number }[]
-}
-
-function RecentList({
-  title,
-  icon: Icon,
-  to,
-  items,
-  fallbackImage,
-}: {
-  title: string
-  icon: LucideIcon
-  to: '/admin/liquor' | '/admin/grocery'
-  items: RecentItem[]
-  fallbackImage: string
-}) {
-  return (
-    <section className="border border-black">
-      <div className="flex items-center justify-between border-b border-black px-5 py-4">
-        <div className="flex items-center gap-2.5">
-          <Icon className="h-4 w-4" />
-          <h2 className="text-sm font-black uppercase tracking-tight">
-            {title}
-          </h2>
-        </div>
-        <Link
-          to={to}
-          className="inline-flex items-center gap-1 border-b border-black pb-0.5 text-xs font-semibold transition-opacity hover:opacity-60"
-        >
-          View all <ArrowUpRight className="h-3.5 w-3.5" />
-        </Link>
-      </div>
-
-      {items.length === 0 ? (
-        <p className="px-5 py-10 text-center text-sm text-neutral-500">
-          Nothing here yet.
-        </p>
-      ) : (
-        <ul className="m-0 list-none divide-y divide-black/10 p-0">
-          {items.map((item) => {
-            const primaryVariant = item.variants[0]
-            return (
-              <li
-                key={item.id}
-                className="flex items-center justify-between gap-4 px-5 py-3.5"
-              >
-                <div className="flex min-w-0 items-center gap-3.5">
-                  <img
-                    src={item.primaryImage || fallbackImage}
-                    alt={item.name}
-                    className="h-11 w-11 shrink-0 bg-[#f3f2ee] object-cover"
-                  />
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 text-sm font-semibold">
-                      <span className="truncate">{item.name}</span>
-                      {item.isFeatured && (
-                        <Sparkles
-                          className="h-3 w-3 shrink-0"
-                          aria-label="Featured"
-                        />
-                      )}
-                    </div>
-                    <div className="mt-0.5 text-xs text-neutral-500">
-                      {item.categoryName} · {item.variants.length} variant
-                      {item.variants.length > 1 ? 's' : ''}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="shrink-0 text-right">
-                  <div className="text-sm font-bold tabular-nums">
-                    {formatNPR(primaryVariant.price)}
-                  </div>
-                  <div className="mt-0.5 flex items-center justify-end gap-1 text-[11px] font-medium">
-                    {item.isActive ? (
-                      <span className="flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" /> Active
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-neutral-400">
-                        <XCircle className="h-3 w-3" /> Draft
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </section>
-  )
-}
-
 function AdminDashboard() {
-  const { stats, liquorProducts, groceryProducts } = Route.useLoaderData()
+  const data = Route.useLoaderData()
+  const search = Route.useSearch()
+  const navigate = Route.useNavigate()
+  const range = search.range ?? '30d'
 
-  const recentLiquor = liquorProducts.slice(0, 5)
-  const recentGrocery = groceryProducts.slice(0, 5)
-
-  const metrics: {
-    label: string
-    value: number
-    note: string
-    icon: LucideIcon
-    alert?: boolean
-  }[] = [
+  const kpis = [
     {
-      label: 'Liquor SKUs',
-      value: stats.totalLiquorProducts,
-      note: 'Active in catalog',
-      icon: Wine,
+      label: 'Revenue',
+      value: formatNPR(data.kpis.revenue),
+      note: 'Delivered orders in range',
+      icon: Wallet,
     },
     {
-      label: 'Grocery SKUs',
-      value: stats.totalGroceryProducts,
-      note: 'Mixers & snacks',
-      icon: ShoppingBag,
+      label: 'Orders',
+      value: data.kpis.orders,
+      note: `${data.kpis.sales} delivered`,
+      icon: ShoppingCart,
     },
     {
-      label: 'Brands',
-      value: stats.totalBrands,
-      note: 'Nepal & imported',
-      icon: Tags,
+      label: 'Profit',
+      value: formatNPR(data.kpis.profit),
+      note: 'After estimated COGS & refunds',
+      icon: TrendingUp,
+      tone: 'success' as const,
     },
     {
-      label: 'Stock units',
-      value: stats.totalStockUnits,
-      note: 'Physical bottles/cans',
+      label: 'Customers',
+      value: data.kpis.customers,
+      note: 'Registered accounts',
+      icon: Users,
+    },
+    {
+      label: 'Riders',
+      value: data.kpis.riders,
+      note: `${data.ridersOnline} currently active`,
+      icon: Bike,
+    },
+    {
+      label: 'Inventory units',
+      value: data.kpis.inventory,
+      note: formatNPR(data.inventoryValue) + ' on hand',
       icon: Boxes,
     },
     {
       label: 'Low stock',
-      value: stats.lowStockCount,
-      note: '≤ 20 units remaining',
+      value: data.kpis.lowStock,
+      note: `≤ ${data.catalog.lowStockCount >= 0 ? 20 : 20} units remaining`,
       icon: AlertTriangle,
-      alert: true,
-    },
-    {
-      label: 'Users',
-      value: stats.totalUsers,
-      note: 'Registered accounts',
-      icon: Users,
+      tone: data.kpis.lowStock > 0 ? ('danger' as const) : ('default' as const),
     },
   ]
 
   return (
-    <div className="space-y-10 bg-white p-5 text-[#101010] sm:p-8">
-      {/* Heading */}
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
-            Admin
-          </p>
-          <h1 className="mt-3 text-4xl font-black uppercase leading-[0.9] tracking-tighter sm:text-6xl">
-            Operations
-            <br />
-            dashboard
-          </h1>
-          <p className="mt-4 max-w-md text-sm text-neutral-600">
-            Real-time catalog inventory, stock alerts, and Kathmandu hub
-            metrics.
-          </p>
-        </div>
+    <div className={pageClass}>
+      <PageHeader
+        kicker="Overview"
+        title="Operations dashboard"
+        description="Live catalog inventory plus order, rider, and ledger activity for the Kathmandu hub."
+        actions={
+          <>
+            <select
+              aria-label="Date range"
+              className={`${selectClass} w-auto`}
+              value={range}
+              onChange={(e) =>
+                navigate({
+                  search: { range: e.target.value as typeof range },
+                })
+              }
+            >
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+              <option value="90d">Last 90 days</option>
+              <option value="ytd">Year to date</option>
+            </select>
+            <Link
+              to="/admin/orders"
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4" /> New order
+            </Link>
+          </>
+        }
+      />
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Link
-            to="/admin/liquor"
-            className="inline-flex h-11 items-center gap-2 bg-black px-5 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800"
-          >
-            <Plus className="h-4 w-4" />
-            Add liquor SKU
-          </Link>
-          <Link
-            to="/admin/grocery"
-            className="inline-flex h-11 items-center gap-2 border border-black px-5 text-xs font-semibold uppercase tracking-wider transition-colors hover:bg-black hover:text-white"
-          >
-            <Plus className="h-4 w-4" />
-            Add grocery SKU
-          </Link>
-        </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-7">
+        {kpis.map((k) => (
+          <KpiCard key={k.label} {...k} />
+        ))}
       </div>
 
-      {/* Metrics */}
-      <div className="grid grid-cols-2 gap-px border border-black bg-black md:grid-cols-3 lg:grid-cols-6">
-        {metrics.map((m) => {
-          const Icon = m.icon
-          return (
-            <div key={m.label} className="bg-[#f3f2ee] p-5">
-              <div className="mb-6 flex items-center justify-between text-neutral-500">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em]">
-                  {m.label}
-                </span>
-                <Icon className="h-4 w-4" />
-              </div>
-              <div
-                className={`text-4xl font-black tabular-nums tracking-tighter sm:text-5xl ${
-                  m.alert && m.value > 0 ? 'text-red-700' : ''
-                }`}
-              >
-                {m.value}
-              </div>
-              <div className="mt-2 text-[11px] text-neutral-500">{m.note}</div>
-            </div>
-          )
-        })}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <section className={`${cardClass} p-5 xl:col-span-2`}>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-900">Sales trend</h2>
+            <span className="text-xs text-slate-500">NPR · {range}</span>
+          </div>
+          <LineChart data={data.salesTrend} money />
+        </section>
+        <section className={`${cardClass} p-5`}>
+          <h2 className="mb-2 text-sm font-semibold text-slate-900">
+            Order status
+          </h2>
+          <DoughnutChart data={data.orderStatus} />
+        </section>
       </div>
 
-      {/* Recent */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <RecentList
-          title="Recent liquor inventory"
-          icon={Wine}
-          to="/admin/liquor"
-          items={recentLiquor}
-          fallbackImage="https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=100&q=80"
-        />
-        <RecentList
-          title="Recent grocery & munchies"
-          icon={ShoppingBag}
-          to="/admin/grocery"
-          items={recentGrocery}
-          fallbackImage="https://images.unsplash.com/photo-1566478989037-eec170784d0b?auto=format&fit=crop&w=100&q=80"
-        />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section className={`${cardClass} p-5`}>
+          <h2 className="mb-3 text-sm font-semibold text-slate-900">
+            Orders by status
+          </h2>
+          <BarChart data={data.orderStatus} />
+        </section>
+        <section className={`${cardClass} overflow-hidden`}>
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+            <h2 className="text-sm font-semibold text-slate-900">Top products</h2>
+            <Link to="/admin/liquor" className="text-xs font-medium text-blue-600">
+              Catalog
+            </Link>
+          </div>
+          <ul className="m-0 divide-y divide-slate-100 p-0">
+            {data.topProducts.map((p) => (
+              <li key={p.name} className="flex items-center justify-between gap-3 px-5 py-3">
+                <div>
+                  <div className="text-sm font-medium text-slate-900">{p.name}</div>
+                  <div className="text-xs text-slate-500">{p.qty} sold</div>
+                </div>
+                <div className="text-sm font-semibold tabular-nums">
+                  {formatNPR(p.revenue)}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section className={`${cardClass} overflow-hidden`}>
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+            <h2 className="text-sm font-semibold text-slate-900">Recent orders</h2>
+            <Link to="/admin/orders" className="text-xs font-medium text-blue-600">
+              View all
+            </Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="text-[11px] tracking-wider text-slate-400 uppercase">
+                  <th className="px-5 py-2 font-medium">Order</th>
+                  <th className="px-3 py-2 font-medium">Customer</th>
+                  <th className="px-3 py-2 font-medium">Status</th>
+                  <th className="px-5 py-2 text-right font-medium">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recentOrders.map((o) => (
+                  <tr key={o.id} className="border-t border-slate-100">
+                    <td className="px-5 py-3">
+                      <a
+                        href={`/admin/orders/${o.id}`}
+                        className="font-medium text-blue-700 hover:underline"
+                      >
+                        {o.number}
+                      </a>
+                    </td>
+                    <td className="px-3 py-3 text-slate-600">{o.customerName}</td>
+                    <td className="px-3 py-3">
+                      <StatusBadge value={o.status} />
+                    </td>
+                    <td className="px-5 py-3 text-right font-semibold tabular-nums">
+                      {formatNPR(o.total)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section className={`${cardClass} p-5`}>
+          <h2 className="mb-3 text-sm font-semibold text-slate-900">
+            Recent activity
+          </h2>
+          <ul className="m-0 space-y-3 p-0">
+            {data.activities.map((a) => (
+              <li key={a.id} className="flex gap-3 text-sm">
+                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                <div>
+                  <div className="font-medium text-slate-800">{a.detail}</div>
+                  <div className="text-xs text-slate-500">
+                    {a.actor} · {a.module} · {new Date(a.at).toLocaleString()}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
     </div>
   )
