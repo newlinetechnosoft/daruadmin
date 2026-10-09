@@ -431,7 +431,7 @@ function GroceryPage() {
           </div>
         </div>
       )}
-
+      
       <Footer />
     </div>
   )

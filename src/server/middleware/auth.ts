@@ -25,8 +25,8 @@ export async function requireAuth() {
 export async function requireAdmin() {
   const session = await requireAuth()
   const user = session.user as typeof session.user & { role?: string }
-  if (user.role !== 'admin') {
-    throw new Error('Forbidden: Administrator privileges required')
+  if (user.role !== 'admin' && user.role !== 'manager') {
+    throw new Error('Forbidden: Staff privileges required')
   }
   return session
 }
