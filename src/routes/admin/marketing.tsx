@@ -8,7 +8,6 @@ import {
   deleteBannerFn,
   updateReviewFn,
 } from '#/server/operations/operations.functions'
-import type { Coupon, Banner, Review } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/admin/page-header'
 import { KpiCard } from '#/components/admin/kpi-card'
@@ -20,7 +19,6 @@ import {
   tdClass,
   btnPrimary,
   btnSecondary,
-  btnGhost,
   inputClass,
   selectClass,
   labelClass,
@@ -32,12 +30,9 @@ import {
   Plus,
   Copy,
   Trash2,
-  CheckCircle,
-  Eye,
   X,
   Check,
   XCircle,
-  Sparkles,
 } from 'lucide-react'
 import { toast } from 'sonner'
 

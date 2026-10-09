@@ -30,18 +30,15 @@ import {
   Plus,
   Download,
   Eye,
-  CheckCircle2,
   Bike,
   Printer,
   X,
   CreditCard,
   MapPin,
   Clock,
-  User,
   Phone,
   Mail,
   Receipt,
-  FileText,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -119,21 +116,25 @@ function AdminOrdersPage() {
             sku: v.sku,
             price: v.price,
             variantId: v.id,
-            variantName: v.sizeVolume,
+            variantName: v.name || `${v.volumeMl}ml`,
           })
         }
       }
     }
     for (const g of grocery) {
-      list.push({
-        id: g.id,
-        type: 'grocery',
-        name: g.name,
-        sku: g.sku,
-        price: g.price,
-        variantId: g.id,
-        variantName: g.weightVolume || 'Standard',
-      })
+      if (g.variants && g.variants.length > 0) {
+        for (const v of g.variants) {
+          list.push({
+            id: g.id,
+            type: 'grocery',
+            name: g.name,
+            sku: v.sku,
+            price: v.price,
+            variantId: v.id,
+            variantName: v.name || `${v.quantity} ${v.unit}`,
+          })
+        }
+      }
     }
     return list
   }, [liquor, grocery])
@@ -331,7 +332,7 @@ function AdminOrdersPage() {
           value={pendingCount}
           note="Needs warehouse confirmation"
           icon={Clock}
-          tone={pendingCount > 0 ? 'warning' : 'default'}
+          tone={pendingCount > 0 ? 'danger' : 'default'}
         />
         <KpiCard
           label="Out For Delivery"
@@ -435,7 +436,7 @@ function AdminOrdersPage() {
                       </td>
 
                       <td className={tdClass}>
-                        <StatusBadge status={order.status} />
+                        <StatusBadge value={order.status} />
                       </td>
 
                       <td className={tdClass}>
@@ -515,7 +516,7 @@ function AdminOrdersPage() {
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-slate-500 font-medium">Status:</span>
-                  <StatusBadge status={selectedOrder.status} />
+                  <StatusBadge value={selectedOrder.status} />
                 </div>
 
                 <div className="flex items-center gap-2">
