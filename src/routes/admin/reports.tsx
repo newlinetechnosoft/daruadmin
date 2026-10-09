@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { getOpsBundleFn } from '#/server/operations/operations.functions'
 import { formatNPR } from '#/lib/money'
@@ -7,23 +7,16 @@ import { KpiCard } from '#/components/admin/kpi-card'
 import {
   pageClass,
   cardClass,
-  tableWrap,
-  thClass,
-  tdClass,
   btnPrimary,
   btnSecondary,
 } from '#/components/admin/styles'
 import {
-  BarChart3,
   Download,
   Printer,
   DollarSign,
   Truck,
   Building,
   Package,
-  Calendar,
-  X,
-  FileText,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -104,12 +97,14 @@ function AdminReportsPage() {
     const liquorRows = liquor.flatMap((l) =>
       (l.variants || []).map(
         (v) =>
-          `"Liquor","${v.sku}","${l.name}","${l.brandName || ''}","${l.categoryName || ''}","${v.sizeVolume}",${v.stock ?? 25},${v.price}`
-      )
+          `"Liquor","${v.sku}","${l.name}","${l.brandName || ''}","${l.categoryName || ''}","${v.name || `${v.volumeMl}ml`}",${v.stock ?? 25},${v.price}`,
+      ),
     )
-    const groceryRows = grocery.map(
-      (g) =>
-        `"Grocery","${g.sku}","${g.name}","${g.brand || ''}","${g.categoryName || ''}","${g.weightVolume || 'Standard'}",${g.stock ?? 30},${g.price}`
+    const groceryRows = grocery.flatMap((g) =>
+      (g.variants || []).map(
+        (v) =>
+          `"Grocery","${v.sku}","${g.name}","","${g.categoryName || ''}","${v.name || `${v.quantity} ${v.unit}`}",${v.stock ?? 30},${v.price}`,
+      ),
     )
     const blob = new Blob([headers + [...liquorRows, ...groceryRows].join('\n')], {
       type: 'text/csv',

@@ -306,7 +306,7 @@ function AdminRidersPage() {
                 key={r.id}
                 style={{ top: `${topPos}%`, left: `${leftPos}%` }}
                 className="absolute -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
-                onClick={() => setSelectedRider(r)}
+                onClick={() => toast.info(`Courier: ${r.name} (${r.zone}) • Status: ${r.status}`)}
               >
                 <div className="relative flex items-center justify-center">
                   <div className="absolute w-6 h-6 rounded-full bg-blue-500/30 animate-ping"></div>
