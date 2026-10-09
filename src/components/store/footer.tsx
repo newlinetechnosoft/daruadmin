@@ -65,12 +65,10 @@ export function Footer() {
                 className="text-[21px] font-black tracking-[-0.07em] text-white uppercase inline-block"
               >
                 <img
-                  src="/mezmani_logo.png"
-                  alt="MEZMANI"
+                  src="/mezmani_logo_bg.svg"
                   width="180"
                   height="180"
                   loading="lazy"
-                  className='transition-all duration-300 hover:scale-110'
                 />
               </Link>
               <p className="max-w-[260px] text-[11px] leading-[1.8] text-[#777]">

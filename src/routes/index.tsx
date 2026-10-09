@@ -23,10 +23,10 @@ const FOOD_ITEMS = [
 ]
 
 const HERO_SLIDES = [
-  '/images/butwal-night.webp',
   '/images/butwal_night_view.png',
-  '/images/drinks-bg.jpg',
-  'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=1600&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1436076863939-06870fe779c2?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+  'https://plus.unsplash.com/premium_photo-1684952849219-5a0d76012ed2?q=80&w=1932&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+  '/images/pizza-bg.jpg',
 ]
 
 const FEATURES = [
@@ -75,6 +75,7 @@ function DrinkTileBody({
   tone,
   chip = 'bg-black text-white',
   size = 'sm',
+  imageClassName = ''
 }: {
   /** label split into lines, e.g. ['Domestic', 'Spirits'] */
   lines: string[]
@@ -85,6 +86,7 @@ function DrinkTileBody({
   /** hover arrow chip colors */
   chip?: string
   size?: LabelSize
+  imageClassName?: string
 }) {
   return (
     <>
@@ -93,7 +95,7 @@ function DrinkTileBody({
         src={src}
         alt={alt}
         loading="lazy"
-        className="absolute inset-y-0 right-0 h-full w-[calc(100%-2.5rem)] object-contain p-2 drop-shadow-[0_16px_22px_rgba(0,0,0,0.28)] transition-transform duration-500 ease-out  group-hover:-rotate-2 sm:w-[calc(100%-3rem)] sm:p-3"
+        className={`absolute inset-y-0 right-0 h-full w-[calc(100%-2.5rem)] object-contain p-2 drop-shadow-[0_16px_22px_rgba(0,0,0,0.28)] transition-transform duration-500 ease-out  group-hover:-rotate-2 sm:w-[calc(100%-3rem)] sm:p-3 ${imageClassName}`}
       />
 
       {/* Vertical label, reads bottom-to-top, anchored bottom-left */}
@@ -253,7 +255,7 @@ export function HomePage() {
         {/* HERO WITH 5 AUTO-SCROLLING BACKGROUNDS IN 5-SECOND LOOP */}
         {/* HERO SECTION MATCHING USER REFERENCE DESIGN */}
         <section
-          className="relative min-h-[82vh] sm:min-h-[88vh] lg:min-h-[90vh] flex flex-col justify-between overflow-hidden bg-[#16082b] select-none"
+          className="relative min-h-[82vh] sm:min-h-[88vh] lg:min-h-[90vh] flex flex-col justify-between overflow-hidden bg-[#12061F] select-none"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
           aria-label="Hero Showcase"
@@ -272,53 +274,60 @@ export function HomePage() {
                   src={slideImg}
                   alt={`Food & Drinks Delivery Background ${idx + 1}`}
                   loading={idx === 0 ? 'eager' : 'lazy'}
-                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${
-                    idx === currentSlide ? 'scale-110' : 'scale-100'
-                  }`}
+                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${idx === currentSlide ? 'scale-110' : 'scale-100'
+                    }`}
                 />
               </div>
             ))}
           </div>
 
+          {/* ── COLOR SCRIM LAYERS ─────────────────────────────────────────────
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_45%,rgba(255,122,47,0.18),transparent_70%)]" />
+          <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_200px_70px_rgba(9,2,16,0.9)]" /> */}
+
           {/* HERO FOREGROUND CONTENT */}
           <div className="mx-auto max-w-5xl px-4 sm:px-8 w-full flex-1 flex flex-col items-center justify-center text-center relative z-10 py-16 sm:py-24">
 
             {/* TOP PILL BADGE */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-4 sm:px-5 py-1.5 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-md shadow-lg mb-6">
-              <Sparkles size={15} className="text-[#ff5b00]" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#0A0413]/70 px-4 sm:px-5 py-1.5 text-xs font-bold uppercase tracking-widest text-[#FFF6EF] backdrop-blur-md shadow-[0_8px_24px_-8px_rgba(0,0,0,0.8)] mb-6">
+              <Sparkles size={15} className="text-[#FF7A2F]" />
               <span>NEPAL&apos;S #1 FASTEST DELIVERY PLATFORM</span>
             </div>
 
-            {/* BOLD HEADLINE */}
-            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.25rem] font-black tracking-tight uppercase leading-[1.05] drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
-              <span className="text-[#ff5b00] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">FOOD &amp; </span>
-              <span className="text-[#00e5ff] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">DRINKS </span>
-              <span className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">DELIVERY</span>
+            {/* BOLD HEADLINE — gradient-filled type instead of flat saturated fills */}
+            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.25rem] font-black tracking-tight uppercase leading-[1.05]">
+              <span className="bg-gradient-to-r from-[#FFA24D] via-[#FF7A2F] to-[#FF5B00] bg-clip-text text-transparent drop-shadow-[0_3px_12px_rgba(0,0,0,0.65)]">
+                FOOD &amp;{' '}
+              </span>
+              <span className="bg-gradient-to-r from-[#9BF2FF] via-[#5FE3F5] to-[#22C7E0] bg-clip-text text-transparent drop-shadow-[0_3px_12px_rgba(0,0,0,0.65)]">
+                DRINKS{' '}
+              </span>
+              <span className="text-[#FFF6EF] drop-shadow-[0_3px_12px_rgba(0,0,0,0.7)]">
+                DELIVERY
+              </span>
             </h1>
 
-            {/* SUBTITLE */}
-            <p className="mt-4 text-xs sm:text-sm md:text-base font-bold tracking-[0.2em] text-white uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
+            {/* SUBTITLE — warm white instead of pure white, reads richer on plum */}
+            <p className="mt-4 text-xs sm:text-sm md:text-base font-bold tracking-[0.2em] text-[#FFF6EF]/85 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
               EASY, FAST &amp; CONVENIENT
             </p>
 
             {/* CAPSULE SEARCH BAR */}
-            <form
-              onSubmit={handleHeroSearch}
-              className="mt-8 sm:mt-10 w-full max-w-2xl"
-            >
-              <div className="relative flex items-center rounded-full border border-white/40 bg-white/95 p-1.5 sm:p-2 shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-md transition-all focus-within:border-[#ff5b00] focus-within:ring-4 focus-within:ring-orange-500/30">
-                <SearchIcon className="ml-3 sm:ml-4 h-5 w-5 sm:h-6 sm:w-6 text-slate-400 shrink-0" />
+            <form onSubmit={handleHeroSearch} className="mt-8 sm:mt-10 w-full max-w-2xl">
+              <div className="relative flex items-center rounded-full border border-white/50 bg-[#FFF9F5]/95 p-1.5 sm:p-2 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.75)] backdrop-blur-md transition-all focus-within:border-[#FF7A2F] focus-within:ring-4 focus-within:ring-[#FF7A2F]/25">
+                <SearchIcon className="ml-3 sm:ml-4 h-5 w-5 sm:h-6 sm:w-6 text-[#8B7A93] shrink-0" />
                 <input
                   id="hero-search-input"
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search for food or drinks (beer, whisky, momo, pizza, snacks...)"
-                  className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm md:text-base font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                  className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm md:text-base font-semibold text-[#2A1035] outline-none placeholder:text-[#8B7A93]"
                 />
                 <button
                   type="submit"
-                  className="flex items-center gap-2 rounded-full bg-[#ff5b00] hover:bg-[#e05000] px-5 sm:px-7 py-2.5 sm:py-3 text-xs sm:text-sm font-black text-white shadow-lg transition-transform hover:scale-105 shrink-0 cursor-pointer"
+                  className="flex items-center gap-2 rounded-full bg-gradient-to-b from-[#FF8A3D] to-[#FF5B00] px-5 sm:px-7 py-2.5 sm:py-3 text-xs sm:text-sm font-black text-white shadow-[0_10px_28px_-8px_rgba(255,91,0,0.75)] transition-all hover:scale-105 hover:shadow-[0_14px_34px_-8px_rgba(255,91,0,0.9)] shrink-0 cursor-pointer"
                 >
                   <span>SHOP</span>
                   <ArrowRight size={16} />
@@ -326,43 +335,41 @@ export function HomePage() {
               </div>
             </form>
 
-            {/* SPEED FOOTER */}
-            <p className="mt-5 sm:mt-6 text-xs sm:text-sm font-bold tracking-[0.18em] text-cyan-300 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
+            {/* SPEED FOOTER — softened aqua so it accents instead of competing */}
+            <p className="mt-5 sm:mt-6 text-xs sm:text-sm font-bold tracking-[0.18em] text-[#7FE7F7] uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
               ALCOHOL, BEVERAGES &amp; FOOD DELIVERY WITHIN 45 MINS
             </p>
 
             {/* 5-SLIDE LOOP INDICATORS */}
-            <div className="mt-8 flex items-center gap-2.5 rounded-full bg-black/50 px-3.5 py-1.5 backdrop-blur-md shadow-md">
+            <div className="mt-8 flex items-center gap-2.5 rounded-full bg-[#0A0413]/60 px-3.5 py-1.5 backdrop-blur-md shadow-[0_8px_20px_-8px_rgba(0,0,0,0.8)] ring-1 ring-white/10">
               {HERO_SLIDES.map((_, idx) => (
                 <button
                   key={idx}
                   type="button"
                   onClick={() => setCurrentSlide(idx)}
-                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                    idx === currentSlide
-                      ? 'w-8 bg-[#ff5b00] shadow-md shadow-orange-500/50'
-                      : 'w-2.5 bg-white/70 hover:bg-white'
-                  }`}
+                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${idx === currentSlide
+                    ? 'w-8 bg-gradient-to-r from-[#FF8A3D] to-[#FF5B00] shadow-[0_0_14px_rgba(255,122,47,0.7)]'
+                    : 'w-2.5 bg-white/35 hover:bg-white/70'
+                    }`}
                   aria-label={`Go to slide ${idx + 1}`}
                 />
               ))}
             </div>
-
           </div>
 
           {/* BOTTOM TRUST BADGES */}
-          <div className="relative z-20 border-t border-white/15 bg-black/60 backdrop-blur-md py-3.5 text-xs font-semibold text-slate-200">
+          <div className="relative z-20 border-t border-white/10 bg-[#0A0413]/70 backdrop-blur-md py-3.5 text-xs font-semibold text-[#FFF6EF]/80">
             <div className="mx-auto flex max-w-7xl items-center justify-around px-4">
               <div className="flex items-center gap-2">
-                <ShieldCheck size={16} className="text-[#ff5b00]" />
+                <ShieldCheck size={16} className="text-[#FF7A2F]" />
                 <span>100% Genuine Quality</span>
               </div>
               <div className="flex items-center gap-2">
-                <Clock size={16} className="text-cyan-400" />
+                <Clock size={16} className="text-[#5FE3F5]" />
                 <span>45 Min Express Delivery</span>
               </div>
               <div className="flex items-center gap-2">
-                <Award size={16} className="text-[#ff5b00]" />
+                <Award size={16} className="text-[#FFC978]" />
                 <span>24/7 Late-Night Delivery</span>
               </div>
             </div>
@@ -442,6 +449,7 @@ export function HomePage() {
                   tone="text-white/90"
                   chip="bg-white text-black"
                   size="lg"
+                  imageClassName="left-6 right-auto w-full p-0 object-center sm:w-full sm:p-0 scale-[1.15] sm:scale-[1.35]"
                 />
               </Link>
 
@@ -530,10 +538,17 @@ export function HomePage() {
           >
             <div className="flex justify-center lg:justify-start">
               <div className="w-60 rounded-[2.5rem] bg-black p-2.5 shadow-2xl sm:w-72">
-                <div className="relative flex aspect-[9/17] flex-col justify-between overflow-hidden rounded-[2rem] bg-white p-6">
+                <div className="relative flex aspect-[9/17] flex-col justify-between overflow-hidden rounded-[2rem] bg-[#c3e58f] p-6">
                   <div>
                     <span className="text-xs font-black uppercase tracking-tighter">
-                      Mezmani
+                      <img
+                        src="/mezmani_logo.png"
+                        alt="LOGO"
+                        width="120"
+                        height="120"
+                        loading="lazy"
+                        className="-ml-1.5"
+                      />
                     </span>
                     <strong className="mt-4 block text-3xl font-black uppercase leading-[0.92] tracking-tighter">
                       Good times
@@ -542,10 +557,10 @@ export function HomePage() {
                     </strong>
                   </div>
                   <img
-                    src="/images/beer.png"
+                    src="/images/wine.png"
                     alt=""
                     aria-hidden="true"
-                    className="mx-auto h-[55%] w-full object-contain"
+                    className="mx-auto h-[55%] w-full object-contain lg:col-span-4 lg:col-start-9 lg:row-start-2 bg-[#c3e58f]"
                   />
                 </div>
               </div>
@@ -782,6 +797,6 @@ export function HomePage() {
           </p>
         </div>
       </footer>
-    </div>
+    </div >
   )
 }

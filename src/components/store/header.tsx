@@ -45,9 +45,17 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
         {/* LOGO */}
         <Link
           to="/"
-          className="text-[21px] font-black tracking-[-0.07em] text-[#181818] uppercase"
+          className="text-xl font-black uppercase tracking-tighter sm:text-2xl"
         >
-          MEZMANI
+          {/*Mezmani */}
+          <img
+            src="/mezmani_logo.png"
+            alt="LOGO"
+            width="180"
+            height="180"
+            loading="lazy"
+            className='transition-all duration-300 hover:scale-110'
+          />
         </Link>
 
         {/* DESKTOP NAV LINKS */}
@@ -79,11 +87,10 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
           {/* Quick search input (toggle or persistent) */}
           <form
             onSubmit={handleSearchSubmit}
-            className={`transition-all duration-200 ${
-              searchOpen
+            className={`transition-all duration-200 ${searchOpen
                 ? 'flex items-center w-56 sm:w-72'
                 : 'hidden md:flex md:w-44 lg:w-56'
-            }`}
+              }`}
           >
             <div className="relative w-full">
               <input
