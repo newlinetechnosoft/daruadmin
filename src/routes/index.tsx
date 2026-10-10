@@ -197,7 +197,7 @@ export function HomePage() {
               width="180"
               height="180"
               loading="lazy"
-              className='transition-all duration-300 hover:scale-110'
+              className="transition-all duration-300 hover:scale-110"
             />
           </Link>
 
@@ -274,9 +274,8 @@ export function HomePage() {
                   src={slideImg}
                   alt={`Food & Drinks Delivery Background ${idx + 1}`}
                   loading={idx === 0 ? 'eager' : 'lazy'}
-                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${
-                    idx === currentSlide ? 'scale-110' : 'scale-100'
-                  }`}
+                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${idx === currentSlide ? 'scale-110' : 'scale-100'
+                    }`}
                 />
               </div>
             ))}
@@ -284,7 +283,6 @@ export function HomePage() {
 
           {/* HERO FOREGROUND CONTENT */}
           <div className="mx-auto max-w-5xl px-4 sm:px-8 w-full flex-1 flex flex-col items-center justify-center text-center relative z-10 py-16 sm:py-24">
-
             {/* TOP PILL BADGE */}
             <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-4 sm:px-5 py-1.5 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-md shadow-lg mb-6">
               <Sparkles size={15} className="text-[#ff5b00]" />
@@ -293,9 +291,15 @@ export function HomePage() {
 
             {/* BOLD HEADLINE */}
             <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.25rem] font-black tracking-tight uppercase leading-[1.05] drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
-              <span className="text-[#ff5b00] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">FOOD &amp; </span>
-              <span className="text-[#00e5ff] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">DRINKS </span>
-              <span className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">DELIVERY</span>
+              <span className="text-[#ff5b00] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                FOOD &amp;{' '}
+              </span>
+              <span className="text-[#00e5ff] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                DRINKS{' '}
+              </span>
+              <span className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                DELIVERY
+              </span>
             </h1>
 
             {/* SUBTITLE */}
@@ -340,16 +344,14 @@ export function HomePage() {
                   key={idx}
                   type="button"
                   onClick={() => setCurrentSlide(idx)}
-                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                    idx === currentSlide
+                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${idx === currentSlide
                       ? 'w-8 bg-[#ff5b00] shadow-md shadow-orange-500/50'
                       : 'w-2.5 bg-white/70 hover:bg-white'
-                  }`}
+                    }`}
                   aria-label={`Go to slide ${idx + 1}`}
                 />
               ))}
             </div>
-
           </div>
 
           {/* BOTTOM TRUST BADGES */}
@@ -372,7 +374,10 @@ export function HomePage() {
         </section>
 
         {/* SHOP BY DRINKS */}
-        <section className="h-[90%] scroll-mt-24 bg-white py-16 sm:py-24" id="drinks">
+        <section
+          className="h-[90%] scroll-mt-24 bg-white py-16 sm:py-24"
+          id="drinks"
+        >
           <div className={wrap}>
             <div className="mb-8 flex items-end justify-between gap-6 sm:mb-12">
               <div>
@@ -532,10 +537,17 @@ export function HomePage() {
           >
             <div className="flex justify-center lg:justify-start">
               <div className="w-60 rounded-[2.5rem] bg-black p-2.5 shadow-2xl sm:w-72">
-                <div className="relative flex aspect-[9/17] flex-col justify-between overflow-hidden rounded-[2rem] bg-white p-6">
+                <div className="relative flex aspect-[9/17] flex-col justify-between overflow-hidden rounded-[2rem] bg-[#c3e58f] p-6">
                   <div>
                     <span className="text-xs font-black uppercase tracking-tighter">
-                      Mezmani
+                      <img
+                        src="/mezmani_logo.png"
+                        alt="LOGO"
+                        width="180"
+                        height="180"
+                        loading="lazy"
+                        className="-ml-2"
+                      />
                     </span>
                     <strong className="mt-4 block text-3xl font-black uppercase leading-[0.92] tracking-tighter">
                       Good times
@@ -544,7 +556,7 @@ export function HomePage() {
                     </strong>
                   </div>
                   <img
-                    src="/images/beer.png"
+                    src="/images/wine.png"
                     alt=""
                     aria-hidden="true"
                     className="mx-auto h-[55%] w-full object-contain"
