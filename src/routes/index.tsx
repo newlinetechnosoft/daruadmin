@@ -2,9 +2,22 @@ import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { getFrontpageDataFn } from '#/server/catalog/catalog.functions'
-import { useCart } from '#/lib/cart-context'
+import { Header } from '#/components/store/header'
+import { Footer } from '#/components/store/footer'
 import { toast } from 'sonner'
-import { Sparkles, ArrowRight, ShieldCheck, Clock, Award } from 'lucide-react'
+import {
+  Sparkles,
+  ArrowRight,
+  ShieldCheck,
+  Clock,
+  Award,
+  Search,
+} from 'lucide-react'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Badge } from '#/components/ui/badge'
+import { Card, CardContent } from '#/components/ui/card'
+import { Avatar, AvatarFallback } from '#/components/ui/avatar'
 
 export const Route = createFileRoute('/')({
   loader: async () => {
@@ -23,7 +36,6 @@ const FOOD_ITEMS = [
 ]
 
 const HERO_SLIDES = [
-  //'/images/butwal-night.webp',
   '/images/butwal_night_view.png',
   '/images/drinks-bg.jpg',
   'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=1600&auto=format&fit=crop',
@@ -32,116 +44,40 @@ const HERO_SLIDES = [
 ]
 
 const FEATURES = [
-  { title: '40 minute delivery', body: 'Fast delivery whenever you need it.' },
-  { title: 'Secure payments', body: 'Safe and convenient payment options.' },
-  { title: '24/7 customer service', body: "We're always here to help." },
+  {
+    title: '40-minute express delivery',
+    body: 'Fast dispatched couriers directly to your doorstep in Kathmandu Valley.',
+    icon: Clock,
+  },
+  {
+    title: 'Secure cashless payments',
+    body: 'Fonepay QR, eSewa, Khalti, ConnectIPS and Cash on Delivery.',
+    icon: ShieldCheck,
+  },
+  {
+    title: 'Genuine manufacturer stock',
+    body: 'Direct excise-stamped bottles and verified supplier relationships.',
+    icon: Award,
+  },
 ]
 
 const REVIEWS = [
-  { quote: 'Too polite & for sure best service.', name: 'Yogendra Dhami' },
   {
-    quote: 'One of the best service providers for late night.',
+    quote: 'Too polite and for sure the best late-night delivery service in Kathmandu.',
+    name: 'Yogendra Dhami',
+  },
+  {
+    quote: 'Chilled beer delivered within 35 minutes when everything else was closed.',
     name: 'Ramkrishna Baruwal',
   },
   {
-    quote: 'Fast delivery and very cooperative. Highly recommended.',
+    quote: 'Fast dispatch and cooperative couriers. Authentic liquor seal intact.',
     name: 'Krishant Rana',
   },
 ]
 
-/* ------------------------------------------------------------------ */
-/*  Drink tile primitives                                              */
-/* ------------------------------------------------------------------ */
-
-/**
- * Compact tile: solid color, product cutout filling the space, vertical
- * label on the left edge. The grid needs `group/bento` so that hovering
- * one tile softly dims the others.
- */
-const drinkTile =
-  'group relative isolate block h-full min-w-0 overflow-hidden rounded-2xl ring-1 ring-black/10 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl hover:ring-black/40 group-hover/bento:[&:not(:hover)]:opacity-60 focus-visible:-translate-y-1 focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none'
-
-/** Vertical label scale, tuned per tile footprint */
-const LABEL_SIZE = {
-  sm: 'text-xl sm:text-2xl',
-  md: 'text-2xl sm:text-4xl',
-  lg: 'text-4xl sm:text-6xl',
-} as const
-
-type LabelSize = keyof typeof LABEL_SIZE
-
-function DrinkTileBody({
-  lines,
-  src,
-  alt,
-  tone,
-  chip = 'bg-black text-white',
-  size = 'sm',
-}: {
-  /** label split into lines, e.g. ['Domestic', 'Spirits'] */
-  lines: string[]
-  src: string
-  alt: string
-  /** label text color class */
-  tone: string
-  /** hover arrow chip colors */
-  chip?: string
-  size?: LabelSize
-}) {
-  return (
-    <>
-      {/* Product cutout — takes everything right of the label strip */}
-      <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        className="absolute inset-y-0 right-0 h-full w-[calc(100%-2.5rem)] object-contain p-2 drop-shadow-[0_16px_22px_rgba(0,0,0,0.28)] transition-transform duration-500 ease-out  group-hover:-rotate-2 sm:w-[calc(100%-3rem)] sm:p-3"
-      />
-
-      {/* Vertical label, reads bottom-to-top, anchored bottom-left */}
-      <span
-        className={`pointer-events-none absolute bottom-3 left-3 rotate-180 font-black uppercase leading-[0.9] tracking-tighter transition-transform duration-300 [writing-mode:vertical-rl] group-hover:-translate-y-1 sm:bottom-4 sm:left-4 ${LABEL_SIZE[size]} ${tone}`}
-      >
-        {lines.map((line, i) => (
-          <span key={line}>
-            {line}
-            {i < lines.length - 1 && <br />}
-          </span>
-        ))}
-      </span>
-
-      {/* Hover arrow chip */}
-      <span
-        aria-hidden="true"
-        className={`pointer-events-none absolute right-3 top-3 z-10 grid h-8 w-8 -translate-y-1 place-items-center rounded-full text-sm font-bold opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 ${chip}`}
-      >
-        →
-      </span>
-    </>
-  )
-}
-
-function SearchIcon({ className = 'h-5 w-5' }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3.5-3.5" />
-    </svg>
-  )
-}
-
 export function HomePage() {
   const navigate = useNavigate()
-  const { itemCount, setIsOpen } = useCart()
   const [searchQuery, setSearchQuery] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -177,90 +113,19 @@ export function HomePage() {
     setPhoneNumber('')
   }
 
-  const wrap = 'mx-auto w-full max-w-7xl px-5 sm:px-8'
-  const eyebrow =
-    'text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500'
-
   return (
-    <div className="min-h-screen bg-white text-[#101010] antialiased">
-      {/* HEADER */}
-      <header className="sticky top-0 z-40 border-b border-black/10 bg-white/90 backdrop-blur">
-        <div className={`${wrap} flex h-16 items-center justify-between gap-6`}>
-          <Link
-            to="/"
-            className="text-xl font-black uppercase tracking-tighter sm:text-2xl"
-          >
-            {/*Mezmani */}
-            <img
-              src="/mezmani_logo.png"
-              alt="LOGO"
-              width="180"
-              height="180"
-              loading="lazy"
-              className="transition-all duration-300 hover:scale-110"
-            />
-          </Link>
+    <div className="min-h-screen bg-background text-foreground antialiased flex flex-col font-sans">
+      <Header />
 
-          <nav className="hidden items-center gap-9 text-sm font-medium md:flex">
-            <Link to="/drinks" className="hover:underline underline-offset-8">
-              Drinks
-            </Link>
-            <Link to="/grocery" className="hover:underline underline-offset-8">
-              Food
-            </Link>
-            <a href="#reviews" className="hover:underline underline-offset-8">
-              Reviews
-            </a>
-            <a href="#about" className="hover:underline underline-offset-8">
-              About
-            </a>
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label="Search"
-              className="grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-neutral-100 cursor-pointer"
-              onClick={() => {
-                const el = document.getElementById('hero-search-input')
-                el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                el?.focus()
-              }}
-            >
-              <SearchIcon />
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-10 items-center gap-2 rounded-full bg-black px-5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 cursor-pointer"
-              onClick={() => setIsOpen(true)}
-            >
-              Cart
-              <span className="grid h-5 min-w-5 place-items-center rounded-full bg-white px-1 text-[11px] font-bold text-black">
-                {itemCount}
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* mobile nav */}
-        <nav className="flex items-center gap-6 overflow-x-auto border-t border-black/5 px-5 py-2.5 text-sm font-medium md:hidden">
-          <Link to="/drinks">Drinks</Link>
-          <Link to="/grocery">Food</Link>
-          <a href="#reviews">Reviews</a>
-          <a href="#about">About</a>
-        </nav>
-      </header>
-
-      <main>
-        {/* HERO WITH 5 AUTO-SCROLLING BACKGROUNDS IN 5-SECOND LOOP */}
-        {/* HERO SECTION MATCHING USER REFERENCE DESIGN */}
+      <main className="flex-1">
+        {/* HERO SHOWCASE */}
         <section
-          className="relative min-h-[82vh] sm:min-h-[88vh] lg:min-h-[90vh] flex flex-col justify-between overflow-hidden bg-[#16082b] select-none"
+          className="relative min-h-[75vh] sm:min-h-[82vh] lg:min-h-[86vh] flex flex-col justify-between overflow-hidden bg-black select-none"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
           aria-label="Hero Showcase"
         >
-          {/* 5-BACKGROUND HORIZONTAL SLIDING TRACK WITH 5-SECOND LOOP */}
+          {/* Horizontal Sliding Backgrounds */}
           <div
             className="absolute inset-0 flex transition-transform duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]"
             style={{ transform: `translateX(-${currentSlide * 100}%)` }}
@@ -272,530 +137,346 @@ export function HomePage() {
               >
                 <img
                   src={slideImg}
-                  alt={`Food & Drinks Delivery Background ${idx + 1}`}
+                  alt={`Food and Drinks Delivery ${idx + 1}`}
                   loading={idx === 0 ? 'eager' : 'lazy'}
-                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${idx === currentSlide ? 'scale-110' : 'scale-100'
-                    }`}
+                  className={`h-full w-full object-cover object-center opacity-40 transition-transform duration-[7000ms] ease-out ${
+                    idx === currentSlide ? 'scale-105' : 'scale-100'
+                  }`}
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-black/40 to-black/60" />
               </div>
             ))}
           </div>
 
-          {/* HERO FOREGROUND CONTENT */}
-          <div className="mx-auto max-w-5xl px-4 sm:px-8 w-full flex-1 flex flex-col items-center justify-center text-center relative z-10 py-16 sm:py-24">
-            {/* TOP PILL BADGE */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-4 sm:px-5 py-1.5 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-md shadow-lg mb-6">
-              <Sparkles size={15} className="text-[#ff5b00]" />
-              <span>NEPAL&apos;S #1 FASTEST DELIVERY PLATFORM</span>
-            </div>
+          {/* Hero Foreground Content */}
+          <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 w-full flex-1 flex flex-col items-center justify-center text-center relative z-10 py-16 sm:py-24">
+            {/* Top Pill Badge */}
+            <Badge
+              variant="outline"
+              className="gap-1.5 px-3 py-1 text-xs font-medium text-white border-white/20 bg-black/60 backdrop-blur-md mb-6"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+              <span>Kathmandu Valley Express Delivery</span>
+            </Badge>
 
-            {/* BOLD HEADLINE */}
-            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.25rem] font-black tracking-tight uppercase leading-[1.05] drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
-              <span className="text-[#ff5b00] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-                FOOD &amp;{' '}
-              </span>
-              <span className="text-[#00e5ff] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-                DRINKS{' '}
-              </span>
-              <span className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-                DELIVERY
-              </span>
+            {/* Headline */}
+            <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-white leading-[1.08]">
+              Drinks &amp; Food Delivered In 40 Mins
             </h1>
 
-            {/* SUBTITLE */}
-            <p className="mt-4 text-xs sm:text-sm md:text-base font-bold tracking-[0.2em] text-white uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
-              EASY, FAST &amp; CONVENIENT
+            {/* Subtitle */}
+            <p className="mt-4 text-xs sm:text-sm font-medium tracking-wide text-white/80 max-w-lg">
+              Genuine spirits, cold craft beer, wine, snacks, and late-night munchies to your doorstep.
             </p>
 
-            {/* CAPSULE SEARCH BAR */}
+            {/* Capsule Search Bar */}
             <form
               onSubmit={handleHeroSearch}
-              className="mt-8 sm:mt-10 w-full max-w-2xl"
+              className="mt-8 sm:mt-10 w-full max-w-xl"
             >
-              <div className="relative flex items-center rounded-full border border-white/40 bg-white/95 p-1.5 sm:p-2 shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-md transition-all focus-within:border-[#ff5b00] focus-within:ring-4 focus-within:ring-orange-500/30">
-                <SearchIcon className="ml-3 sm:ml-4 h-5 w-5 sm:h-6 sm:w-6 text-slate-400 shrink-0" />
-                <input
+              <div className="relative flex items-center rounded-lg border border-white/20 bg-background/95 p-1.5 shadow-xl backdrop-blur-md">
+                <Search className="ml-3 h-4 w-4 text-muted-foreground shrink-0" />
+                <Input
                   id="hero-search-input"
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search for food or drinks (beer, whisky, momo, pizza, snacks...)"
-                  className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm md:text-base font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                  placeholder="Search beer, whiskey, momo, snacks..."
+                  className="border-0 shadow-none focus-visible:ring-0 bg-transparent text-xs sm:text-sm placeholder:text-muted-foreground"
                 />
-                <button
+                <Button
                   type="submit"
-                  className="flex items-center gap-2 rounded-full bg-[#ff5b00] hover:bg-[#e05000] px-5 sm:px-7 py-2.5 sm:py-3 text-xs sm:text-sm font-black text-white shadow-lg transition-transform hover:scale-105 shrink-0 cursor-pointer"
+                  size="sm"
+                  className="gap-1.5 px-4 h-9 text-xs font-medium shrink-0"
                 >
-                  <span>SHOP</span>
-                  <ArrowRight size={16} />
-                </button>
+                  <span>Search</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </form>
 
-            {/* SPEED FOOTER */}
-            <p className="mt-5 sm:mt-6 text-xs sm:text-sm font-bold tracking-[0.18em] text-cyan-300 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
-              ALCOHOL, BEVERAGES &amp; FOOD DELIVERY WITHIN 45 MINS
-            </p>
-
-            {/* 5-SLIDE LOOP INDICATORS */}
-            <div className="mt-8 flex items-center gap-2.5 rounded-full bg-black/50 px-3.5 py-1.5 backdrop-blur-md shadow-md">
+            {/* Slide Loop Indicators */}
+            <div className="mt-8 flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-md">
               {HERO_SLIDES.map((_, idx) => (
-                <button
+                <Button
                   key={idx}
                   type="button"
+                  variant="ghost"
                   onClick={() => setCurrentSlide(idx)}
-                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${idx === currentSlide
-                      ? 'w-8 bg-[#ff5b00] shadow-md shadow-orange-500/50'
-                      : 'w-2.5 bg-white/70 hover:bg-white'
-                    }`}
+                  className={`p-0 h-1.5 rounded-full transition-all duration-300 hover:bg-white/70 min-w-0 ${
+                    idx === currentSlide
+                      ? 'w-6 bg-white'
+                      : 'w-1.5 bg-white/40'
+                  }`}
                   aria-label={`Go to slide ${idx + 1}`}
                 />
               ))}
             </div>
           </div>
 
-          {/* BOTTOM TRUST BADGES */}
-          <div className="relative z-20 border-t border-white/15 bg-black/60 backdrop-blur-md py-3.5 text-xs font-semibold text-slate-200">
+          {/* Bottom Trust Strip */}
+          <div className="relative z-20 border-t border-white/10 bg-black/40 backdrop-blur-md py-3 text-xs text-white/80">
             <div className="mx-auto flex max-w-7xl items-center justify-around px-4">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={16} className="text-[#ff5b00]" />
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className="h-4 w-4 text-emerald-400" />
                 <span>100% Genuine Quality</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Clock size={16} className="text-cyan-400" />
-                <span>45 Min Express Delivery</span>
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-4 w-4 text-sky-400" />
+                <span>40-Minute Express Dispatch</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Award size={16} className="text-[#ff5b00]" />
-                <span>24/7 Late-Night Delivery</span>
+              <div className="flex items-center gap-1.5">
+                <Award className="h-4 w-4 text-amber-400" />
+                <span>Late-Night Delivery</span>
               </div>
             </div>
           </div>
         </section>
 
-        {/* SHOP BY DRINKS */}
-        <section
-          className="h-[90%] scroll-mt-24 bg-white py-16 sm:py-24"
-          id="drinks"
-        >
-          <div className={wrap}>
-            <div className="mb-8 flex items-end justify-between gap-6 sm:mb-12">
+        {/* SHOP BY CATEGORY TILES */}
+        <section className="py-16 sm:py-20 bg-background" id="drinks">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-8 flex items-end justify-between gap-6">
               <div>
-                <p className={eyebrow}>Explore</p>
-                <h2 className="mt-3 text-4xl font-black uppercase leading-none tracking-tighter sm:text-6xl">
-                  Shop by drinks
+                <span className="text-xs font-medium text-muted-foreground">
+                  Explore Catalog
+                </span>
+                <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                  Shop drinks by category
                 </h2>
               </div>
-              <Link
-                to="/drinks"
-                className="shrink-0 border-b border-black pb-0.5 text-sm font-semibold transition-opacity hover:opacity-60"
-              >
-                View all →
-              </Link>
+              <Button asChild variant="ghost" size="sm" className="gap-1 text-xs">
+                <Link to="/drinks">
+                  View all drinks
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
             </div>
 
-            <div className="group/bento grid auto-rows-[11rem] grid-cols-2 gap-3 sm:auto-rows-[13rem] sm:gap-4 lg:auto-rows-[18.5rem] lg:grid-cols-12">
-              <Link
-                to="/drinks"
-                search={{ category: 'whiskey' }}
-                className={`${drinkTile} col-span-2 lg:col-span-4 lg:col-start-1 lg:row-start-1 bg-[#f3e9e4]`}
-              >
-                <DrinkTileBody
-                  lines={['Domestic', 'Spirits']}
-                  src="/images/spirits.png"
-                  alt="Domestic Spirits"
-                  tone="text-[#a1887f]"
-                  size="md"
-                />
-              </Link>
-
-              <Link
-                to="/drinks"
-                search={{ category: 'vodka' }}
-                className={`${drinkTile} lg:col-span-2 lg:col-start-1 lg:row-start-2 bg-[#eceecf]`}
-              >
-                <DrinkTileBody
-                  lines={['Vodka']}
-                  src="/images/vodka.png"
-                  alt="Vodka"
-                  tone="text-[#9a9a2e]"
-                  size="sm"
-                />
-              </Link>
-
-              <Link
-                to="/drinks"
-                search={{ category: 'whiskey' }}
-                className={`${drinkTile} lg:col-span-2 lg:col-start-3 lg:row-start-2 bg-[#fddcc2]`}
-              >
-                <DrinkTileBody
-                  lines={['Whiskey']}
-                  src="/images/whiskey.png"
-                  alt="Whiskey"
-                  tone="text-[#d1621f]"
-                  size="sm"
-                />
-              </Link>
-
-              <Link
-                to="/drinks"
-                search={{ category: 'beer-cider' }}
-                className={`${drinkTile} col-span-2 row-span-2 lg:col-span-4 lg:col-start-5 lg:row-start-1 bg-[#151515]`}
-              >
-                <DrinkTileBody
-                  lines={['Beer']}
-                  src="/images/beer.png"
-                  alt="Beer"
-                  tone="text-white/90"
-                  chip="bg-white text-black"
-                  size="lg"
-                />
-              </Link>
-
-              <Link
-                to="/grocery"
-                search={{ category: 'party-essentials' }}
-                className={`${drinkTile} lg:col-span-4 lg:col-start-9 lg:row-start-1 bg-[#fcd34d]`}
-              >
-                <DrinkTileBody
-                  lines={['Tobacco']}
-                  src="/images/tobacco.png"
-                  alt="Tobacco"
-                  tone="text-[#6f5e12]"
-                  size="md"
-                />
-              </Link>
-
-              <Link
-                to="/drinks"
-                search={{ category: 'wine' }}
-                className={`${drinkTile} lg:col-span-4 lg:col-start-9 lg:row-start-2 bg-[#c3e58f]`}
-              >
-                <DrinkTileBody
-                  lines={['Wine']}
-                  src="/images/wine.png"
-                  alt="Wine"
-                  tone="text-[#527f2c]"
-                  size="md"
-                />
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* FOOD */}
-        <section
-          className="scroll-mt-24 border-t border-black/10 py-16 sm:py-24"
-          id="food"
-        >
-          <div
-            className={`${wrap} grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20`}
-          >
-            <div>
-              <p className={eyebrow}>Hungry?</p>
-              <h2 className="mt-3 text-4xl font-black uppercase leading-none tracking-tighter sm:text-6xl">
-                Shop by food
-              </h2>
-              <Link
-                to="/grocery"
-                className="mt-8 inline-block border-b border-black pb-0.5 text-sm font-semibold transition-opacity hover:opacity-60"
-              >
-                View all →
-              </Link>
-            </div>
-
-            <ul className="border-t border-black">
-              {FOOD_ITEMS.map((item, i) => (
-                <li key={item} className="border-b border-black/15">
-                  <Link
-                    to="/grocery"
-                    search={{ category: 'late-night-bites' }}
-                    className="group flex items-center justify-between gap-4 py-5 transition-colors hover:bg-neutral-50 sm:py-6"
-                  >
-                    <span className="flex items-baseline gap-5 sm:gap-8">
-                      <span className="w-6 text-xs font-medium tabular-nums text-neutral-400">
-                        {String(i + 1).padStart(2, '0')}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+              {[
+                { name: 'Whiskey', slug: 'whiskey', image: '/images/whiskey.png' },
+                { name: 'Beer & Cider', slug: 'beer-cider', image: '/images/beer.png' },
+                { name: 'Vodka', slug: 'vodka', image: '/images/vodka.png' },
+                { name: 'Wine', slug: 'wine', image: '/images/wine.png' },
+                { name: 'Spirits', slug: 'whiskey', image: '/images/spirits.png' },
+                { name: 'Snacks & More', slug: 'tobacco', image: '/images/tobacco.png' },
+              ].map((cat) => (
+                <Link
+                  key={cat.name}
+                  to="/drinks"
+                  search={{ category: cat.slug }}
+                  className="group"
+                >
+                  <Card className="overflow-hidden transition-all hover:border-foreground/20 hover:shadow-sm">
+                    <CardContent className="p-3 flex flex-col items-center text-center">
+                      <div className="h-28 w-full flex items-center justify-center bg-muted/30 rounded-md p-2 mb-2">
+                        <img
+                          src={cat.image}
+                          alt={cat.name}
+                          className="h-24 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                      </div>
+                      <span className="text-xs font-semibold text-foreground">
+                        {cat.name}
                       </span>
-                      <span className="text-2xl font-bold uppercase tracking-tight transition-transform group-hover:translate-x-2 sm:text-4xl">
-                        {item}
-                      </span>
-                    </span>
-                    <span className="text-xl transition-transform group-hover:translate-x-1">
-                      →
-                    </span>
-                  </Link>
-                </li>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
-            </ul>
+            </div>
           </div>
         </section>
 
-        {/* APP */}
-        <section className="bg-[#f3f2ee]">
-          <div
-            className={`${wrap} grid items-center gap-14 py-16 sm:py-24 lg:grid-cols-2`}
-          >
-            <div className="flex justify-center lg:justify-start">
-              <div className="w-60 rounded-[2.5rem] bg-black p-2.5 shadow-2xl sm:w-72">
-                <div className="relative flex aspect-[9/17] flex-col justify-between overflow-hidden rounded-[2rem] bg-[#c3e58f] p-6">
-                  <div>
-                    <span className="text-xs font-black uppercase tracking-tighter">
-                      <img
-                        src="/mezmani_logo.png"
-                        alt="LOGO"
-                        width="180"
-                        height="180"
-                        loading="lazy"
-                        className="-ml-2"
-                      />
+        {/* FOOD & LATE NIGHT BITES */}
+        <section className="py-16 sm:py-20 border-t border-border bg-muted/10" id="food">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 items-center">
+            <div>
+              <span className="text-xs font-medium text-muted-foreground">
+                Midnight Cravings
+              </span>
+              <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                Hot food &amp; munchies
+              </h2>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                Pair your drinks with fresh Kathmandu momo, spicy wings, piping hot biryani, and party snacks.
+              </p>
+              <div className="mt-6">
+                <Button asChild size="sm" className="gap-2 text-xs">
+                  <Link to="/grocery">
+                    Explore food catalog
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="border border-border rounded-lg bg-card overflow-hidden divide-y divide-border">
+              {FOOD_ITEMS.map((item, i) => (
+                <Link
+                  key={item}
+                  to="/grocery"
+                  search={{ category: 'late-night-bites' }}
+                  className="group flex items-center justify-between p-4 text-xs font-medium text-foreground hover:bg-muted/40 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground font-mono">
+                      {String(i + 1).padStart(2, '0')}
                     </span>
-                    <strong className="mt-4 block text-3xl font-black uppercase leading-[0.92] tracking-tighter">
-                      Good times
-                      <br />
-                      delivered.
-                    </strong>
+                    <span className="font-semibold text-sm">{item}</span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-foreground" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* APP DOWNLOAD */}
+        <section className="py-16 sm:py-20 border-t border-border bg-background">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid items-center gap-12 lg:grid-cols-2">
+            <div className="flex justify-center">
+              <div className="w-56 rounded-2xl border border-border bg-card p-3 shadow-md">
+                <div className="aspect-[9/16] rounded-xl bg-muted/40 flex flex-col justify-between p-5 text-center">
+                  <div>
+                    <span className="text-xs font-bold tracking-tight block">MEZMANI</span>
+                    <p className="mt-2 text-sm font-semibold">Drinks delivered in 40 mins</p>
                   </div>
                   <img
                     src="/images/wine.png"
-                    alt=""
-                    aria-hidden="true"
-                    className="mx-auto h-[55%] w-full object-contain"
+                    alt="App preview"
+                    className="mx-auto h-36 object-contain"
                   />
+                  <Badge variant="outline" className="mx-auto text-[10px]">
+                    iOS &amp; Android
+                  </Badge>
                 </div>
               </div>
             </div>
 
-            <div>
-              <p className={eyebrow}>Mezmani app</p>
-              <h2 className="mt-3 text-4xl font-black uppercase leading-[0.92] tracking-tighter sm:text-6xl">
-                Your drinks.
-                <br />
-                <span className="text-neutral-400">Wherever you go.</span>
+            <div className="space-y-4">
+              <span className="text-xs font-medium text-muted-foreground">
+                Mobile Convenience
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                Your bar in your pocket
               </h2>
-              <p className="mt-6 max-w-md text-base leading-relaxed text-neutral-600">
-                Get your liquor, food and party supplies delivered with just a
-                few taps.
+              <p className="text-xs leading-relaxed text-muted-foreground max-w-md">
+                Get notified on live courier tracking, reorder your favorites with one click, and access exclusive valley promo vouchers.
               </p>
 
-              <form
-                onSubmit={handleGetApp}
-                className="mt-8 flex max-w-lg flex-col gap-3 sm:flex-row"
-              >
-                <input
+              <form onSubmit={handleGetApp} className="flex gap-2 max-w-sm pt-2">
+                <Input
                   type="tel"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="Enter your number (98XXXXXXXX)"
-                  className="h-14 min-w-0 flex-1 border-2 border-black bg-white px-4 text-base outline-none placeholder:text-neutral-400 focus:shadow-[4px_4px_0_0_#000]"
+                  placeholder="Mobile number (98XXXXXXXX)"
+                  className="text-xs font-mono"
                 />
-                <button
-                  type="submit"
-                  className="h-14 bg-black px-8 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800 cursor-pointer"
-                >
-                  Get App
-                </button>
+                <Button type="submit" size="sm" className="shrink-0 text-xs">
+                  Get app link
+                </Button>
               </form>
 
-              <div className="mt-4 flex flex-wrap gap-3">
-                <button
+              <div className="flex gap-2 pt-2">
+                <Button
                   type="button"
-                  className="h-11 border border-black px-5 text-sm font-semibold transition-colors hover:bg-black hover:text-white cursor-pointer"
+                  variant="outline"
+                  size="sm"
                   onClick={() => toast.success('iOS App download link sent!')}
+                  className="text-xs"
                 >
                   App Store
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="h-11 border border-black px-5 text-sm font-semibold transition-colors hover:bg-black hover:text-white cursor-pointer"
-                  onClick={() =>
-                    toast.success('Google Play download link sent!')
-                  }
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toast.success('Google Play download link sent!')}
+                  className="text-xs"
                 >
                   Google Play
-                </button>
+                </Button>
               </div>
             </div>
           </div>
         </section>
 
-        {/* FEATURES */}
-        <section className="py-14 sm:py-20">
-          <div className={`${wrap} grid gap-10 sm:grid-cols-3 sm:gap-8`}>
-            {FEATURES.map((f, i) => (
-              <div key={f.title} className="border-t-2 border-black pt-5">
-                <span className="text-xs font-medium tabular-nums text-neutral-400">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <h3 className="mt-3 text-xl font-bold tracking-tight">
-                  {f.title}
-                </h3>
-                <p className="mt-2 text-sm text-neutral-600">{f.body}</p>
-              </div>
-            ))}
+        {/* FEATURES / VALUE PROPS */}
+        <section className="py-14 sm:py-16 border-t border-border bg-muted/10">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid gap-8 sm:grid-cols-3">
+            {FEATURES.map((f) => {
+              const Icon = f.icon
+              return (
+                <div key={f.title} className="space-y-2">
+                  <div className="h-9 w-9 grid place-items-center rounded-lg border border-border bg-card text-foreground">
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {f.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {f.body}
+                  </p>
+                </div>
+              )
+            })}
           </div>
         </section>
 
         {/* REVIEWS */}
         <section
-          className="scroll-mt-24 border-t border-black/10 bg-[#f3f2ee] py-16 sm:py-24"
+          className="scroll-mt-14 py-16 sm:py-20 border-t border-border bg-background"
           id="reviews"
         >
-          <div className={wrap}>
-            <div className="mb-10 max-w-2xl sm:mb-14">
-              <p className={eyebrow}>Customer love</p>
-              <h2 className="mt-3 text-4xl font-black uppercase leading-none tracking-tighter sm:text-6xl">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-10 max-w-xl">
+              <span className="text-xs font-medium text-muted-foreground">
+                Verified Feedback
+              </span>
+              <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
                 What customers say
               </h2>
-              <p className="mt-4 text-neutral-600">
-                Here&apos;s what our satisfied customers have to say.
-              </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               {REVIEWS.map((r) => (
-                <article
-                  key={r.name}
-                  className="flex flex-col justify-between bg-white p-7 sm:p-8"
-                >
-                  <div>
-                    <div
-                      className="text-sm tracking-[0.2em]"
-                      aria-label="5 out of 5 stars"
-                    >
-                      ★★★★★
+                <Card key={r.name}>
+                  <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex text-amber-500 text-xs">
+                        {'★'.repeat(5)}
+                      </div>
+                      <p className="text-xs leading-relaxed text-muted-foreground italic">
+                        &ldquo;{r.quote}&rdquo;
+                      </p>
                     </div>
-                    <blockquote className="mt-6 text-xl font-semibold leading-snug tracking-tight">
-                      “{r.quote}”
-                    </blockquote>
-                  </div>
 
-                  <div className="mt-10 flex items-center gap-3">
-                    <div className="grid h-10 w-10 place-items-center rounded-full bg-black text-sm font-bold text-white">
-                      {r.name.charAt(0)}
+                    <div className="flex items-center gap-2.5 pt-2 border-t border-border">
+                      <Avatar className="h-7 w-7">
+                        <AvatarFallback className="text-xs font-semibold">
+                          {r.name.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-xs font-semibold text-foreground">
+                          {r.name}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Kathmandu Customer
+                        </p>
+                      </div>
                     </div>
-                    <div className="leading-tight">
-                      <strong className="block text-sm">{r.name}</strong>
-                      <small className="text-xs text-neutral-500">
-                        Verified customer
-                      </small>
-                    </div>
-                  </div>
-                </article>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>
         </section>
       </main>
 
-      {/* FOOTER */}
-      <footer className="scroll-mt-24 bg-black text-white" id="about">
-        <div className={`${wrap} py-16 sm:py-20`}>
-          <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
-            <div>
-              <Link
-                to="/"
-                className="text-3xl font-black uppercase tracking-tighter"
-              >
-                <img
-                  src="/mezmani_logo_bg.svg"
-                  width="180"
-                  height="180"
-                  loading="lazy"
-                />
-              </Link>
-              <p className="mt-4 max-w-xs text-sm leading-relaxed text-neutral-400">
-                Food &amp; drinks delivery.
-                <br />
-                Let the good times roll.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3 text-sm">
-              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
-                Extras
-              </h4>
-              <Link to="/drinks" className="text-neutral-300 hover:text-white">
-                Cocktail Recipes
-              </Link>
-              <Link to="/drinks" className="text-neutral-300 hover:text-white">
-                Give a Gift
-              </Link>
-              <a href="#reviews" className="text-neutral-300 hover:text-white">
-                Reviews
-              </a>
-              <Link to="/drinks" className="text-neutral-300 hover:text-white">
-                Share &amp; Save 20%
-              </Link>
-            </div>
-
-            <div className="flex flex-col gap-3 text-sm">
-              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
-                About
-              </h4>
-              <a href="#about" className="text-neutral-300 hover:text-white">
-                About Us
-              </a>
-              <a href="#about" className="text-neutral-300 hover:text-white">
-                Find Us
-              </a>
-              <a
-                href="tel:+9779802088800"
-                className="text-neutral-300 hover:text-white"
-              >
-                Contact (+977-9802088800)
-              </a>
-              <a href="#about" className="text-neutral-300 hover:text-white">
-                Help &amp; Support
-              </a>
-            </div>
-
-            <div className="flex flex-col gap-3 text-sm">
-              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
-                Connect
-              </h4>
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-neutral-300 hover:text-white"
-              >
-                Facebook
-              </a>
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-neutral-300 hover:text-white"
-              >
-                Instagram
-              </a>
-              <a
-                href="https://tiktok.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-neutral-300 hover:text-white"
-              >
-                TikTok
-              </a>
-            </div>
-          </div>
-
-          <div className="mt-16 flex flex-col gap-5 border-t border-white/15 pt-6 text-xs text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
-            <p>© 2026 Mezmani Pvt. Ltd. All Rights Reserved.</p>
-
-            <div className="flex flex-wrap gap-x-5 gap-y-2 font-medium text-neutral-300">
-              <span>eSewa</span>
-              <span>Khalti</span>
-              <span>fonepay</span>
-              <span>IME Pay</span>
-            </div>
-          </div>
-
-          <p className="mt-6 text-xs text-neutral-500">
-            Please drink responsibly. 18+ only.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

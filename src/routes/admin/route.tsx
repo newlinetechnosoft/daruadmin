@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   createFileRoute,
   Outlet,
@@ -22,8 +22,6 @@ import {
   Users,
   ExternalLink,
   LogOut,
-  Menu,
-  ChevronLeft,
   Search,
   Bell,
   Package,
@@ -36,6 +34,7 @@ import {
   BarChart3,
   Settings,
   ClipboardList,
+  Check,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -47,6 +46,49 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '#/components/ui/dropdown-menu'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '#/components/ui/popover'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '#/components/ui/breadcrumb'
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '#/components/ui/command'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+} from '#/components/ui/sidebar'
+import { Button } from '#/components/ui/button'
+import { Separator } from '#/components/ui/separator'
+import { Avatar, AvatarFallback } from '#/components/ui/avatar'
+import { Badge } from '#/components/ui/badge'
+import { Kbd } from '#/components/ui/kbd'
+import { ThemeToggle } from '#/components/shared/theme-toggle'
 
 export const Route = createFileRoute('/admin')({
   beforeLoad: async ({ location }) => {
@@ -139,27 +181,32 @@ function AdminLayout() {
   const { unread, notifications } = Route.useLoaderData()
   const routerState = useRouterState()
   const navigate = useNavigate()
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(false)
-  const [navQuery, setNavQuery] = useState('')
-  const [globalQ, setGlobalQ] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
-  const [results, setResults] = useState<
-    { products: { id: string; name: string; href: string }[]; orders: { id: string; name: string; href: string }[]; customers: { id: string; name: string; href: string }[]; riders: { id: string; name: string; href: string }[] } | null
-  >(null)
+  const [globalQ, setGlobalQ] = useState('')
+  const [results, setResults] = useState<{
+    products: { id: string; name: string; href: string }[]
+    orders: { id: string; name: string; href: string }[]
+    customers: { id: string; name: string; href: string }[]
+    riders: { id: string; name: string; href: string }[]
+  } | null>(null)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [notificationsRead, setNotificationsRead] = useState(false)
 
   const currentPath = routerState.location.pathname
 
+  // Global keyboard shortcut for Command Palette
   useEffect(() => {
-    const saved = localStorage.getItem('mezmani-admin-collapsed')
-    if (saved === '1') setCollapsed(true)
+    const down = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setSearchOpen((open) => !open)
+      }
+    }
+    document.addEventListener('keydown', down)
+    return () => document.removeEventListener('keydown', down)
   }, [])
 
-  useEffect(() => {
-    localStorage.setItem('mezmani-admin-collapsed', collapsed ? '1' : '0')
-  }, [collapsed])
-
+  // Debounced search query
   useEffect(() => {
     if (globalQ.trim().length < 2) {
       setResults(null)
@@ -171,15 +218,6 @@ function AdminLayout() {
     }, 220)
     return () => clearTimeout(t)
   }, [globalQ])
-
-  const filteredGroups = useMemo(() => {
-    const q = navQuery.trim().toLowerCase()
-    if (!q) return NAV_GROUPS
-    return NAV_GROUPS.map((g) => ({
-      ...g,
-      items: g.items.filter((i) => i.label.toLowerCase().includes(q)),
-    })).filter((g) => g.items.length > 0)
-  }, [navQuery])
 
   const isCurrent = (item: NavItem) => {
     if (item.exact) return currentPath === item.to
@@ -199,254 +237,309 @@ function AdminLayout() {
     }
   }
 
-  const sidebar = (
-    <>
-      <div className="flex h-16 items-center justify-between gap-2 border-b border-slate-200 px-3">
-        <Link to="/admin" className="flex min-w-0 items-center gap-2.5">
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-600 text-sm font-bold text-white shadow-sm">
-            M
-          </div>
-          {!collapsed && (
-            <div className="min-w-0 leading-tight">
-              <div className="truncate text-sm font-semibold text-slate-900">
-                Mezmani
-              </div>
-              <div className="text-[11px] text-slate-500">Admin console</div>
-            </div>
-          )}
-        </Link>
-        <button
-          type="button"
-          className="hidden h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 md:grid"
-          onClick={() => setCollapsed((v) => !v)}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          <ChevronLeft
-            className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-180' : ''}`}
-          />
-        </button>
-      </div>
+  const handleMarkNotifications = async () => {
+    try {
+      await markNotificationsFn()
+      setNotificationsRead(true)
+      toast.success('Notifications marked as read')
+    } catch {
+      toast.error('Failed to update notifications')
+    }
+  }
 
-      {!collapsed && (
-        <div className="px-3 pt-3">
-          <div className="relative">
-            <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-            <input
-              value={navQuery}
-              onChange={(e) => setNavQuery(e.target.value)}
-              placeholder="Search menu"
-              className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pr-3 pl-8 text-xs outline-none focus:border-blue-500 focus:bg-white"
-            />
-          </div>
-        </div>
-      )}
-
-      <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-3">
-        {filteredGroups.map((group) => (
-          <div key={group.label}>
-            {!collapsed && (
-              <div className="px-2 pb-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-                {group.label}
-              </div>
-            )}
-            <div className="space-y-0.5">
-              {group.items.map((item) => {
-                const active = isCurrent(item)
-                const Icon = item.icon
-                return (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    title={item.label}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
-                      collapsed ? 'justify-center' : ''
-                    } ${
-                      active
-                        ? 'bg-blue-50 font-semibold text-blue-700'
-                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    {!collapsed && <span>{item.label}</span>}
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        ))}
-      </nav>
-
-      <div className="border-t border-slate-200 p-3">
-        <Link
-          to="/"
-          target="_blank"
-          className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-slate-500 hover:bg-slate-100 ${collapsed ? 'justify-center' : ''}`}
-        >
-          <ExternalLink className="h-4 w-4" />
-          {!collapsed && <span>Storefront</span>}
-        </Link>
-      </div>
-    </>
-  )
+  const unreadCount = notificationsRead ? 0 : unread
 
   return (
-    <div className="admin-shell flex min-h-screen bg-slate-50 text-slate-900 antialiased">
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-slate-200 bg-white transition-all duration-200 md:sticky md:top-0 md:h-screen md:translate-x-0 ${
-          collapsed ? 'md:w-[72px]' : 'md:w-64'
-        } w-64 ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
-      >
-        {sidebar}
-      </aside>
-
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-[2px] md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6">
-          <button
-            type="button"
-            className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-600 md:hidden"
-            onClick={() => setMobileOpen(true)}
-            aria-label="Open menu"
-          >
-            <Menu className="h-4 w-4" />
-          </button>
-
-          <nav className="hidden items-center gap-1.5 text-sm text-slate-500 md:flex">
-            <Link to="/admin" className="hover:text-slate-900">
-              Admin
-            </Link>
-            <span className="text-slate-300">/</span>
-            <span className="font-medium capitalize text-slate-900">
-              {crumbLabel(currentPath)}
-            </span>
-          </nav>
-
-          <div className="relative mx-auto hidden w-full max-w-md md:block">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              value={globalQ}
-              onChange={(e) => {
-                setGlobalQ(e.target.value)
-                setSearchOpen(true)
-              }}
-              onFocus={() => setSearchOpen(true)}
-              placeholder="Search orders, products, customers..."
-              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pr-3 pl-9 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/15"
-            />
-            {searchOpen && results && (
-              <div className="absolute top-11 z-40 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-                {['products', 'orders', 'customers', 'riders'].map((key) => {
-                  const rows = results[key as keyof typeof results]
-                  if (!rows.length) return null
-                  return (
-                    <div key={key} className="border-b border-slate-100 last:border-0">
-                      <div className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-                        {key}
-                      </div>
-                      {rows.map((r) => (
-                        <a
-                          key={r.id}
-                          href={r.href}
-                          onClick={() => setSearchOpen(false)}
-                          className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                          {r.name}
-                        </a>
-                      ))}
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-background text-foreground antialiased">
+        <Sidebar collapsible="icon" className="border-r border-border bg-sidebar">
+          <SidebarHeader className="border-b border-border/40 p-3">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton size="lg" asChild>
+                  <Link to="/admin" className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary font-bold text-xs text-primary-foreground">
+                      M
                     </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="ml-auto flex items-center gap-1.5">
-            <DropdownMenu>
-              <DropdownMenuTrigger className="relative grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100">
-                <Bell className="h-4 w-4" />
-                {unread > 0 && (
-                  <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-blue-600" />
-                )}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
-                <DropdownMenuLabel className="flex items-center justify-between">
-                  Notifications
-                  <button
-                    type="button"
-                    className="text-xs font-medium text-blue-600"
-                    onClick={() => markNotificationsFn()}
-                  >
-                    Mark read
-                  </button>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {notifications.length === 0 ? (
-                  <div className="px-2 py-6 text-center text-sm text-slate-400">
-                    No notifications
-                  </div>
-                ) : (
-                  notifications.map((n) => (
-                    <DropdownMenuItem key={n.id} asChild>
-                      <a href={n.href} className="flex flex-col items-start gap-0.5">
-                        <span className="text-sm font-medium">{n.title}</span>
-                        <span className="text-xs text-slate-500">{n.body}</span>
-                      </a>
-                    </DropdownMenuItem>
-                  ))
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-slate-100">
-                <div className="grid h-8 w-8 place-items-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                  {adminUser.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="hidden text-left leading-tight sm:block">
-                  <div className="text-sm font-medium">{adminUser.name}</div>
-                  <div className="text-[11px] capitalize text-slate-500">
-                    {adminUser.role}
-                  </div>
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="truncate text-sm">{adminUser.email}</div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/admin/settings">Settings</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/" target="_blank">
-                    View store
+                    <div className="grid flex-1 text-left text-xs leading-tight">
+                      <span className="font-semibold text-foreground">Mezmani</span>
+                      <span className="text-muted-foreground text-[11px]">Admin console</span>
+                    </div>
                   </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleSignOut}
-                  disabled={isLoggingOut}
-                  className="text-red-600"
-                >
-                  <LogOut className="h-4 w-4" />
-                  {isLoggingOut ? 'Signing out...' : 'Sign out'}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
 
-        <main className="min-w-0 flex-1">
-          <Outlet />
-        </main>
+          <SidebarContent className="gap-2 px-2 py-2">
+            {NAV_GROUPS.map((group) => (
+              <SidebarGroup key={group.label} className="p-0">
+                <SidebarGroupLabel className="px-2 text-[11px] font-medium text-muted-foreground/70 tracking-normal">
+                  {group.label}
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map((item) => {
+                      const active = isCurrent(item)
+                      const Icon = item.icon
+                      return (
+                        <SidebarMenuItem key={item.to}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={active}
+                            tooltip={item.label}
+                            className="text-xs transition-colors"
+                          >
+                            <Link to={item.to}>
+                              <Icon className="h-4 w-4" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
+          </SidebarContent>
+
+          <SidebarFooter className="border-t border-border/40 p-2">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Storefront" className="text-xs text-muted-foreground">
+                  <Link to="/" target="_blank" rel="noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                    <span>Storefront</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+          <SidebarRail />
+        </Sidebar>
+
+        <SidebarInset className="flex flex-1 flex-col">
+          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+
+            <Breadcrumb className="hidden sm:flex">
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link to="/admin">Admin</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="capitalize">
+                    {crumbLabel(currentPath)}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+
+            <div className="flex flex-1 items-center justify-center px-2 sm:px-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSearchOpen(true)}
+                className="h-8 w-full max-w-sm justify-between bg-muted/30 px-3 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground sm:w-64 md:w-80"
+              >
+                <span className="flex items-center gap-2">
+                  <Search className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Search admin...</span>
+                  <span className="sm:hidden">Search...</span>
+                </span>
+                <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
+              </Button>
+            </div>
+
+            <div className="ml-auto flex items-center gap-1.5">
+              <ThemeToggle />
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative h-8 w-8">
+                    <Bell className="h-4 w-4" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
+                    )}
+                    <span className="sr-only">Notifications</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 p-0 shadow-lg">
+                  <div className="flex items-center justify-between border-b border-border px-3 py-2 text-xs font-semibold">
+                    <span>Notifications</span>
+                    {unreadCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleMarkNotifications}
+                        className="h-6 px-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+                      >
+                        <Check className="mr-1 h-3 w-3" /> Mark read
+                      </Button>
+                    )}
+                  </div>
+                  <div className="max-h-72 overflow-y-auto divide-y divide-border/60">
+                    {notifications.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-muted-foreground">
+                        No notifications
+                      </div>
+                    ) : (
+                      notifications.map((n) => (
+                        <a
+                          key={n.id}
+                          href={n.href}
+                          className="flex flex-col gap-0.5 px-3 py-2.5 text-xs transition-colors hover:bg-muted/50"
+                        >
+                          <span className="font-medium text-foreground">{n.title}</span>
+                          <span className="text-[11px] text-muted-foreground">{n.body}</span>
+                        </a>
+                      ))
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 gap-2 rounded-full p-1 pl-1 pr-2 hover:bg-accent">
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="bg-primary text-[10px] text-primary-foreground font-semibold">
+                        {adminUser.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden text-xs font-medium text-foreground sm:inline-block">
+                      {adminUser.name}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-xs font-semibold leading-none">{adminUser.name}</p>
+                      <p className="text-[11px] leading-none text-muted-foreground">{adminUser.email}</p>
+                      <div className="pt-1">
+                        <Badge variant="outline" className="text-[10px] font-normal capitalize">
+                          {adminUser.role}
+                        </Badge>
+                      </div>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin/settings">Settings</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/" target="_blank" rel="noreferrer">
+                      View storefront
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleSignOut}
+                    disabled={isLoggingOut}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>{isLoggingOut ? 'Signing out...' : 'Sign out'}</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </header>
+
+          <main className="flex-1 bg-muted/20 p-4 md:p-6">
+            <Outlet />
+          </main>
+        </SidebarInset>
+
+        <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
+          <CommandInput
+            placeholder="Type a command or search..."
+            value={globalQ}
+            onValueChange={setGlobalQ}
+          />
+          <CommandList>
+            <CommandEmpty>
+              {globalQ.trim().length < 2
+                ? 'Type at least 2 characters to search...'
+                : 'No results found.'}
+            </CommandEmpty>
+
+            {results?.products && results.products.length > 0 && (
+              <CommandGroup heading="Products">
+                {results.products.map((p) => (
+                  <CommandItem
+                    key={p.id}
+                    onSelect={() => {
+                      setSearchOpen(false)
+                      window.location.href = p.href
+                    }}
+                  >
+                    <Wine className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>{p.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {results?.orders && results.orders.length > 0 && (
+              <CommandGroup heading="Orders">
+                {results.orders.map((o) => (
+                  <CommandItem
+                    key={o.id}
+                    onSelect={() => {
+                      setSearchOpen(false)
+                      window.location.href = o.href
+                    }}
+                  >
+                    <ClipboardList className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>{o.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {results?.customers && results.customers.length > 0 && (
+              <CommandGroup heading="Customers">
+                {results.customers.map((c) => (
+                  <CommandItem
+                    key={c.id}
+                    onSelect={() => {
+                      setSearchOpen(false)
+                      window.location.href = c.href
+                    }}
+                  >
+                    <Users className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>{c.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+
+            {results?.riders && results.riders.length > 0 && (
+              <CommandGroup heading="Riders">
+                {results.riders.map((r) => (
+                  <CommandItem
+                    key={r.id}
+                    onSelect={() => {
+                      setSearchOpen(false)
+                      window.location.href = r.href
+                    }}
+                  >
+                    <Bike className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>{r.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </CommandDialog>
       </div>
-    </div>
+    </SidebarProvider>
   )
 }

@@ -1,156 +1,139 @@
 import { Link } from '@tanstack/react-router'
+import { Zap, ShieldCheck, Headphones } from 'lucide-react'
 
 export function Footer() {
   return (
     <div>
-      {/* =========================================================
-           SERVICES STRIP (from drinks.html)
-      ========================================================= */}
-      <section className="border-t border-b border-[#dedbd4] py-11 bg-white">
-        <div className="w-[min(1220px,calc(100%-50px))] max-sm:w-[calc(100%-30px)] mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+      {/* Services Strip */}
+      <section className="border-t border-b border-border py-10 bg-muted/30">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 shrink-0 grid place-items-center border border-[#dedbd4] rounded-full text-lg select-none">
-              ⚡
+            <div className="h-10 w-10 shrink-0 grid place-items-center rounded-lg border border-border bg-background text-foreground">
+              <Zap className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-xs font-bold text-[#181818]">
-                On demand 40 minutes delivery
+              <h3 className="text-xs font-semibold text-foreground">
+                On-demand 40-minute delivery
               </h3>
-              <p className="mt-0.5 text-[10px] text-[#888]">
-                Fast delivery to your doorstep.
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Rapid doorstep service across Kathmandu Valley.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 shrink-0 grid place-items-center border border-[#dedbd4] rounded-full text-lg select-none">
-              🔒
+            <div className="h-10 w-10 shrink-0 grid place-items-center rounded-lg border border-border bg-background text-foreground">
+              <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-xs font-bold text-[#181818]">
-                Secure payments
+              <h3 className="text-xs font-semibold text-foreground">
+                Secure cashless payments
               </h3>
-              <p className="mt-0.5 text-[10px] text-[#888]">
-                Safe and reliable payment options.
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Fonepay, eSewa, Khalti, ConnectIPS and Cash on Delivery.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 shrink-0 grid place-items-center border border-[#dedbd4] rounded-full text-lg select-none">
-              ◉
+            <div className="h-10 w-10 shrink-0 grid place-items-center rounded-lg border border-border bg-background text-foreground">
+              <Headphones className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-xs font-bold text-[#181818]">
-                24/7 customer service
+              <h3 className="text-xs font-semibold text-foreground">
+                Customer support
               </h3>
-              <p className="mt-0.5 text-[10px] text-[#888]">
-                We&apos;re always available to help.
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Direct phone and WhatsApp helpline for deliveries.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* =========================================================
-           FOOTER (from drinks.html)
-      ========================================================= */}
-      <footer className="pt-[70px] bg-[#111] text-white">
-        <div className="w-[min(1220px,calc(100%-50px))] max-sm:w-[calc(100%-30px)] mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-12 pb-16">
-            {/* BRAND */}
-            <div className="space-y-4">
+      {/* Main Footer */}
+      <footer className="pt-14 pb-8 bg-background border-t border-border text-foreground">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-10 pb-12">
+            {/* Brand */}
+            <div className="space-y-3">
               <Link
                 to="/"
-                className="text-[21px] font-black tracking-[-0.07em] text-white uppercase inline-block"
+                className="text-base font-bold tracking-tight text-foreground inline-block"
               >
-                <img
-                  src="/mezmani_logo.png"
-                  alt="MEZMANI"
-                  width="180"
-                  height="180"
-                  loading="lazy"
-                  className='transition-all duration-300 hover:scale-110'
-                />
+                MEZMANI
               </Link>
-              <p className="max-w-[260px] text-[11px] leading-[1.8] text-[#777]">
-                Food &amp; drinks delivery. Premium beverages and food delivered
-                straight to your doorstep across Kathmandu Valley.
+              <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">
+                Licensed food and beverage delivery platform. Genuine spirits, cold beer, wine, and groceries delivered straight to your door across Kathmandu Valley.
               </p>
             </div>
 
-            {/* EXTRAS */}
-            <div className="flex flex-col gap-2.5">
-              <h4 className="text-[10px] font-bold uppercase tracking-[0.13em] text-white mb-1.5">
-                Extras
+            {/* Catalog */}
+            <div className="flex flex-col gap-2.5 text-xs">
+              <h4 className="font-semibold text-foreground mb-1">
+                Catalog
               </h4>
               <Link
                 to="/drinks"
-                className="text-[11px] text-[#777] hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Cocktail Recipes
+                Liquor &amp; Spirits
               </Link>
               <Link
                 to="/drinks"
-                className="text-[11px] text-[#777] hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Give a Gift
+                Craft Beer &amp; Wine
+              </Link>
+              <Link
+                to="/grocery"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Snacks &amp; Munchies
               </Link>
               <a
                 href="/#reviews"
-                className="text-[11px] text-[#777] hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Reviews
+                Customer Reviews
               </a>
-              <Link
-                to="/drinks"
-                className="text-[11px] text-[#777] hover:text-white transition-colors"
-              >
-                Share &amp; Save 20%
-              </Link>
             </div>
 
-            {/* ABOUT */}
-            <div className="flex flex-col gap-2.5">
-              <h4 className="text-[10px] font-bold uppercase tracking-[0.13em] text-white mb-1.5">
-                About
+            {/* About */}
+            <div className="flex flex-col gap-2.5 text-xs">
+              <h4 className="font-semibold text-foreground mb-1">
+                Company
               </h4>
               <a
                 href="/#about"
-                className="text-[11px] text-[#777] hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                About Us
+                About Mezmani
               </a>
               <a
                 href="/#about"
-                className="text-[11px] text-[#777] hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Find Us
+                Delivery Areas
               </a>
               <a
                 href="tel:+9779802088800"
-                className="text-[11px] text-[#777] hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Contact (+977-9802088800)
-              </a>
-              <a
-                href="/#about"
-                className="text-[11px] text-[#777] hover:text-white transition-colors"
-              >
-                Help &amp; Support
+                Help (+977-9802088800)
               </a>
             </div>
 
-            {/* CONNECT */}
-            <div className="flex flex-col gap-2.5">
-              <h4 className="text-[10px] font-bold uppercase tracking-[0.13em] text-white mb-1.5">
+            {/* Connect */}
+            <div className="flex flex-col gap-2.5 text-xs">
+              <h4 className="font-semibold text-foreground mb-1">
                 Connect
               </h4>
               <a
                 href="https://facebook.com"
                 target="_blank"
                 rel="noreferrer"
-                className="text-[11px] text-[#777] hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 Facebook
               </a>
@@ -158,7 +141,7 @@ export function Footer() {
                 href="https://instagram.com"
                 target="_blank"
                 rel="noreferrer"
-                className="text-[11px] text-[#777] hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 Instagram
               </a>
@@ -166,35 +149,35 @@ export function Footer() {
                 href="https://tiktok.com"
                 target="_blank"
                 rel="noreferrer"
-                className="text-[11px] text-[#777] hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 TikTok
               </a>
             </div>
           </div>
 
-          {/* BOTTOM ROW */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-5 border-t border-[#292929] text-[9px] text-[#555]">
-            <span>© 2026 Mezmani Pvt. Ltd. All Rights Reserved.</span>
+          {/* Bottom Bar */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4 border-t border-border text-[11px] text-muted-foreground">
+            <span>© 2026 Mezmani Retail Pvt. Ltd. All rights reserved.</span>
 
             <div className="flex gap-2">
-              <span className="px-2 py-1 border border-[#292929] text-[#777] uppercase font-semibold">
+              <span className="px-2 py-0.5 rounded border border-border text-[10px] font-mono">
                 eSewa
               </span>
-              <span className="px-2 py-1 border border-[#292929] text-[#777] uppercase font-semibold">
+              <span className="px-2 py-0.5 rounded border border-border text-[10px] font-mono">
                 Khalti
               </span>
-              <span className="px-2 py-1 border border-[#292929] text-[#777] uppercase font-semibold">
+              <span className="px-2 py-0.5 rounded border border-border text-[10px] font-mono">
                 Fonepay
               </span>
-              <span className="px-2 py-1 border border-[#292929] text-[#777] uppercase font-semibold">
-                IME Pay
+              <span className="px-2 py-0.5 rounded border border-border text-[10px] font-mono">
+                COD
               </span>
             </div>
           </div>
 
-          <p className="pb-5 text-[9px] text-[#444]">
-            Please drink responsibly. 18+ only.
+          <p className="pt-2 text-[10px] text-muted-foreground/80">
+            Please drink responsibly. 18+ verification enforced upon delivery.
           </p>
         </div>
       </footer>

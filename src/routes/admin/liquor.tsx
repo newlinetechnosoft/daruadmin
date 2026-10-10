@@ -10,7 +10,6 @@ import {
 } from '#/server/catalog/catalog.functions'
 import { formatNPR, toPaisa, toRupees } from '#/lib/money'
 import {
-  Wine,
   Search,
   Plus,
   Sparkles,
@@ -18,9 +17,37 @@ import {
   Trash2,
   CheckCircle2,
   XCircle,
-  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { PageHeader } from '#/components/shared/page-header'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { Textarea } from '#/components/ui/textarea'
+import { Badge } from '#/components/ui/badge'
+import { Checkbox } from '#/components/ui/checkbox'
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '#/components/ui/native-select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
+import { ConfirmDialog } from '#/components/shared/confirm-dialog'
+import { EmptyState } from '#/components/shared/empty-state'
 
 export const Route = createFileRoute('/admin/liquor')({
   loader: async () => {
@@ -38,21 +65,12 @@ interface VariantFormItem {
   name: string
   volumeMl: number
   sku: string
-  price: number // in NPR rupees for form input
+  price: number
   mrp?: number
   abv: string
   stock: number
   isActive: boolean
 }
-
-const labelCls =
-  'mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500'
-const fieldCls =
-  'h-11 w-full border border-black/30 bg-white px-3 text-sm outline-none placeholder:text-neutral-400 focus:border-black focus:shadow-[3px_3px_0_0_#000]'
-const cellCls =
-  'h-9 w-full border border-black/25 bg-white px-2 text-sm outline-none focus:border-black'
-const filterCls =
-  'h-11 border border-black/30 bg-white px-3 text-sm outline-none focus:border-black'
 
 function AdminLiquorPage() {
   const { products, taxonomy } = Route.useLoaderData()
@@ -66,6 +84,7 @@ function AdminLiquorPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
   // Form state
   const [formName, setFormName] = useState('')
@@ -238,9 +257,7 @@ function AdminLiquorPage() {
       })
 
       toast.success(
-        editingId
-          ? 'Product updated successfully!'
-          : 'Product added successfully!',
+        editingId ? 'Product updated successfully!' : 'Product added successfully!',
       )
       setModalOpen(false)
       await router.invalidate()
@@ -265,25 +282,24 @@ function AdminLiquorPage() {
           value: !currentVal,
         },
       })
-      toast.success(`Updated ${field === 'isActive' ? 'status' : 'featured'}`)
+      toast.success('Updated status')
       await router.invalidate()
     } catch {
       toast.error('Failed to update status')
     }
   }
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to permanently delete "${name}"?`)) {
-      return
-    }
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
     try {
       await deleteItemFn({
         data: {
           catalogType: 'liquor',
-          id,
+          id: deleteTarget.id,
         },
       })
       toast.success('Product deleted')
+      setDeleteTarget(null)
       await router.invalidate()
     } catch {
       toast.error('Failed to delete product')
@@ -296,485 +312,459 @@ function AdminLiquorPage() {
     )
 
   return (
-    <div className="space-y-8 bg-white p-5 text-[#101010] sm:p-8">
-      {/* Header & action */}
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
-            <Wine className="h-3.5 w-3.5" /> Catalog
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-4">
-            <h1 className="text-4xl font-black uppercase leading-[0.9] tracking-tighter sm:text-6xl">
-              Liquor catalog
-            </h1>
-            <span className="border border-black px-2.5 py-1 text-[11px] font-bold tabular-nums">
+    <div className="space-y-6">
+      <PageHeader
+        kicker="Catalog"
+        title="Liquor catalog"
+        description="Manage whiskey, rum, vodka, beers, wines, spirits and pricing."
+        actions={
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="font-mono text-xs">
               {products.length} SKUs
-            </span>
+            </Badge>
+            <Button size="sm" onClick={openAddModal} className="h-8 gap-1.5 text-xs">
+              <Plus className="h-3.5 w-3.5" />
+              Add liquor SKU
+            </Button>
           </div>
-          <p className="mt-4 max-w-md text-sm text-neutral-600">
-            Manage whiskey, rum, vodka, beers, wines, spirits and pricing.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={openAddModal}
-          className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 self-start bg-black px-5 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800 sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          Add liquor SKU
-        </button>
-      </div>
+        }
+      />
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 bg-[#f3f2ee] p-4 md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
-          <input
-            type="text"
-            placeholder="Search by bottle name, brand, SKU..."
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Search by product name, brand, category, SKU..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`${fieldCls} pl-10`}
+            className="h-8 pl-9 text-xs"
           />
         </div>
 
-        <select
+        <NativeSelect
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
-          aria-label="Filter by category"
-          className={filterCls}
+          size="sm"
+          className="h-8 text-xs"
         >
-          <option value="all">
-            All Categories ({taxonomy.liquorCategories.length})
-          </option>
+          <NativeSelectOption value="all">
+            All categories ({taxonomy.liquorCategories.length})
+          </NativeSelectOption>
           {taxonomy.liquorCategories.map((c) => (
-            <option key={c.id} value={c.id}>
+            <NativeSelectOption key={c.id} value={c.id}>
               {c.name}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
 
-        <select
+        <NativeSelect
           value={selectedBrand}
           onChange={(e) => setSelectedBrand(e.target.value)}
-          aria-label="Filter by brand"
-          className={filterCls}
+          size="sm"
+          className="h-8 text-xs"
         >
-          <option value="all">
-            All Brands ({taxonomy.liquorBrands.length})
-          </option>
+          <NativeSelectOption value="all">
+            All brands ({taxonomy.liquorBrands.length})
+          </NativeSelectOption>
           {taxonomy.liquorBrands.map((b) => (
-            <option key={b.id} value={b.id}>
+            <NativeSelectOption key={b.id} value={b.id}>
               {b.name}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
       {/* Table */}
-      <div className="border border-black">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-            <thead>
-              <tr className="border-b border-black bg-[#f3f2ee] text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-                <th className="px-4 py-3.5">Item</th>
-                <th className="px-4 py-3.5">Category / Brand</th>
-                <th className="px-4 py-3.5">Variants &amp; pricing (NPR)</th>
-                <th className="px-4 py-3.5 text-center">Status</th>
-                <th className="px-4 py-3.5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/10">
-              {filteredProducts.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="py-14 text-center text-sm text-neutral-500"
-                  >
-                    No matching liquor products found.
-                  </td>
-                </tr>
-              ) : (
-                filteredProducts.map((p) => (
-                  <tr
-                    key={p.id}
-                    className="transition-colors hover:bg-neutral-50"
-                  >
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3.5">
-                        <img
-                          src={
-                            p.primaryImage ||
-                            'https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=100&q=80'
-                          }
-                          alt={p.name}
-                          className="h-12 w-12 shrink-0 bg-[#f3f2ee] object-cover"
-                        />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 font-semibold">
-                            <span>{p.name}</span>
-                            {p.isFeatured && (
-                              <span className="inline-flex items-center gap-1 bg-black px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
-                                <Sparkles className="h-2.5 w-2.5" /> Featured
-                              </span>
-                            )}
-                          </div>
-                          <div className="mt-0.5 truncate font-mono text-[11px] text-neutral-400">
-                            /{p.slug}
-                          </div>
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-xs">Product</TableHead>
+              <TableHead className="text-xs">Brand &amp; Category</TableHead>
+              <TableHead className="text-xs">Sizes, ABV &amp; pricing</TableHead>
+              <TableHead className="text-center text-xs">Status</TableHead>
+              <TableHead className="text-right text-xs">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredProducts.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="p-0">
+                  <EmptyState
+                    title="No matching liquor products found"
+                    description="Try adjusting your filter or search terms."
+                  />
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredProducts.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={
+                          p.primaryImage ||
+                          'https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=100&q=80'
+                        }
+                        alt={p.name}
+                        className="h-10 w-10 shrink-0 rounded-md bg-muted object-cover border border-border"
+                      />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 font-medium text-xs text-foreground">
+                          <span>{p.name}</span>
+                          {p.isFeatured && (
+                            <Badge variant="secondary" className="gap-1 text-[9px] px-1 py-0 font-normal">
+                              <Sparkles className="h-2.5 w-2.5" /> Featured
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="truncate font-mono text-[11px] text-muted-foreground">
+                          /{p.slug}
                         </div>
                       </div>
-                    </td>
+                    </div>
+                  </TableCell>
 
-                    <td className="px-4 py-4">
-                      <div className="font-semibold">{p.categoryName}</div>
-                      <div className="text-xs text-neutral-500">
-                        {p.brandName || 'No Brand'}
-                      </div>
-                    </td>
+                  <TableCell>
+                    <div className="font-medium text-xs text-foreground">{p.brandName || '—'}</div>
+                    <div className="text-[11px] text-muted-foreground">{p.categoryName}</div>
+                  </TableCell>
 
-                    <td className="px-4 py-4">
-                      <div className="flex max-w-sm flex-wrap gap-1.5">
-                        {p.variants.map((v) => (
-                          <span
-                            key={v.id}
-                            className={`inline-flex items-center gap-1.5 border px-2 py-1 text-xs ${
-                              v.stock <= 10
-                                ? 'border-red-700 bg-red-50 text-red-800'
-                                : 'border-black/20 bg-white'
-                            }`}
-                          >
-                            <span className="font-medium">{v.name}</span>
-                            <span className="font-bold tabular-nums">
-                              {formatNPR(v.price)}
+                  <TableCell>
+                    <div className="flex max-w-sm flex-wrap gap-1.5">
+                      {p.variants.map((v) => (
+                        <span
+                          key={v.id}
+                          className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs ${
+                            v.stock <= 10
+                              ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                              : 'border-border bg-muted/30 text-foreground'
+                          }`}
+                        >
+                          <span className="font-medium text-[11px]">{v.name}</span>
+                          {v.abv && (
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {v.abv}%
                             </span>
-                            <span className="text-[10px] text-neutral-500">
-                              {v.stock} in stock
-                            </span>
+                          )}
+                          <span className="font-mono font-semibold text-[11px] tabular-nums">
+                            {formatNPR(v.price)}
                           </span>
-                        ))}
-                      </div>
-                    </td>
+                          <span className="text-[10px] text-muted-foreground">
+                            {v.stock} left
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  </TableCell>
 
-                    <td className="px-4 py-4 text-center">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleToggleStatus(p.id, 'isActive', p.isActive)
-                        }
-                        className={`inline-flex cursor-pointer items-center gap-1.5 border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
-                          p.isActive
-                            ? 'border-black bg-black text-white hover:bg-neutral-800'
-                            : 'border-black/30 bg-white text-neutral-500 hover:border-black hover:text-black'
-                        }`}
+                  <TableCell className="text-center">
+                    <Button
+                      variant={p.isActive ? 'outline' : 'secondary'}
+                      size="sm"
+                      onClick={() =>
+                        handleToggleStatus(p.id, 'isActive', p.isActive)
+                      }
+                      className="h-7 gap-1 text-[11px]"
+                    >
+                      {p.isActive ? (
+                        <>
+                          <CheckCircle2 className="h-3 w-3 text-emerald-500" /> Active
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="h-3 w-3 text-muted-foreground" /> Draft
+                        </>
+                      )}
+                    </Button>
+                  </TableCell>
+
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditModal(p)}
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        aria-label={`Edit ${p.name}`}
                       >
-                        {p.isActive ? (
-                          <>
-                            <CheckCircle2 className="h-3 w-3" /> Active
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="h-3 w-3" /> Draft
-                          </>
-                        )}
-                      </button>
-                    </td>
-
-                    <td className="px-4 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(p)}
-                          className="grid h-9 w-9 cursor-pointer place-items-center text-neutral-500 transition-colors hover:bg-black hover:text-white"
-                          title="Edit Product"
-                          aria-label={`Edit ${p.name}`}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(p.id, p.name)}
-                          className="grid h-9 w-9 cursor-pointer place-items-center text-neutral-500 transition-colors hover:bg-red-700 hover:text-white"
-                          title="Delete Product"
-                          aria-label={`Delete ${p.name}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleteTarget({ id: p.id, name: p.name })}
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        aria-label={`Delete ${p.name}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
 
-      {/* Add / Edit modal */}
-      {modalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:items-center"
-          role="dialog"
-          aria-modal="true"
-          aria-label={editingId ? 'Edit liquor SKU' : 'New liquor SKU'}
-        >
-          <div className="relative my-8 w-full max-w-2xl border-2 border-black bg-white p-6 text-[#101010] shadow-[8px_8px_0_0_#000] sm:p-8">
-            <button
-              type="button"
-              onClick={() => setModalOpen(false)}
-              aria-label="Close"
-              className="absolute right-4 top-4 grid h-9 w-9 cursor-pointer place-items-center transition-colors hover:bg-neutral-100"
-            >
-              <X className="h-5 w-5" />
-            </button>
+      {/* Add / Edit Dialog */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">
+              {editingId ? 'Edit liquor product' : 'New liquor product'}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Manage product profile, alcohol by volume (ABV), and sizing variants.
+            </DialogDescription>
+          </DialogHeader>
 
-            <h2 className="text-3xl font-black uppercase leading-none tracking-tighter">
-              {editingId ? 'Edit liquor SKU' : 'New liquor SKU'}
-            </h2>
-            <p className="mb-7 mt-2 text-sm text-neutral-600">
-              Fill in product information, pricing, bottle volume, and stock.
-            </p>
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="liq-name" className="text-xs">
+                Product name *
+              </Label>
+              <Input
+                id="liq-name"
+                required
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder="e.g. Old Durbar Black Chimney"
+                className="h-8 text-xs"
+              />
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label htmlFor="liq-name" className={labelCls}>
-                  Product Name *
-                </label>
-                <input
-                  id="liq-name"
-                  type="text"
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="liq-cat" className="text-xs">
+                  Category *
+                </Label>
+                <NativeSelect
+                  id="liq-cat"
+                  value={formCategoryId}
+                  onChange={(e) => setFormCategoryId(e.target.value)}
                   required
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="e.g. Old Durbar Black Chimney"
-                  className={fieldCls}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="liq-cat" className={labelCls}>
-                    Category *
-                  </label>
-                  <select
-                    id="liq-cat"
-                    value={formCategoryId}
-                    onChange={(e) => setFormCategoryId(e.target.value)}
-                    required
-                    className={fieldCls}
-                  >
-                    {taxonomy.liquorCategories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="liq-brand" className={labelCls}>
-                    Brand (Optional)
-                  </label>
-                  <select
-                    id="liq-brand"
-                    value={formBrandId}
-                    onChange={(e) => setFormBrandId(e.target.value)}
-                    className={fieldCls}
-                  >
-                    <option value="">No Brand</option>
-                    {taxonomy.liquorBrands.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="liq-img" className={labelCls}>
-                    Image URL
-                  </label>
-                  <input
-                    id="liq-img"
-                    type="url"
-                    value={formImageUrl}
-                    onChange={(e) => setFormImageUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
-                    className={fieldCls}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="liq-slug" className={labelCls}>
-                    URL Slug (Optional)
-                  </label>
-                  <input
-                    id="liq-slug"
-                    type="text"
-                    value={formSlug}
-                    onChange={(e) => setFormSlug(e.target.value)}
-                    placeholder="auto-generated-from-name"
-                    className={`${fieldCls} font-mono`}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="liq-desc" className={labelCls}>
-                  Description
-                </label>
-                <textarea
-                  id="liq-desc"
-                  rows={2}
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Tasting notes, blend info, heritage..."
-                  className="w-full border border-black/30 bg-white px-3 py-2.5 text-sm outline-none placeholder:text-neutral-400 focus:border-black focus:shadow-[3px_3px_0_0_#000]"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-x-8 gap-y-3 border-y border-black/15 py-4">
-                <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium">
-                  <input
-                    type="checkbox"
-                    checked={formIsActive}
-                    onChange={(e) => setFormIsActive(e.target.checked)}
-                    className="h-4 w-4 accent-black"
-                  />
-                  <span>Active on storefront</span>
-                </label>
-
-                <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium">
-                  <input
-                    type="checkbox"
-                    checked={formIsFeatured}
-                    onChange={(e) => setFormIsFeatured(e.target.checked)}
-                    className="h-4 w-4 accent-black"
-                  />
-                  <span className="flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Featured badge
-                  </span>
-                </label>
-              </div>
-
-              {/* Variants */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className={`${labelCls} mb-0`}>
-                    Bottle volumes &amp; variants
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleAddVariantRow}
-                    className="inline-flex cursor-pointer items-center gap-1 border-0 border-b border-black bg-transparent p-0 pb-0.5 text-xs font-semibold transition-opacity hover:opacity-60"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Add variant
-                  </button>
-                </div>
-
-                <div className="max-h-64 space-y-2 overflow-y-auto">
-                  {formVariants.map((v, i) => (
-                    <div
-                      key={i}
-                      className="grid grid-cols-2 items-center gap-2 bg-[#f3f2ee] p-3 sm:grid-cols-12"
-                    >
-                      <div className="col-span-2 sm:col-span-3">
-                        <input
-                          type="text"
-                          placeholder="e.g. 750 ml"
-                          aria-label="Variant name"
-                          value={v.name}
-                          onChange={(e) =>
-                            updateVariant(i, { name: e.target.value })
-                          }
-                          className={cellCls}
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <input
-                          type="number"
-                          placeholder="Vol ml"
-                          aria-label="Volume in ml"
-                          value={v.volumeMl}
-                          onChange={(e) =>
-                            updateVariant(i, {
-                              volumeMl: Number(e.target.value),
-                            })
-                          }
-                          className={`${cellCls} tabular-nums`}
-                        />
-                      </div>
-
-                      <div className="sm:col-span-3">
-                        <input
-                          type="number"
-                          placeholder="Price (Rs)"
-                          aria-label="Price in rupees"
-                          value={v.price}
-                          onChange={(e) =>
-                            updateVariant(i, { price: Number(e.target.value) })
-                          }
-                          className={`${cellCls} font-bold tabular-nums`}
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <input
-                          type="number"
-                          placeholder="Stock"
-                          aria-label="Stock"
-                          value={v.stock}
-                          onChange={(e) =>
-                            updateVariant(i, { stock: Number(e.target.value) })
-                          }
-                          className={`${cellCls} tabular-nums`}
-                        />
-                      </div>
-
-                      <div className="col-span-2 flex justify-end sm:col-span-2">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveVariantRow(i)}
-                          aria-label="Remove variant"
-                          className="grid h-9 w-9 cursor-pointer place-items-center text-neutral-500 transition-colors hover:bg-red-700 hover:text-white"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
+                  size="sm"
+                  className="w-full text-xs"
+                >
+                  {taxonomy.liquorCategories.map((c) => (
+                    <NativeSelectOption key={c.id} value={c.id}>
+                      {c.name}
+                    </NativeSelectOption>
                   ))}
-                </div>
+                </NativeSelect>
               </div>
 
-              <div className="flex items-center justify-end gap-3 border-t border-black/15 pt-5">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="h-11 cursor-pointer border border-black bg-white px-5 text-xs font-semibold uppercase tracking-wider transition-colors hover:bg-neutral-100"
+              <div className="space-y-1.5">
+                <Label htmlFor="liq-brand" className="text-xs">
+                  Brand / distillery
+                </Label>
+                <NativeSelect
+                  id="liq-brand"
+                  value={formBrandId}
+                  onChange={(e) => setFormBrandId(e.target.value)}
+                  size="sm"
+                  className="w-full text-xs"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="h-11 cursor-pointer bg-black px-6 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSubmitting
-                    ? 'Saving...'
-                    : editingId
-                      ? 'Update product'
-                      : 'Create product'}
-                </button>
+                  <NativeSelectOption value="">No specific brand</NativeSelectOption>
+                  {taxonomy.liquorBrands.map((b) => (
+                    <NativeSelectOption key={b.id} value={b.id}>
+                      {b.name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="liq-slug" className="text-xs">
+                  URL slug (optional)
+                </Label>
+                <Input
+                  id="liq-slug"
+                  value={formSlug}
+                  onChange={(e) => setFormSlug(e.target.value)}
+                  placeholder="auto-generated-from-name"
+                  className="h-8 font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="liq-img" className="text-xs">
+                  Primary image URL
+                </Label>
+                <Input
+                  id="liq-img"
+                  type="url"
+                  value={formImageUrl}
+                  onChange={(e) => setFormImageUrl(e.target.value)}
+                  placeholder="https://images.unsplash.com/..."
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="liq-desc" className="text-xs">
+                Tasting notes &amp; description
+              </Label>
+              <Textarea
+                id="liq-desc"
+                rows={2}
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                placeholder="Aromatic profile, aging cask notes, tasting palate..."
+                className="text-xs"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-6 border-y border-border py-3">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="liq-is-active"
+                  checked={formIsActive}
+                  onCheckedChange={(checked) => setFormIsActive(Boolean(checked))}
+                />
+                <Label htmlFor="liq-is-active" className="text-xs cursor-pointer font-normal">
+                  Active on storefront
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="liq-is-featured"
+                  checked={formIsFeatured}
+                  onCheckedChange={(checked) => setFormIsFeatured(Boolean(checked))}
+                />
+                <Label htmlFor="liq-is-featured" className="text-xs cursor-pointer font-normal flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Featured top pick
+                </Label>
+              </div>
+            </div>
+
+            {/* Variants */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Volume variants &amp; price tiers</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAddVariantRow}
+                  className="h-7 gap-1 text-xs text-primary"
+                >
+                  <Plus className="h-3 w-3" /> Add variant
+                </Button>
+              </div>
+
+              <div className="max-h-60 space-y-2 overflow-y-auto">
+                {formVariants.map((v, i) => (
+                  <div
+                    key={i}
+                    className="grid grid-cols-2 items-center gap-2 rounded-md border border-border bg-muted/30 p-2 sm:grid-cols-12"
+                  >
+                    <div className="col-span-2 sm:col-span-3">
+                      <Input
+                        type="text"
+                        placeholder="Variant name"
+                        value={v.name}
+                        onChange={(e) =>
+                          updateVariant(i, { name: e.target.value })
+                        }
+                        className="h-7 text-xs"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <Input
+                        type="number"
+                        placeholder="ml"
+                        value={v.volumeMl}
+                        onChange={(e) =>
+                          updateVariant(i, {
+                            volumeMl: Number(e.target.value),
+                          })
+                        }
+                        className="h-7 font-mono text-xs"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-3">
+                      <Input
+                        type="number"
+                        placeholder="Price"
+                        value={v.price}
+                        onChange={(e) =>
+                          updateVariant(i, {
+                            price: Number(e.target.value),
+                          })
+                        }
+                        className="h-7 font-mono text-xs"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <Input
+                        type="number"
+                        placeholder="Stock"
+                        value={v.stock}
+                        onChange={(e) =>
+                          updateVariant(i, {
+                            stock: Number(e.target.value),
+                          })
+                        }
+                        className="h-7 font-mono text-xs"
+                      />
+                    </div>
+
+                    <div className="col-span-2 flex justify-end sm:col-span-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveVariantRow(i)}
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setModalOpen(false)}
+                className="h-8 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={isSubmitting} className="h-8 text-xs">
+                {isSubmitting ? 'Saving...' : editingId ? 'Update product' : 'Create product'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete liquor product"
+        description={`Are you sure you want to permanently delete "${deleteTarget?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        tone="destructive"
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   )
 }

@@ -6,6 +6,11 @@ import { authClient } from '#/lib/auth-client'
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { toast } from 'sonner'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { Checkbox } from '#/components/ui/checkbox'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card'
 import {
   User,
   Phone,
@@ -14,7 +19,7 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  AlertCircle,
+  ShieldCheck,
 } from 'lucide-react'
 
 const signupSearchSchema = z.object({
@@ -94,198 +99,178 @@ function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f5ef] text-[#181818] flex flex-col font-sans">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
       <Header />
 
       <main className="flex-1 flex items-center justify-center py-12 sm:py-16 px-4">
-        <div className="w-full max-w-[460px]">
-          {/* AUTH CARD */}
-          <div className="rounded-[6px] border border-[#dedbd4] bg-white p-7 sm:p-10 shadow-[0_12px_32px_rgba(0,0,0,0.05)]">
-            <div className="text-center mb-8">
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#777] block mb-2">
-                CREATE AN ACCOUNT
+        <div className="w-full max-w-sm space-y-4">
+          <Card className="border-border shadow-sm">
+            <CardHeader className="text-center space-y-1.5 pb-6">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                Create an account
               </span>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-[-0.05em] text-[#181818] uppercase">
+              <CardTitle className="text-2xl font-bold tracking-tight">
                 Join Mezmani
-              </h1>
-              <p className="mt-2 text-xs text-[#777] leading-relaxed">
-                Order genuine liquor, cold beers and late-night munchies with
-                40-minute delivery.
-              </p>
-            </div>
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Order genuine liquor, cold beers, and groceries with 40-minute express delivery.
+              </CardDescription>
+            </CardHeader>
 
-            <form onSubmit={handleSignUp} className="space-y-4">
-              {/* FULL NAME */}
-              <div>
-                <label
-                  htmlFor="name"
-                  className="block text-[11px] font-bold uppercase tracking-[0.12em] text-[#181818] mb-1.5"
-                >
-                  Full Name
-                </label>
-                <div className="relative">
-                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#888]">
-                    <User className="h-4 w-4" />
+            <CardContent>
+              <form onSubmit={handleSignUp} className="space-y-4">
+                {/* Full Name */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="name" className="text-xs">
+                    Full name
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="name"
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Suman Shrestha"
+                      className="pl-9 text-xs"
+                    />
                   </div>
-                  <input
-                    id="name"
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Suman Shrestha"
-                    className="w-full h-11 pl-10 pr-3.5 rounded-[3px] border border-[#dedbd4] bg-[#fdfdfc] text-xs text-[#181818] placeholder:text-[#999] focus:outline-none focus:border-[#171717] focus:bg-white transition-colors"
-                  />
                 </div>
-              </div>
 
-              {/* PHONE NUMBER */}
-              <div>
-                <label
-                  htmlFor="phone"
-                  className="block text-[11px] font-bold uppercase tracking-[0.12em] text-[#181818] mb-1.5"
-                >
-                  Mobile Number (For Rider Dispatch)
-                </label>
-                <div className="relative">
-                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#888]">
-                    <Phone className="h-4 w-4" />
+                {/* Mobile Number */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone" className="text-xs">
+                    Mobile number (for delivery)
+                  </Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="phone"
+                      type="tel"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="98XXXXXXXX"
+                      className="pl-9 text-xs font-mono"
+                    />
                   </div>
-                  <input
-                    id="phone"
-                    type="tel"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="98XXXXXXXX"
-                    className="w-full h-11 pl-10 pr-3.5 rounded-[3px] border border-[#dedbd4] bg-[#fdfdfc] text-xs text-[#181818] placeholder:text-[#999] focus:outline-none focus:border-[#171717] focus:bg-white transition-colors"
-                  />
                 </div>
-              </div>
 
-              {/* EMAIL ADDRESS */}
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-[11px] font-bold uppercase tracking-[0.12em] text-[#181818] mb-1.5"
-                >
-                  Email Address
-                </label>
-                <div className="relative">
-                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#888]">
-                    <Mail className="h-4 w-4" />
+                {/* Email Address */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="text-xs">
+                    Email address
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      className="pl-9 text-xs"
+                    />
                   </div>
-                  <input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    className="w-full h-11 pl-10 pr-3.5 rounded-[3px] border border-[#dedbd4] bg-[#fdfdfc] text-xs text-[#181818] placeholder:text-[#999] focus:outline-none focus:border-[#171717] focus:bg-white transition-colors"
-                  />
                 </div>
-              </div>
 
-              {/* PASSWORD */}
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-[11px] font-bold uppercase tracking-[0.12em] text-[#181818] mb-1.5"
-                >
-                  Password (min 8 characters)
-                </label>
-                <div className="relative">
-                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#888]">
-                    <Lock className="h-4 w-4" />
+                {/* Password */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="password" className="text-xs">
+                    Password (min 8 characters)
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      required
+                      minLength={8}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="pl-9 pr-9 text-xs"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-3.5 w-3.5" />
+                      ) : (
+                        <Eye className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
                   </div>
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full h-11 pl-10 pr-10 rounded-[3px] border border-[#dedbd4] bg-[#fdfdfc] text-xs text-[#181818] placeholder:text-[#999] focus:outline-none focus:border-[#171717] focus:bg-white transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#888] hover:text-[#181818] border-0 bg-transparent cursor-pointer p-0"
-                    aria-label={
-                      showPassword ? 'Hide password' : 'Show password'
-                    }
+                </div>
+
+                {/* 18+ Age Confirmation Checkbox */}
+                <div className="rounded-lg border border-border bg-muted/20 p-3 mt-1">
+                  <div className="flex items-start gap-2.5">
+                    <Checkbox
+                      id="age-confirm"
+                      checked={isAgeConfirmed}
+                      onCheckedChange={(checked) => setIsAgeConfirmed(Boolean(checked))}
+                      className="mt-0.5"
+                    />
+                    <Label
+                      htmlFor="age-confirm"
+                      className="text-[11px] leading-relaxed text-muted-foreground font-normal cursor-pointer"
+                    >
+                      I certify that I am <strong className="text-foreground">18 years of age</strong> or older in accordance with Nepal Liquor Regulations.
+                    </Label>
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="pt-2">
+                  <Button
+                    type="submit"
+                    disabled={isLoading || !isAgeConfirmed}
+                    className="w-full h-10 text-xs font-medium gap-2"
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                        Creating account...
+                      </span>
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      <>
+                        Create account
+                        <ArrowRight className="h-4 w-4" />
+                      </>
                     )}
-                  </button>
+                  </Button>
                 </div>
+              </form>
+
+              {/* Switch to Sign In */}
+              <div className="mt-6 pt-4 border-t border-border text-center">
+                <p className="text-xs text-muted-foreground">
+                  Already have an account?{' '}
+                  <Link
+                    to="/login"
+                    search={{ redirect: search.redirect }}
+                    className="font-medium text-foreground hover:underline"
+                  >
+                    Sign in here
+                  </Link>
+                </p>
               </div>
+            </CardContent>
+          </Card>
 
-              {/* 18+ AGE CONFIRMATION CHECKBOX */}
-              <div className="rounded-[4px] border border-[#dedbd4] bg-[#f7f4ee] p-3 mt-1">
-                <label className="flex items-start gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isAgeConfirmed}
-                    onChange={(e) => setIsAgeConfirmed(e.target.checked)}
-                    className="mt-0.5 accent-[#171717] rounded"
-                  />
-                  <span className="text-[11px] leading-relaxed text-[#555]">
-                    I certify that I am{' '}
-                    <strong className="text-[#181818]">18 years of age</strong>{' '}
-                    or older in strict accordance with Nepal Liquor Regulations
-                    and agree to drink responsibly.
-                  </span>
-                </label>
-              </div>
-
-              {/* SUBMIT BUTTON */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={isLoading || !isAgeConfirmed}
-                  className="w-full h-12 bg-[#171717] text-white rounded-[3px] text-xs font-bold uppercase tracking-wider hover:bg-[#d8ff38] hover:text-[#111] transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <span className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                      CREATING ACCOUNT...
-                    </span>
-                  ) : (
-                    <>
-                      CREATE ACCOUNT
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-
-            {/* SWITCH TO SIGN IN */}
-            <div className="mt-8 pt-6 border-t border-[#dedbd4] text-center">
-              <p className="text-xs text-[#666]">
-                Already have an account?{' '}
-                <Link
-                  to="/login"
-                  search={{ redirect: search.redirect }}
-                  className="font-bold text-[#181818] hover:underline"
-                >
-                  Sign in here →
-                </Link>
-              </p>
-            </div>
-          </div>
-
-          {/* COMPLIANCE FOOTNOTE */}
-          <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-[#777]">
-            <AlertCircle className="h-3.5 w-3.5 text-[#888]" />
+          {/* Compliance Footnote */}
+          <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
+            <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Government of Nepal Verified Liquor Delivery Partner</span>
           </div>
         </div>

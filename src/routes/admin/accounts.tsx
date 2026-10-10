@@ -5,40 +5,59 @@ import {
   addLedgerFn,
   approveSettlementFn,
 } from '#/server/operations/operations.functions'
-import type { LedgerEntry, Settlement } from '#/server/operations/types'
+import type { LedgerEntry } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
-import { PageHeader } from '#/components/admin/page-header'
-import { KpiCard } from '#/components/admin/kpi-card'
-import {
-  pageClass,
-  cardClass,
-  tableWrap,
-  thClass,
-  tdClass,
-  btnPrimary,
-  btnSecondary,
-  btnGhost,
-  inputClass,
-  selectClass,
-  labelClass,
-} from '#/components/admin/styles'
+import { PageHeader } from '#/components/shared/page-header'
+import { KpiCard } from '#/components/shared/kpi-card'
 import {
   Wallet,
   Receipt,
   Plus,
   Download,
   Search,
-  Filter,
-  CheckCircle,
   Coins,
   ArrowDownLeft,
   ArrowUpRight,
   TrendingUp,
-  X,
   Printer,
-  Building,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { Badge } from '#/components/ui/badge'
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from '#/components/ui/tabs'
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '#/components/ui/native-select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui/table'
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '#/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
+import { EmptyState } from '#/components/shared/empty-state'
 
 export const Route = createFileRoute('/admin/accounts')({
   loader: async () => {
@@ -131,7 +150,7 @@ function AdminAccountsPage() {
           amount: Number(voucherForm.amount),
         },
       })
-      toast.success('Journal voucher posted to General Ledger in Neon DB!')
+      toast.success('Journal voucher posted to general ledger')
       setIsAddVoucherOpen(false)
       setVoucherForm({
         memo: '',
@@ -152,7 +171,7 @@ function AdminAccountsPage() {
     try {
       setIsSubmitting(true)
       await approveSettlementFn({ data: { id, status } })
-      toast.success(`Settlement marked as ${status.toUpperCase()}!`)
+      toast.success(`Settlement marked as ${status}`)
       await router.invalidate()
     } catch {
       toast.error('Failed to update settlement')
@@ -179,21 +198,21 @@ function AdminAccountsPage() {
   }
 
   return (
-    <div className={pageClass}>
+    <div className="space-y-6">
       <PageHeader
         kicker="Finance"
-        title="Accounts & Financial Ledger"
+        title="Accounts and financial ledger"
         description="Centralized double-entry accounting, P&L reporting, and courier remittance settlement."
         actions={
           <div className="flex items-center gap-2">
-            <button type="button" onClick={handleExportCSV} className={btnSecondary}>
-              <Download className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-8 gap-1.5 text-xs">
+              <Download className="h-3.5 w-3.5" />
               Export CSV
-            </button>
-            <button type="button" onClick={() => setIsAddVoucherOpen(true)} className={btnPrimary}>
-              <Plus className="h-4 w-4" />
-              Record Voucher
-            </button>
+            </Button>
+            <Button size="sm" onClick={() => setIsAddVoucherOpen(true)} className="h-8 gap-1.5 text-xs">
+              <Plus className="h-3.5 w-3.5" />
+              Record voucher
+            </Button>
           </div>
         }
       />
@@ -201,27 +220,27 @@ function AdminAccountsPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <KpiCard
-          label="Consolidated Liquidity"
+          label="Consolidated liquidity"
           value={formatNPR(netLiquidityBalance)}
           note="Across bank, wallets & COD cash"
           icon={Wallet}
         />
         <KpiCard
-          label="Total Inflow (Credits)"
+          label="Total inflow (credits)"
           value={formatNPR(totalCredits)}
           note="Sales income & COD remittances"
           icon={ArrowDownLeft}
           tone="success"
         />
         <KpiCard
-          label="Total Outflow (Debits)"
+          label="Total outflow (debits)"
           value={formatNPR(totalDebits)}
           note="Inventory restock & expenses"
           icon={ArrowUpRight}
           tone="danger"
         />
         <KpiCard
-          label="Estimated Net Margin"
+          label="Estimated net margin"
           value={formatNPR(netEstimatedProfit)}
           note="Gross profit less overhead"
           icon={TrendingUp}
@@ -229,560 +248,522 @@ function AdminAccountsPage() {
         />
       </div>
 
-      {/* Sub Tabs */}
-      <div className="flex border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab('ledger')}
-          className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition ${
-            activeTab === 'ledger'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Receipt className="w-4 h-4" />
-          <span>Double-Entry General Ledger ({ops.ledger.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('statements')}
-          className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition ${
-            activeTab === 'statements'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <TrendingUp className="w-4 h-4" />
-          <span>P&L Statement & Balance Sheet</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('settlements')}
-          className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition ${
-            activeTab === 'settlements'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Coins className="w-4 h-4" />
-          <span>Settlements ({ops.settlements.length})</span>
-        </button>
-      </div>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)}>
+        <TabsList className="h-9">
+          <TabsTrigger value="ledger" className="gap-2 text-xs">
+            <Receipt className="h-3.5 w-3.5" />
+            <span>General ledger ({ops.ledger.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="statements" className="gap-2 text-xs">
+            <TrendingUp className="h-3.5 w-3.5" />
+            <span>P&L and balance sheet</span>
+          </TabsTrigger>
+          <TabsTrigger value="settlements" className="gap-2 text-xs">
+            <Coins className="h-3.5 w-3.5" />
+            <span>Settlements ({ops.settlements.length})</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {activeTab === 'ledger' ? (
         /* Ledger Table */
         <div className="space-y-4">
-          <div className={`${cardClass} p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3`}>
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 md:flex-row md:items-center md:justify-between">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
                 placeholder="Search memo, reference ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`${inputClass} pl-9`}
+                className="h-8 pl-9 text-xs"
               />
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <select
+              <NativeSelect
                 value={accountFilter}
                 onChange={(e) => setAccountFilter(e.target.value)}
-                className={selectClass}
+                size="sm"
+                className="h-8 text-xs"
               >
-                <option value="all">All Accounts</option>
-                <option value="bank">Bank Account</option>
-                <option value="cash">Cash in Hand</option>
-                <option value="esewa">eSewa Wallet</option>
-                <option value="khalti">Khalti Wallet</option>
-              </select>
+                <NativeSelectOption value="all">All accounts</NativeSelectOption>
+                <NativeSelectOption value="bank">Bank account</NativeSelectOption>
+                <NativeSelectOption value="cash">Cash in hand</NativeSelectOption>
+                <NativeSelectOption value="esewa">eSewa wallet</NativeSelectOption>
+                <NativeSelectOption value="khalti">Khalti wallet</NativeSelectOption>
+              </NativeSelect>
 
-              <select
+              <NativeSelect
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className={selectClass}
+                size="sm"
+                className="h-8 text-xs"
               >
-                <option value="all">All Categories</option>
-                <option value="sales">Sales Income</option>
-                <option value="purchase">Inventory Purchases</option>
-                <option value="expense">Operating Expense</option>
-                <option value="cod">COD Remittance</option>
-                <option value="refund">Refund Payout</option>
-              </select>
+                <NativeSelectOption value="all">All categories</NativeSelectOption>
+                <NativeSelectOption value="sales">Sales income</NativeSelectOption>
+                <NativeSelectOption value="purchase">Inventory purchases</NativeSelectOption>
+                <NativeSelectOption value="expense">Operating expense</NativeSelectOption>
+                <NativeSelectOption value="cod">COD remittance</NativeSelectOption>
+                <NativeSelectOption value="refund">Refund payout</NativeSelectOption>
+              </NativeSelect>
             </div>
           </div>
 
-          <div className={tableWrap}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50/80 border-b border-slate-200">
-                  <tr>
-                    <th className={thClass}>Date & ID</th>
-                    <th className={thClass}>Description & Memo</th>
-                    <th className={thClass}>Category</th>
-                    <th className={thClass}>Account</th>
-                    <th className={`${thClass} text-right`}>Debit Out (-)</th>
-                    <th className={`${thClass} text-right`}>Credit In (+)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredLedger.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-12 text-center text-slate-400 text-sm">
-                        No ledger transactions found.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredLedger.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50/70 transition">
-                        <td className={tdClass}>
-                          <span className="font-mono text-xs text-slate-500 block">{item.id}</span>
-                          <span className="text-xs text-slate-400">{item.date}</span>
-                        </td>
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Date and ID</TableHead>
+                  <TableHead className="text-xs">Description and memo</TableHead>
+                  <TableHead className="text-xs">Category</TableHead>
+                  <TableHead className="text-xs">Account</TableHead>
+                  <TableHead className="text-right text-xs">Debit out (-)</TableHead>
+                  <TableHead className="text-right text-xs">Credit in (+)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredLedger.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="p-0">
+                      <EmptyState
+                        title="No ledger transactions found"
+                        description="Try adjusting your filters or search terms."
+                      />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredLedger.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <span className="font-mono text-xs text-foreground block">{item.id}</span>
+                        <span className="text-[11px] text-muted-foreground">{item.date}</span>
+                      </TableCell>
 
-                        <td className={tdClass}>
-                          <div className="font-semibold text-slate-900">{item.memo}</div>
-                          {item.refId && (
-                            <span className="text-xs text-slate-400 font-mono">Ref: {item.refId}</span>
-                          )}
-                        </td>
+                      <TableCell>
+                        <div className="font-medium text-xs text-foreground">{item.memo}</div>
+                        {item.refId && (
+                          <span className="text-[11px] text-muted-foreground font-mono">Ref: {item.refId}</span>
+                        )}
+                      </TableCell>
 
-                        <td className={tdClass}>
-                          <span className="inline-flex px-2 py-0.5 rounded text-[11px] font-bold uppercase bg-slate-100 text-slate-700">
-                            {item.category}
+                      <TableCell>
+                        <Badge variant="secondary" className="text-[10px] font-normal capitalize">
+                          {item.category}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell>
+                        <span className="font-mono text-xs uppercase text-muted-foreground">
+                          {item.account}
+                        </span>
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        {item.type === 'debit' ? (
+                          <span className="font-mono text-xs font-semibold tabular-nums text-destructive">
+                            -{formatNPR(item.amount)}
                           </span>
-                        </td>
+                        ) : (
+                          <span className="text-muted-foreground/40">-</span>
+                        )}
+                      </TableCell>
 
-                        <td className={tdClass}>
-                          <span className="font-mono text-xs uppercase text-slate-600">
-                            {item.account}
+                      <TableCell className="text-right">
+                        {item.type === 'credit' ? (
+                          <span className="font-mono text-xs font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+                            +{formatNPR(item.amount)}
                           </span>
-                        </td>
-
-                        <td className={`${tdClass} text-right`}>
-                          {item.type === 'debit' ? (
-                            <span className="font-mono font-bold text-rose-600">
-                              -{formatNPR(item.amount)}
-                            </span>
-                          ) : (
-                            <span className="text-slate-300">-</span>
-                          )}
-                        </td>
-
-                        <td className={`${tdClass} text-right`}>
-                          {item.type === 'credit' ? (
-                            <span className="font-mono font-bold text-emerald-600">
-                              +{formatNPR(item.amount)}
-                            </span>
-                          ) : (
-                            <span className="text-slate-300">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                        ) : (
+                          <span className="text-muted-foreground/40">-</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </div>
       ) : activeTab === 'statements' ? (
         /* P&L and Balance Sheet */
         <div className="space-y-6">
           <div className="flex justify-end">
-            <button
-              type="button"
+            <Button
+              size="sm"
               onClick={() => setIsStatementModalOpen(true)}
-              className={btnPrimary}
+              className="h-8 gap-1.5 text-xs"
             >
-              <Printer className="h-4 w-4" />
-              Print Official Statement
-            </button>
+              <Printer className="h-3.5 w-3.5" />
+              Print official statement
+            </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Profit & Loss */}
-            <div className={`${cardClass} p-6 space-y-4`}>
-              <div className="border-b pb-3 border-slate-200">
-                <h3 className="text-base font-bold text-slate-900">Statement of Profit & Loss</h3>
-                <p className="text-xs text-slate-500">Operating performance summary</p>
-              </div>
+            <Card className="p-4 space-y-3">
+              <CardHeader className="p-0 pb-3 border-b border-border">
+                <CardTitle className="text-xs font-semibold">Statement of profit and loss</CardTitle>
+                <CardDescription className="text-[11px]">Operating performance summary</CardDescription>
+              </CardHeader>
 
-              <div className="space-y-2.5 text-xs">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Revenue</div>
-                <div className="flex justify-between pl-2">
-                  <span>Gross Merchandise Sales:</span>
-                  <span className="font-mono text-emerald-700 font-bold">+{formatNPR(grossSales)}</span>
+              <div className="space-y-2 text-xs">
+                <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Revenue</div>
+                <div className="flex justify-between pl-2 text-muted-foreground">
+                  <span>Gross merchandise sales:</span>
+                  <span className="font-mono text-foreground font-medium">+{formatNPR(grossSales)}</span>
                 </div>
-                <div className="flex justify-between pl-2">
-                  <span>COD Remittances Realized:</span>
-                  <span className="font-mono text-emerald-700 font-bold">+{formatNPR(codCollected)}</span>
-                </div>
-
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-2">
-                  Cost of Goods Sold (COGS)
-                </div>
-                <div className="flex justify-between pl-2">
-                  <span>Inventory Restock Purchases:</span>
-                  <span className="font-mono text-rose-600">-{formatNPR(cogsPurchases)}</span>
-                </div>
-                <div className="flex justify-between font-bold text-slate-900 border-t border-slate-200 pt-1.5 pl-2">
-                  <span>Gross Operating Margin:</span>
-                  <span className="font-mono text-blue-700">{formatNPR(grossProfit)}</span>
+                <div className="flex justify-between pl-2 text-muted-foreground">
+                  <span>COD remittances realized:</span>
+                  <span className="font-mono text-foreground font-medium">+{formatNPR(codCollected)}</span>
                 </div>
 
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-2">
-                  Operating Overhead
+                <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider pt-2">
+                  Cost of goods sold (COGS)
                 </div>
-                <div className="flex justify-between pl-2">
-                  <span>Utilities & Fulfillment Overhead:</span>
-                  <span className="font-mono text-rose-600">-{formatNPR(operatingExpenses)}</span>
+                <div className="flex justify-between pl-2 text-muted-foreground">
+                  <span>Inventory restock purchases:</span>
+                  <span className="font-mono text-destructive">-{formatNPR(cogsPurchases)}</span>
                 </div>
-                <div className="flex justify-between pl-2">
-                  <span>Customer Refund Disbursals:</span>
-                  <span className="font-mono text-rose-600">-{formatNPR(refundsIssued)}</span>
+                <div className="flex justify-between font-medium text-foreground border-t border-border/50 pt-1.5 pl-2">
+                  <span>Gross operating margin:</span>
+                  <span className="font-mono font-semibold">{formatNPR(grossProfit)}</span>
                 </div>
 
-                <div className="flex justify-between font-bold text-sm text-slate-900 border-t-2 border-slate-200 pt-3 bg-blue-50/70 p-3 rounded-xl mt-3">
-                  <span>Estimated Net Operating Profit:</span>
-                  <span className={`font-mono ${netEstimatedProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider pt-2">
+                  Operating overhead
+                </div>
+                <div className="flex justify-between pl-2 text-muted-foreground">
+                  <span>Utilities and fulfillment overhead:</span>
+                  <span className="font-mono text-destructive">-{formatNPR(operatingExpenses)}</span>
+                </div>
+                <div className="flex justify-between pl-2 text-muted-foreground">
+                  <span>Customer refund disbursals:</span>
+                  <span className="font-mono text-destructive">-{formatNPR(refundsIssued)}</span>
+                </div>
+
+                <div className="flex justify-between items-center border-t border-border pt-3 bg-muted/30 p-2.5 rounded-md mt-2">
+                  <span className="text-xs font-medium text-foreground">Estimated net operating profit:</span>
+                  <span className={`font-mono text-sm font-bold ${netEstimatedProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
                     {formatNPR(netEstimatedProfit)}
                   </span>
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Balance Sheet Overview */}
-            <div className={`${cardClass} p-6 space-y-4`}>
-              <div className="border-b pb-3 border-slate-200">
-                <h3 className="text-base font-bold text-slate-900">Solvency & Balance Sheet</h3>
-                <p className="text-xs text-slate-500">Liquid reserves and current liabilities</p>
-              </div>
+            <Card className="p-4 space-y-3">
+              <CardHeader className="p-0 pb-3 border-b border-border">
+                <CardTitle className="text-xs font-semibold">Solvency and balance sheet</CardTitle>
+                <CardDescription className="text-[11px]">Liquid reserves and current liabilities</CardDescription>
+              </CardHeader>
 
-              <div className="space-y-2.5 text-xs">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Liquid Assets</div>
-                <div className="flex justify-between pl-2">
-                  <span>Corporate Bank Operating Account:</span>
-                  <span className="font-mono font-semibold">{formatNPR(1850000)}</span>
+              <div className="space-y-2 text-xs">
+                <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Current liquid assets</div>
+                <div className="flex justify-between pl-2 text-muted-foreground">
+                  <span>Corporate bank operating account:</span>
+                  <span className="font-mono text-foreground font-medium">{formatNPR(1850000)}</span>
                 </div>
-                <div className="flex justify-between pl-2">
-                  <span>eSewa Merchant Settlement Reserve:</span>
-                  <span className="font-mono font-semibold">{formatNPR(420000)}</span>
+                <div className="flex justify-between pl-2 text-muted-foreground">
+                  <span>eSewa merchant settlement reserve:</span>
+                  <span className="font-mono text-foreground font-medium">{formatNPR(420000)}</span>
                 </div>
-                <div className="flex justify-between pl-2">
-                  <span>Khalti Merchant Settlement Reserve:</span>
-                  <span className="font-mono font-semibold">{formatNPR(310000)}</span>
+                <div className="flex justify-between pl-2 text-muted-foreground">
+                  <span>Khalti merchant settlement reserve:</span>
+                  <span className="font-mono text-foreground font-medium">{formatNPR(310000)}</span>
                 </div>
-                <div className="flex justify-between font-bold text-slate-900 border-t border-slate-200 pt-1.5 pl-2">
-                  <span>Total Liquid Reserves:</span>
-                  <span className="font-mono text-blue-700">{formatNPR(2580000)}</span>
+                <div className="flex justify-between font-medium text-foreground border-t border-border/50 pt-1.5 pl-2">
+                  <span>Total liquid reserves:</span>
+                  <span className="font-mono font-semibold">{formatNPR(2580000)}</span>
                 </div>
 
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-2">
-                  Current Liabilities
+                <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider pt-2">
+                  Current liabilities
                 </div>
-                <div className="flex justify-between pl-2">
-                  <span>Vendor Inventory Payables:</span>
-                  <span className="font-mono text-rose-600 font-semibold">{formatNPR(180000)}</span>
+                <div className="flex justify-between pl-2 text-muted-foreground">
+                  <span>Vendor inventory payables:</span>
+                  <span className="font-mono text-destructive font-medium">{formatNPR(180000)}</span>
                 </div>
-                <div className="flex justify-between pl-2">
-                  <span>Government 13% VAT Payable:</span>
-                  <span className="font-mono text-rose-600 font-semibold">
+                <div className="flex justify-between pl-2 text-muted-foreground">
+                  <span>Government 13% VAT payable:</span>
+                  <span className="font-mono text-destructive font-medium">
                     {formatNPR(Math.round(grossSales * 0.13))}
                   </span>
                 </div>
 
-                <div className="flex justify-between font-bold text-sm text-slate-900 border-t-2 border-slate-200 pt-3 bg-emerald-50/70 p-3 rounded-xl mt-3">
-                  <span>Net Working Capital:</span>
-                  <span className="font-mono text-emerald-700">
+                <div className="flex justify-between items-center border-t border-border pt-3 bg-muted/30 p-2.5 rounded-md mt-2">
+                  <span className="text-xs font-medium text-foreground">Net working capital:</span>
+                  <span className="font-mono text-sm font-bold text-foreground">
                     {formatNPR(2580000 - 180000 - Math.round(grossSales * 0.13))}
                   </span>
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
         </div>
       ) : (
         /* Settlements Table */
-        <div className={tableWrap}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50/80 border-b border-slate-200">
-                <tr>
-                  <th className={thClass}>Settlement No</th>
-                  <th className={thClass}>Courier Name</th>
-                  <th className={thClass}>Cycle Period</th>
-                  <th className={thClass}>Deliveries</th>
-                  <th className={thClass}>Cash Remitted</th>
-                  <th className={thClass}>Commission</th>
-                  <th className={thClass}>Status</th>
-                  <th className={`${thClass} text-right`}>Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {ops.settlements.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-400 text-sm">
-                      No courier settlements pending.
-                    </td>
-                  </tr>
-                ) : (
-                  ops.settlements.map((set) => (
-                    <tr key={set.id} className="hover:bg-slate-50/70 transition">
-                      <td className={tdClass}>
-                        <span className="font-mono font-bold text-slate-900">{set.id}</span>
-                      </td>
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs">Settlement no</TableHead>
+                <TableHead className="text-xs">Courier name</TableHead>
+                <TableHead className="text-xs">Cycle period</TableHead>
+                <TableHead className="text-xs">Deliveries</TableHead>
+                <TableHead className="text-xs">Cash remitted</TableHead>
+                <TableHead className="text-xs">Commission</TableHead>
+                <TableHead className="text-xs">Status</TableHead>
+                <TableHead className="text-right text-xs">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {ops.settlements.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="p-0">
+                    <EmptyState
+                      title="No courier settlements pending"
+                      description="All rider accounts are balanced."
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                ops.settlements.map((set) => (
+                  <TableRow key={set.id}>
+                    <TableCell>
+                      <span className="font-mono text-xs font-semibold text-foreground">{set.id}</span>
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <div className="font-semibold text-slate-900">{set.riderName}</div>
-                      </td>
+                    <TableCell>
+                      <div className="font-medium text-xs text-foreground">{set.riderName}</div>
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="text-xs text-slate-500">
-                          {set.periodStart} &rarr; {set.periodEnd}
-                        </span>
-                      </td>
+                    <TableCell>
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {set.periodStart} → {set.periodEnd}
+                      </span>
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="font-bold text-slate-700">{set.deliveries}</span>
-                      </td>
+                    <TableCell>
+                      <span className="font-mono text-xs text-foreground">{set.deliveries}</span>
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="font-mono font-bold text-slate-900">
-                          {formatNPR(set.cashCollected)}
-                        </span>
-                      </td>
+                    <TableCell>
+                      <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+                        {formatNPR(set.cashCollected)}
+                      </span>
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="font-mono text-emerald-700 font-bold">
-                          +{formatNPR(set.commission)}
-                        </span>
-                      </td>
+                    <TableCell>
+                      <span className="font-mono text-xs font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
+                        +{formatNPR(set.commission)}
+                      </span>
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <span
-                          className={`inline-flex px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
-                            set.status === 'paid'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : set.status === 'approved'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-amber-100 text-amber-800'
-                          }`}
+                    <TableCell>
+                      <Badge
+                        variant={set.status === 'paid' ? 'default' : 'secondary'}
+                        className="text-[10px] font-normal uppercase"
+                      >
+                        {set.status}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="text-right">
+                      {set.status !== 'paid' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleApproveSettlement(set.id, 'paid')}
+                          disabled={isSubmitting}
+                          className="h-7 px-2 text-xs"
                         >
-                          {set.status}
-                        </span>
-                      </td>
-
-                      <td className={`${tdClass} text-right`}>
-                        {set.status !== 'paid' && (
-                          <button
-                            type="button"
-                            onClick={() => handleApproveSettlement(set.id, 'paid')}
-                            disabled={isSubmitting}
-                            className={btnPrimary}
-                            style={{ height: '32px', padding: '0 10px', fontSize: '11px' }}
-                          >
-                            Mark Paid
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                          Mark paid
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       )}
 
-      {/* Record Voucher Modal */}
-      {isAddVoucherOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3 border-slate-200">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Post Journal Voucher</h3>
-                <p className="text-xs text-slate-500">Direct General Ledger entry in Neon DB</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAddVoucherOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
+      {/* Record Voucher Dialog */}
+      <Dialog open={isAddVoucherOpen} onOpenChange={setIsAddVoucherOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">Post journal voucher</DialogTitle>
+            <DialogDescription className="text-xs">Direct general ledger entry</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handlePostVoucher} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Description / memo *</Label>
+              <Input
+                required
+                value={voucherForm.memo}
+                onChange={(e) => setVoucherForm({ ...voucherForm, memo: e.target.value })}
+                placeholder="e.g. Warehouse electricity utility payment"
+                className="h-8 text-xs"
+              />
             </div>
 
-            <form onSubmit={handlePostVoucher} className="space-y-3.5 text-xs">
-              <div>
-                <label className={labelClass}>Description / Memo *</label>
-                <input
-                  type="text"
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Category</Label>
+                <NativeSelect
+                  value={voucherForm.category}
+                  onChange={(e) =>
+                    setVoucherForm({ ...voucherForm, category: e.target.value as any })
+                  }
+                  size="sm"
+                  className="w-full text-xs"
+                >
+                  <NativeSelectOption value="expense">Operating expense</NativeSelectOption>
+                  <NativeSelectOption value="purchase">Inventory purchase (COGS)</NativeSelectOption>
+                  <NativeSelectOption value="sales">Direct sales income</NativeSelectOption>
+                  <NativeSelectOption value="cod">COD remittance</NativeSelectOption>
+                  <NativeSelectOption value="refund">Refund payout</NativeSelectOption>
+                </NativeSelect>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Target account</Label>
+                <NativeSelect
+                  value={voucherForm.account}
+                  onChange={(e) => setVoucherForm({ ...voucherForm, account: e.target.value })}
+                  size="sm"
+                  className="w-full text-xs"
+                >
+                  <NativeSelectOption value="bank">Bank corporate</NativeSelectOption>
+                  <NativeSelectOption value="cash">Cash on hand</NativeSelectOption>
+                  <NativeSelectOption value="esewa">eSewa merchant</NativeSelectOption>
+                  <NativeSelectOption value="khalti">Khalti merchant</NativeSelectOption>
+                </NativeSelect>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Voucher type</Label>
+                <NativeSelect
+                  value={voucherForm.type}
+                  onChange={(e) =>
+                    setVoucherForm({ ...voucherForm, type: e.target.value as any })
+                  }
+                  size="sm"
+                  className="w-full text-xs"
+                >
+                  <NativeSelectOption value="debit">Debit outflow (-)</NativeSelectOption>
+                  <NativeSelectOption value="credit">Credit inflow (+)</NativeSelectOption>
+                </NativeSelect>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Amount (NPR) *</Label>
+                <Input
+                  type="number"
+                  min="1"
                   required
-                  value={voucherForm.memo}
-                  onChange={(e) => setVoucherForm({ ...voucherForm, memo: e.target.value })}
-                  placeholder="e.g. Warehouse electricity utility payment"
-                  className={inputClass}
+                  value={voucherForm.amount}
+                  onChange={(e) => setVoucherForm({ ...voucherForm, amount: Number(e.target.value) })}
+                  className="h-8 font-mono text-xs"
                 />
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>Category</label>
-                  <select
-                    value={voucherForm.category}
-                    onChange={(e) =>
-                      setVoucherForm({ ...voucherForm, category: e.target.value as any })
-                    }
-                    className={selectClass}
-                  >
-                    <option value="expense">Operating Expense</option>
-                    <option value="purchase">Inventory Purchase (COGS)</option>
-                    <option value="sales">Direct Sales Income</option>
-                    <option value="cod">COD Remittance</option>
-                    <option value="refund">Refund Payout</option>
-                  </select>
-                </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAddVoucherOpen(false)}
+                className="h-8 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={isSubmitting} className="h-8 text-xs">
+                {isSubmitting ? 'Posting...' : 'Post entry'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-                <div>
-                  <label className={labelClass}>Target Account</label>
-                  <select
-                    value={voucherForm.account}
-                    onChange={(e) => setVoucherForm({ ...voucherForm, account: e.target.value })}
-                    className={selectClass}
-                  >
-                    <option value="bank">Bank Corporate Account</option>
-                    <option value="cash">Cash on Hand</option>
-                    <option value="esewa">eSewa Merchant Wallet</option>
-                    <option value="khalti">Khalti Merchant Wallet</option>
-                  </select>
-                </div>
+      {/* Official Financial Statement Preview Dialog */}
+      <Dialog open={isStatementModalOpen} onOpenChange={setIsStatementModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
+            <DialogTitle className="text-sm font-semibold">
+              Official statement of financial position
+            </DialogTitle>
+            <Button
+              size="sm"
+              onClick={() => window.print()}
+              className="h-7 gap-1 text-xs"
+            >
+              <Printer className="h-3 w-3" />
+              Print / Save PDF
+            </Button>
+          </DialogHeader>
+
+          <div className="p-6 overflow-y-auto space-y-4 text-xs">
+            <div className="flex items-start justify-between border-b border-border/50 pb-3">
+              <div>
+                <h2 className="text-xs font-bold text-foreground uppercase">
+                  {ops.settings.legalName || 'MEZMANI LIQUOR & GROCERY PVT. LTD.'}
+                </h2>
+                <p className="text-muted-foreground">{ops.settings.address || 'Kathmandu, Nepal'}</p>
+                <p className="text-muted-foreground font-mono">PAN/VAT: {ops.settings.pan || '609823415'}</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>Voucher Type</label>
-                  <select
-                    value={voucherForm.type}
-                    onChange={(e) =>
-                      setVoucherForm({ ...voucherForm, type: e.target.value as any })
-                    }
-                    className={selectClass}
-                  >
-                    <option value="debit">Debit Outflow (-)</option>
-                    <option value="credit">Credit Inflow (+)</option>
-                  </select>
+              <div className="text-right">
+                <span className="text-xs font-semibold text-foreground uppercase block">
+                  Audited financial report
+                </span>
+                <div className="text-muted-foreground text-[10px]">
+                  Date: {new Date().toLocaleDateString()}
                 </div>
-
-                <div>
-                  <label className={labelClass}>Amount (NPR) *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={voucherForm.amount}
-                    onChange={(e) => setVoucherForm({ ...voucherForm, amount: Number(e.target.value) })}
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-
-              <div className="pt-3 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddVoucherOpen(false)}
-                  className={btnSecondary}
-                >
-                  Cancel
-                </button>
-                <button type="submit" disabled={isSubmitting} className={btnPrimary}>
-                  {isSubmitting ? 'Posting...' : 'Post Entry'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Official Financial Statement Preview Modal */}
-      {isStatementModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between no-print">
-              <span className="font-bold text-sm text-slate-800">
-                Official Statement of Financial Position Preview
-              </span>
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={() => window.print()} className={btnPrimary}>
-                  <Printer className="h-4 w-4" />
-                  Print / Save PDF
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsStatementModalOpen(false)}
-                  className={btnSecondary}
-                >
-                  Close
-                </button>
               </div>
             </div>
 
-            <div className="p-8 overflow-y-auto space-y-6 text-xs text-slate-800 font-sans">
-              <div className="flex items-start justify-between border-b pb-4 border-slate-200">
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 uppercase">
-                    {ops.settings.legalName || 'MEZMANI LIQUOR & GROCERY PVT. LTD.'}
-                  </h2>
-                  <p className="text-slate-500">{ops.settings.address || 'Kathmandu, Nepal'}</p>
-                  <p className="text-slate-500 font-mono">PAN/VAT: {ops.settings.pan || '609823415'}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs font-bold text-blue-600 uppercase block">
-                    AUDITED FINANCIAL REPORT
-                  </span>
-                  <div className="text-slate-400 text-[10px]">
-                    Date: {new Date().toLocaleDateString()}
-                  </div>
-                </div>
+            <div className="space-y-2">
+              <h4 className="font-semibold text-foreground border-b border-border/40 pb-1 text-xs">Operating income</h4>
+              <div className="flex justify-between py-1 text-muted-foreground">
+                <span>Gross sales income:</span>
+                <span className="font-mono text-foreground font-medium">{formatNPR(grossSales)}</span>
+              </div>
+              <div className="flex justify-between py-1 text-muted-foreground">
+                <span>Cost of inventory purchases (COGS):</span>
+                <span className="font-mono text-destructive">-{formatNPR(cogsPurchases)}</span>
+              </div>
+              <div className="flex justify-between py-1 font-semibold text-foreground bg-muted/40 px-2 rounded">
+                <span>Gross operating margin:</span>
+                <span className="font-mono">{formatNPR(grossProfit)}</span>
               </div>
 
-              <div className="space-y-3">
-                <h4 className="font-bold text-slate-800 border-b pb-1 text-xs">Operating Income</h4>
-                <div className="flex justify-between py-1">
-                  <span>Gross Sales Income:</span>
-                  <span className="font-mono font-semibold">{formatNPR(grossSales)}</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span>Cost of Inventory Purchases (COGS):</span>
-                  <span className="font-mono text-rose-600">-{formatNPR(cogsPurchases)}</span>
-                </div>
-                <div className="flex justify-between py-1 font-bold bg-slate-50 px-2 rounded">
-                  <span>Gross Operating Margin:</span>
-                  <span className="font-mono text-blue-700">{formatNPR(grossProfit)}</span>
-                </div>
+              <h4 className="font-semibold text-foreground border-b border-border/40 pb-1 text-xs pt-2">
+                Operating overhead and payouts
+              </h4>
+              <div className="flex justify-between py-1 text-muted-foreground">
+                <span>Warehouse utilities and supplies:</span>
+                <span className="font-mono text-destructive">-{formatNPR(operatingExpenses)}</span>
+              </div>
+              <div className="flex justify-between py-1 text-muted-foreground">
+                <span>Customer refund payouts:</span>
+                <span className="font-mono text-destructive">-{formatNPR(refundsIssued)}</span>
+              </div>
 
-                <h4 className="font-bold text-slate-800 border-b pb-1 text-xs pt-3">
-                  Operating Overhead & Payouts
-                </h4>
-                <div className="flex justify-between py-1">
-                  <span>Warehouse Utilities & Supplies:</span>
-                  <span className="font-mono text-rose-600">-{formatNPR(operatingExpenses)}</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span>Customer Refund Payouts:</span>
-                  <span className="font-mono text-rose-600">-{formatNPR(refundsIssued)}</span>
-                </div>
-
-                <div className="flex justify-between items-center p-3 rounded-xl bg-blue-50 border border-blue-200 mt-4">
-                  <span className="text-xs font-bold text-blue-900 uppercase">Net Realized Profit:</span>
-                  <span className="text-base font-extrabold text-blue-700 font-mono">
-                    {formatNPR(netEstimatedProfit)}
-                  </span>
-                </div>
+              <div className="flex justify-between items-center p-3 rounded-md bg-muted/30 border border-border mt-3">
+                <span className="text-xs font-medium text-foreground">Net realized profit:</span>
+                <span className="text-sm font-bold text-foreground font-mono">
+                  {formatNPR(netEstimatedProfit)}
+                </span>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -7,20 +7,8 @@ import {
 } from '#/server/operations/operations.functions'
 import type { PaymentMethod } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
-import { PageHeader } from '#/components/admin/page-header'
-import { KpiCard } from '#/components/admin/kpi-card'
-import {
-  pageClass,
-  cardClass,
-  tableWrap,
-  thClass,
-  tdClass,
-  btnPrimary,
-  btnSecondary,
-  inputClass,
-  selectClass,
-  labelClass,
-} from '#/components/admin/styles'
+import { PageHeader } from '#/components/shared/page-header'
+import { KpiCard } from '#/components/shared/kpi-card'
 import {
   CreditCard,
   Shield,
@@ -29,9 +17,45 @@ import {
   Download,
   Search,
   Settings,
-  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { Badge } from '#/components/ui/badge'
+import { Checkbox } from '#/components/ui/checkbox'
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from '#/components/ui/tabs'
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '#/components/ui/native-select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui/table'
+import {
+  Card,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '#/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
+import { EmptyState } from '#/components/shared/empty-state'
 
 export const Route = createFileRoute('/admin/payments')({
   loader: async () => {
@@ -81,7 +105,7 @@ function AdminPaymentsPage() {
     setTimeout(() => {
       const latency = Math.floor(75 + Math.random() * 80)
       setPingStatus((prev) => ({ ...prev, [gw]: { loading: false, latency } }))
-      toast.success(`${GATEWAY_INFO[gw as PaymentMethod]?.name} connection test: ${latency}ms OK (HMAC 200)`)
+      toast.success(`${GATEWAY_INFO[gw as PaymentMethod]?.name} connection test: ${latency}ms OK`)
     }, 600)
   }
 
@@ -117,7 +141,7 @@ function AdminPaymentsPage() {
         },
       })
 
-      toast.success(`Gateway configuration for ${GATEWAY_INFO[editingGateway].name} saved to Neon DB!`)
+      toast.success(`Gateway configuration for ${GATEWAY_INFO[editingGateway].name} saved`)
       setEditingGateway(null)
       await router.invalidate()
     } catch {
@@ -131,7 +155,7 @@ function AdminPaymentsPage() {
     try {
       setIsUpdating(true)
       await reconcilePaymentFn({ data: { id: txnId } })
-      toast.success('Transaction reconciled and matched with ledger!')
+      toast.success('Transaction reconciled and matched with ledger')
       await router.invalidate()
     } catch {
       toast.error('Failed to reconcile transaction')
@@ -173,36 +197,36 @@ function AdminPaymentsPage() {
   }
 
   return (
-    <div className={pageClass}>
+    <div className="space-y-6">
       <PageHeader
         kicker="Finance"
-        title="Payments & Gateway Reconciliation"
+        title="Payments and gateway reconciliation"
         description="Nepal payment provider keys, IPN callback health pings, and transaction payout reconciliation."
         actions={
-          <button type="button" onClick={handleExportCSV} className={btnSecondary}>
-            <Download className="h-4 w-4" />
-            Export Reconciliation
-          </button>
+          <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-8 gap-1.5 text-xs">
+            <Download className="h-3.5 w-3.5" />
+            Export reconciliation
+          </Button>
         }
       />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard
-          label="Active Payment Gateways"
+          label="Active payment gateways"
           value={Object.values(gateways).filter((g) => g.enabled).length}
           note="Configured payment channels"
           icon={CreditCard}
         />
         <KpiCard
-          label="Reconciled Volume"
+          label="Reconciled volume"
           value={formatNPR(totalReconciled)}
           note="Matched checkout payments"
           icon={CheckCircle}
           tone="success"
         />
         <KpiCard
-          label="Pending Batch Matches"
+          label="Pending batch matches"
           value={pendingReconciliation}
           note="Unmatched gateway checkouts"
           icon={Activity}
@@ -210,42 +234,29 @@ function AdminPaymentsPage() {
         />
       </div>
 
-      {/* Sub Tabs */}
-      <div className="flex border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab('gateways')}
-          className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition ${
-            activeTab === 'gateways'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <CreditCard className="w-4 h-4" />
-          <span>Nepal Payment Gateways</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('reconciliation')}
-          className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition ${
-            activeTab === 'reconciliation'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <CheckCircle className="w-4 h-4" />
-          <span>Transaction Reconciliation ({ops.payments.length})</span>
-        </button>
-      </div>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)}>
+        <TabsList className="h-9">
+          <TabsTrigger value="gateways" className="gap-2 text-xs">
+            <CreditCard className="h-3.5 w-3.5" />
+            <span>Nepal payment gateways</span>
+          </TabsTrigger>
+          <TabsTrigger value="reconciliation" className="gap-2 text-xs">
+            <CheckCircle className="h-3.5 w-3.5" />
+            <span>Reconciliation ({ops.payments.length})</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {activeTab === 'gateways' ? (
         /* Gateway Cards Grid */
         <div className="space-y-4">
-          <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-4 flex items-start gap-3 text-xs text-blue-900">
-            <Shield className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+          <div className="rounded-lg border border-border bg-muted/30 p-3.5 flex items-start gap-3 text-xs">
+            <Shield className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
             <div>
-              <strong className="block font-semibold">Nepal Domestic Financial Gateway Standard</strong>
-              <p className="text-slate-600 mt-0.5">
-                Configured with IPN callback endpoints, SHA256 HMAC digital signatures, and dynamic QR terminal generation for domestic merchants.
+              <strong className="block font-medium text-foreground">Nepal Domestic Financial Gateway Standard</strong>
+              <p className="text-muted-foreground mt-0.5">
+                Configured with IPN callback endpoints, SHA256 HMAC digital signatures, and dynamic QR terminal generation.
               </p>
             </div>
           </div>
@@ -257,91 +268,79 @@ function AdminPaymentsPage() {
               const ping = pingStatus[method]
 
               return (
-                <div
-                  key={method}
-                  className={`${cardClass} p-5 flex flex-col justify-between space-y-4 hover:shadow-md transition`}
-                >
-                  <div>
+                <Card key={method} className="flex flex-col justify-between">
+                  <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-bold text-slate-900">{meta.name}</h4>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
-                              gw.mode === 'sandbox'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-emerald-100 text-emerald-800'
-                            }`}
-                          >
+                          <CardTitle className="text-sm font-semibold">{meta.name}</CardTitle>
+                          <Badge variant="outline" className="text-[10px] font-mono capitalize">
                             {gw.mode}
-                          </span>
+                          </Badge>
                         </div>
-                        <span className="text-[11px] text-slate-400 font-mono">
+                        <span className="text-[11px] text-muted-foreground font-mono">
                           Channel: {meta.channel}
                         </span>
                       </div>
 
-                      <span
-                        className={`inline-flex px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
-                          gw.enabled
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-slate-100 text-slate-500'
-                        }`}
+                      <Badge
+                        variant={gw.enabled ? 'default' : 'secondary'}
+                        className="text-[10px] font-normal"
                       >
                         {gw.enabled ? 'Enabled' : 'Disabled'}
-                      </span>
+                      </Badge>
                     </div>
 
-                    <div className="mt-4 space-y-2 text-xs">
-                      <div className="flex justify-between py-1 border-b border-slate-100">
-                        <span className="text-slate-500">Merchant Code:</span>
-                        <span className="font-mono text-slate-900 font-semibold">{gw.merchantId}</span>
+                    <div className="mt-3 space-y-1.5 text-xs">
+                      <div className="flex justify-between py-1 border-b border-border/40">
+                        <span className="text-muted-foreground">Merchant code:</span>
+                        <span className="font-mono text-foreground font-medium">{gw.merchantId}</span>
                       </div>
-                      <div className="flex justify-between py-1 border-b border-slate-100">
-                        <span className="text-slate-500">Processing Fee:</span>
-                        <span className="text-slate-800 font-semibold">{meta.defaultFee}</span>
+                      <div className="flex justify-between py-1 border-b border-border/40">
+                        <span className="text-muted-foreground">Processing fee:</span>
+                        <span className="text-foreground">{meta.defaultFee}</span>
                       </div>
                       <div className="flex justify-between py-1">
-                        <span className="text-slate-500">Settlement SLA:</span>
-                        <span className="text-slate-800">T+1 Business Day (Nabil Corporate)</span>
+                        <span className="text-muted-foreground">Settlement SLA:</span>
+                        <span className="text-foreground">T+1 Business Day (Nabil)</span>
                       </div>
                     </div>
-                  </div>
+                  </CardHeader>
 
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <CardFooter className="flex items-center justify-between border-t border-border/50 pt-3">
                     <div>
                       {ping?.latency ? (
-                        <span className="text-[11px] font-mono font-bold text-emerald-600">
-                          ⚡ {ping.latency}ms OK
+                        <span className="text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                          {ping.latency}ms OK
                         </span>
                       ) : (
-                        <span className="text-[11px] text-slate-400">Ready</span>
+                        <span className="text-[11px] text-muted-foreground">Ready</span>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handlePing(method)}
                         disabled={ping?.loading}
-                        className={btnSecondary}
-                        style={{ height: '32px', padding: '0 10px', fontSize: '11px' }}
+                        className="h-7 gap-1 px-2 text-xs"
                       >
                         <Activity className={`h-3 w-3 ${ping?.loading ? 'animate-spin' : ''}`} />
-                        {ping?.loading ? 'Pinging...' : 'Test Ping'}
-                      </button>
-                      <button
-                        type="button"
+                        {ping?.loading ? 'Pinging...' : 'Test ping'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleOpenEdit(method)}
-                        className={btnSecondary}
-                        style={{ height: '32px', padding: '0 10px', fontSize: '11px' }}
+                        className="h-7 gap-1 px-2 text-xs"
                       >
                         <Settings className="h-3 w-3" />
                         Configure
-                      </button>
+                      </Button>
                     </div>
-                  </div>
-                </div>
+                  </CardFooter>
+                </Card>
               )
             })}
           </div>
@@ -349,164 +348,159 @@ function AdminPaymentsPage() {
       ) : (
         /* Reconciliation Table */
         <div className="space-y-4">
-          <div className={`${cardClass} p-4`}>
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
+          <div className="flex rounded-lg border border-border bg-card p-3">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
                 placeholder="Search reference, order number..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`${inputClass} pl-9`}
+                className="h-8 pl-9 text-xs"
               />
             </div>
           </div>
 
-          <div className={tableWrap}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50/80 border-b border-slate-200">
-                  <tr>
-                    <th className={thClass}>Reference</th>
-                    <th className={thClass}>Order Linked</th>
-                    <th className={thClass}>Gateway Provider</th>
-                    <th className={thClass}>Amount (NPR)</th>
-                    <th className={thClass}>Status</th>
-                    <th className={`${thClass} text-right`}>Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredPayments.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50/70 transition">
-                      <td className={tdClass}>
-                        <span className="font-mono font-bold text-slate-900">{p.reference}</span>
-                      </td>
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Reference</TableHead>
+                  <TableHead className="text-xs">Order linked</TableHead>
+                  <TableHead className="text-xs">Gateway provider</TableHead>
+                  <TableHead className="text-xs">Amount (NPR)</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-right text-xs">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredPayments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="p-0">
+                      <EmptyState
+                        title="No payment records found"
+                        description="Try adjusting your search query."
+                      />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredPayments.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell>
+                        <span className="font-mono text-xs font-semibold text-foreground">{p.reference}</span>
+                      </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="font-mono text-blue-600 font-semibold">{p.orderId}</span>
-                      </td>
+                      <TableCell>
+                        <span className="font-mono text-xs text-primary">{p.orderId}</span>
+                      </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="font-medium text-slate-800 uppercase text-xs">
+                      <TableCell>
+                        <span className="font-medium text-xs uppercase text-foreground">
                           {p.gateway}
                         </span>
-                      </td>
+                      </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="font-mono font-bold text-slate-900">
+                      <TableCell>
+                        <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
                           {formatNPR(p.amount)}
                         </span>
-                      </td>
+                      </TableCell>
 
-                      <td className={tdClass}>
-                        <span
-                          className={`inline-flex px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
-                            p.status === 'reconciled'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-amber-100 text-amber-800'
-                          }`}
+                      <TableCell>
+                        <Badge
+                          variant={p.status === 'reconciled' ? 'outline' : 'secondary'}
+                          className="text-[10px] font-normal uppercase"
                         >
                           {p.status}
-                        </span>
-                      </td>
+                        </Badge>
+                      </TableCell>
 
-                      <td className={`${tdClass} text-right`}>
+                      <TableCell className="text-right">
                         {p.status !== 'reconciled' && (
-                          <button
-                            type="button"
+                          <Button
+                            size="sm"
                             onClick={() => handleReconcile(p.id)}
                             disabled={isUpdating}
-                            className={btnPrimary}
-                            style={{ height: '30px', padding: '0 10px', fontSize: '11px' }}
+                            className="h-7 px-2 text-xs"
                           >
-                            Reconcile Match
-                          </button>
+                            Reconcile match
+                          </Button>
                         )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}
 
-      {/* Configure Gateway Modal */}
-      {editingGateway && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3 border-slate-200">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Configure {GATEWAY_INFO[editingGateway].name}
-                </h3>
-                <p className="text-xs text-slate-500">Update Merchant credentials in Neon DB</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingGateway(null)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      {/* Configure Gateway Dialog */}
+      <Dialog open={Boolean(editingGateway)} onOpenChange={(open) => !open && setEditingGateway(null)}>
+        {editingGateway && (
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-sm font-semibold">
+                Configure {GATEWAY_INFO[editingGateway].name}
+              </DialogTitle>
+              <DialogDescription className="text-xs">Update merchant credentials</DialogDescription>
+            </DialogHeader>
 
-            <form onSubmit={handleSaveGateway} className="space-y-3.5 text-xs">
-              <div>
-                <label className={labelClass}>Merchant ID / Account Code *</label>
-                <input
-                  type="text"
+            <form onSubmit={handleSaveGateway} className="space-y-4 pt-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Merchant ID / account code *</Label>
+                <Input
                   required
                   value={gatewayForm.merchantId}
                   onChange={(e) => setGatewayForm({ ...gatewayForm, merchantId: e.target.value })}
-                  className={inputClass}
+                  className="h-8 font-mono text-xs"
                 />
               </div>
 
-              <div>
-                <label className={labelClass}>Environment Mode</label>
-                <select
+              <div className="space-y-1.5">
+                <Label className="text-xs">Environment mode</Label>
+                <NativeSelect
                   value={gatewayForm.mode}
                   onChange={(e) =>
                     setGatewayForm({ ...gatewayForm, mode: e.target.value as any })
                   }
-                  className={selectClass}
+                  size="sm"
+                  className="w-full text-xs"
                 >
-                  <option value="sandbox">Sandbox (Testing)</option>
-                  <option value="live">Live (Production)</option>
-                </select>
+                  <NativeSelectOption value="sandbox">Sandbox (Testing)</NativeSelectOption>
+                  <NativeSelectOption value="live">Live (Production)</NativeSelectOption>
+                </NativeSelect>
               </div>
 
               <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
+                <Checkbox
                   id="enable_gw"
                   checked={gatewayForm.enabled}
-                  onChange={(e) => setGatewayForm({ ...gatewayForm, enabled: e.target.checked })}
-                  className="rounded border-slate-300 text-blue-600"
+                  onCheckedChange={(checked) => setGatewayForm({ ...gatewayForm, enabled: Boolean(checked) })}
                 />
-                <label htmlFor="enable_gw" className="font-semibold text-slate-700 cursor-pointer">
+                <Label htmlFor="enable_gw" className="text-xs cursor-pointer font-normal">
                   Accept customer checkouts via this channel
-                </label>
+                </Label>
               </div>
 
-              <div className="pt-3 flex justify-end gap-2">
-                <button
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setEditingGateway(null)}
-                  className={btnSecondary}
+                  className="h-8 text-xs"
                 >
                   Cancel
-                </button>
-                <button type="submit" disabled={isUpdating} className={btnPrimary}>
-                  {isUpdating ? 'Saving...' : 'Save Configuration'}
-                </button>
-              </div>
+                </Button>
+                <Button type="submit" size="sm" disabled={isUpdating} className="h-8 text-xs">
+                  {isUpdating ? 'Saving...' : 'Save configuration'}
+                </Button>
+              </DialogFooter>
             </form>
-          </div>
-        </div>
-      )}
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   )
 }

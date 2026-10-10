@@ -6,38 +6,47 @@ import {
 } from '#/server/operations/operations.functions'
 import type { Complaint } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
-import { PageHeader } from '#/components/admin/page-header'
-import { KpiCard } from '#/components/admin/kpi-card'
-import { StatusBadge } from '#/components/admin/status-badge'
-import {
-  pageClass,
-  cardClass,
-  tableWrap,
-  thClass,
-  tdClass,
-  btnPrimary,
-  btnSecondary,
-  btnGhost,
-  inputClass,
-  selectClass,
-} from '#/components/admin/styles'
+import { PageHeader } from '#/components/shared/page-header'
+import { KpiCard } from '#/components/shared/kpi-card'
+import { StatusBadge } from '#/components/shared/status-badge'
 import {
   Users,
   Search,
-  Filter,
   Download,
   Eye,
   MessageSquare,
-  CheckCircle,
-  AlertCircle,
-  Clock,
-  Mail,
-  Phone,
   ShoppingBag,
-  X,
-  ExternalLink,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Badge } from '#/components/ui/badge'
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from '#/components/ui/tabs'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '#/components/ui/native-select'
+import { EmptyState } from '#/components/shared/empty-state'
 
 export const Route = createFileRoute('/admin/customers')({
   loader: async () => {
@@ -143,36 +152,36 @@ function AdminCustomersPage() {
   }
 
   return (
-    <div className={pageClass}>
+    <div className="space-y-6">
       <PageHeader
         kicker="Commerce"
-        title="Customer CRM & Support"
+        title="Customer CRM and support"
         description="View customer lifetime spend, order history, and handle customer service inquiries."
         actions={
-          <button type="button" onClick={handleExportCSV} className={btnSecondary}>
-            <Download className="h-4 w-4" />
-            Export Customers
-          </button>
+          <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-8 gap-1.5 text-xs">
+            <Download className="h-3.5 w-3.5" />
+            Export customers
+          </Button>
         }
       />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard
-          label="Registered Customers"
+          label="Registered customers"
           value={totalCustomersCount}
           note="Active customer profiles"
           icon={Users}
         />
         <KpiCard
-          label="Cumulative Customer LTV"
+          label="Cumulative customer LTV"
           value={formatNPR(totalLtvSum)}
           note="Gross customer spending"
           icon={ShoppingBag}
           tone="success"
         />
         <KpiCard
-          label="Support Complaints"
+          label="Support complaints"
           value={openComplaintsCount}
           note="Unresolved customer issues"
           icon={MessageSquare}
@@ -180,44 +189,30 @@ function AdminCustomersPage() {
         />
       </div>
 
-      {/* Sub Tabs */}
-      <div className="flex border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab('directory')}
-          className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition ${
-            activeTab === 'directory'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>Customer Directory ({customerList.length})</span>
-        </button>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)}>
+        <TabsList className="h-9">
+          <TabsTrigger value="directory" className="gap-2 text-xs">
+            <Users className="h-3.5 w-3.5" />
+            <span>Customer directory ({customerList.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="complaints" className="gap-2 text-xs">
+            <MessageSquare className="h-3.5 w-3.5" />
+            <span>Support complaints ({ops.complaints.length})</span>
+            {openComplaintsCount > 0 && (
+              <Badge variant="secondary" className="h-4 px-1 text-[10px] font-mono">
+                {openComplaintsCount}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-        <button
-          onClick={() => setActiveTab('complaints')}
-          className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition ${
-            activeTab === 'complaints'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <MessageSquare className="w-4 h-4" />
-          <span>Support Complaints ({ops.complaints.length})</span>
-          {openComplaintsCount > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-              {openComplaintsCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Search Input */}
-      <div className={`${cardClass} p-4`}>
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
+      {/* Search Bar */}
+      <div className="flex rounded-lg border border-border bg-card p-3">
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
             placeholder={
               activeTab === 'directory'
                 ? 'Search customers by name, email...'
@@ -225,218 +220,201 @@ function AdminCustomersPage() {
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`${inputClass} pl-9`}
+            className="h-8 pl-9 text-xs"
           />
         </div>
       </div>
 
       {activeTab === 'directory' ? (
         /* Customer Directory Table */
-        <div className={tableWrap}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50/80 border-b border-slate-200">
-                <tr>
-                  <th className={thClass}>Customer Name</th>
-                  <th className={thClass}>Email Address</th>
-                  <th className={thClass}>Total Orders</th>
-                  <th className={thClass}>Lifetime Spend</th>
-                  <th className={thClass}>Joined Date</th>
-                  <th className={`${thClass} text-right`}>Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredCustomers.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400 text-sm">
-                      No customer accounts found.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredCustomers.map((cust) => (
-                    <tr key={cust.id} className="hover:bg-slate-50/70 transition">
-                      <td className={tdClass}>
-                        <div className="font-semibold text-slate-900">{cust.name}</div>
-                        <span className="text-xs text-slate-400 font-mono">ID: {cust.id}</span>
-                      </td>
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs">Customer name</TableHead>
+                <TableHead className="text-xs">Email address</TableHead>
+                <TableHead className="text-xs">Total orders</TableHead>
+                <TableHead className="text-xs">Lifetime spend</TableHead>
+                <TableHead className="text-xs">Joined date</TableHead>
+                <TableHead className="text-right text-xs">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredCustomers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="p-0">
+                    <EmptyState
+                      title="No customer accounts found"
+                      description="Try adjusting your search query."
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredCustomers.map((cust) => (
+                  <TableRow key={cust.id}>
+                    <TableCell>
+                      <div className="font-medium text-xs text-foreground">{cust.name}</div>
+                      <span className="font-mono text-[11px] text-muted-foreground">ID: {cust.id.slice(0, 10)}...</span>
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <div className="text-slate-600 font-mono text-xs">{cust.email}</div>
-                      </td>
+                    <TableCell>
+                      <span className="font-mono text-xs text-muted-foreground">{cust.email}</span>
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="font-bold text-slate-800">{cust.totalOrders}</span>
-                        <span className="text-xs text-slate-400 ml-1">orders</span>
-                      </td>
+                    <TableCell>
+                      <span className="font-mono text-xs font-medium text-foreground">{cust.totalOrders}</span>
+                      <span className="text-[11px] text-muted-foreground ml-1">orders</span>
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="font-mono font-bold text-slate-900">
-                          {formatNPR(cust.totalSpent)}
-                        </span>
-                      </td>
+                    <TableCell>
+                      <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+                        {formatNPR(cust.totalSpent)}
+                      </span>
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="text-xs text-slate-500">
-                          {new Date(cust.createdAt).toLocaleDateString()}
-                        </span>
-                      </td>
+                    <TableCell>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(cust.createdAt).toLocaleDateString()}
+                      </span>
+                    </TableCell>
 
-                      <td className={`${tdClass} text-right`}>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedCustomer(cust)}
-                          className={btnSecondary}
-                          style={{ height: '32px', padding: '0 10px', fontSize: '12px' }}
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          View History
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedCustomer(cust)}
+                        className="h-7 gap-1 px-2 text-xs"
+                      >
+                        <Eye className="h-3 w-3" />
+                        View history
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       ) : (
         /* Complaints Desk Table */
-        <div className={tableWrap}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50/80 border-b border-slate-200">
-                <tr>
-                  <th className={thClass}>Date & ID</th>
-                  <th className={thClass}>Customer</th>
-                  <th className={thClass}>Subject</th>
-                  <th className={thClass}>Issue Summary</th>
-                  <th className={thClass}>Status</th>
-                  <th className={`${thClass} text-right`}>Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredComplaints.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400 text-sm">
-                      No support complaints recorded.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredComplaints.map((comp) => (
-                    <tr key={comp.id} className="hover:bg-slate-50/70 transition">
-                      <td className={tdClass}>
-                        <span className="font-mono text-xs text-slate-500 block">{comp.id}</span>
-                        <span className="text-xs text-slate-400">
-                          {new Date(comp.createdAt).toLocaleDateString()}
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs">Date and ID</TableHead>
+                <TableHead className="text-xs">Customer</TableHead>
+                <TableHead className="text-xs">Subject</TableHead>
+                <TableHead className="text-xs">Issue summary</TableHead>
+                <TableHead className="text-xs">Status</TableHead>
+                <TableHead className="text-right text-xs">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredComplaints.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="p-0">
+                    <EmptyState
+                      title="No support complaints recorded"
+                      description="All customer issues are resolved."
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredComplaints.map((comp) => (
+                  <TableRow key={comp.id}>
+                    <TableCell>
+                      <span className="font-mono text-xs text-foreground block">{comp.id}</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {new Date(comp.createdAt).toLocaleDateString()}
+                      </span>
+                    </TableCell>
+
+                    <TableCell>
+                      <div className="font-medium text-xs text-foreground">{comp.customerName}</div>
+                      {comp.orderId && (
+                        <span className="font-mono text-[11px] text-muted-foreground">
+                          Ref: {comp.orderId}
                         </span>
-                      </td>
+                      )}
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <div className="font-semibold text-slate-900">{comp.customerName}</div>
-                        {comp.orderId && (
-                          <span className="text-xs text-blue-600 font-mono">
-                            Ref: {comp.orderId}
-                          </span>
-                        )}
-                      </td>
+                    <TableCell>
+                      <span className="text-xs font-medium text-foreground">{comp.subject}</span>
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="font-semibold text-slate-800">{comp.subject}</span>
-                      </td>
+                    <TableCell>
+                      <p className="truncate max-w-xs text-xs text-muted-foreground">{comp.body}</p>
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <p className="text-xs text-slate-600 truncate max-w-xs">{comp.body}</p>
-                      </td>
+                    <TableCell>
+                      <StatusBadge value={comp.status} />
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <span
-                          className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase px-2 py-0.5 rounded ${
-                            comp.status === 'resolved'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : comp.status === 'in_progress'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-amber-100 text-amber-800'
-                          }`}
-                        >
-                          {comp.status.replace('_', ' ')}
-                        </span>
-                      </td>
-
-                      <td className={`${tdClass} text-right`}>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedComplaint(comp)}
-                          className={btnSecondary}
-                          style={{ height: '32px', padding: '0 10px', fontSize: '12px' }}
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          Resolve
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedComplaint(comp)}
+                        className="h-7 gap-1 px-2 text-xs"
+                      >
+                        <Eye className="h-3 w-3" />
+                        Resolve
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       )}
 
-      {/* Customer Profile Drawer */}
-      {selectedCustomer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-xl w-full max-h-[85vh] flex flex-col overflow-hidden">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">{selectedCustomer.name}</h3>
-                <p className="text-xs text-slate-500 font-mono">{selectedCustomer.email}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedCustomer(null)}
-                className="text-slate-400 hover:text-slate-600 p-1"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      {/* Customer Profile Dialog */}
+      <Dialog open={Boolean(selectedCustomer)} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
+        {selectedCustomer && (
+          <DialogContent className="max-w-xl max-h-[85vh] flex flex-col p-0">
+            <DialogHeader className="p-4 border-b border-border">
+              <DialogTitle className="text-sm font-semibold">{selectedCustomer.name}</DialogTitle>
+              <DialogDescription className="font-mono text-xs">{selectedCustomer.email}</DialogDescription>
+            </DialogHeader>
 
-            <div className="p-5 overflow-y-auto space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <div className="p-4 overflow-y-auto space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3 bg-muted/40 p-3 rounded-md border border-border">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Spend</span>
-                  <span className="text-base font-bold text-slate-900 font-mono">
+                  <span className="text-[10px] text-muted-foreground block">Total spend</span>
+                  <span className="font-mono text-sm font-bold text-foreground">
                     {formatNPR(selectedCustomer.totalSpent)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Orders</span>
-                  <span className="text-base font-bold text-blue-600">
+                  <span className="text-[10px] text-muted-foreground block">Total orders</span>
+                  <span className="font-mono text-sm font-bold text-foreground">
                     {selectedCustomer.totalOrders} bookings
                   </span>
                 </div>
               </div>
 
               <div>
-                <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2">
-                  Order History ({selectedCustomer.orders.length})
+                <h4 className="font-medium text-xs text-foreground mb-2">
+                  Order history ({selectedCustomer.orders.length})
                 </h4>
                 {selectedCustomer.orders.length === 0 ? (
-                  <p className="text-slate-400 italic">No past orders placed yet.</p>
+                  <p className="text-muted-foreground text-xs italic">No past orders placed yet.</p>
                 ) : (
-                  <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
+                  <div className="border border-border rounded-md overflow-hidden divide-y divide-border/60">
                     {selectedCustomer.orders.map((o: any) => (
-                      <div key={o.id} className="p-3 flex items-center justify-between">
+                      <div key={o.id} className="p-2.5 flex items-center justify-between text-xs">
                         <div>
-                          <strong className="font-mono text-slate-900 block">{o.number}</strong>
-                          <span className="text-[11px] text-slate-500">
-                            {new Date(o.createdAt).toLocaleDateString()} &bull; {o.items.length} items
+                          <strong className="font-mono text-xs text-foreground block">{o.number}</strong>
+                          <span className="text-[11px] text-muted-foreground">
+                            {new Date(o.createdAt).toLocaleDateString()} · {o.items.length} items
                           </span>
                         </div>
                         <div className="text-right">
-                          <span className="font-mono font-bold text-slate-900 block">
+                          <span className="font-mono font-medium text-foreground block">
                             {formatNPR(o.total)}
                           </span>
-                          <StatusBadge status={o.status} />
+                          <StatusBadge value={o.status} />
                         </div>
                       </div>
                     ))}
@@ -445,52 +423,44 @@ function AdminCustomersPage() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
-              <button
+            <DialogFooter className="p-3 border-t border-border bg-muted/20">
+              <Button
                 type="button"
+                size="sm"
                 onClick={() => setSelectedCustomer(null)}
-                className={btnPrimary}
+                className="h-8 text-xs"
               >
                 Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
 
-      {/* Complaint Review Modal */}
-      {selectedComplaint && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Support Ticket: {selectedComplaint.subject}
-                </h3>
-                <p className="text-xs text-slate-500">From {selectedComplaint.customerName}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedComplaint(null)}
-                className="text-slate-400 hover:text-slate-600 p-1"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      {/* Complaint Review Dialog */}
+      <Dialog open={Boolean(selectedComplaint)} onOpenChange={(open) => !open && setSelectedComplaint(null)}>
+        {selectedComplaint && (
+          <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0">
+            <DialogHeader className="p-4 border-b border-border">
+              <DialogTitle className="text-sm font-semibold">
+                Support ticket: {selectedComplaint.subject}
+              </DialogTitle>
+              <DialogDescription className="text-xs">From {selectedComplaint.customerName}</DialogDescription>
+            </DialogHeader>
 
-            <div className="p-5 overflow-y-auto space-y-4 text-xs">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Customer Message:
+            <div className="p-4 overflow-y-auto space-y-4 text-xs">
+              <div className="p-3 bg-muted/40 rounded-md border border-border">
+                <span className="text-[10px] font-medium text-muted-foreground block mb-1">
+                  Customer message:
                 </span>
-                <p className="text-slate-700 leading-relaxed italic">"{selectedComplaint.body}"</p>
+                <p className="text-foreground leading-relaxed italic">"{selectedComplaint.body}"</p>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Update Resolution Status:
-                </label>
-                <select
+              <div className="space-y-1.5">
+                <span className="block text-xs font-medium text-foreground">
+                  Update resolution status:
+                </span>
+                <NativeSelect
                   value={selectedComplaint.status}
                   onChange={(e) =>
                     handleUpdateComplaintStatus(
@@ -499,27 +469,29 @@ function AdminCustomersPage() {
                     )
                   }
                   disabled={isUpdating}
-                  className={selectClass}
+                  size="sm"
+                  className="w-full text-xs"
                 >
-                  <option value="open">Open (Under Review)</option>
-                  <option value="in_progress">In Progress (Agent Contacted)</option>
-                  <option value="resolved">Resolved & Closed</option>
-                </select>
+                  <NativeSelectOption value="open">Open (Under review)</NativeSelectOption>
+                  <NativeSelectOption value="in_progress">In progress (Agent contacted)</NativeSelectOption>
+                  <NativeSelectOption value="resolved">Resolved and closed</NativeSelectOption>
+                </NativeSelect>
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end">
-              <button
+            <DialogFooter className="p-3 border-t border-border bg-muted/20">
+              <Button
                 type="button"
+                size="sm"
                 onClick={() => setSelectedComplaint(null)}
-                className={btnPrimary}
+                className="h-8 text-xs"
               >
-                Close Ticket
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                Close ticket
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   )
 }

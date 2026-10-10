@@ -2,14 +2,8 @@ import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { getOpsBundleFn } from '#/server/operations/operations.functions'
 import { formatNPR } from '#/lib/money'
-import { PageHeader } from '#/components/admin/page-header'
-import { KpiCard } from '#/components/admin/kpi-card'
-import {
-  pageClass,
-  cardClass,
-  btnPrimary,
-  btnSecondary,
-} from '#/components/admin/styles'
+import { PageHeader } from '#/components/shared/page-header'
+import { KpiCard } from '#/components/shared/kpi-card'
 import {
   Download,
   Printer,
@@ -19,6 +13,28 @@ import {
   Package,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '#/components/ui/button'
+import {
+  Card,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '#/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui/table'
 
 export const Route = createFileRoute('/admin/reports')({
   loader: async () => {
@@ -52,7 +68,7 @@ function AdminReportsPage() {
     a.href = url
     a.download = `sales-revenue-audit-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
-    toast.success('Sales & Revenue CSV downloaded')
+    toast.success('Sales & revenue CSV downloaded')
   }
 
   const handleExportFleetCSV = () => {
@@ -70,7 +86,7 @@ function AdminReportsPage() {
     a.href = url
     a.download = `fleet-logistics-report-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
-    toast.success('Fleet Logistics CSV downloaded')
+    toast.success('Fleet logistics CSV downloaded')
   }
 
   const handleExportIrdVatCSV = () => {
@@ -114,243 +130,231 @@ function AdminReportsPage() {
     a.href = url
     a.download = `inventory-valuation-report-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
-    toast.success('Inventory Valuation CSV downloaded')
+    toast.success('Inventory valuation CSV downloaded')
   }
 
   return (
-    <div className={pageClass}>
+    <div className="space-y-6">
       <PageHeader
         kicker="Growth"
-        title="Business Reports & Audits"
+        title="Business reports and audits"
         description="Downloadable fiscal audits, IRD VAT compliance returns, courier fulfillment metrics, and warehouse valuation."
       />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard
-          label="Cumulative Sales Audit"
+          label="Cumulative sales audit"
           value={formatNPR(grossSalesTotal)}
           note="Gross order checkout revenue"
           icon={DollarSign}
         />
         <KpiCard
-          label="Fleet Logistics Deliveries"
+          label="Fleet logistics deliveries"
           value={totalDeliveriesCount}
           note="Parcels completed in Kathmandu"
           icon={Truck}
           tone="success"
         />
         <KpiCard
-          label="Nepal IRD VAT Remittance"
+          label="Nepal IRD VAT remittance"
           value={formatNPR(estimatedVatCollected)}
-          note={`13% VAT accrued for IRD`}
+          note="13% VAT accrued for IRD"
           icon={Building}
         />
       </div>
 
       {/* Reports Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Report 1: Sales Audit */}
-        <div className={`${cardClass} p-6 flex flex-col justify-between space-y-4 hover:shadow-md transition`}>
-          <div>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
-              <DollarSign className="h-5 w-5" />
+        <Card className="flex flex-col justify-between">
+          <CardHeader>
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
+              <DollarSign className="h-4 w-4" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">Fiscal Sales & Revenue Audit</h3>
-            <p className="text-xs text-slate-500">
+            <CardTitle className="text-sm font-semibold">Fiscal sales and revenue audit</CardTitle>
+            <CardDescription className="text-xs">
               Detailed breakdown of order transaction numbers, customer contact profiles, delivery surcharges, applied discounts, and net realized turnover.
-            </p>
-          </div>
-
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="font-mono font-bold text-sm text-blue-700">
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
+            <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
               {formatNPR(grossSalesTotal)}
             </span>
-            <button type="button" onClick={handleExportSalesCSV} className={btnPrimary}>
-              <Download className="h-4 w-4" />
+            <Button size="sm" onClick={handleExportSalesCSV} className="h-8 gap-1.5 text-xs">
+              <Download className="h-3.5 w-3.5" />
               Download CSV
-            </button>
-          </div>
-        </div>
+            </Button>
+          </CardFooter>
+        </Card>
 
         {/* Report 2: Fleet Performance */}
-        <div className={`${cardClass} p-6 flex flex-col justify-between space-y-4 hover:shadow-md transition`}>
-          <div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
-              <Truck className="h-5 w-5" />
+        <Card className="flex flex-col justify-between">
+          <CardHeader>
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
+              <Truck className="h-4 w-4" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">Fleet Delivery Logistics Performance</h3>
-            <p className="text-xs text-slate-500">
+            <CardTitle className="text-sm font-semibold">Fleet delivery logistics performance</CardTitle>
+            <CardDescription className="text-xs">
               Courier-wise completion metrics, active COD floats in transit, star ratings, and commission disbursements for Kathmandu Valley corridors.
-            </p>
-          </div>
-
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="font-bold text-sm text-emerald-700">
-              {totalDeliveriesCount} Completed Parcels
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
+            <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+              {totalDeliveriesCount} parcels
             </span>
-            <button type="button" onClick={handleExportFleetCSV} className={btnPrimary}>
-              <Download className="h-4 w-4" />
+            <Button size="sm" onClick={handleExportFleetCSV} className="h-8 gap-1.5 text-xs">
+              <Download className="h-3.5 w-3.5" />
               Download CSV
-            </button>
-          </div>
-        </div>
+            </Button>
+          </CardFooter>
+        </Card>
 
         {/* Report 3: IRD VAT Annex 13 */}
-        <div className={`${cardClass} p-6 flex flex-col justify-between space-y-4 hover:shadow-md transition`}>
-          <div>
-            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3">
-              <Building className="h-5 w-5" />
+        <Card className="flex flex-col justify-between">
+          <CardHeader>
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
+              <Building className="h-4 w-4" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">Nepal IRD VAT Annex 13 (बिक्री खाता)</h3>
-            <p className="text-xs text-slate-500">
+            <CardTitle className="text-sm font-semibold">Nepal IRD VAT Annex 13 (बिक्री खाता)</CardTitle>
+            <CardDescription className="text-xs">
               Official Government of Nepal Inland Revenue Department monthly sales ledger format ready for tax audit submission.
-            </p>
-          </div>
-
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="font-mono font-bold text-xs text-slate-800">
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
+            <span className="font-mono text-xs text-muted-foreground">
               PAN: {ops.settings.pan || '609823415'}
             </span>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setIsIrdModalOpen(true)}
-                className={btnSecondary}
+                className="h-8 gap-1.5 text-xs"
               >
-                <Printer className="h-4 w-4" />
+                <Printer className="h-3.5 w-3.5" />
                 Preview
-              </button>
-              <button type="button" onClick={handleExportIrdVatCSV} className={btnPrimary}>
-                <Download className="h-4 w-4" />
+              </Button>
+              <Button size="sm" onClick={handleExportIrdVatCSV} className="h-8 gap-1.5 text-xs">
+                <Download className="h-3.5 w-3.5" />
                 Download CSV
-              </button>
+              </Button>
             </div>
-          </div>
-        </div>
+          </CardFooter>
+        </Card>
 
         {/* Report 4: Inventory Valuation */}
-        <div className={`${cardClass} p-6 flex flex-col justify-between space-y-4 hover:shadow-md transition`}>
-          <div>
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3">
-              <Package className="h-5 w-5" />
+        <Card className="flex flex-col justify-between">
+          <CardHeader>
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
+              <Package className="h-4 w-4" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">Stock Valuation & Asset Audit</h3>
-            <p className="text-xs text-slate-500">
+            <CardTitle className="text-sm font-semibold">Stock valuation and asset audit</CardTitle>
+            <CardDescription className="text-xs">
               Combined catalog inventory units on hand across Liquor and Grocery lines with cost evaluation basis and retail turnover potential.
-            </p>
-          </div>
-
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="font-bold text-sm text-slate-800">
-              {liquor.length + grocery.length} Catalog Items
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
+            <span className="font-mono text-xs text-muted-foreground">
+              {liquor.length + grocery.length} catalog items
             </span>
-            <button type="button" onClick={handleExportInventoryCSV} className={btnPrimary}>
-              <Download className="h-4 w-4" />
+            <Button size="sm" onClick={handleExportInventoryCSV} className="h-8 gap-1.5 text-xs">
+              <Download className="h-3.5 w-3.5" />
               Download CSV
-            </button>
-          </div>
-        </div>
+            </Button>
+          </CardFooter>
+        </Card>
       </div>
 
-      {/* IRD VAT Annex 13 Preview Modal */}
-      {isIrdModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between no-print">
-              <span className="font-bold text-sm text-slate-800">
-                Government of Nepal &bull; IRD Sales Ledger (अनुसूची १३)
-              </span>
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={() => window.print()} className={btnPrimary}>
-                  <Printer className="h-4 w-4" />
-                  Print / Save PDF
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsIrdModalOpen(false)}
-                  className={btnSecondary}
-                >
-                  Close
-                </button>
+      {/* IRD VAT Annex 13 Preview Dialog */}
+      <Dialog open={isIrdModalOpen} onOpenChange={setIsIrdModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
+            <DialogTitle className="text-sm font-medium">
+              Government of Nepal · IRD Sales Ledger (अनुसूची १३)
+            </DialogTitle>
+            <Button
+              size="sm"
+              onClick={() => window.print()}
+              className="h-7 gap-1 text-xs"
+            >
+              <Printer className="h-3 w-3" />
+              Print / Save PDF
+            </Button>
+          </DialogHeader>
+
+          <div className="p-6 overflow-y-auto space-y-4 text-xs">
+            <div className="text-center border-b border-border/50 pb-3">
+              <h3 className="font-semibold text-xs text-foreground">
+                Government of Nepal · Ministry of Finance
+              </h3>
+              <p className="text-muted-foreground">Inland Revenue Department (आन्तरिक राजस्व विभाग)</p>
+              <p className="text-[11px] text-muted-foreground/70">Monthly Sales Ledger (अनुसूची १३ - बिक्री खाता)</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 bg-muted/40 p-3 rounded-md border border-border text-xs">
+              <div>
+                <span className="text-muted-foreground">Taxpayer: </span>
+                <span className="font-medium text-foreground">{ops.settings.legalName || 'MEZMANI PVT. LTD.'}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">PAN: </span>
+                <span className="font-mono font-medium text-foreground">{ops.settings.pan || '609823415'}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Period: </span>
+                <span className="text-foreground">Fiscal Year 2082/83</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">VAT Rate: </span>
+                <span className="text-foreground">{ops.settings.taxRate}%</span>
               </div>
             </div>
 
-            <div className="p-8 overflow-y-auto space-y-5 text-xs text-slate-800 font-sans">
-              <div className="text-center border-b pb-3 border-slate-200">
-                <h3 className="font-bold text-sm text-slate-900 uppercase">
-                  Government of Nepal &bull; Ministry of Finance
-                </h3>
-                <p className="text-slate-600 font-medium">Inland Revenue Department (आन्तरिक राजस्व विभाग)</p>
-                <p className="text-slate-400 text-[10px]">Monthly Sales Ledger (अनुसूची १३ - बिक्री खाता)</p>
-              </div>
+            <div className="border border-border rounded-md overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Invoice #</TableHead>
+                    <TableHead className="text-xs">Date</TableHead>
+                    <TableHead className="text-xs">Buyer</TableHead>
+                    <TableHead className="text-right text-xs">Taxable</TableHead>
+                    <TableHead className="text-right text-xs">VAT (13%)</TableHead>
+                    <TableHead className="text-right text-xs">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ops.orders.map((o) => {
+                    const taxable = Math.round(o.subtotal - o.discount)
+                    return (
+                      <TableRow key={o.id}>
+                        <TableCell className="font-mono text-xs">
+                          {ops.settings.invoicePrefix || 'MEZ-INV-'}
+                          {o.number.replace(/[^0-9]/g, '')}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{o.createdAt.slice(0, 10)}</TableCell>
+                        <TableCell className="text-xs">{o.customerName}</TableCell>
+                        <TableCell className="text-right font-mono text-xs">{formatNPR(taxable)}</TableCell>
+                        <TableCell className="text-right font-mono text-xs">{formatNPR(o.tax)}</TableCell>
+                        <TableCell className="text-right font-mono text-xs font-medium text-foreground">
+                          {formatNPR(o.total)}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
-                <div>
-                  <span className="text-slate-500">Taxpayer Trade Name: </span>
-                  <strong className="text-slate-900">{ops.settings.legalName || 'MEZMANI PVT. LTD.'}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500">Permanent Account No (PAN): </span>
-                  <strong className="text-slate-900 font-mono">{ops.settings.pan || '609823415'}</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500">Tax Period: </span>
-                  <strong className="text-slate-900">Fiscal Year 2082/83 (Ashwin / Kartik)</strong>
-                </div>
-                <div>
-                  <span className="text-slate-500">Standard VAT Rate: </span>
-                  <strong className="text-slate-900">{ops.settings.taxRate}%</strong>
-                </div>
-              </div>
-
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold">
-                    <tr>
-                      <th className="py-2.5 px-3">Invoice #</th>
-                      <th className="py-2.5 px-3">Date</th>
-                      <th className="py-2.5 px-3">Buyer Name</th>
-                      <th className="py-2.5 px-3 text-right">Taxable Sales</th>
-                      <th className="py-2.5 px-3 text-right">VAT (13%)</th>
-                      <th className="py-2.5 px-3 text-right">Total Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {ops.orders.map((o) => {
-                      const taxable = Math.round(o.subtotal - o.discount)
-                      return (
-                        <tr key={o.id}>
-                          <td className="py-2 px-3 font-mono font-semibold">
-                            {ops.settings.invoicePrefix || 'MEZ-INV-'}
-                            {o.number.replace(/[^0-9]/g, '')}
-                          </td>
-                          <td className="py-2 px-3 text-slate-500">{o.createdAt.slice(0, 10)}</td>
-                          <td className="py-2 px-3">{o.customerName}</td>
-                          <td className="py-2 px-3 text-right font-mono">{formatNPR(taxable)}</td>
-                          <td className="py-2 px-3 text-right font-mono text-purple-700 font-bold">
-                            {formatNPR(o.tax)}
-                          </td>
-                          <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
-                            {formatNPR(o.total)}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 flex justify-between items-center text-xs">
-                <span className="font-bold text-purple-900">Total VAT Collected to Remit to IRD:</span>
-                <span className="text-base font-extrabold text-purple-800 font-mono">
-                  {formatNPR(estimatedVatCollected)}
-                </span>
-              </div>
+            <div className="p-3 bg-muted/30 rounded-md border border-border flex justify-between items-center text-xs">
+              <span className="font-medium text-foreground">Total VAT collected to remit to IRD:</span>
+              <span className="font-mono font-bold text-foreground">
+                {formatNPR(estimatedVatCollected)}
+              </span>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

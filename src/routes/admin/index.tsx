@@ -6,7 +6,6 @@ import { PageHeader } from '#/components/admin/page-header'
 import { KpiCard } from '#/components/admin/kpi-card'
 import { StatusBadge } from '#/components/admin/status-badge'
 import { LineChart, BarChart, DoughnutChart } from '#/components/admin/charts'
-import { pageClass, cardClass, selectClass } from '#/components/admin/styles'
 import {
   Wallet,
   ShoppingCart,
@@ -17,6 +16,23 @@ import {
   AlertTriangle,
   Plus,
 } from 'lucide-react'
+import { Button } from '#/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui/table'
 
 const searchSchema = z.object({
   range: z.enum(['7d', '30d', '90d', 'ytd', 'custom']).optional(),
@@ -86,42 +102,44 @@ function AdminDashboard() {
     {
       label: 'Low stock',
       value: data.kpis.lowStock,
-      note: `≤ ${data.catalog.lowStockCount >= 0 ? 20 : 20} units remaining`,
+      note: `≤ 20 units remaining`,
       icon: AlertTriangle,
       tone: data.kpis.lowStock > 0 ? ('danger' as const) : ('default' as const),
     },
   ]
 
   return (
-    <div className={pageClass}>
+    <div className="space-y-6">
       <PageHeader
         kicker="Overview"
         title="Operations dashboard"
         description="Live catalog inventory plus order, rider, and ledger activity for the Kathmandu hub."
         actions={
-          <>
-            <select
-              aria-label="Date range"
-              className={`${selectClass} w-auto`}
+          <div className="flex items-center gap-2">
+            <Select
               value={range}
-              onChange={(e) =>
+              onValueChange={(val) =>
                 navigate({
-                  search: { range: e.target.value as typeof range },
+                  search: { range: val as typeof range },
                 })
               }
             >
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="90d">Last 90 days</option>
-              <option value="ytd">Year to date</option>
-            </select>
-            <Link
-              to="/admin/orders"
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-            >
-              <Plus className="h-4 w-4" /> New order
-            </Link>
-          </>
+              <SelectTrigger className="h-8 w-[130px] text-xs">
+                <SelectValue placeholder="Date range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+                <SelectItem value="30d">Last 30 days</SelectItem>
+                <SelectItem value="90d">Last 90 days</SelectItem>
+                <SelectItem value="ytd">Year to date</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button asChild size="sm" className="h-8 gap-1.5 text-xs">
+              <Link to="/admin/orders">
+                <Plus className="h-3.5 w-3.5" /> New order
+              </Link>
+            </Button>
+          </div>
         }
       />
 
@@ -132,111 +150,120 @@ function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <section className={`${cardClass} p-5 xl:col-span-2`}>
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900">Sales trend</h2>
-            <span className="text-xs text-slate-500">NPR · {range}</span>
-          </div>
-          <LineChart data={data.salesTrend} money />
-        </section>
-        <section className={`${cardClass} p-5`}>
-          <h2 className="mb-2 text-sm font-semibold text-slate-900">
-            Order status
-          </h2>
-          <DoughnutChart data={data.orderStatus} />
-        </section>
+        <Card className="p-4 xl:col-span-2">
+          <CardHeader className="p-0 pb-3 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm font-medium">Sales trend</CardTitle>
+            <span className="text-xs text-muted-foreground font-mono">NPR · {range}</span>
+          </CardHeader>
+          <CardContent className="p-0">
+            <LineChart data={data.salesTrend} money />
+          </CardContent>
+        </Card>
+
+        <Card className="p-4">
+          <CardHeader className="p-0 pb-3">
+            <CardTitle className="text-sm font-medium">Order status</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <DoughnutChart data={data.orderStatus} />
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <section className={`${cardClass} p-5`}>
-          <h2 className="mb-3 text-sm font-semibold text-slate-900">
-            Orders by status
-          </h2>
-          <BarChart data={data.orderStatus} />
-        </section>
-        <section className={`${cardClass} overflow-hidden`}>
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-            <h2 className="text-sm font-semibold text-slate-900">Top products</h2>
-            <Link to="/admin/liquor" className="text-xs font-medium text-blue-600">
+        <Card className="p-4">
+          <CardHeader className="p-0 pb-3">
+            <CardTitle className="text-sm font-medium">Orders by status</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <BarChart data={data.orderStatus} />
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 px-4 py-3 space-y-0">
+            <CardTitle className="text-sm font-medium">Top products</CardTitle>
+            <Link to="/admin/liquor" className="text-xs text-muted-foreground hover:text-foreground">
               Catalog
             </Link>
-          </div>
-          <ul className="m-0 divide-y divide-slate-100 p-0">
+          </CardHeader>
+          <ul className="m-0 divide-y divide-border/40 p-0">
             {data.topProducts.map((p) => (
-              <li key={p.name} className="flex items-center justify-between gap-3 px-5 py-3">
+              <li key={p.name} className="flex items-center justify-between gap-3 px-4 py-2.5 text-xs">
                 <div>
-                  <div className="text-sm font-medium text-slate-900">{p.name}</div>
-                  <div className="text-xs text-slate-500">{p.qty} sold</div>
+                  <div className="font-medium text-foreground">{p.name}</div>
+                  <div className="text-[11px] text-muted-foreground">{p.qty} sold</div>
                 </div>
-                <div className="text-sm font-semibold tabular-nums">
+                <div className="font-mono font-medium tabular-nums text-foreground">
                   {formatNPR(p.revenue)}
                 </div>
               </li>
             ))}
           </ul>
-        </section>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <section className={`${cardClass} overflow-hidden`}>
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-            <h2 className="text-sm font-semibold text-slate-900">Recent orders</h2>
-            <Link to="/admin/orders" className="text-xs font-medium text-blue-600">
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 px-4 py-3 space-y-0">
+            <CardTitle className="text-sm font-medium">Recent orders</CardTitle>
+            <Link to="/admin/orders" className="text-xs text-muted-foreground hover:text-foreground">
               View all
             </Link>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="text-[11px] tracking-wider text-slate-400 uppercase">
-                  <th className="px-5 py-2 font-medium">Order</th>
-                  <th className="px-3 py-2 font-medium">Customer</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-5 py-2 text-right font-medium">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.recentOrders.map((o) => (
-                  <tr key={o.id} className="border-t border-slate-100">
-                    <td className="px-5 py-3">
-                      <a
-                        href={`/admin/orders/${o.id}`}
-                        className="font-medium text-blue-700 hover:underline"
-                      >
-                        {o.number}
-                      </a>
-                    </td>
-                    <td className="px-3 py-3 text-slate-600">{o.customerName}</td>
-                    <td className="px-3 py-3">
-                      <StatusBadge value={o.status} />
-                    </td>
-                    <td className="px-5 py-3 text-right font-semibold tabular-nums">
-                      {formatNPR(o.total)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-        <section className={`${cardClass} p-5`}>
-          <h2 className="mb-3 text-sm font-semibold text-slate-900">
-            Recent activity
-          </h2>
-          <ul className="m-0 space-y-3 p-0">
-            {data.activities.map((a) => (
-              <li key={a.id} className="flex gap-3 text-sm">
-                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
-                <div>
-                  <div className="font-medium text-slate-800">{a.detail}</div>
-                  <div className="text-xs text-slate-500">
-                    {a.actor} · {a.module} · {new Date(a.at).toLocaleString()}
+          </CardHeader>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs">Order</TableHead>
+                <TableHead className="text-xs">Customer</TableHead>
+                <TableHead className="text-xs">Status</TableHead>
+                <TableHead className="text-right text-xs">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.recentOrders.map((o) => (
+                <TableRow key={o.id}>
+                  <TableCell>
+                    <a
+                      href={`/admin/orders/${o.id}`}
+                      className="font-mono font-medium text-foreground hover:underline"
+                    >
+                      {o.number}
+                    </a>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{o.customerName}</TableCell>
+                  <TableCell>
+                    <StatusBadge value={o.status} />
+                  </TableCell>
+                  <TableCell className="text-right font-mono font-medium tabular-nums">
+                    {formatNPR(o.total)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+
+        <Card className="p-4">
+          <CardHeader className="p-0 pb-3">
+            <CardTitle className="text-sm font-medium">Recent activity</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ul className="m-0 space-y-3 p-0">
+              {data.activities.map((a) => (
+                <li key={a.id} className="flex gap-2.5 text-xs">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/60" />
+                  <div>
+                    <div className="font-medium text-foreground">{a.detail}</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {a.actor} · {a.module} · {new Date(a.at).toLocaleDateString()}
+                    </div>
                   </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

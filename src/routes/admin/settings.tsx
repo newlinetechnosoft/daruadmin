@@ -6,16 +6,24 @@ import {
   resetOpsFn,
 } from '#/server/operations/operations.functions'
 import type { PaymentMethod, StoreSettings } from '#/server/operations/types'
-import { PageHeader } from '#/components/admin/page-header'
-import { KpiCard } from '#/components/admin/kpi-card'
+import { PageHeader } from '#/components/shared/page-header'
+import { KpiCard } from '#/components/shared/kpi-card'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { NativeSelect } from '#/components/ui/native-select'
+import { Switch } from '#/components/ui/switch'
+import { Badge } from '#/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '#/components/ui/card'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '#/components/ui/tabs'
 import {
-  pageClass,
-  cardClass,
-  btnPrimary,
-  btnSecondary,
-  inputClass,
-  labelClass,
-} from '#/components/admin/styles'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
 import {
   Building2,
   Receipt,
@@ -142,26 +150,25 @@ function AdminSettingsPage() {
   const totalCatalogItems = liquor.length + grocery.length
 
   return (
-    <div className={pageClass}>
+    <div className="space-y-6">
       <PageHeader
         kicker="System Configuration"
         title="Settings & Compliance"
         description="Configure platform store legal identity, Nepal IRD VAT invoicing, 18+ liquor age gate, payment credentials, and Neon DB storage."
         actions={
           <div className="flex items-center gap-2">
-            <button
-              type="button"
+            <Button
+              variant="outline"
               onClick={() => setResetModalOpen(true)}
-              className={btnSecondary}
+              className="gap-2"
             >
-              <RotateCcw className="h-4 w-4 text-slate-500" />
+              <RotateCcw className="h-4 w-4 text-muted-foreground" />
               Reset Demo Data
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               onClick={() => handleSave()}
               disabled={isSaving}
-              className={btnPrimary}
+              className="gap-2"
             >
               {isSaving ? (
                 <>
@@ -174,7 +181,7 @@ function AdminSettingsPage() {
                   Save Configuration
                 </>
               )}
-            </button>
+            </Button>
           </div>
         }
       />
@@ -211,561 +218,528 @@ function AdminSettingsPage() {
         />
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex border-b border-slate-200">
-        <div className="flex gap-2 overflow-x-auto pb-px">
-          {[
-            { id: 'general', label: 'Store & Legal Profile', icon: Building2 },
-            { id: 'tax', label: 'Tax & Invoicing', icon: Receipt },
-            { id: 'compliance', label: 'Compliance & Safety', icon: ShieldCheck },
-            { id: 'notifications', label: 'Alerts & Messages', icon: Bell },
-            { id: 'gateways', label: 'Payment Gateways', icon: CreditCard },
-            { id: 'system', label: 'Neon DB & System Info', icon: Server },
-          ].map((tab) => {
-            const Icon = tab.icon
-            const active = activeTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors whitespace-nowrap ${
-                  active
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-900'
-                }`}
-              >
-                <Icon className={`h-4 w-4 ${active ? 'text-blue-600' : 'text-slate-400'}`} />
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
+      {/* Tabs */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(val) => setActiveTab(val as typeof activeTab)}
+        className="w-full space-y-4"
+      >
+        <TabsList className="h-auto flex-wrap p-1">
+          <TabsTrigger value="general" className="gap-2">
+            <Building2 className="h-3.5 w-3.5" />
+            <span>Store & Legal Profile</span>
+          </TabsTrigger>
+          <TabsTrigger value="tax" className="gap-2">
+            <Receipt className="h-3.5 w-3.5" />
+            <span>Tax & Invoicing</span>
+          </TabsTrigger>
+          <TabsTrigger value="compliance" className="gap-2">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            <span>Compliance & Safety</span>
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="gap-2">
+            <Bell className="h-3.5 w-3.5" />
+            <span>Alerts & Messages</span>
+          </TabsTrigger>
+          <TabsTrigger value="gateways" className="gap-2">
+            <CreditCard className="h-3.5 w-3.5" />
+            <span>Payment Gateways</span>
+          </TabsTrigger>
+          <TabsTrigger value="system" className="gap-2">
+            <Server className="h-3.5 w-3.5" />
+            <span>Neon DB & System</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* TAB CONTENT: General Store Profile */}
-      {activeTab === 'general' && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
-            <div className={`${cardClass} p-6`}>
-              <h2 className="text-base font-semibold text-slate-900">
-                Official Business Information
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Used in Nepal IRD tax invoices, legal order receipts, and customer confirmation emails.
-              </p>
+        {/* General Store Profile */}
+        <TabsContent value="general">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Official Business Information</CardTitle>
+                  <CardDescription>
+                    Used in Nepal IRD tax invoices, legal order receipts, and customer confirmation emails.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="store-name">Store Display Name</Label>
+                      <Input
+                        id="store-name"
+                        value={form.storeName}
+                        onChange={(e) => setForm({ ...form, storeName: e.target.value })}
+                        placeholder="e.g. Mezmani"
+                        required
+                      />
+                    </div>
 
-              <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelClass}>Customer Facing Store Name</label>
-                  <input
-                    type="text"
-                    value={form.storeName}
-                    onChange={(e) => setForm({ ...form, storeName: e.target.value })}
-                    className={inputClass}
-                    placeholder="e.g. Mezmani"
-                    required
-                  />
-                </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="legal-name">Registered Corporate Entity</Label>
+                      <Input
+                        id="legal-name"
+                        value={form.legalName}
+                        onChange={(e) => setForm({ ...form, legalName: e.target.value })}
+                        placeholder="e.g. Mezmani Retail Pvt. Ltd."
+                        required
+                      />
+                    </div>
 
-                <div>
-                  <label className={labelClass}>Registered Legal Corporate Entity</label>
-                  <input
-                    type="text"
-                    value={form.legalName}
-                    onChange={(e) => setForm({ ...form, legalName: e.target.value })}
-                    className={inputClass}
-                    placeholder="e.g. Mezmani Retail Pvt. Ltd."
-                    required
-                  />
-                </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pan-num">Nepal PAN Registration Number</Label>
+                      <Input
+                        id="pan-num"
+                        value={form.pan}
+                        onChange={(e) => setForm({ ...form, pan: e.target.value })}
+                        placeholder="9-digit PAN number"
+                        required
+                      />
+                    </div>
 
-                <div>
-                  <label className={labelClass}>Nepal PAN Registration Number</label>
-                  <input
-                    type="text"
-                    value={form.pan}
-                    onChange={(e) => setForm({ ...form, pan: e.target.value })}
-                    className={inputClass}
-                    placeholder="9-digit PAN number"
-                    required
-                  />
-                </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="vat-id">Nepal VAT Registration ID</Label>
+                      <Input
+                        id="vat-id"
+                        value={form.vat}
+                        onChange={(e) => setForm({ ...form, vat: e.target.value })}
+                        placeholder="e.g. NP-VAT-001"
+                        required
+                      />
+                    </div>
 
-                <div>
-                  <label className={labelClass}>Nepal VAT Registration ID</label>
-                  <input
-                    type="text"
-                    value={form.vat}
-                    onChange={(e) => setForm({ ...form, vat: e.target.value })}
-                    className={inputClass}
-                    placeholder="e.g. NP-VAT-001"
-                    required
-                  />
-                </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="store-phone">Official Phone Number</Label>
+                      <div className="relative">
+                        <Phone className="absolute top-1/2 -translate-y-1/2 left-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="store-phone"
+                          value={form.phone}
+                          onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                          className="pl-9"
+                          placeholder="+977-98XXXXXXXX"
+                          required
+                        />
+                      </div>
+                    </div>
 
-                <div>
-                  <label className={labelClass}>Official Phone Number</label>
-                  <div className="relative">
-                    <Phone className="absolute top-3 left-3 h-4 w-4 text-slate-400" />
-                    <input
-                      type="text"
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                      className={`${inputClass} pl-9`}
-                      placeholder="+977-98XXXXXXXX"
-                      required
-                    />
+                    <div className="space-y-1.5">
+                      <Label htmlFor="store-email">Operational Support Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute top-1/2 -translate-y-1/2 left-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="store-email"
+                          type="email"
+                          value={form.email}
+                          onChange={(e) => setForm({ ...form, email: e.target.value })}
+                          className="pl-9"
+                          placeholder="ops@mezmani.com.np"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-2 space-y-1.5">
+                      <Label htmlFor="store-addr">Registered Physical Address</Label>
+                      <div className="relative">
+                        <MapPin className="absolute top-1/2 -translate-y-1/2 left-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="store-addr"
+                          value={form.address}
+                          onChange={(e) => setForm({ ...form, address: e.target.value })}
+                          className="pl-9"
+                          placeholder="Street address, Ward, Location"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="store-city">City / Municipality</Label>
+                      <Input
+                        id="store-city"
+                        value={form.city}
+                        onChange={(e) => setForm({ ...form, city: e.target.value })}
+                        placeholder="Kathmandu"
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className={labelClass}>Operational Support Email</label>
-                  <div className="relative">
-                    <Mail className="absolute top-3 left-3 h-4 w-4 text-slate-400" />
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      className={`${inputClass} pl-9`}
-                      placeholder="ops@mezmani.com.np"
-                      required
-                    />
+                  <div className="pt-4 flex justify-end border-t border-border">
+                    <Button
+                      onClick={() => handleSave()}
+                      disabled={isSaving}
+                      className="gap-2"
+                    >
+                      <Save className="h-4 w-4" />
+                      Save Store Profile
+                    </Button>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
+            </div>
 
-                <div className="sm:col-span-2">
-                  <label className={labelClass}>Registered Physical Address</label>
-                  <div className="relative">
-                    <MapPin className="absolute top-3 left-3 h-4 w-4 text-slate-400" />
-                    <input
-                      type="text"
-                      value={form.address}
-                      onChange={(e) => setForm({ ...form, address: e.target.value })}
-                      className={`${inputClass} pl-9`}
-                      placeholder="Street address, Ward, Location"
-                      required
-                    />
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Invoice Header Preview</CardTitle>
+                  <CardDescription>
+                    Official receipt header format:
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-lg border border-border bg-muted/30 p-4 text-center space-y-1">
+                    <h4 className="text-sm font-bold uppercase tracking-tight text-foreground">
+                      {form.storeName || 'Mezmani'}
+                    </h4>
+                    <p className="text-xs text-muted-foreground font-medium">{form.legalName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {form.address}, {form.city}
+                    </p>
+                    <div className="pt-2 flex items-center justify-center gap-2 text-[11px] font-mono text-foreground font-semibold">
+                      <span>PAN: {form.pan}</span>
+                      <span>•</span>
+                      <span>VAT: {form.vat}</span>
+                    </div>
+                    <p className="pt-1 text-[11px] text-muted-foreground">
+                      Tel: {form.phone} | Email: {form.email}
+                    </p>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                <div>
-                  <label className={labelClass}>City / Municipality</label>
-                  <input
-                    type="text"
-                    value={form.city}
-                    onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    className={inputClass}
-                    placeholder="Kathmandu"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => handleSave()}
-                  disabled={isSaving}
-                  className={btnPrimary}
-                >
-                  <Save className="h-4 w-4" />
-                  Save Store Profile
-                </button>
-              </div>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
+                      <ShieldCheck className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground">Nepal IRD Compliance</h4>
+                      <p className="text-xs text-muted-foreground">Inland Revenue Department rules</p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                    According to Nepal IRD Value Added Tax Act 2052, all retail liquor transactions must maintain sequentially numbered tax invoices and report VAT Annex 13 registers monthly.
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </div>
+        </TabsContent>
 
-          <div className="space-y-6">
-            <div className={`${cardClass} p-6`}>
-              <h3 className="text-sm font-semibold text-slate-900">
-                Invoice Header Preview
-              </h3>
-              <p className="mt-1 text-xs text-slate-500">
-                How your company header appears on official customer receipts:
-              </p>
+        {/* Tax & Invoicing */}
+        <TabsContent value="tax">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Nepal Tax & Invoicing Parameters</CardTitle>
+                  <CardDescription>
+                    Control the standard VAT rate, sequential bill numbering prefixes, and inventory triggers.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="tax-rate">Standard Nepal VAT Rate (%)</Label>
+                      <div className="relative">
+                        <Input
+                          id="tax-rate"
+                          type="number"
+                          min="0"
+                          max="30"
+                          step="0.5"
+                          value={form.taxRate}
+                          onChange={(e) =>
+                            setForm({ ...form, taxRate: parseFloat(e.target.value) || 0 })
+                          }
+                          required
+                        />
+                        <span className="absolute top-1/2 -translate-y-1/2 right-3 text-xs font-semibold text-muted-foreground">
+                          %
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Statutory standard VAT rate in Nepal is 13%.
+                      </p>
+                    </div>
 
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                <div className="text-center">
-                  <h4 className="text-base font-bold tracking-tight text-slate-900 uppercase">
-                    {form.storeName || 'Mezmani'}
-                  </h4>
-                  <p className="text-xs text-slate-600 font-medium">{form.legalName}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {form.address}, {form.city}
-                  </p>
-                  <div className="mt-2 inline-flex items-center gap-2 rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-xs">
-                    <span>PAN: {form.pan}</span>
-                    <span>•</span>
-                    <span>VAT: {form.vat}</span>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="prefix-input">Invoice Number Prefix</Label>
+                      <Input
+                        id="prefix-input"
+                        value={form.invoicePrefix}
+                        onChange={(e) =>
+                          setForm({ ...form, invoicePrefix: e.target.value.toUpperCase() })
+                        }
+                        placeholder="e.g. MZ or DARU"
+                        required
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        Sample generated invoice:{' '}
+                        <span className="font-mono font-semibold text-primary">
+                          {form.invoicePrefix || 'MZ'}-2026-0042
+                        </span>
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="stock-thresh">Low Stock Alert Threshold</Label>
+                      <div className="relative">
+                        <Input
+                          id="stock-thresh"
+                          type="number"
+                          min="1"
+                          max="500"
+                          value={form.lowStockThreshold}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              lowStockThreshold: parseInt(e.target.value, 10) || 10,
+                            })
+                          }
+                          required
+                        />
+                        <span className="absolute top-1/2 -translate-y-1/2 right-3 text-xs font-semibold text-muted-foreground">
+                          units
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Items with inventory below this quantity trigger alerts on dashboard.
+                      </p>
+                    </div>
                   </div>
-                  <p className="mt-2 text-[11px] text-slate-500">
-                    Tel: {form.phone} | Email: {form.email}
-                  </p>
-                </div>
-              </div>
+
+                  <div className="pt-4 flex justify-end border-t border-border">
+                    <Button
+                      onClick={() => handleSave()}
+                      disabled={isSaving}
+                      className="gap-2"
+                    >
+                      <Save className="h-4 w-4" />
+                      Save Tax Settings
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
-            <div className={`${cardClass} p-6`}>
-              <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-blue-600">
-                  <ShieldCheck className="h-5 w-5" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-slate-900">Nepal IRD Compliance</h4>
-                  <p className="text-xs text-slate-500">Inland Revenue Department rules</p>
-                </div>
-              </div>
-              <p className="mt-3 text-xs leading-relaxed text-slate-600">
-                According to Nepal IRD Value Added Tax Act 2052, all retail liquor transactions must maintain sequentially numbered tax invoices and report VAT Annex 13 registers monthly.
-              </p>
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Tax Calculation Logic</CardTitle>
+                  <CardDescription>
+                    Mezmani tax breakdown flow:
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center justify-between border-b border-border pb-1.5 text-muted-foreground">
+                      <span>Gross Product Subtotal</span>
+                      <span className="font-semibold text-foreground">100.00%</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-border pb-1.5 text-muted-foreground">
+                      <span>VAT ({form.taxRate}%)</span>
+                      <span className="font-semibold text-primary">+{form.taxRate}.00%</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-border pb-1.5 text-muted-foreground">
+                      <span>Delivery Fee</span>
+                      <span className="font-semibold text-foreground">Per Zone</span>
+                    </div>
+                    <div className="flex items-center justify-between font-semibold text-foreground pt-1">
+                      <span>Net Payable Total</span>
+                      <span className="text-emerald-600 dark:text-emerald-400">Calculated</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
-        </div>
-      )}
+        </TabsContent>
 
-      {/* TAB CONTENT: Tax & Invoicing */}
-      {activeTab === 'tax' && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
-            <div className={`${cardClass} p-6`}>
-              <h2 className="text-base font-semibold text-slate-900">
-                Nepal Tax & Invoicing Parameters
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Control the standard VAT rate, sequential bill numbering prefixes, and inventory triggers.
-              </p>
+        {/* Compliance & Safety */}
+        <TabsContent value="compliance">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Liquor Sale Age Verification (18+)</CardTitle>
+                      <CardDescription>
+                        Nepal law strictly prohibits the sale and delivery of alcoholic beverages to minors under 18 years of age.
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {form.ageGate ? 'Enforced' : 'Disabled'}
+                      </span>
+                      <Switch
+                        checked={form.ageGate}
+                        onCheckedChange={(checked) => setForm({ ...form, ageGate: checked })}
+                      />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="rounded-lg border border-border bg-muted/20 p-4">
+                    <div className="flex gap-3">
+                      <Info className="h-5 w-5 shrink-0 text-primary" />
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        <p className="font-medium text-foreground">
+                          When age gate enforcement is ON:
+                        </p>
+                        <p>
+                          1. All guest checkout flows prompt for user birth-date and explicit declaration of majority (18+).
+                        </p>
+                        <p>
+                          2. Delivery riders are mandated by dispatch policy to check national identity card upon handing over liquor parcels.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-              <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div>
-                  <label className={labelClass}>Standard Nepal VAT Rate (%)</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="0"
-                      max="30"
-                      step="0.5"
-                      value={form.taxRate}
-                      onChange={(e) =>
-                        setForm({ ...form, taxRate: parseFloat(e.target.value) || 0 })
-                      }
-                      className={inputClass}
-                      required
+                  <div className="pt-2 flex justify-end">
+                    <Button
+                      onClick={() => handleSave()}
+                      disabled={isSaving}
+                      className="gap-2"
+                    >
+                      <Save className="h-4 w-4" />
+                      Save Compliance Settings
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Kathmandu Valley Liquor License</CardTitle>
+                  <CardDescription>
+                    Registered under Department of Commerce, Supplies and Consumer Protection.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-800 dark:text-emerald-300">
+                    <div className="flex items-center gap-1.5 font-semibold">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Excise License Valid
+                    </div>
+                    <p className="mt-1 text-[11px] text-emerald-700 dark:text-emerald-400">
+                      Compliant with Nepal Excise Act and Tobacco & Alcohol Control Regulations.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Notifications */}
+        <TabsContent value="notifications">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Automated Alerts & Dispatch Notifications</CardTitle>
+                  <CardDescription>
+                    Configure channels for order status changes, courier alerts, and system notices.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                    <div>
+                      <h4 className="text-sm font-medium text-foreground">
+                        Email Notifications
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        Send transactional email to customers when an order is confirmed, packed, or delivered.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={form.notifyEmail}
+                      onCheckedChange={(checked) => setForm({ ...form, notifyEmail: checked })}
                     />
-                    <span className="absolute top-2.5 right-3 text-sm font-semibold text-slate-400">
-                      %
-                    </span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Statutory standard VAT rate in Nepal is 13%.
-                  </p>
-                </div>
 
-                <div>
-                  <label className={labelClass}>Invoice Number Prefix</label>
-                  <input
-                    type="text"
-                    value={form.invoicePrefix}
-                    onChange={(e) =>
-                      setForm({ ...form, invoicePrefix: e.target.value.toUpperCase() })
-                    }
-                    className={inputClass}
-                    placeholder="e.g. MZ or DARU"
-                    required
-                  />
-                  <p className="mt-1 text-xs text-slate-500">
-                    Sample generated invoice:{' '}
-                    <span className="font-mono font-semibold text-blue-600">
-                      {form.invoicePrefix || 'MZ'}-2026-0042
-                    </span>
-                  </p>
-                </div>
-
-                <div>
-                  <label className={labelClass}>Low Stock Alert Threshold</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="1"
-                      max="500"
-                      value={form.lowStockThreshold}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          lowStockThreshold: parseInt(e.target.value, 10) || 10,
-                        })
-                      }
-                      className={inputClass}
-                      required
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                    <div>
+                      <h4 className="text-sm font-medium text-foreground">
+                        SMS / WhatsApp Dispatch Alerts
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        Send SMS / WhatsApp notifications to delivery riders upon new order assignments via Sparrow SMS / NTC.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={form.notifySms}
+                      onCheckedChange={(checked) => setForm({ ...form, notifySms: checked })}
                     />
-                    <span className="absolute top-2.5 right-3 text-sm font-semibold text-slate-400">
-                      units
-                    </span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Items with inventory below this quantity will trigger amber warnings on the dashboard and inventory desk.
-                  </p>
-                </div>
-              </div>
 
-              <div className="mt-6 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => handleSave()}
-                  disabled={isSaving}
-                  className={btnPrimary}
-                >
-                  <Save className="h-4 w-4" />
-                  Save Tax Settings
-                </button>
-              </div>
+                  <div className="pt-2 flex justify-end">
+                    <Button
+                      onClick={() => handleSave()}
+                      disabled={isSaving}
+                      className="gap-2"
+                    >
+                      <Save className="h-4 w-4" />
+                      Save Alert Settings
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </div>
 
-          <div className="space-y-6">
-            <div className={`${cardClass} p-6`}>
-              <h3 className="text-sm font-semibold text-slate-900">
-                Tax Calculation Logic
-              </h3>
-              <p className="mt-2 text-xs leading-relaxed text-slate-600">
-                Nepal IRD requires item pricing to either be inclusive or exclusive of VAT. In Mezmani:
-              </p>
-              <div className="mt-3 space-y-2 text-xs text-slate-600">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                  <span>Gross Product Subtotal</span>
-                  <span className="font-semibold text-slate-800">100.00%</span>
-                </div>
-                <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                  <span>VAT ({form.taxRate}%)</span>
-                  <span className="font-semibold text-blue-600">+{form.taxRate}.00%</span>
-                </div>
-                <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                  <span>Service Delivery Fee</span>
-                  <span className="font-semibold text-slate-800">Per Zone</span>
-                </div>
-                <div className="flex items-center justify-between font-bold text-slate-900 pt-1">
-                  <span>Net Payable Total</span>
-                  <span className="text-emerald-600">Calculated</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB CONTENT: Compliance & Safety */}
-      {activeTab === 'compliance' && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
-            <div className={`${cardClass} p-6`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-semibold text-slate-900">
-                    Liquor Sale Age Verification (18+)
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Nepal law strictly prohibits the sale and delivery of alcoholic beverages to minors under 18 years of age.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-slate-600">
-                    {form.ageGate ? 'Enforced' : 'Disabled'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, ageGate: !form.ageGate })}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      form.ageGate ? 'bg-blue-600' : 'bg-slate-300'
-                    }`}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Test Dispatch Alert</CardTitle>
+                  <CardDescription>
+                    Simulate a test ping to verify notification services:
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={() => {
+                      toast.success('Test alert broadcast queued: sent to ' + form.email)
+                    }}
                   >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                        form.ageGate ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                <div className="flex gap-3">
-                  <Info className="h-5 w-5 shrink-0 text-blue-600" />
-                  <div className="text-xs text-slate-600 space-y-1">
-                    <p className="font-medium text-slate-900">
-                      When age gate enforcement is ON:
-                    </p>
-                    <p>
-                      1. All guest checkout flows prompt for user birth-date and explicit declaration of majority (18+).
-                    </p>
-                    <p>
-                      2. Delivery riders are mandated by dispatch policy to check national identity card (Nagarikta / Driving License) upon handing over liquor parcels.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => handleSave()}
-                  disabled={isSaving}
-                  className={btnPrimary}
-                >
-                  <Save className="h-4 w-4" />
-                  Save Compliance Settings
-                </button>
-              </div>
+                    <Bell className="h-4 w-4" />
+                    Send Test Ping
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </div>
+        </TabsContent>
 
-          <div className="space-y-6">
-            <div className={`${cardClass} p-6`}>
-              <h3 className="text-sm font-semibold text-slate-900">
-                Kathmandu Valley Liquor License
-              </h3>
-              <p className="mt-2 text-xs text-slate-500">
-                Registered under the Department of Commerce, Supplies and Consumer Protection (वाणिज्य, आपूर्ति तथा उपभोक्ता संरक्षण विभाग).
-              </p>
-              <div className="mt-4 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800">
-                <div className="flex items-center gap-1.5 font-semibold">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Excise License Valid
-                </div>
-                <p className="mt-1 text-[11px] text-emerald-700">
-                  Compliant with Nepal Excise Act and Tobacco & Alcohol Control Regulations.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB CONTENT: Notifications */}
-      {activeTab === 'notifications' && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
-            <div className={`${cardClass} p-6`}>
-              <h2 className="text-base font-semibold text-slate-900">
-                Automated Alerts & Dispatch Notifications
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Configure channels for order status changes, courier alerts, and system notices.
-              </p>
-
-              <div className="mt-6 space-y-5">
-                <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">
-                      Email Notifications
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Send transactional email to customers when an order is confirmed, packed, or delivered.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, notifyEmail: !form.notifyEmail })}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      form.notifyEmail ? 'bg-blue-600' : 'bg-slate-300'
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                        form.notifyEmail ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">
-                      SMS / WhatsApp Dispatch Alerts
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Send SMS / WhatsApp notifications to delivery riders upon new order assignments via Sparrow SMS / NTC.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, notifySms: !form.notifySms })}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      form.notifySms ? 'bg-blue-600' : 'bg-slate-300'
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                        form.notifySms ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => handleSave()}
-                  disabled={isSaving}
-                  className={btnPrimary}
-                >
-                  <Save className="h-4 w-4" />
-                  Save Alert Settings
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className={`${cardClass} p-6`}>
-              <h3 className="text-sm font-semibold text-slate-900">
-                Test Dispatch Alert
-              </h3>
-              <p className="mt-1 text-xs text-slate-500">
-                Simulate a test ping to verify email and notification services:
-              </p>
-              <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    toast.success('Test alert broadcast queued: sent to ' + form.email)
-                  }}
-                  className={btnSecondary}
-                >
-                  <Bell className="h-4 w-4" />
-                  Send Test Ping
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB CONTENT: Payment Gateways */}
-      {activeTab === 'gateways' && (
-        <div className="space-y-6">
-          <div className={`${cardClass} p-6`}>
-            <div className="flex items-center justify-between">
+        {/* Payment Gateways */}
+        <TabsContent value="gateways">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <div>
-                <h2 className="text-base font-semibold text-slate-900">
-                  Nepal Payment Gateway Integrations
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
+                <CardTitle>Nepal Payment Gateway Integrations</CardTitle>
+                <CardDescription>
                   Configure merchant identification keys and switch between Sandbox (Test) and Live production mode.
-                </p>
+                </CardDescription>
               </div>
-              <button
-                type="button"
+              <Button
                 onClick={() => handleSave()}
                 disabled={isSaving}
-                className={btnPrimary}
+                className="gap-2"
               >
                 <Save className="h-4 w-4" />
-                Save Gateway Configurations
-              </button>
-            </div>
-
-            <div className="mt-6 space-y-4">
+                Save Gateways
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
               {(
                 ['esewa', 'khalti', 'fonepay', 'connectips', 'cod'] as PaymentMethod[]
               ).map((method) => {
@@ -779,38 +753,36 @@ function AdminSettingsPage() {
                 return (
                   <div
                     key={method}
-                    className="flex flex-col gap-4 rounded-xl border border-slate-200/80 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-4 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0 sm:w-1/3">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-slate-900 text-sm">
+                        <span className="font-semibold text-foreground text-xs">
                           {info.title}
                         </span>
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
-                            gw.mode === 'live'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}
+                        <Badge
+                          variant={gw.mode === 'live' ? 'success' : 'warning'}
+                          className="uppercase text-[10px]"
                         >
                           {gw.mode}
-                        </span>
+                        </Badge>
                       </div>
-                      <p className="mt-0.5 text-xs text-slate-500">{info.subtitle}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{info.subtitle}</p>
                     </div>
 
                     <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-                      <div className="flex-1">
-                        <label className="text-[11px] font-medium text-slate-500">
+                      <div className="flex-1 space-y-1">
+                        <Label htmlFor={`gw-${method}-id`} className="text-[11px] text-muted-foreground">
                           {method === 'cod' ? 'Float Account ID' : 'Merchant ID / Secret Key'}
-                        </label>
-                        <input
+                        </Label>
+                        <Input
+                          id={`gw-${method}-id`}
                           type="text"
                           value={gw.merchantId}
                           onChange={(e) =>
                             updateGateway(method, { merchantId: e.target.value })
                           }
-                          className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 font-mono text-xs text-slate-800 shadow-xs outline-none focus:border-blue-500"
+                          className="h-8 font-mono text-xs"
                           placeholder={
                             method === 'cod'
                               ? 'COD-CUSTODY'
@@ -819,39 +791,31 @@ function AdminSettingsPage() {
                         />
                       </div>
 
-                      <div className="w-28">
-                        <label className="text-[11px] font-medium text-slate-500">
+                      <div className="w-28 space-y-1">
+                        <Label htmlFor={`gw-${method}-mode`} className="text-[11px] text-muted-foreground">
                           Environment
-                        </label>
-                        <select
+                        </Label>
+                        <NativeSelect
+                          id={`gw-${method}-mode`}
                           value={gw.mode}
                           onChange={(e) =>
                             updateGateway(method, {
                               mode: e.target.value as 'sandbox' | 'live',
                             })
                           }
-                          className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-800 shadow-xs outline-none focus:border-blue-500"
+                          className="h-8 text-xs"
                         >
                           <option value="sandbox">Sandbox</option>
                           <option value="live">Live</option>
-                        </select>
+                        </NativeSelect>
                       </div>
 
-                      <div className="flex items-center gap-2 pt-4 sm:pt-0">
-                        <button
-                          type="button"
-                          onClick={() => updateGateway(method, { enabled: !gw.enabled })}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            gw.enabled ? 'bg-blue-600' : 'bg-slate-300'
-                          }`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                              gw.enabled ? 'translate-x-5' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
-                        <span className="text-xs font-semibold text-slate-700 w-12">
+                      <div className="flex items-center gap-2 pt-2 sm:pt-4">
+                        <Switch
+                          checked={gw.enabled}
+                          onCheckedChange={(checked) => updateGateway(method, { enabled: checked })}
+                        />
+                        <span className="text-xs text-muted-foreground w-12 font-medium">
                           {gw.enabled ? 'Enabled' : 'Off'}
                         </span>
                       </div>
@@ -859,169 +823,162 @@ function AdminSettingsPage() {
                   </div>
                 )
               })}
-            </div>
-          </div>
-        </div>
-      )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* TAB CONTENT: Neon DB & System Info */}
-      {activeTab === 'system' && (
-        <div className="space-y-6">
+        {/* Neon DB & System */}
+        <TabsContent value="system" className="space-y-6">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className={`${cardClass} p-6`}>
-              <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-blue-600">
-                  <Database className="h-5 w-5" />
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <Database className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle>Neon PostgreSQL Infrastructure</CardTitle>
+                    <CardDescription>Serverless AWS Cloud Database</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-semibold text-slate-900">
-                    Neon PostgreSQL Infrastructure
-                  </h3>
-                  <p className="text-xs text-slate-500">Serverless AWS Cloud Database</p>
-                </div>
-              </div>
-
-              <div className="mt-5 space-y-3 text-xs">
-                <div className="flex items-center justify-between rounded-lg bg-slate-50 p-2.5">
-                  <span className="text-slate-500">Database Driver</span>
-                  <span className="font-mono font-semibold text-slate-800">
+              </CardHeader>
+              <CardContent className="space-y-2.5 text-xs">
+                <div className="flex items-center justify-between rounded-lg border border-border p-2.5">
+                  <span className="text-muted-foreground">Database Driver</span>
+                  <span className="font-mono font-medium text-foreground">
                     @neondatabase/serverless (WebSocket Pooler)
                   </span>
                 </div>
-                <div className="flex items-center justify-between rounded-lg bg-slate-50 p-2.5">
-                  <span className="text-slate-500">Operational Table</span>
-                  <span className="font-mono font-semibold text-slate-800">ops_kv</span>
+                <div className="flex items-center justify-between rounded-lg border border-border p-2.5">
+                  <span className="text-muted-foreground">Operational Table</span>
+                  <span className="font-mono font-medium text-foreground">ops_kv</span>
                 </div>
-                <div className="flex items-center justify-between rounded-lg bg-slate-50 p-2.5">
-                  <span className="text-slate-500">State Snapshot Key</span>
-                  <span className="font-mono font-semibold text-slate-800">mezmani-ops-v1</span>
+                <div className="flex items-center justify-between rounded-lg border border-border p-2.5">
+                  <span className="text-muted-foreground">State Snapshot Key</span>
+                  <span className="font-mono font-medium text-foreground">mezmani-ops-v1</span>
                 </div>
-                <div className="flex items-center justify-between rounded-lg bg-slate-50 p-2.5">
-                  <span className="text-slate-500">Connection Status</span>
-                  <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-600">
+                <div className="flex items-center justify-between rounded-lg border border-border p-2.5">
+                  <span className="text-muted-foreground">Connection Status</span>
+                  <span className="inline-flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                     Live & Healthy (Auto-Sync)
                   </span>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            <div className={`${cardClass} p-6`}>
-              <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-purple-50 text-purple-600">
-                  <Sparkles className="h-5 w-5" />
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <CardTitle>Cloud Storage Metrics</CardTitle>
+                    <CardDescription>Current live operational records</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-semibold text-slate-900">
-                    Cloud Storage Metrics
-                  </h3>
-                  <p className="text-xs text-slate-500">Current live operational records</p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3 text-center">
+                  <div className="rounded-lg border border-border bg-muted/20 p-3">
+                    <p className="text-xs text-muted-foreground">Live Orders</p>
+                    <p className="mt-1 text-xl font-bold text-foreground font-mono">{ops.orders.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/20 p-3">
+                    <p className="text-xs text-muted-foreground">Fleet Couriers</p>
+                    <p className="mt-1 text-xl font-bold text-foreground font-mono">{ops.riders.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/20 p-3">
+                    <p className="text-xs text-muted-foreground">Ledger Vouchers</p>
+                    <p className="mt-1 text-xl font-bold text-foreground font-mono">{ops.ledger.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/20 p-3">
+                    <p className="text-xs text-muted-foreground">Catalog SKUs</p>
+                    <p className="mt-1 text-xl font-bold text-foreground font-mono">{totalCatalogItems}</p>
+                  </div>
                 </div>
-              </div>
-
-              <div className="mt-5 grid grid-cols-2 gap-3 text-center">
-                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                  <p className="text-xs text-slate-500">Live Orders</p>
-                  <p className="mt-1 text-xl font-bold text-slate-900">{ops.orders.length}</p>
-                </div>
-                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                  <p className="text-xs text-slate-500">Fleet Couriers</p>
-                  <p className="mt-1 text-xl font-bold text-slate-900">{ops.riders.length}</p>
-                </div>
-                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                  <p className="text-xs text-slate-500">Ledger Vouchers</p>
-                  <p className="mt-1 text-xl font-bold text-slate-900">{ops.ledger.length}</p>
-                </div>
-                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                  <p className="text-xs text-slate-500">Catalog SKUs</p>
-                  <p className="mt-1 text-xl font-bold text-slate-900">{totalCatalogItems}</p>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Danger Zone */}
-          <div className="rounded-2xl border border-red-200 bg-red-50/40 p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                  <h3 className="text-base font-semibold text-red-900">
-                    Sandbox Demo Factory Re-seed
-                  </h3>
+          <Card className="border-destructive/30 bg-destructive/5">
+            <CardContent className="p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                    <h3 className="text-sm font-semibold text-destructive">
+                      Sandbox Demo Factory Re-seed
+                    </h3>
+                  </div>
+                  <p className="mt-1 max-w-xl text-xs text-muted-foreground">
+                    Re-populates the Neon database with default orders, Kathmandu Valley dispatch riders, initial general ledger transactions, and marketing vouchers from the catalog.
+                  </p>
                 </div>
-                <p className="mt-1 max-w-xl text-xs text-red-700">
-                  Re-populates the Neon database with default orders, Kathmandu Valley dispatch riders, initial general ledger transactions, and marketing vouchers from the catalog. Use this if test data gets cluttered.
-                </p>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setResetModalOpen(true)}
+                  className="gap-2 shrink-0"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Reset Sandbox Data
+                </Button>
               </div>
-              <button
-                type="button"
-                onClick={() => setResetModalOpen(true)}
-                className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-red-700"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                Reset Sandbox Data
-              </button>
-            </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Confirmation Dialog for Reset */}
+      <Dialog open={resetModalOpen} onOpenChange={setResetModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Confirm Sandbox Reset
+            </DialogTitle>
+            <DialogDescription>
+              This action replaces live test state in Neon DB with fresh seed data.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-xs">
+            <p className="text-muted-foreground">
+              To prevent accidental reset, please type{' '}
+              <span className="font-mono font-bold text-destructive">RESET</span> below to confirm:
+            </p>
+            <Input
+              type="text"
+              value={resetConfirmationText}
+              onChange={(e) => setResetConfirmationText(e.target.value)}
+              placeholder="Type RESET"
+              className="font-mono"
+            />
           </div>
-        </div>
-      )}
 
-      {/* Confirmation Modal for Reset */}
-      {resetModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-red-50 text-red-600">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-slate-900">
-                  Confirm Sandbox Reset
-                </h3>
-                <p className="text-xs text-slate-500">
-                  This action replaces live test state in Neon DB with fresh seed data.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <p className="text-xs text-slate-600 leading-relaxed">
-                To prevent accidental reset, please type{' '}
-                <span className="font-mono font-bold text-red-600">RESET</span> below to confirm:
-              </p>
-              <input
-                type="text"
-                value={resetConfirmationText}
-                onChange={(e) => setResetConfirmationText(e.target.value)}
-                placeholder="Type RESET"
-                className="mt-2.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 font-mono text-sm text-slate-900 shadow-xs outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
-              />
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setResetModalOpen(false)
-                  setResetConfirmationText('')
-                }}
-                className={btnSecondary}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleResetSandbox}
-                disabled={isResetting || resetConfirmationText.trim().toLowerCase() !== 'reset'}
-                className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isResetting ? 'Resetting...' : 'Confirm Factory Reset'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setResetModalOpen(false)
+                setResetConfirmationText('')
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleResetSandbox}
+              disabled={isResetting || resetConfirmationText.trim().toLowerCase() !== 'reset'}
+            >
+              {isResetting ? 'Resetting...' : 'Confirm Factory Reset'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

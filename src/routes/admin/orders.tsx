@@ -7,22 +7,32 @@ import {
 } from '#/server/operations/operations.functions'
 import type { Order, OrderStatus, PaymentMethod } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
-import { PageHeader } from '#/components/admin/page-header'
-import { KpiCard } from '#/components/admin/kpi-card'
-import { StatusBadge } from '#/components/admin/status-badge'
+import { PageHeader } from '#/components/shared/page-header'
+import { KpiCard } from '#/components/shared/kpi-card'
+import { StatusBadge } from '#/components/shared/status-badge'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { Textarea } from '#/components/ui/textarea'
+import { NativeSelect } from '#/components/ui/native-select'
+import { Badge } from '#/components/ui/badge'
+import { Card, CardContent } from '#/components/ui/card'
 import {
-  pageClass,
-  cardClass,
-  tableWrap,
-  thClass,
-  tdClass,
-  btnPrimary,
-  btnSecondary,
-  btnGhost,
-  inputClass,
-  selectClass,
-  labelClass,
-} from '#/components/admin/styles'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
 import {
   ClipboardList,
   Search,
@@ -32,13 +42,13 @@ import {
   Eye,
   Bike,
   Printer,
-  X,
   CreditCard,
   MapPin,
   Clock,
   Phone,
   Mail,
   Receipt,
+  Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -300,21 +310,21 @@ function AdminOrdersPage() {
   }
 
   return (
-    <div className={pageClass}>
+    <div className="space-y-6">
       <PageHeader
         kicker="Commerce"
         title="Order Management"
         description="Monitor lifecycle transitions, assign Kathmandu Valley fleet couriers, and generate government-compliant VAT invoices."
         actions={
           <div className="flex items-center gap-2">
-            <button type="button" onClick={handleExportCSV} className={btnSecondary}>
+            <Button variant="outline" onClick={handleExportCSV} className="gap-2">
               <Download className="h-4 w-4" />
               Export CSV
-            </button>
-            <button type="button" onClick={() => setIsCreateOpen(true)} className={btnPrimary}>
+            </Button>
+            <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
               <Plus className="h-4 w-4" />
               Create Order
-            </button>
+            </Button>
           </div>
         }
       />
@@ -350,655 +360,641 @@ function AdminOrdersPage() {
       </div>
 
       {/* Search and Filters */}
-      <div className={`${cardClass} p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3`}>
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by order #, customer, phone, city..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={`${inputClass} pl-9`}
-          />
-        </div>
+      <Card>
+        <CardContent className="p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search by order #, customer, phone, city..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 text-xs"
+            />
+          </div>
 
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-slate-500 shrink-0" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className={selectClass}
-          >
-            {ORDER_STATUSES.map((st) => (
-              <option key={st.value} value={st.value}>
-                {st.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+            <NativeSelect
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="text-xs"
+            >
+              {ORDER_STATUSES.map((st) => (
+                <option key={st.value} value={st.value}>
+                  {st.label}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Orders Table */}
-      <div className={tableWrap}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50/80 border-b border-slate-200">
-              <tr>
-                <th className={thClass}>Order # & Date</th>
-                <th className={thClass}>Customer</th>
-                <th className={thClass}>Items</th>
-                <th className={thClass}>Total (NPR)</th>
-                <th className={thClass}>Status</th>
-                <th className={thClass}>Payment</th>
-                <th className={thClass}>Assigned Rider</th>
-                <th className={`${thClass} text-right`}>Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Order # & Date</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Items</TableHead>
+                <TableHead>Total (NPR)</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Payment</TableHead>
+                <TableHead>Assigned Rider</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filteredOrders.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 text-sm">
+                <TableRow>
+                  <TableCell colSpan={8} className="py-12 text-center text-muted-foreground text-sm">
                     No orders match your filter criteria.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 filteredOrders.map((order) => {
                   const assignedRider = ops.riders.find((r) => r.id === order.riderId)
                   return (
-                    <tr key={order.id} className="hover:bg-slate-50/70 transition">
-                      <td className={tdClass}>
-                        <span className="font-mono font-bold text-slate-900 block">
+                    <TableRow key={order.id}>
+                      <TableCell>
+                        <span className="font-mono font-medium text-foreground block">
                           {order.number}
                         </span>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-muted-foreground font-mono">
                           {new Date(order.createdAt).toLocaleDateString()}
                         </span>
-                      </td>
+                      </TableCell>
 
-                      <td className={tdClass}>
-                        <div className="font-semibold text-slate-900">{order.customerName}</div>
-                        <div className="text-xs text-slate-400 font-mono">{order.customerPhone}</div>
-                      </td>
+                      <TableCell>
+                        <div className="font-medium text-foreground">{order.customerName}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{order.customerPhone}</div>
+                      </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="font-medium text-slate-700">
+                      <TableCell>
+                        <span className="font-medium text-foreground">
                           {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
                         </span>
-                        <div className="text-xs text-slate-400 truncate max-w-[160px]">
+                        <div className="text-xs text-muted-foreground truncate max-w-[160px]">
                           {order.items.map((i) => i.name).join(', ')}
                         </div>
-                      </td>
+                      </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="font-bold text-slate-900 font-mono">
+                      <TableCell>
+                        <span className="font-semibold text-foreground font-mono">
                           {formatNPR(order.total)}
                         </span>
-                      </td>
+                      </TableCell>
 
-                      <td className={tdClass}>
+                      <TableCell>
                         <StatusBadge value={order.status} />
-                      </td>
+                      </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                      <TableCell>
+                        <Badge variant="outline" className="font-mono text-[11px] uppercase">
                           {order.paymentMethod}
-                        </span>
-                      </td>
+                        </Badge>
+                      </TableCell>
 
-                      <td className={tdClass}>
+                      <TableCell>
                         {assignedRider ? (
-                          <div className="flex items-center gap-1.5 text-xs text-blue-700 font-medium">
-                            <Bike className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                          <div className="flex items-center gap-1.5 text-xs text-foreground font-medium">
+                            <Bike className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                             <span>{assignedRider.name}</span>
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400 italic">Unassigned</span>
+                          <span className="text-xs text-muted-foreground italic">Unassigned</span>
                         )}
-                      </td>
+                      </TableCell>
 
-                      <td className={`${tdClass} text-right`}>
+                      <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <button
-                            type="button"
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
                             onClick={() => {
                               setSelectedOrder(order)
                               setIsInvoiceOpen(true)
                             }}
-                            className={btnGhost}
                             title="Print Tax Invoice"
                           >
-                            <Receipt className="h-4 w-4 text-slate-600" />
-                          </button>
-                          <button
-                            type="button"
+                            <Receipt className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1.5 text-xs"
                             onClick={() => setSelectedOrder(order)}
-                            className={btnSecondary}
-                            style={{ height: '32px', padding: '0 10px', fontSize: '12px' }}
                           >
                             <Eye className="h-3.5 w-3.5" />
                             Details
-                          </button>
+                          </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )
                 })
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-      {/* Order Details Drawer/Modal */}
-      {selectedOrder && !isInvoiceOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Order {selectedOrder.number}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Placed on {new Date(selectedOrder.createdAt).toLocaleString()}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedOrder(null)}
-                className="text-slate-400 hover:text-slate-600 p-1"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      {/* Order Details Dialog */}
+      <Dialog
+        open={Boolean(selectedOrder && !isInvoiceOpen)}
+        onOpenChange={(open) => !open && setSelectedOrder(null)}
+      >
+        {selectedOrder && (
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Order {selectedOrder.number}</DialogTitle>
+              <DialogDescription>
+                Placed on {new Date(selectedOrder.createdAt).toLocaleString()}
+              </DialogDescription>
+            </DialogHeader>
 
-            <div className="p-5 overflow-y-auto space-y-5 text-sm">
-              {/* Status and Action Buttons */}
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-4 text-xs">
+              {/* Status and Action Selector */}
+              <div className="p-3.5 rounded-lg border border-border bg-muted/30 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500 font-medium">Status:</span>
+                  <span className="text-muted-foreground font-medium">Status:</span>
                   <StatusBadge value={selectedOrder.status} />
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <select
+                  <NativeSelect
                     value={selectedOrder.status}
                     onChange={(e) => handleUpdateStatus(selectedOrder.id, e.target.value as OrderStatus)}
                     disabled={isUpdating}
-                    className="text-xs py-1.5 px-3 bg-white border border-slate-300 rounded-lg text-slate-800 font-semibold"
+                    className="text-xs font-medium"
                   >
                     {ORDER_STATUSES.filter((s) => s.value !== 'all').map((s) => (
                       <option key={s.value} value={s.value}>
                         Set {s.label}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                 </div>
               </div>
 
-              {/* Courier assignment */}
+              {/* Customer & Courier dispatch details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="border border-slate-200 rounded-xl p-3.5 space-y-1.5">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
-                    Customer Details
-                  </span>
-                  <div className="font-semibold text-slate-900">{selectedOrder.customerName}</div>
-                  <div className="text-xs text-slate-600 flex items-center gap-1.5">
-                    <Phone className="h-3 w-3 text-slate-400" />
-                    {selectedOrder.customerPhone}
-                  </div>
-                  <div className="text-xs text-slate-600 flex items-center gap-1.5">
-                    <Mail className="h-3 w-3 text-slate-400" />
-                    {selectedOrder.customerEmail}
-                  </div>
-                  <div className="text-xs text-slate-600 flex items-center gap-1.5">
-                    <MapPin className="h-3 w-3 text-slate-400" />
-                    {selectedOrder.address}, {selectedOrder.city}
-                  </div>
-                </div>
+                <Card>
+                  <CardContent className="p-3.5 space-y-1.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                      Customer Details
+                    </span>
+                    <div className="font-semibold text-foreground">{selectedOrder.customerName}</div>
+                    <div className="text-muted-foreground flex items-center gap-1.5 font-mono">
+                      <Phone className="h-3 w-3 text-muted-foreground" />
+                      {selectedOrder.customerPhone}
+                    </div>
+                    <div className="text-muted-foreground flex items-center gap-1.5">
+                      <Mail className="h-3 w-3 text-muted-foreground" />
+                      {selectedOrder.customerEmail}
+                    </div>
+                    <div className="text-muted-foreground flex items-center gap-1.5">
+                      <MapPin className="h-3 w-3 text-muted-foreground" />
+                      {selectedOrder.address}, {selectedOrder.city}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <div className="border border-slate-200 rounded-xl p-3.5 space-y-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
-                    Fleet Dispatch
-                  </span>
-                  <div>
-                    <label className={labelClass}>Assigned Courier</label>
-                    <select
-                      value={selectedOrder.riderId || ''}
-                      onChange={(e) => handleAssignRider(selectedOrder.id, e.target.value)}
-                      disabled={isUpdating}
-                      className={selectClass}
-                    >
-                      <option value="">No Rider Assigned</option>
-                      {ops.riders.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name} ({r.zone} &bull; {r.status})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    Payment Mode: <strong className="uppercase text-slate-800">{selectedOrder.paymentMethod}</strong>
-                  </div>
-                </div>
+                <Card>
+                  <CardContent className="p-3.5 space-y-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                      Fleet Dispatch
+                    </span>
+                    <div className="space-y-1">
+                      <Label htmlFor="courier-select" className="text-xs">Assigned Courier</Label>
+                      <NativeSelect
+                        id="courier-select"
+                        value={selectedOrder.riderId || ''}
+                        onChange={(e) => handleAssignRider(selectedOrder.id, e.target.value)}
+                        disabled={isUpdating}
+                        className="text-xs"
+                      >
+                        <option value="">No Rider Assigned</option>
+                        {ops.riders.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.name} ({r.zone} &bull; {r.status})
+                          </option>
+                        ))}
+                      </NativeSelect>
+                    </div>
+                    <div className="text-muted-foreground pt-1">
+                      Payment Mode: <strong className="uppercase text-foreground font-mono">{selectedOrder.paymentMethod}</strong>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Items List */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
-                    <tr>
-                      <th className="py-2.5 px-3">Item</th>
-                      <th className="py-2.5 px-3">SKU</th>
-                      <th className="py-2.5 px-3 text-center">Qty</th>
-                      <th className="py-2.5 px-3 text-right">Unit Price</th>
-                      <th className="py-2.5 px-3 text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
+              <div className="rounded-lg border border-border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Item</TableHead>
+                      <TableHead>SKU</TableHead>
+                      <TableHead className="text-center">Qty</TableHead>
+                      <TableHead className="text-right">Unit Price</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {selectedOrder.items.map((item) => (
-                      <tr key={item.id}>
-                        <td className="py-2 px-3">
-                          <span className="font-semibold text-slate-800">{item.name}</span>
-                          <span className="block text-[10px] text-slate-400">{item.variantName}</span>
-                        </td>
-                        <td className="py-2 px-3 font-mono text-slate-500">{item.sku}</td>
-                        <td className="py-2 px-3 text-center font-bold text-slate-700">{item.qty}</td>
-                        <td className="py-2 px-3 text-right font-mono">{formatNPR(item.unitPrice)}</td>
-                        <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <span className="font-medium text-foreground">{item.name}</span>
+                          <span className="block text-[11px] text-muted-foreground">{item.variantName}</span>
+                        </TableCell>
+                        <TableCell className="font-mono text-muted-foreground">{item.sku}</TableCell>
+                        <TableCell className="text-center font-semibold text-foreground">{item.qty}</TableCell>
+                        <TableCell className="text-right font-mono">{formatNPR(item.unitPrice)}</TableCell>
+                        <TableCell className="text-right font-mono font-semibold text-foreground">
                           {formatNPR(item.lineTotal)}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
 
               {/* Price Calculation Summary */}
-              <div className="bg-slate-50 rounded-xl p-3.5 space-y-1.5 text-xs text-right max-w-xs ml-auto">
-                <div className="flex justify-between text-slate-600">
+              <div className="rounded-lg border border-border bg-muted/20 p-3.5 space-y-1.5 text-xs text-right max-w-xs ml-auto">
+                <div className="flex justify-between text-muted-foreground">
                   <span>Subtotal:</span>
                   <span className="font-mono">{formatNPR(selectedOrder.subtotal)}</span>
                 </div>
                 {selectedOrder.discount > 0 && (
-                  <div className="flex justify-between text-emerald-600">
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
                     <span>Discount:</span>
                     <span className="font-mono">-{formatNPR(selectedOrder.discount)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-slate-600">
+                <div className="flex justify-between text-muted-foreground">
                   <span>Delivery Charge:</span>
                   <span className="font-mono">{formatNPR(selectedOrder.deliveryCharge)}</span>
                 </div>
-                <div className="flex justify-between text-slate-600">
+                <div className="flex justify-between text-muted-foreground">
                   <span>VAT ({ops.settings.taxRate}%):</span>
                   <span className="font-mono">{formatNPR(selectedOrder.tax)}</span>
                 </div>
-                <div className="flex justify-between text-sm font-bold text-slate-900 border-t border-slate-200 pt-1.5">
+                <div className="flex justify-between text-sm font-semibold text-foreground border-t border-border pt-1.5">
                   <span>Grand Total:</span>
-                  <span className="font-mono text-blue-600">{formatNPR(selectedOrder.total)}</span>
+                  <span className="font-mono">{formatNPR(selectedOrder.total)}</span>
                 </div>
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-              <button
-                type="button"
+            <DialogFooter className="pt-3 border-t border-border flex items-center justify-between sm:justify-between">
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setIsInvoiceOpen(true)}
-                className={btnSecondary}
+                className="gap-1.5"
               >
                 <Printer className="h-4 w-4" />
                 Print Invoice
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                size="sm"
                 onClick={() => setSelectedOrder(null)}
-                className={btnPrimary}
               >
                 Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
 
-      {/* Printable Nepal VAT Tax Invoice Modal */}
-      {isInvoiceOpen && selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between no-print">
-              <span className="font-bold text-sm text-slate-800">
-                Tax Invoice Preview &bull; {selectedOrder.number}
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
+      {/* Printable Nepal VAT Tax Invoice Dialog */}
+      <Dialog
+        open={Boolean(isInvoiceOpen && selectedOrder)}
+        onOpenChange={(open) => !open && setIsInvoiceOpen(false)}
+      >
+        {selectedOrder && (
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="no-print border-b border-border pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle>Tax Invoice Preview</DialogTitle>
+                  <DialogDescription className="font-mono">{selectedOrder.number}</DialogDescription>
+                </div>
+                <Button
                   onClick={() => window.print()}
-                  className={btnPrimary}
+                  className="gap-1.5"
+                  size="sm"
                 >
                   <Printer className="h-4 w-4" />
                   Print / Save PDF
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsInvoiceOpen(false)}
-                  className={btnSecondary}
-                >
-                  Close
-                </button>
+                </Button>
               </div>
-            </div>
+            </DialogHeader>
 
-            <div className="p-8 overflow-y-auto space-y-6 text-xs text-slate-800 font-sans">
+            <div className="p-4 space-y-6 text-xs text-foreground font-sans">
               {/* Header */}
-              <div className="flex items-start justify-between border-b pb-4 border-slate-200">
+              <div className="flex items-start justify-between border-b pb-4 border-border">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900 uppercase">
+                  <h2 className="text-base font-bold text-foreground uppercase tracking-tight">
                     {ops.settings.legalName || 'MEZMANI LIQUOR & GROCERY PVT. LTD.'}
                   </h2>
-                  <p className="text-slate-500">{ops.settings.address || 'Kathmandu, Nepal'}</p>
-                  <p className="text-slate-500 font-mono">
+                  <p className="text-muted-foreground">{ops.settings.address || 'Kathmandu, Nepal'}</p>
+                  <p className="text-muted-foreground font-mono">
                     PAN / VAT Reg: <strong>{ops.settings.pan || '609823415'}</strong>
                   </p>
-                  <p className="text-slate-500">Contact: {ops.settings.phone || '+977-1-4229988'}</p>
+                  <p className="text-muted-foreground">Contact: {ops.settings.phone || '+977-1-4229988'}</p>
                 </div>
                 <div className="text-right">
-                  <span className="text-sm font-bold text-blue-600 block">TAX INVOICE</span>
-                  <div className="font-mono font-bold text-slate-900 mt-1">
+                  <span className="text-sm font-semibold text-primary block">TAX INVOICE</span>
+                  <div className="font-mono font-bold text-foreground mt-1">
                     {ops.settings.invoicePrefix || 'MEZ-INV-'}
                     {selectedOrder.number.replace(/[^0-9]/g, '')}
                   </div>
-                  <div className="text-slate-500">
+                  <div className="text-muted-foreground font-mono">
                     Date: {new Date(selectedOrder.createdAt).toLocaleDateString()}
                   </div>
-                  <div className="text-slate-500 uppercase font-semibold">
+                  <div className="text-muted-foreground uppercase font-semibold">
                     Payment: {selectedOrder.paymentMethod}
                   </div>
                 </div>
               </div>
 
               {/* Billed to */}
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <div className="grid grid-cols-2 gap-4 bg-muted/30 p-3.5 rounded-lg border border-border">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
                     Billed To Customer:
                   </span>
-                  <div className="font-bold text-slate-900">{selectedOrder.customerName}</div>
-                  <div className="text-slate-600">{selectedOrder.customerPhone}</div>
-                  <div className="text-slate-600">{selectedOrder.customerEmail}</div>
+                  <div className="font-semibold text-foreground">{selectedOrder.customerName}</div>
+                  <div className="text-muted-foreground font-mono">{selectedOrder.customerPhone}</div>
+                  <div className="text-muted-foreground">{selectedOrder.customerEmail}</div>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
                     Delivery Destination:
                   </span>
-                  <div className="font-medium text-slate-800">{selectedOrder.address}</div>
-                  <div className="text-slate-600">{selectedOrder.city}</div>
+                  <div className="font-medium text-foreground">{selectedOrder.address}</div>
+                  <div className="text-muted-foreground">{selectedOrder.city}</div>
                 </div>
               </div>
 
               {/* Items */}
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold">
-                    <tr>
-                      <th className="py-2.5 px-3">#</th>
-                      <th className="py-2.5 px-3">Description</th>
-                      <th className="py-2.5 px-3">SKU</th>
-                      <th className="py-2.5 px-3 text-right">Rate</th>
-                      <th className="py-2.5 px-3 text-center">Qty</th>
-                      <th className="py-2.5 px-3 text-right">Amount (NPR)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
+              <div className="border border-border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">#</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>SKU</TableHead>
+                      <TableHead className="text-right">Rate</TableHead>
+                      <TableHead className="text-center">Qty</TableHead>
+                      <TableHead className="text-right">Amount (NPR)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {selectedOrder.items.map((i, idx) => (
-                      <tr key={i.id}>
-                        <td className="py-2 px-3 text-slate-400">{idx + 1}</td>
-                        <td className="py-2 px-3 font-semibold text-slate-800">{i.name}</td>
-                        <td className="py-2 px-3 font-mono text-slate-500">{i.sku}</td>
-                        <td className="py-2 px-3 text-right font-mono">{formatNPR(i.unitPrice)}</td>
-                        <td className="py-2 px-3 text-center font-bold">{i.qty}</td>
-                        <td className="py-2 px-3 text-right font-mono font-bold">{formatNPR(i.lineTotal)}</td>
-                      </tr>
+                      <TableRow key={i.id}>
+                        <TableCell className="text-muted-foreground font-mono">{idx + 1}</TableCell>
+                        <TableCell className="font-medium text-foreground">{i.name}</TableCell>
+                        <TableCell className="font-mono text-muted-foreground">{i.sku}</TableCell>
+                        <TableCell className="text-right font-mono">{formatNPR(i.unitPrice)}</TableCell>
+                        <TableCell className="text-center font-semibold">{i.qty}</TableCell>
+                        <TableCell className="text-right font-mono font-semibold text-foreground">
+                          {formatNPR(i.lineTotal)}
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
 
               {/* Totals */}
               <div className="flex justify-between items-start pt-2">
-                <div className="max-w-xs space-y-1 text-[11px] text-slate-500">
+                <div className="max-w-xs space-y-1 text-[11px] text-muted-foreground">
                   <p>Covered under manufacturer genuine warranty.</p>
                   <p>Subject to Kathmandu jurisdiction.</p>
                 </div>
 
                 <div className="w-56 space-y-1.5 text-xs text-right">
-                  <div className="flex justify-between text-slate-600">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Subtotal:</span>
                     <span className="font-mono">{formatNPR(selectedOrder.subtotal)}</span>
                   </div>
                   {selectedOrder.discount > 0 && (
-                    <div className="flex justify-between text-emerald-600">
+                    <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
                       <span>Discount:</span>
                       <span className="font-mono">-{formatNPR(selectedOrder.discount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-slate-600">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Shipping:</span>
                     <span className="font-mono">{formatNPR(selectedOrder.deliveryCharge)}</span>
                   </div>
-                  <div className="flex justify-between text-slate-600">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>VAT ({ops.settings.taxRate}%):</span>
                     <span className="font-mono">{formatNPR(selectedOrder.tax)}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-bold text-slate-900 border-t border-slate-200 pt-1.5">
+                  <div className="flex justify-between text-sm font-semibold text-foreground border-t border-border pt-1.5">
                     <span>Grand Total:</span>
-                    <span className="font-mono text-blue-600">{formatNPR(selectedOrder.total)}</span>
+                    <span className="font-mono">{formatNPR(selectedOrder.total)}</span>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogContent>
+        )}
+      </Dialog>
 
-      {/* Create Order Modal */}
-      {isCreateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Create New Customer Order</h3>
-                <p className="text-xs text-slate-500">Manual booking with live inventory items</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsCreateOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      {/* Create Order Dialog */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Customer Order</DialogTitle>
+            <DialogDescription>Manual booking with live inventory items</DialogDescription>
+          </DialogHeader>
 
-            <form onSubmit={handleCreateOrder} className="p-5 overflow-y-auto space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>Customer Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={orderForm.customerName}
-                    onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })}
-                    placeholder="e.g. Aayush Shrestha"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Phone Contact *</label>
-                  <input
-                    type="text"
-                    required
-                    value={orderForm.customerPhone}
-                    onChange={(e) => setOrderForm({ ...orderForm, customerPhone: e.target.value })}
-                    placeholder="+977 98..."
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>Delivery Address *</label>
-                  <input
-                    type="text"
-                    required
-                    value={orderForm.address}
-                    onChange={(e) => setOrderForm({ ...orderForm, address: e.target.value })}
-                    placeholder="e.g. Jhamsikhel, Ward 3"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>City Hub</label>
-                  <input
-                    type="text"
-                    value={orderForm.city}
-                    onChange={(e) => setOrderForm({ ...orderForm, city: e.target.value })}
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>Payment Method</label>
-                  <select
-                    value={orderForm.paymentMethod}
-                    onChange={(e) =>
-                      setOrderForm({ ...orderForm, paymentMethod: e.target.value as PaymentMethod })
-                    }
-                    className={selectClass}
-                  >
-                    <option value="cod">Cash on Delivery (COD)</option>
-                    <option value="esewa">eSewa Mobile Wallet</option>
-                    <option value="khalti">Khalti Digital Payment</option>
-                    <option value="fonepay">Fonepay Direct QR</option>
-                    <option value="connectips">ConnectIPS NCHL</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass}>Customer Email</label>
-                  <input
-                    type="email"
-                    value={orderForm.customerEmail}
-                    onChange={(e) => setOrderForm({ ...orderForm, customerEmail: e.target.value })}
-                    placeholder="customer@domain.np"
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-
-              {/* Add Items to Order */}
-              <div className="pt-2 border-t border-slate-200 space-y-2">
-                <label className={labelClass}>Add Catalog Items</label>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={selectedCatalogItem}
-                    onChange={(e) => setSelectedCatalogItem(e.target.value)}
-                    className={selectClass}
-                  >
-                    <option value="">Select Liquor or Grocery Product...</option>
-                    {allCatalogProducts.map((p) => (
-                      <option
-                        key={`${p.type}::${p.id}::${p.variantId}`}
-                        value={`${p.type}::${p.id}::${p.variantId}`}
-                      >
-                        [{p.type.toUpperCase()}] {p.name} ({p.variantName}) &bull; {formatNPR(p.price)}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={handleAddItemToForm}
-                    className={btnSecondary}
-                    style={{ height: '40px' }}
-                  >
-                    Add
-                  </button>
-                </div>
-
-                {orderForm.items.length > 0 && (
-                  <div className="border border-slate-200 rounded-lg overflow-hidden mt-2">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
-                        <tr>
-                          <th className="py-2 px-3">Item</th>
-                          <th className="py-2 px-3 text-center">Qty</th>
-                          <th className="py-2 px-3 text-right">Price</th>
-                          <th className="py-2 px-3 text-right">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {orderForm.items.map((it) => (
-                          <tr key={`${it.productId}-${it.variantId}`}>
-                            <td className="py-1.5 px-3 font-medium text-slate-800">
-                              {it.name} ({it.variantName})
-                            </td>
-                            <td className="py-1.5 px-3 text-center">{it.qty}</td>
-                            <td className="py-1.5 px-3 text-right font-mono font-semibold">
-                              {formatNPR(it.unitPrice * it.qty)}
-                            </td>
-                            <td className="py-1.5 px-3 text-right">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setOrderForm((prev) => ({
-                                    ...prev,
-                                    items: prev.items.filter(
-                                      (x) =>
-                                        !(x.productId === it.productId && x.variantId === it.variantId)
-                                    ),
-                                  }))
-                                }
-                                className="text-rose-500 hover:text-rose-700 font-semibold"
-                              >
-                                Remove
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className={labelClass}>Order Notes / Instructions</label>
-                <textarea
-                  rows={2}
-                  value={orderForm.notes}
-                  onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
-                  placeholder="Gate instructions, landmark, preferred delivery window..."
-                  className={inputClass}
-                  style={{ height: 'auto', padding: '8px' }}
+          <form onSubmit={handleCreateOrder} className="space-y-4 text-xs">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="cust-name">Customer Name *</Label>
+                <Input
+                  id="cust-name"
+                  required
+                  value={orderForm.customerName}
+                  onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })}
+                  placeholder="e.g. Aayush Shrestha"
                 />
               </div>
-
-              <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCreateOpen(false)}
-                  className={btnSecondary}
-                >
-                  Cancel
-                </button>
-                <button type="submit" disabled={isUpdating} className={btnPrimary}>
-                  {isUpdating ? 'Creating...' : 'Book Order'}
-                </button>
+              <div className="space-y-1.5">
+                <Label htmlFor="cust-phone">Phone Contact *</Label>
+                <Input
+                  id="cust-phone"
+                  required
+                  value={orderForm.customerPhone}
+                  onChange={(e) => setOrderForm({ ...orderForm, customerPhone: e.target.value })}
+                  placeholder="+977 98..."
+                />
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="cust-addr">Delivery Address *</Label>
+                <Input
+                  id="cust-addr"
+                  required
+                  value={orderForm.address}
+                  onChange={(e) => setOrderForm({ ...orderForm, address: e.target.value })}
+                  placeholder="e.g. Jhamsikhel, Ward 3"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cust-city">City Hub</Label>
+                <Input
+                  id="cust-city"
+                  value={orderForm.city}
+                  onChange={(e) => setOrderForm({ ...orderForm, city: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="pay-method">Payment Method</Label>
+                <NativeSelect
+                  id="pay-method"
+                  value={orderForm.paymentMethod}
+                  onChange={(e) =>
+                    setOrderForm({ ...orderForm, paymentMethod: e.target.value as PaymentMethod })
+                  }
+                >
+                  <option value="cod">Cash on Delivery (COD)</option>
+                  <option value="esewa">eSewa Mobile Wallet</option>
+                  <option value="khalti">Khalti Digital Payment</option>
+                  <option value="fonepay">Fonepay Direct QR</option>
+                  <option value="connectips">ConnectIPS NCHL</option>
+                </NativeSelect>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cust-email">Customer Email</Label>
+                <Input
+                  id="cust-email"
+                  type="email"
+                  value={orderForm.customerEmail}
+                  onChange={(e) => setOrderForm({ ...orderForm, customerEmail: e.target.value })}
+                  placeholder="customer@domain.np"
+                />
+              </div>
+            </div>
+
+            {/* Add Items to Order */}
+            <div className="pt-2 border-t border-border space-y-2">
+              <Label htmlFor="cat-item-select">Add Catalog Items</Label>
+              <div className="flex items-center gap-2">
+                <NativeSelect
+                  id="cat-item-select"
+                  value={selectedCatalogItem}
+                  onChange={(e) => setSelectedCatalogItem(e.target.value)}
+                  className="flex-1"
+                >
+                  <option value="">Select Liquor or Grocery Product...</option>
+                  {allCatalogProducts.map((p) => (
+                    <option
+                      key={`${p.type}::${p.id}::${p.variantId}`}
+                      value={`${p.type}::${p.id}::${p.variantId}`}
+                    >
+                      [{p.type.toUpperCase()}] {p.name} ({p.variantName}) &bull; {formatNPR(p.price)}
+                    </option>
+                  ))}
+                </NativeSelect>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddItemToForm}
+                  className="shrink-0"
+                >
+                  Add
+                </Button>
+              </div>
+
+              {orderForm.items.length > 0 && (
+                <div className="border border-border rounded-lg overflow-hidden mt-2">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item</TableHead>
+                        <TableHead className="text-center">Qty</TableHead>
+                        <TableHead className="text-right">Price</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {orderForm.items.map((it) => (
+                        <TableRow key={`${it.productId}-${it.variantId}`}>
+                          <TableCell className="font-medium text-foreground">
+                            {it.name} ({it.variantName})
+                          </TableCell>
+                          <TableCell className="text-center font-semibold">{it.qty}</TableCell>
+                          <TableCell className="text-right font-mono font-semibold">
+                            {formatNPR(it.unitPrice * it.qty)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() =>
+                                setOrderForm((prev) => ({
+                                  ...prev,
+                                  items: prev.items.filter(
+                                    (x) =>
+                                      !(x.productId === it.productId && x.variantId === it.variantId)
+                                  ),
+                                }))
+                              }
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="order-notes">Order Notes / Instructions</Label>
+              <Textarea
+                id="order-notes"
+                rows={2}
+                value={orderForm.notes}
+                onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
+                placeholder="Gate instructions, landmark, preferred delivery window..."
+              />
+            </div>
+
+            <DialogFooter className="pt-3 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isUpdating}>
+                {isUpdating ? 'Creating...' : 'Book Order'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

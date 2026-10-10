@@ -8,17 +8,35 @@ import {
   deleteItemFn,
 } from '#/server/catalog/catalog.functions'
 import {
-  Tags,
   Wine,
   ShoppingBag,
   Award,
   Plus,
   Edit2,
   Trash2,
-  X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
+import { PageHeader } from '#/components/shared/page-header'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { Textarea } from '#/components/ui/textarea'
+import { Badge } from '#/components/ui/badge'
+import { Card, CardContent, CardFooter } from '#/components/ui/card'
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from '#/components/ui/tabs'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
+import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 
 export const Route = createFileRoute('/admin/taxonomy')({
   loader: async () => {
@@ -30,11 +48,6 @@ export const Route = createFileRoute('/admin/taxonomy')({
 
 type ActiveTab = 'liquor-cat' | 'grocery-cat' | 'brands'
 
-const labelCls =
-  'mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500'
-const fieldCls =
-  'h-11 w-full border border-black/30 bg-white px-3 text-sm outline-none placeholder:text-neutral-400 focus:border-black focus:shadow-[3px_3px_0_0_#000]'
-
 interface CategoryLike {
   id: string
   name: string
@@ -42,37 +55,6 @@ interface CategoryLike {
   description?: string | null
   imageUrl?: string | null
   sortOrder?: number | null
-}
-
-function CardActions({
-  onEdit,
-  onDelete,
-  name,
-}: {
-  onEdit: () => void
-  onDelete: () => void
-  name: string
-}) {
-  return (
-    <div className="flex items-center gap-1">
-      <button
-        type="button"
-        onClick={onEdit}
-        aria-label={`Edit ${name}`}
-        className="grid h-9 w-9 cursor-pointer place-items-center border-0 bg-transparent text-neutral-500 transition-colors hover:bg-black hover:text-white"
-      >
-        <Edit2 className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
-        onClick={onDelete}
-        aria-label={`Delete ${name}`}
-        className="grid h-9 w-9 cursor-pointer place-items-center border-0 bg-transparent text-neutral-500 transition-colors hover:bg-red-700 hover:text-white"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </div>
-  )
 }
 
 function AdminTaxonomyPage() {
@@ -93,6 +75,9 @@ function AdminTaxonomyPage() {
   const [formImageUrl, setFormImageUrl] = useState('')
   const [formOrigin, setFormOrigin] = useState('Nepal')
   const [formSortOrder, setFormSortOrder] = useState(0)
+
+  // Delete State
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
   const openAddModal = () => {
     setEditingId(null)
@@ -177,8 +162,8 @@ function AdminTaxonomyPage() {
     }
   }
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) return
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
 
     try {
       const catalogType =
@@ -191,78 +176,37 @@ function AdminTaxonomyPage() {
       await deleteItemFn({
         data: {
           catalogType,
-          id,
+          id: deleteTarget.id,
         },
       })
       toast.success('Deleted successfully')
+      setDeleteTarget(null)
       await router.invalidate()
     } catch {
       toast.error('Failed to delete item')
     }
   }
 
-  const tabs: { id: ActiveTab; label: string; count: number; icon: LucideIcon }[] =
-    [
-      {
-        id: 'liquor-cat',
-        label: 'Liquor Categories',
-        count: taxonomy.liquorCategories.length,
-        icon: Wine,
-      },
-      {
-        id: 'grocery-cat',
-        label: 'Grocery Categories',
-        count: taxonomy.groceryCategories.length,
-        icon: ShoppingBag,
-      },
-      {
-        id: 'brands',
-        label: 'Brands & Distilleries',
-        count: taxonomy.liquorBrands.length,
-        icon: Award,
-      },
-    ]
-
-  const renderCategoryCard = (cat: CategoryLike) => (
-    <div
-      key={cat.id}
-      className="flex flex-col justify-between gap-5 border border-black bg-white p-5"
-    >
-      <div className="flex items-start gap-4">
-        {cat.imageUrl && (
-          <img
-            src={cat.imageUrl}
-            alt={cat.name}
-            className="h-14 w-14 shrink-0 bg-[#f3f2ee] object-cover"
-          />
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="text-lg font-black uppercase leading-tight tracking-tight">
-            {cat.name}
-          </div>
-          <div className="mt-0.5 font-mono text-[11px] text-neutral-400">
-            /{cat.slug}
-          </div>
-          {cat.description && (
-            <p className="mt-2 line-clamp-2 text-sm text-neutral-600">
-              {cat.description}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between border-t border-black/10 pt-3">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-          Order {cat.sortOrder}
-        </span>
-        <CardActions
-          name={cat.name}
-          onEdit={() => openEditModal(cat)}
-          onDelete={() => handleDelete(cat.id, cat.name)}
-        />
-      </div>
-    </div>
-  )
+  const tabs: { id: ActiveTab; label: string; count: number; icon: LucideIcon }[] = [
+    {
+      id: 'liquor-cat',
+      label: 'Liquor categories',
+      count: taxonomy.liquorCategories.length,
+      icon: Wine,
+    },
+    {
+      id: 'grocery-cat',
+      label: 'Grocery categories',
+      count: taxonomy.groceryCategories.length,
+      icon: ShoppingBag,
+    },
+    {
+      id: 'brands',
+      label: 'Brands and distilleries',
+      count: taxonomy.liquorBrands.length,
+      icon: Award,
+    },
+  ]
 
   const addLabel =
     activeTab === 'liquor-cat'
@@ -279,64 +223,91 @@ function AdminTaxonomyPage() {
         : 'brand'
   }`
 
-  return (
-    <div className="space-y-8 bg-white p-5 text-[#101010] sm:p-8">
-      {/* Header */}
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
-            <Tags className="h-3.5 w-3.5" /> Catalog
-          </p>
-          <h1 className="mt-3 text-4xl font-black uppercase leading-[0.9] tracking-tighter sm:text-6xl">
-            Taxonomy
-          </h1>
-          <p className="mt-4 max-w-md text-sm text-neutral-600">
-            Organize catalog categories, brand origins, and visual portals.
-          </p>
+  const renderCategoryCard = (cat: CategoryLike) => (
+    <Card key={cat.id} className="flex flex-col justify-between">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          {cat.imageUrl && (
+            <img
+              src={cat.imageUrl}
+              alt={cat.name}
+              className="h-12 w-12 shrink-0 rounded-md bg-muted object-cover border border-border"
+            />
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-semibold text-foreground">
+              {cat.name}
+            </div>
+            <div className="font-mono text-[11px] text-muted-foreground">
+              /{cat.slug}
+            </div>
+            {cat.description && (
+              <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
+                {cat.description}
+              </p>
+            )}
+          </div>
         </div>
+      </CardContent>
 
-        <button
-          type="button"
-          onClick={openAddModal}
-          className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 self-start bg-black px-5 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800 sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          {addLabel}
-        </button>
-      </div>
+      <CardFooter className="flex items-center justify-between border-t border-border/50 px-4 py-2.5">
+        <span className="font-mono text-[11px] text-muted-foreground">
+          Order {cat.sortOrder ?? 0}
+        </span>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => openEditModal(cat)}
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+          >
+            <Edit2 className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setDeleteTarget({ id: cat.id, name: cat.name })}
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </CardFooter>
+    </Card>
+  )
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        kicker="Catalog"
+        title="Taxonomy and categories"
+        description="Organize catalog categories, brand origins, and visual portals."
+        actions={
+          <Button size="sm" onClick={openAddModal} className="h-8 gap-1.5 text-xs">
+            <Plus className="h-3.5 w-3.5" />
+            {addLabel}
+          </Button>
+        }
+      />
 
       {/* Tabs */}
-      <div
-        role="tablist"
-        className="-mx-5 flex items-center gap-1 overflow-x-auto border-b border-black px-5 sm:mx-0 sm:px-0"
-      >
-        {tabs.map((tab) => {
-          const Icon = tab.icon
-          const active = activeTab === tab.id
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setActiveTab(tab.id)}
-              className={`-mb-px inline-flex shrink-0 cursor-pointer items-center gap-2 border border-b-0 px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors ${
-                active
-                  ? 'border-black bg-black text-white'
-                  : 'border-transparent bg-transparent text-neutral-500 hover:text-black'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              <span>
-                {tab.label}{' '}
-                <span className="tabular-nums opacity-60">({tab.count})</span>
-              </span>
-            </button>
-          )
-        })}
-      </div>
+      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as ActiveTab)}>
+        <TabsList className="h-9">
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            return (
+              <TabsTrigger key={tab.id} value={tab.id} className="gap-2 text-xs">
+                <Icon className="h-3.5 w-3.5" />
+                <span>
+                  {tab.label} <span className="tabular-nums opacity-60">({tab.count})</span>
+                </span>
+              </TabsTrigger>
+            )
+          })}
+        </TabsList>
+      </Tabs>
 
-      {/* Cards */}
+      {/* Cards Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {activeTab === 'liquor-cat' &&
           taxonomy.liquorCategories.map((cat) => renderCategoryCard(cat))}
@@ -346,173 +317,173 @@ function AdminTaxonomyPage() {
 
         {activeTab === 'brands' &&
           taxonomy.liquorBrands.map((brand) => (
-            <div
-              key={brand.id}
-              className="flex flex-col justify-between gap-5 border border-black bg-white p-5"
-            >
-              <div>
+            <Card key={brand.id} className="flex flex-col justify-between">
+              <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="text-lg font-black uppercase leading-tight tracking-tight">
+                  <div className="text-xs font-semibold text-foreground">
                     {brand.name}
                   </div>
                   {brand.origin && (
-                    <span className="shrink-0 border border-black px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+                    <Badge variant="outline" className="text-[10px] font-normal">
                       {brand.origin}
-                    </span>
+                    </Badge>
                   )}
                 </div>
-                <div className="mt-0.5 font-mono text-[11px] text-neutral-400">
+                <div className="font-mono text-[11px] text-muted-foreground">
                   /{brand.slug}
                 </div>
                 {brand.description && (
-                  <p className="mt-3 line-clamp-2 text-sm text-neutral-600">
+                  <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
                     {brand.description}
                   </p>
                 )}
-              </div>
+              </CardContent>
 
-              <div className="flex items-center justify-end border-t border-black/10 pt-3">
-                <CardActions
-                  name={brand.name}
-                  onEdit={() => openEditModal(brand)}
-                  onDelete={() => handleDelete(brand.id, brand.name)}
-                />
-              </div>
-            </div>
+              <CardFooter className="flex items-center justify-end border-t border-border/50 px-4 py-2.5">
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openEditModal(brand)}
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDeleteTarget({ id: brand.id, name: brand.name })}
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
           ))}
       </div>
 
-      {/* Modal */}
-      {modalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:items-center"
-          role="dialog"
-          aria-modal="true"
-          aria-label={modalTitle}
-        >
-          <div className="relative my-8 w-full max-w-lg border-2 border-black bg-white p-6 text-[#101010] shadow-[8px_8px_0_0_#000] sm:p-8">
-            <button
-              type="button"
-              onClick={() => setModalOpen(false)}
-              aria-label="Close"
-              className="absolute right-4 top-4 grid h-9 w-9 cursor-pointer place-items-center border-0 bg-transparent transition-colors hover:bg-neutral-100"
-            >
-              <X className="h-5 w-5" />
-            </button>
+      {/* Add / Edit Dialog */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold capitalize">{modalTitle}</DialogTitle>
+          </DialogHeader>
 
-            <h2 className="mb-7 pr-8 text-3xl font-black uppercase leading-none tracking-tighter">
-              {modalTitle}
-            </h2>
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="tax-name" className="text-xs">
+                Name *
+              </Label>
+              <Input
+                id="tax-name"
+                required
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder="e.g. Single Malt Whiskey or Old Durbar"
+                className="h-8 text-xs"
+              />
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label htmlFor="tax-name" className={labelCls}>
-                  Name *
-                </label>
-                <input
-                  id="tax-name"
-                  type="text"
-                  required
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="e.g. Single Malt Whiskey or Old Durbar"
-                  className={fieldCls}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="tax-slug" className="text-xs">
+                  Slug (optional)
+                </Label>
+                <Input
+                  id="tax-slug"
+                  value={formSlug}
+                  onChange={(e) => setFormSlug(e.target.value)}
+                  placeholder="auto-derived"
+                  className="h-8 font-mono text-xs"
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="tax-slug" className={labelCls}>
-                    Slug (Optional)
-                  </label>
-                  <input
-                    id="tax-slug"
-                    type="text"
-                    value={formSlug}
-                    onChange={(e) => setFormSlug(e.target.value)}
-                    placeholder="auto-derived"
-                    className={`${fieldCls} font-mono`}
+              {activeTab === 'brands' ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="tax-origin" className="text-xs">
+                    Origin country
+                  </Label>
+                  <Input
+                    id="tax-origin"
+                    value={formOrigin}
+                    onChange={(e) => setFormOrigin(e.target.value)}
+                    placeholder="e.g. Nepal, Scotland"
+                    className="h-8 text-xs"
                   />
                 </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label htmlFor="tax-sort" className="text-xs">
+                    Sort order
+                  </Label>
+                  <Input
+                    id="tax-sort"
+                    type="number"
+                    value={formSortOrder}
+                    onChange={(e) => setFormSortOrder(Number(e.target.value))}
+                    className="h-8 font-mono text-xs"
+                  />
+                </div>
+              )}
+            </div>
 
-                {activeTab === 'brands' ? (
-                  <div>
-                    <label htmlFor="tax-origin" className={labelCls}>
-                      Origin Country
-                    </label>
-                    <input
-                      id="tax-origin"
-                      type="text"
-                      value={formOrigin}
-                      onChange={(e) => setFormOrigin(e.target.value)}
-                      placeholder="e.g. Nepal, Scotland"
-                      className={fieldCls}
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <label htmlFor="tax-sort" className={labelCls}>
-                      Sort Order
-                    </label>
-                    <input
-                      id="tax-sort"
-                      type="number"
-                      value={formSortOrder}
-                      onChange={(e) => setFormSortOrder(Number(e.target.value))}
-                      className={`${fieldCls} tabular-nums`}
-                    />
-                  </div>
-                )}
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="tax-img" className="text-xs">
+                Image or logo URL
+              </Label>
+              <Input
+                id="tax-img"
+                type="url"
+                value={formImageUrl}
+                onChange={(e) => setFormImageUrl(e.target.value)}
+                placeholder="https://..."
+                className="h-8 text-xs"
+              />
+            </div>
 
-              <div>
-                <label htmlFor="tax-img" className={labelCls}>
-                  Image or Logo URL
-                </label>
-                <input
-                  id="tax-img"
-                  type="url"
-                  value={formImageUrl}
-                  onChange={(e) => setFormImageUrl(e.target.value)}
-                  placeholder="https://..."
-                  className={fieldCls}
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="tax-desc" className="text-xs">
+                Description
+              </Label>
+              <Textarea
+                id="tax-desc"
+                rows={2}
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                placeholder="Brief overview..."
+                className="text-xs"
+              />
+            </div>
 
-              <div>
-                <label htmlFor="tax-desc" className={labelCls}>
-                  Description
-                </label>
-                <textarea
-                  id="tax-desc"
-                  rows={2}
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Brief overview..."
-                  className="w-full border border-black/30 bg-white px-3 py-2.5 text-sm outline-none placeholder:text-neutral-400 focus:border-black focus:shadow-[3px_3px_0_0_#000]"
-                />
-              </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setModalOpen(false)}
+                className="h-8 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={isSubmitting} className="h-8 text-xs">
+                {isSubmitting ? 'Saving...' : 'Save changes'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-              <div className="flex items-center justify-end gap-3 border-t border-black/15 pt-5">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="h-11 cursor-pointer border border-black bg-white px-5 text-xs font-semibold uppercase tracking-wider transition-colors hover:bg-neutral-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="h-11 cursor-pointer bg-black px-6 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Saving...' : 'Save changes'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete item"
+        description={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        tone="destructive"
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   )
 }

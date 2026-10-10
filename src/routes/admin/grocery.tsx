@@ -10,7 +10,6 @@ import {
 } from '#/server/catalog/catalog.functions'
 import { formatNPR, toPaisa, toRupees } from '#/lib/money'
 import {
-  ShoppingBag,
   Search,
   Plus,
   Sparkles,
@@ -18,9 +17,37 @@ import {
   Trash2,
   CheckCircle2,
   XCircle,
-  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { PageHeader } from '#/components/shared/page-header'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { Textarea } from '#/components/ui/textarea'
+import { Badge } from '#/components/ui/badge'
+import { Checkbox } from '#/components/ui/checkbox'
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '#/components/ui/native-select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
+import { ConfirmDialog } from '#/components/shared/confirm-dialog'
+import { EmptyState } from '#/components/shared/empty-state'
 
 export const Route = createFileRoute('/admin/grocery')({
   loader: async () => {
@@ -39,20 +66,11 @@ interface GroceryVariantItem {
   unit: string
   quantity: string
   sku: string
-  price: number // in rupees for form
+  price: number
   mrp?: number
   stock: number
   isActive: boolean
 }
-
-const labelCls =
-  'mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500'
-const fieldCls =
-  'h-11 w-full border border-black/30 bg-white px-3 text-sm outline-none placeholder:text-neutral-400 focus:border-black focus:shadow-[3px_3px_0_0_#000]'
-const cellCls =
-  'h-9 w-full border border-black/25 bg-white px-2 text-sm outline-none focus:border-black'
-const filterCls =
-  'h-11 border border-black/30 bg-white px-3 text-sm outline-none focus:border-black'
 
 function AdminGroceryPage() {
   const { products, taxonomy } = Route.useLoaderData()
@@ -61,12 +79,13 @@ function AdminGroceryPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
 
-  // Modal
+  // Modal State
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
-  // Form
+  // Form State
   const [formName, setFormName] = useState('')
   const [formSlug, setFormSlug] = useState('')
   const [formCategoryId, setFormCategoryId] = useState('')
@@ -250,25 +269,24 @@ function AdminGroceryPage() {
           value: !currentVal,
         },
       })
-      toast.success(`Updated status`)
+      toast.success('Updated status')
       await router.invalidate()
     } catch {
       toast.error('Failed to update status')
     }
   }
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) {
-      return
-    }
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
     try {
       await deleteItemFn({
         data: {
           catalogType: 'grocery',
-          id,
+          id: deleteTarget.id,
         },
       })
       toast.success('Grocery product deleted')
+      setDeleteTarget(null)
       await router.invalidate()
     } catch {
       toast.error('Failed to delete grocery product')
@@ -281,444 +299,409 @@ function AdminGroceryPage() {
     )
 
   return (
-    <div className="space-y-8 bg-white p-5 text-[#101010] sm:p-8">
-      {/* Header & action */}
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
-            <ShoppingBag className="h-3.5 w-3.5" /> Catalog
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-4">
-            <h1 className="text-4xl font-black uppercase leading-[0.9] tracking-tighter sm:text-6xl">
-              Grocery &amp; munchies
-            </h1>
-            <span className="border border-black px-2.5 py-1 text-[11px] font-bold tabular-nums">
+    <div className="space-y-6">
+      <PageHeader
+        kicker="Catalog"
+        title="Grocery and munchies"
+        description="Manage snacks, chips, party ice, mixers, energy drinks, and midnight snacks."
+        actions={
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="font-mono text-xs">
               {products.length} SKUs
-            </span>
+            </Badge>
+            <Button size="sm" onClick={openAddModal} className="h-8 gap-1.5 text-xs">
+              <Plus className="h-3.5 w-3.5" />
+              Add grocery SKU
+            </Button>
           </div>
-          <p className="mt-4 max-w-md text-sm text-neutral-600">
-            Manage snacks, chips, party ice, mixers, energy drinks and midnight
-            hunger snacks.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={openAddModal}
-          className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 self-start bg-black px-5 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800 sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          Add grocery SKU
-        </button>
-      </div>
+        }
+      />
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 bg-[#f3f2ee] p-4 md:flex-row md:items-center">
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
-          <input
-            type="text"
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
             placeholder="Search by item name, category, SKU..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`${fieldCls} pl-10`}
+            className="h-8 pl-9 text-xs"
           />
         </div>
 
-        <select
+        <NativeSelect
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
-          aria-label="Filter by grocery category"
-          className={filterCls}
+          size="sm"
+          className="h-8 text-xs"
         >
-          <option value="all">
-            All Categories ({taxonomy.groceryCategories.length})
-          </option>
+          <NativeSelectOption value="all">
+            All categories ({taxonomy.groceryCategories.length})
+          </NativeSelectOption>
           {taxonomy.groceryCategories.map((c) => (
-            <option key={c.id} value={c.id}>
+            <NativeSelectOption key={c.id} value={c.id}>
               {c.name}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
       {/* Table */}
-      <div className="border border-black">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] border-collapse text-left text-sm">
-            <thead>
-              <tr className="border-b border-black bg-[#f3f2ee] text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
-                <th className="px-4 py-3.5">Item</th>
-                <th className="px-4 py-3.5">Category</th>
-                <th className="px-4 py-3.5">Variants &amp; pricing (NPR)</th>
-                <th className="px-4 py-3.5 text-center">Status</th>
-                <th className="px-4 py-3.5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/10">
-              {filteredProducts.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="py-14 text-center text-sm text-neutral-500"
-                  >
-                    No matching grocery products found.
-                  </td>
-                </tr>
-              ) : (
-                filteredProducts.map((p) => (
-                  <tr
-                    key={p.id}
-                    className="transition-colors hover:bg-neutral-50"
-                  >
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3.5">
-                        <img
-                          src={
-                            p.primaryImage ||
-                            'https://images.unsplash.com/photo-1566478989037-eec170784d0b?auto=format&fit=crop&w=100&q=80'
-                          }
-                          alt={p.name}
-                          className="h-12 w-12 shrink-0 bg-[#f3f2ee] object-cover"
-                        />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 font-semibold">
-                            <span>{p.name}</span>
-                            {p.isFeatured && (
-                              <span className="inline-flex items-center gap-1 bg-black px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
-                                <Sparkles className="h-2.5 w-2.5" /> Featured
-                              </span>
-                            )}
-                          </div>
-                          <div className="mt-0.5 truncate font-mono text-[11px] text-neutral-400">
-                            /{p.slug}
-                          </div>
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-xs">Item</TableHead>
+              <TableHead className="text-xs">Category</TableHead>
+              <TableHead className="text-xs">Variants and pricing (NPR)</TableHead>
+              <TableHead className="text-center text-xs">Status</TableHead>
+              <TableHead className="text-right text-xs">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredProducts.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="p-0">
+                  <EmptyState
+                    title="No matching grocery products found"
+                    description="Try adjusting your filter or search query."
+                  />
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredProducts.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={
+                          p.primaryImage ||
+                          'https://images.unsplash.com/photo-1566478989037-eec170784d0b?auto=format&fit=crop&w=100&q=80'
+                        }
+                        alt={p.name}
+                        className="h-10 w-10 shrink-0 rounded-md bg-muted object-cover border border-border"
+                      />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 font-medium text-xs text-foreground">
+                          <span>{p.name}</span>
+                          {p.isFeatured && (
+                            <Badge variant="secondary" className="gap-1 text-[9px] px-1 py-0 font-normal">
+                              <Sparkles className="h-2.5 w-2.5" /> Featured
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="truncate font-mono text-[11px] text-muted-foreground">
+                          /{p.slug}
                         </div>
                       </div>
-                    </td>
+                    </div>
+                  </TableCell>
 
-                    <td className="px-4 py-4 font-semibold">
-                      {p.categoryName}
-                    </td>
+                  <TableCell className="font-medium text-xs text-foreground">
+                    {p.categoryName}
+                  </TableCell>
 
-                    <td className="px-4 py-4">
-                      <div className="flex max-w-sm flex-wrap gap-1.5">
-                        {p.variants.map((v) => (
-                          <span
-                            key={v.id}
-                            className={`inline-flex items-center gap-1.5 border px-2 py-1 text-xs ${
-                              v.stock <= 10
-                                ? 'border-red-700 bg-red-50 text-red-800'
-                                : 'border-black/20 bg-white'
-                            }`}
-                          >
-                            <span className="font-medium">{v.name}</span>
-                            <span className="font-bold tabular-nums">
-                              {formatNPR(v.price)}
-                            </span>
-                            <span className="text-[10px] text-neutral-500">
-                              {v.stock} in stock
-                            </span>
+                  <TableCell>
+                    <div className="flex max-w-sm flex-wrap gap-1.5">
+                      {p.variants.map((v) => (
+                        <span
+                          key={v.id}
+                          className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs ${
+                            v.stock <= 10
+                              ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                              : 'border-border bg-muted/30 text-foreground'
+                          }`}
+                        >
+                          <span className="font-medium text-[11px]">{v.name}</span>
+                          <span className="font-mono font-semibold text-[11px] tabular-nums">
+                            {formatNPR(v.price)}
                           </span>
-                        ))}
-                      </div>
-                    </td>
+                          <span className="text-[10px] text-muted-foreground">
+                            {v.stock} in stock
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  </TableCell>
 
-                    <td className="px-4 py-4 text-center">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleToggleStatus(p.id, 'isActive', p.isActive)
-                        }
-                        className={`inline-flex cursor-pointer items-center gap-1.5 border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
-                          p.isActive
-                            ? 'border-black bg-black text-white hover:bg-neutral-800'
-                            : 'border-black/30 bg-white text-neutral-500 hover:border-black hover:text-black'
-                        }`}
+                  <TableCell className="text-center">
+                    <Button
+                      variant={p.isActive ? 'outline' : 'secondary'}
+                      size="sm"
+                      onClick={() =>
+                        handleToggleStatus(p.id, 'isActive', p.isActive)
+                      }
+                      className="h-7 gap-1 text-[11px]"
+                    >
+                      {p.isActive ? (
+                        <>
+                          <CheckCircle2 className="h-3 w-3 text-emerald-500" /> Active
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="h-3 w-3 text-muted-foreground" /> Draft
+                        </>
+                      )}
+                    </Button>
+                  </TableCell>
+
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditModal(p)}
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        aria-label={`Edit ${p.name}`}
                       >
-                        {p.isActive ? (
-                          <>
-                            <CheckCircle2 className="h-3 w-3" /> Active
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="h-3 w-3" /> Draft
-                          </>
-                        )}
-                      </button>
-                    </td>
-
-                    <td className="px-4 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(p)}
-                          className="grid h-9 w-9 cursor-pointer place-items-center text-neutral-500 transition-colors hover:bg-black hover:text-white"
-                          title="Edit Item"
-                          aria-label={`Edit ${p.name}`}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(p.id, p.name)}
-                          className="grid h-9 w-9 cursor-pointer place-items-center text-neutral-500 transition-colors hover:bg-red-700 hover:text-white"
-                          title="Delete Item"
-                          aria-label={`Delete ${p.name}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleteTarget({ id: p.id, name: p.name })}
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        aria-label={`Delete ${p.name}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
 
-      {/* Add / Edit modal */}
-      {modalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-4 backdrop-blur-sm sm:items-center"
-          role="dialog"
-          aria-modal="true"
-          aria-label={editingId ? 'Edit grocery item' : 'New grocery item'}
-        >
-          <div className="relative my-8 w-full max-w-2xl border-2 border-black bg-white p-6 text-[#101010] shadow-[8px_8px_0_0_#000] sm:p-8">
-            <button
-              type="button"
-              onClick={() => setModalOpen(false)}
-              aria-label="Close"
-              className="absolute right-4 top-4 grid h-9 w-9 cursor-pointer place-items-center transition-colors hover:bg-neutral-100"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <h2 className="text-3xl font-black uppercase leading-none tracking-tighter">
+      {/* Add / Edit Dialog */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">
               {editingId ? 'Edit grocery item' : 'New grocery item'}
-            </h2>
-            <p className="mb-7 mt-2 text-sm text-neutral-600">
+            </DialogTitle>
+            <DialogDescription className="text-xs">
               Manage snack items, mixers, package sizes, and stock.
-            </p>
+            </DialogDescription>
+          </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label htmlFor="gro-name" className={labelCls}>
-                  Item Name *
-                </label>
-                <input
-                  id="gro-name"
-                  type="text"
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="gro-name" className="text-xs">
+                Item name *
+              </Label>
+              <Input
+                id="gro-name"
+                required
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder="e.g. Lay's India's Magic Masala"
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="gro-cat" className="text-xs">
+                  Category *
+                </Label>
+                <NativeSelect
+                  id="gro-cat"
+                  value={formCategoryId}
+                  onChange={(e) => setFormCategoryId(e.target.value)}
                   required
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="e.g. Lay's India's Magic Masala"
-                  className={fieldCls}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="gro-cat" className={labelCls}>
-                    Category *
-                  </label>
-                  <select
-                    id="gro-cat"
-                    value={formCategoryId}
-                    onChange={(e) => setFormCategoryId(e.target.value)}
-                    required
-                    className={fieldCls}
-                  >
-                    {taxonomy.groceryCategories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="gro-slug" className={labelCls}>
-                    URL Slug (Optional)
-                  </label>
-                  <input
-                    id="gro-slug"
-                    type="text"
-                    value={formSlug}
-                    onChange={(e) => setFormSlug(e.target.value)}
-                    placeholder="auto-generated-from-name"
-                    className={`${fieldCls} font-mono`}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="gro-img" className={labelCls}>
-                  Image URL
-                </label>
-                <input
-                  id="gro-img"
-                  type="url"
-                  value={formImageUrl}
-                  onChange={(e) => setFormImageUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className={fieldCls}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="gro-desc" className={labelCls}>
-                  Description
-                </label>
-                <textarea
-                  id="gro-desc"
-                  rows={2}
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Item details, flavor profile, ingredients..."
-                  className="w-full border border-black/30 bg-white px-3 py-2.5 text-sm outline-none placeholder:text-neutral-400 focus:border-black focus:shadow-[3px_3px_0_0_#000]"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-x-8 gap-y-3 border-y border-black/15 py-4">
-                <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium">
-                  <input
-                    type="checkbox"
-                    checked={formIsActive}
-                    onChange={(e) => setFormIsActive(e.target.checked)}
-                    className="h-4 w-4 accent-black"
-                  />
-                  <span>Active on storefront</span>
-                </label>
-
-                <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium">
-                  <input
-                    type="checkbox"
-                    checked={formIsFeatured}
-                    onChange={(e) => setFormIsFeatured(e.target.checked)}
-                    className="h-4 w-4 accent-black"
-                  />
-                  <span className="flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Featured item
-                  </span>
-                </label>
-              </div>
-
-              {/* Variants */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className={`${labelCls} mb-0`}>
-                    Sizes / pack variants
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleAddVariantRow}
-                    className="inline-flex cursor-pointer items-center gap-1 border-0 border-b border-black bg-transparent p-0 pb-0.5 text-xs font-semibold transition-opacity hover:opacity-60"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Add variant
-                  </button>
-                </div>
-
-                <div className="max-h-64 space-y-2 overflow-y-auto">
-                  {formVariants.map((v, i) => (
-                    <div
-                      key={i}
-                      className="grid grid-cols-2 items-center gap-2 bg-[#f3f2ee] p-3 sm:grid-cols-12"
-                    >
-                      <div className="col-span-2 sm:col-span-3">
-                        <input
-                          type="text"
-                          placeholder="e.g. 200 g Jar"
-                          aria-label="Variant name"
-                          value={v.name}
-                          onChange={(e) =>
-                            updateVariant(i, { name: e.target.value })
-                          }
-                          className={cellCls}
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <input
-                          type="text"
-                          placeholder="Unit"
-                          aria-label="Unit"
-                          value={v.unit}
-                          onChange={(e) =>
-                            updateVariant(i, { unit: e.target.value })
-                          }
-                          className={`${cellCls} font-mono`}
-                        />
-                      </div>
-
-                      <div className="sm:col-span-3">
-                        <input
-                          type="number"
-                          placeholder="Price (Rs)"
-                          aria-label="Price in rupees"
-                          value={v.price}
-                          onChange={(e) =>
-                            updateVariant(i, { price: Number(e.target.value) })
-                          }
-                          className={`${cellCls} font-bold tabular-nums`}
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <input
-                          type="number"
-                          placeholder="Stock"
-                          aria-label="Stock"
-                          value={v.stock}
-                          onChange={(e) =>
-                            updateVariant(i, { stock: Number(e.target.value) })
-                          }
-                          className={`${cellCls} tabular-nums`}
-                        />
-                      </div>
-
-                      <div className="col-span-2 flex justify-end sm:col-span-2">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveVariantRow(i)}
-                          aria-label="Remove variant"
-                          className="grid h-9 w-9 cursor-pointer place-items-center text-neutral-500 transition-colors hover:bg-red-700 hover:text-white"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
+                  size="sm"
+                  className="w-full text-xs"
+                >
+                  {taxonomy.groceryCategories.map((c) => (
+                    <NativeSelectOption key={c.id} value={c.id}>
+                      {c.name}
+                    </NativeSelectOption>
                   ))}
-                </div>
+                </NativeSelect>
               </div>
 
-              <div className="flex items-center justify-end gap-3 border-t border-black/15 pt-5">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="h-11 cursor-pointer border border-black bg-white px-5 text-xs font-semibold uppercase tracking-wider transition-colors hover:bg-neutral-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="h-11 cursor-pointer bg-black px-6 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isSubmitting
-                    ? 'Saving...'
-                    : editingId
-                      ? 'Update item'
-                      : 'Create item'}
-                </button>
+              <div className="space-y-1.5">
+                <Label htmlFor="gro-slug" className="text-xs">
+                  URL slug (optional)
+                </Label>
+                <Input
+                  id="gro-slug"
+                  value={formSlug}
+                  onChange={(e) => setFormSlug(e.target.value)}
+                  placeholder="auto-generated-from-name"
+                  className="h-8 font-mono text-xs"
+                />
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="gro-img" className="text-xs">
+                Image URL
+              </Label>
+              <Input
+                id="gro-img"
+                type="url"
+                value={formImageUrl}
+                onChange={(e) => setFormImageUrl(e.target.value)}
+                placeholder="https://images.unsplash.com/..."
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="gro-desc" className="text-xs">
+                Description
+              </Label>
+              <Textarea
+                id="gro-desc"
+                rows={2}
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                placeholder="Item details, flavor profile, ingredients..."
+                className="text-xs"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-6 border-y border-border py-3">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="form-is-active"
+                  checked={formIsActive}
+                  onCheckedChange={(checked) => setFormIsActive(Boolean(checked))}
+                />
+                <Label htmlFor="form-is-active" className="text-xs cursor-pointer font-normal">
+                  Active on storefront
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="form-is-featured"
+                  checked={formIsFeatured}
+                  onCheckedChange={(checked) => setFormIsFeatured(Boolean(checked))}
+                />
+                <Label htmlFor="form-is-featured" className="text-xs cursor-pointer font-normal flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Featured item
+                </Label>
+              </div>
+            </div>
+
+            {/* Variants */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Sizes / pack variants</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAddVariantRow}
+                  className="h-7 gap-1 text-xs text-primary"
+                >
+                  <Plus className="h-3 w-3" /> Add variant
+                </Button>
+              </div>
+
+              <div className="max-h-60 space-y-2 overflow-y-auto">
+                {formVariants.map((v, i) => (
+                  <div
+                    key={i}
+                    className="grid grid-cols-2 items-center gap-2 rounded-md border border-border bg-muted/30 p-2 sm:grid-cols-12"
+                  >
+                    <div className="col-span-2 sm:col-span-3">
+                      <Input
+                        type="text"
+                        placeholder="Variant name"
+                        value={v.name}
+                        onChange={(e) =>
+                          updateVariant(i, { name: e.target.value })
+                        }
+                        className="h-7 text-xs"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <Input
+                        type="text"
+                        placeholder="Unit"
+                        value={v.unit}
+                        onChange={(e) =>
+                          updateVariant(i, { unit: e.target.value })
+                        }
+                        className="h-7 font-mono text-xs"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-3">
+                      <Input
+                        type="number"
+                        placeholder="Price"
+                        value={v.price}
+                        onChange={(e) =>
+                          updateVariant(i, { price: Number(e.target.value) })
+                        }
+                        className="h-7 font-mono text-xs"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <Input
+                        type="number"
+                        placeholder="Stock"
+                        value={v.stock}
+                        onChange={(e) =>
+                          updateVariant(i, { stock: Number(e.target.value) })
+                        }
+                        className="h-7 font-mono text-xs"
+                      />
+                    </div>
+
+                    <div className="col-span-2 flex justify-end sm:col-span-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveVariantRow(i)}
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setModalOpen(false)}
+                className="h-8 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={isSubmitting} className="h-8 text-xs">
+                {isSubmitting ? 'Saving...' : editingId ? 'Update item' : 'Create item'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete grocery item"
+        description={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        tone="destructive"
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   )
 }
