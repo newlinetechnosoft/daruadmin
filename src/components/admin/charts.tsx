@@ -1,7 +1,30 @@
-import { useState } from 'react'
+import {
+  AreaChart,
+  Area,
+  BarChart as RechartsBarChart,
+  Bar,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from 'recharts'
 import { formatNPR } from '#/lib/money'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '#/components/ui/chart'
 
-const PALETTE = ['#2563eb', '#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#64748b']
+const CHART_COLORS = [
+  'var(--chart-2)',
+  'var(--chart-1)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
+]
 
 export function LineChart({
   data,
@@ -12,69 +35,69 @@ export function LineChart({
   valueKey?: string
   money?: boolean
 }) {
-  const [hover, setHover] = useState<number | null>(null)
-  if (data.length === 0) {
-    return <p className="py-10 text-center text-sm text-slate-400">No trend data</p>
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-[220px] items-center justify-center text-xs text-muted-foreground">
+        No trend data
+      </div>
+    )
   }
-  const values = data.map((d) => Number(d[valueKey] ?? 0))
-  const max = Math.max(...values, 1)
-  const w = 640
-  const h = 220
-  const pad = 28
-  const points = values.map((v, i) => {
-    const x = pad + (i * (w - pad * 2)) / Math.max(values.length - 1, 1)
-    const y = h - pad - (v / max) * (h - pad * 2)
-    return { x, y, v, label: data[i].date }
-  })
-  const path = points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-    .join(' ')
-  const area = `${path} L ${points[points.length - 1].x} ${h - pad} L ${points[0].x} ${h - pad} Z`
-  const tip = hover !== null ? points[hover] : null
+
+  const chartConfig = {
+    [valueKey]: {
+      label: money ? 'Revenue' : 'Count',
+      color: 'var(--chart-2)',
+    },
+  } satisfies ChartConfig
 
   return (
-    <div className="relative">
-      <svg viewBox={`0 0 ${w} ${h}`} className="h-[220px] w-full" role="img">
+    <ChartContainer config={chartConfig} className="h-[220px] w-full aspect-auto">
+      <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
         <defs>
-          <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#2563eb" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
+          <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.25} />
+            <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0.0} />
           </linearGradient>
         </defs>
-        {[0, 0.5, 1].map((t) => (
-          <line
-            key={t}
-            x1={pad}
-            x2={w - pad}
-            y1={pad + t * (h - pad * 2)}
-            y2={pad + t * (h - pad * 2)}
-            stroke="#e2e8f0"
-            strokeDasharray="4 4"
-          />
-        ))}
-        <path d={area} fill="url(#salesFill)" />
-        <path d={path} fill="none" stroke="#2563eb" strokeWidth="2.5" />
-        {points.map((p, i) => (
-          <circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r={hover === i ? 5 : 3}
-            fill="#2563eb"
-            onMouseEnter={() => setHover(i)}
-            onMouseLeave={() => setHover(null)}
-          />
-        ))}
-      </svg>
-      {tip && (
-        <div className="pointer-events-none absolute top-2 right-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-md">
-          <div className="font-medium text-slate-500">{tip.label}</div>
-          <div className="font-semibold text-slate-900">
-            {money ? formatNPR(tip.v) : tip.v}
-          </div>
-        </div>
-      )}
-    </div>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.6} />
+        <XAxis
+          dataKey="date"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          fontSize={11}
+          stroke="var(--muted-foreground)"
+        />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          fontSize={11}
+          stroke="var(--muted-foreground)"
+          tickFormatter={(v) => (money ? `Rs ${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}` : `${v}`)}
+        />
+        <ChartTooltip
+          cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
+          content={
+            <ChartTooltipContent
+              indicator="line"
+              formatter={(value) => (
+                <span className="font-mono font-medium text-foreground">
+                  {money ? formatNPR(Number(value)) : String(value)}
+                </span>
+              )}
+            />
+          }
+        />
+        <Area
+          type="monotone"
+          dataKey={valueKey}
+          stroke="var(--chart-2)"
+          strokeWidth={2}
+          fill="url(#areaGradient)"
+        />
+      </AreaChart>
+    </ChartContainer>
   )
 }
 
@@ -83,37 +106,57 @@ export function BarChart({
 }: {
   data: { label: string; value: number }[]
 }) {
-  const [hover, setHover] = useState<number | null>(null)
-  if (data.length === 0) {
-    return <p className="py-10 text-center text-sm text-slate-400">No data</p>
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-[220px] items-center justify-center text-xs text-muted-foreground">
+        No data
+      </div>
+    )
   }
-  const max = Math.max(...data.map((d) => d.value), 1)
+
+  const chartConfig = {
+    value: {
+      label: 'Orders',
+      color: 'var(--chart-2)',
+    },
+  } satisfies ChartConfig
+
+  const formattedData = data.map((d) => ({
+    ...d,
+    displayName: d.label.replaceAll('_', ' '),
+  }))
+
   return (
-    <div className="flex h-[220px] items-end gap-2 px-1">
-      {data.map((d, i) => (
-        <div
-          key={d.label}
-          className="flex min-w-0 flex-1 flex-col items-center gap-2"
-          onMouseEnter={() => setHover(i)}
-          onMouseLeave={() => setHover(null)}
-        >
-          <div className="relative flex h-[170px] w-full items-end justify-center">
-            {hover === i && (
-              <span className="absolute -top-6 rounded bg-slate-900 px-2 py-0.5 text-[10px] text-white">
-                {d.value}
-              </span>
-            )}
-            <div
-              className="w-full max-w-10 rounded-t-md bg-blue-600 transition-opacity hover:opacity-80"
-              style={{ height: `${(d.value / max) * 100}%` }}
-            />
-          </div>
-          <span className="w-full truncate text-center text-[10px] capitalize text-slate-500">
-            {d.label.replaceAll('_', ' ')}
-          </span>
-        </div>
-      ))}
-    </div>
+    <ChartContainer config={chartConfig} className="h-[220px] w-full aspect-auto">
+      <RechartsBarChart data={formattedData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.6} />
+        <XAxis
+          dataKey="displayName"
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          fontSize={11}
+          stroke="var(--muted-foreground)"
+        />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          fontSize={11}
+          stroke="var(--muted-foreground)"
+        />
+        <ChartTooltip
+          cursor={{ fill: 'var(--muted)', opacity: 0.4 }}
+          content={<ChartTooltipContent indicator="dot" />}
+        />
+        <Bar
+          dataKey="value"
+          fill="var(--chart-2)"
+          radius={[4, 4, 0, 0]}
+          maxBarSize={48}
+        />
+      </RechartsBarChart>
+    </ChartContainer>
   )
 }
 
@@ -122,68 +165,61 @@ export function DoughnutChart({
 }: {
   data: { label: string; value: number }[]
 }) {
-  const [hover, setHover] = useState<number | null>(null)
-  const total = data.reduce((s, d) => s + d.value, 0) || 1
-  let acc = 0
-  const size = 180
-  const r = 62
-  const c = 2 * Math.PI * r
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-[220px] items-center justify-center text-xs text-muted-foreground">
+        No data
+      </div>
+    )
+  }
+
+  const chartConfig = Object.fromEntries(
+    data.map((d, i) => [
+      d.label,
+      {
+        label: d.label.replaceAll('_', ' '),
+        color: CHART_COLORS[i % CHART_COLORS.length],
+      },
+    ])
+  ) satisfies ChartConfig
+
   return (
     <div className="flex flex-col items-center gap-4 sm:flex-row">
-      <svg viewBox={`0 0 ${size} ${size}`} className="h-44 w-44">
-        <g transform={`translate(${size / 2} ${size / 2}) rotate(-90)`}>
-          {data.map((d, i) => {
-            const frac = d.value / total
-            const dash = frac * c
-            const gap = c - dash
-            const offset = acc
-            acc += dash
-            return (
-              <circle
-                key={d.label}
-                r={r}
-                cx={0}
-                cy={0}
-                fill="none"
-                stroke={PALETTE[i % PALETTE.length]}
-                strokeWidth={hover === i ? 22 : 18}
-                strokeDasharray={`${dash} ${gap}`}
-                strokeDashoffset={-offset}
-                className="cursor-pointer transition-all"
-                onMouseEnter={() => setHover(i)}
-                onMouseLeave={() => setHover(null)}
+      <ChartContainer config={chartConfig} className="h-[180px] w-[180px] shrink-0 aspect-square">
+        <RechartsPieChart>
+          <ChartTooltip
+            content={<ChartTooltipContent hideLabel />}
+          />
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="label"
+            innerRadius={50}
+            outerRadius={75}
+            paddingAngle={2}
+            strokeWidth={1}
+            stroke="var(--card)"
+          >
+            {data.map((_, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={CHART_COLORS[index % CHART_COLORS.length]}
               />
-            )
-          })}
-        </g>
-        <text
-          x="50%"
-          y="48%"
-          textAnchor="middle"
-          className="fill-slate-900 text-xl font-semibold"
-        >
-          {hover !== null ? data[hover].value : total}
-        </text>
-        <text
-          x="50%"
-          y="60%"
-          textAnchor="middle"
-          className="fill-slate-500 text-[10px]"
-        >
-          {hover !== null ? data[hover].label.replaceAll('_', ' ') : 'Total'}
-        </text>
-      </svg>
-      <ul className="m-0 flex-1 list-none space-y-2 p-0">
+            ))}
+          </Pie>
+        </RechartsPieChart>
+      </ChartContainer>
+      <ul className="m-0 flex-1 list-none space-y-1.5 p-0">
         {data.map((d, i) => (
-          <li key={d.label} className="flex items-center justify-between gap-3 text-sm">
-            <span className="flex items-center gap-2 capitalize text-slate-600">
+          <li key={d.label} className="flex items-center justify-between gap-3 text-xs">
+            <span className="flex items-center gap-2 capitalize text-muted-foreground">
               <span
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ background: PALETTE[i % PALETTE.length] }}
+                className="h-2 w-2 rounded-full"
+                style={{ background: CHART_COLORS[i % CHART_COLORS.length] }}
               />
               {d.label.replaceAll('_', ' ')}
             </span>
-            <span className="font-semibold tabular-nums text-slate-900">{d.value}</span>
+            <span className="font-mono font-medium tabular-nums text-foreground">{d.value}</span>
           </li>
         ))}
       </ul>

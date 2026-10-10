@@ -6,6 +6,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
+import { ThemeProvider } from 'next-themes'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import { CartProvider } from '#/lib/cart-context'
 import { CartSheet } from '#/components/store/cart-sheet'
@@ -51,17 +52,24 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-screen font-sans bg-white text-[#101010] antialiased selection:bg-[#d8ff00] selection:text-[#101010]">
-        <CartProvider>
-          {children}
-          <CartSheet />
-          <AgeGate />
-          <Toaster position="bottom-right" richColors />
-        </CartProvider>
+      <body className="min-h-screen font-sans bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <CartProvider>
+            {children}
+            <CartSheet />
+            <AgeGate />
+            <Toaster position="bottom-right" richColors />
+          </CartProvider>
+        </ThemeProvider>
         <TanStackDevtools
           config={{
             position: 'bottom-right',

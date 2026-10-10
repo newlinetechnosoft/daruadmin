@@ -10,7 +10,34 @@ import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { ProductCard } from '#/components/store/product-card'
 import type { ProductProps } from '#/components/store/product-card'
-import { Wine, X, RotateCcw, SlidersHorizontal } from 'lucide-react'
+import { Wine, RotateCcw, SlidersHorizontal } from 'lucide-react'
+import { Button } from '#/components/ui/button'
+import { Checkbox } from '#/components/ui/checkbox'
+import { Label } from '#/components/ui/label'
+import { NativeSelect } from '#/components/ui/native-select'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '#/components/ui/breadcrumb'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '#/components/ui/pagination'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '#/components/ui/sheet'
+import { EmptyState } from '#/components/shared/empty-state'
 
 const drinksSearchSchema = z.object({
   category: z.string().optional(),
@@ -63,35 +90,37 @@ const VOLUME_OPTIONS = [
   { id: '1000', label: '1L+' },
 ]
 
-const wrap = 'mx-auto w-full max-w-7xl px-5 sm:px-8'
-
 function GroupTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
+    <h3 className="mb-3 text-xs font-semibold text-foreground tracking-tight">
       {children}
     </h3>
   )
 }
 
 function CheckRow({
+  id,
   checked,
   onChange,
   label,
 }: {
+  id: string
   checked: boolean
   onChange: () => void
   label: string
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-3 text-sm text-neutral-600 transition-colors hover:text-black">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        className="h-4 w-4 shrink-0 accent-black"
-      />
-      <span className={checked ? 'font-semibold text-black' : ''}>{label}</span>
-    </label>
+    <div className="flex items-center gap-2">
+      <Checkbox id={id} checked={checked} onCheckedChange={onChange} />
+      <Label
+        htmlFor={id}
+        className={`text-xs cursor-pointer ${
+          checked ? 'font-medium text-foreground' : 'text-muted-foreground'
+        }`}
+      >
+        {label}
+      </Label>
+    </div>
   )
 }
 
@@ -186,7 +215,6 @@ function DrinksPage() {
     } else if (sortBy === 'newest') {
       list.sort((a, b) => b.name.localeCompare(a.name))
     } else {
-      // Recommended: featured first
       list.sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0))
     }
 
@@ -206,12 +234,12 @@ function DrinksPage() {
     selectedVolume,
   )
 
-  // Shared by the desktop sidebar and the mobile drawer
   const filterPanel = (
-    <div className="space-y-10">
+    <div className="space-y-8">
+      {/* Categories */}
       <div>
         <GroupTitle>Categories</GroupTitle>
-        <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+        <div className="space-y-0.5">
           {[
             {
               key: 'all',
@@ -228,37 +256,34 @@ function DrinksPage() {
           ].map((cat) => {
             const active = currentCategory === cat.slug
             return (
-              <li key={cat.key}>
-                <button
-                  type="button"
-                  onClick={() => handleCategorySelect(cat.slug)}
-                  className={`flex w-full cursor-pointer items-center justify-between px-3 py-2.5 text-left text-sm transition-colors ${
-                    active
-                      ? 'bg-black font-semibold text-white'
-                      : 'text-neutral-600 hover:bg-[#f3f2ee] hover:text-black'
-                  }`}
-                >
-                  <span>{cat.name}</span>
-                  <span
-                    className={`text-[11px] tabular-nums ${
-                      active ? 'text-neutral-400' : 'text-neutral-400'
-                    }`}
-                  >
-                    {cat.count}
-                  </span>
-                </button>
-              </li>
+              <Button
+                key={cat.key}
+                type="button"
+                variant={active ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => handleCategorySelect(cat.slug)}
+                className={`w-full justify-between h-8 px-2.5 text-xs font-normal ${
+                  active ? 'font-medium text-foreground' : 'text-muted-foreground'
+                }`}
+              >
+                <span>{cat.name}</span>
+                <span className="text-[11px] font-mono text-muted-foreground">
+                  {cat.count}
+                </span>
+              </Button>
             )
           })}
-        </ul>
+        </div>
       </div>
 
-      <div className="border-t border-black/10 pt-8">
-        <GroupTitle>Price</GroupTitle>
-        <div className="space-y-3">
+      {/* Price */}
+      <div className="border-t border-border pt-6">
+        <GroupTitle>Price Range</GroupTitle>
+        <div className="space-y-2.5">
           {PRICE_OPTIONS.map((p) => (
             <CheckRow
               key={p.id}
+              id={`price-${p.id}`}
               label={p.label}
               checked={selectedPriceRange === p.id}
               onChange={() =>
@@ -269,12 +294,14 @@ function DrinksPage() {
         </div>
       </div>
 
-      <div className="border-t border-black/10 pt-8">
+      {/* Volume */}
+      <div className="border-t border-border pt-6">
         <GroupTitle>Volume</GroupTitle>
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {VOLUME_OPTIONS.map((v) => (
             <CheckRow
               key={v.id}
+              id={`vol-${v.id}`}
               label={v.label}
               checked={selectedVolume === v.id}
               onChange={() =>
@@ -285,10 +312,12 @@ function DrinksPage() {
         </div>
       </div>
 
-      <div className="border-t border-black/10 pt-8">
+      {/* Brands */}
+      <div className="border-t border-border pt-6">
         <GroupTitle>Brands</GroupTitle>
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <CheckRow
+            id="brand-all"
             label="All Brands"
             checked={currentBrand === 'all'}
             onChange={() => handleBrandSelect('all')}
@@ -296,6 +325,7 @@ function DrinksPage() {
           {brands.map((b) => (
             <CheckRow
               key={b.id}
+              id={`brand-${b.slug}`}
               label={b.name}
               checked={currentBrand === b.slug}
               onChange={() => handleBrandSelect(b.slug)}
@@ -307,108 +337,117 @@ function DrinksPage() {
   )
 
   return (
-    <div className="flex min-h-screen flex-col bg-white font-sans text-[#101010] antialiased">
+    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
       <Header />
 
       <main className="flex-1">
-        {/* PAGE HERO */}
-        <section className="bg-[#f3f2ee]">
-          <div className={`${wrap} py-12 sm:py-16 lg:py-20`}>
-            <nav
-              aria-label="Breadcrumb"
-              className="mb-6 flex flex-wrap items-center text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500"
-            >
-              <Link to="/" className="transition-colors hover:text-black">
-                Home
-              </Link>
-              <span className="mx-2.5 text-neutral-300">/</span>
-              <span className={activeCategoryObj ? '' : 'text-black'}>
-                Drinks
-              </span>
-              {activeCategoryObj && (
-                <>
-                  <span className="mx-2.5 text-neutral-300">/</span>
-                  <span className="text-black">{activeCategoryObj.name}</span>
-                </>
-              )}
-            </nav>
+        {/* Page Hero */}
+        <section className="border-b border-border bg-muted/20 py-8 sm:py-12">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <Breadcrumb className="mb-4">
+              <BreadcrumbList className="text-xs">
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link to="/">Home</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  {activeCategoryObj ? (
+                    <BreadcrumbLink asChild>
+                      <Link to="/drinks">Drinks</Link>
+                    </BreadcrumbLink>
+                  ) : (
+                    <BreadcrumbPage>Drinks</BreadcrumbPage>
+                  )}
+                </BreadcrumbItem>
+                {activeCategoryObj && (
+                  <>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>{activeCategoryObj.name}</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </>
+                )}
+              </BreadcrumbList>
+            </Breadcrumb>
 
-            <h1 className="text-[clamp(3rem,10vw,7.5rem)] font-black uppercase leading-[0.88] tracking-tighter">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               {activeCategoryObj ? activeCategoryObj.name : 'Drinks'}
             </h1>
 
-            <p className="mt-6 max-w-lg text-base leading-relaxed text-neutral-600">
+            <p className="mt-2 max-w-lg text-xs leading-relaxed text-muted-foreground">
               {activeCategoryObj?.description ??
                 'Discover our selection of spirits, vodka, whiskey, beer, wine and more with 40-minute late-night delivery.'}
             </p>
           </div>
         </section>
 
-        {/* SHOP AREA */}
-        <section className="py-10 sm:py-14 lg:pb-24">
-          <div className={wrap}>
-            {/* TOOLBAR */}
-            <div className="flex items-center justify-between gap-4 border-b border-black pb-5">
-              <p className="text-sm text-neutral-500">
-                <span className="font-semibold tabular-nums text-black">
+        {/* Shop Area */}
+        <section className="py-8 sm:py-10">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between gap-4 border-b border-border pb-4">
+              <p className="text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground font-mono">
                   {filteredProducts.length}
                 </span>{' '}
                 of {products.length} products
               </p>
 
               <div className="flex items-center gap-3">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setMobileFilterOpen(true)}
-                  className="inline-flex h-10 cursor-pointer items-center gap-2 border border-black px-4 text-xs font-semibold uppercase tracking-wider transition-colors hover:bg-black hover:text-white md:hidden"
+                  className="gap-2 text-xs md:hidden"
                 >
                   <SlidersHorizontal className="h-3.5 w-3.5" />
                   Filters
-                </button>
+                </Button>
 
-                <div className="flex items-center gap-3 text-sm">
-                  <label
-                    htmlFor="sort"
-                    className="hidden text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500 sm:inline"
-                  >
+                <div className="flex items-center gap-2">
+                  <span className="hidden text-xs text-muted-foreground sm:inline">
                     Sort by
-                  </label>
-                  <select
-                    id="sort"
+                  </span>
+                  <NativeSelect
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="h-10 cursor-pointer border border-black bg-white px-3 pr-8 text-sm outline-none focus:shadow-[3px_3px_0_0_#000]"
+                    className="h-8 text-xs"
                   >
                     <option value="recommended">Recommended</option>
                     <option value="price-low">Price: Low to High</option>
                     <option value="price-high">Price: High to Low</option>
                     <option value="newest">Newest</option>
-                  </select>
+                  </NativeSelect>
                 </div>
               </div>
             </div>
 
-            {/* SIDEBAR + GRID */}
-            <div className="grid grid-cols-1 gap-12 pt-10 md:grid-cols-[230px_1fr] lg:grid-cols-[250px_1fr] lg:gap-16">
+            {/* Sidebar + Grid */}
+            <div className="grid grid-cols-1 gap-8 pt-8 md:grid-cols-[220px_1fr] lg:grid-cols-[240px_1fr] lg:gap-12">
               <aside className="hidden md:block">
-                <div className="sticky top-6">
+                <div className="sticky top-20">
                   {filterPanel}
 
                   {hasActiveFilters && (
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={handleResetFilters}
-                      className="mt-8 inline-flex cursor-pointer items-center gap-2 border-0 border-b border-black bg-transparent p-0 pb-0.5 text-xs font-semibold uppercase tracking-wider transition-opacity hover:opacity-60"
+                      className="mt-6 gap-2 text-xs text-muted-foreground hover:text-foreground w-full justify-start px-0"
                     >
                       <RotateCcw className="h-3.5 w-3.5" /> Reset all filters
-                    </button>
+                    </Button>
                   )}
                 </div>
               </aside>
 
               <section>
                 {filteredProducts.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12 lg:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
                     {filteredProducts.map((product) => (
                       <ProductCard
                         key={product.id}
@@ -417,46 +456,66 @@ function DrinksPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-[#f3f2ee] px-6 py-20 text-center">
-                    <Wine
-                      className="mx-auto mb-4 h-10 w-10 text-neutral-400"
-                      strokeWidth={1.5}
-                    />
-                    <h3 className="text-2xl font-black uppercase tracking-tighter">
-                      No drinks match your filters
-                    </h3>
-                    <p className="mx-auto mt-2 max-w-sm text-sm text-neutral-600">
-                      Try clearing some filters or searching for another liquor.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleResetFilters}
-                      className="mt-7 h-12 cursor-pointer bg-black px-8 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800"
-                    >
-                      Clear all filters
-                    </button>
-                  </div>
+                  <EmptyState
+                    icon={Wine}
+                    title="No drinks match your filters"
+                    description="Try clearing some filters or searching for another liquor."
+                    action={
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleResetFilters}
+                        className="text-xs"
+                      >
+                        Clear all filters
+                      </Button>
+                    }
+                  />
                 )}
 
-                {/* PAGINATION */}
+                {/* Real shadcn Pagination component */}
                 {filteredProducts.length > 0 && (
-                  <div className="mt-14 flex items-center justify-center gap-2 sm:mt-20">
-                    <button
-                      type="button"
-                      className="grid h-11 w-11 place-items-center border border-black bg-black text-xs font-bold text-white"
-                    >
-                      1
-                    </button>
-                    {['2', '3', '→'].map((label) => (
-                      <button
-                        key={label}
-                        type="button"
-                        className="grid h-11 w-11 place-items-center border border-black/20 bg-white text-xs font-medium transition-colors hover:border-black"
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+                  <Pagination className="mt-12 sm:mt-16">
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => e.preventDefault()}
+                        />
+                      </PaginationItem>
+                      <PaginationItem>
+                        <PaginationLink
+                          href="#"
+                          isActive
+                          onClick={(e) => e.preventDefault()}
+                        >
+                          1
+                        </PaginationLink>
+                      </PaginationItem>
+                      <PaginationItem>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => e.preventDefault()}
+                        >
+                          2
+                        </PaginationLink>
+                      </PaginationItem>
+                      <PaginationItem>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => e.preventDefault()}
+                        >
+                          3
+                        </PaginationLink>
+                      </PaginationItem>
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => e.preventDefault()}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
                 )}
               </section>
             </div>
@@ -464,56 +523,38 @@ function DrinksPage() {
         </section>
       </main>
 
-      {/* MOBILE FILTER DRAWER */}
-      {mobileFilterOpen && (
-        <div
-          className="fixed inset-0 z-50 flex bg-black/60 backdrop-blur-sm md:hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Filter drinks"
-          onClick={() => setMobileFilterOpen(false)}
-        >
-          <div
-            className="ml-auto flex h-full w-full max-w-sm flex-col bg-white"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-black px-6 py-5">
-              <h3 className="text-xl font-black uppercase tracking-tighter">
-                Filter drinks
-              </h3>
-              <button
-                type="button"
-                aria-label="Close filters"
-                onClick={() => setMobileFilterOpen(false)}
-                className="grid h-9 w-9 cursor-pointer place-items-center border-0 bg-transparent transition-colors hover:bg-neutral-100"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      {/* Mobile Filter Sheet */}
+      <Sheet open={mobileFilterOpen} onOpenChange={setMobileFilterOpen}>
+        <SheetContent side="left" className="w-80 p-6 flex flex-col justify-between">
+          <SheetHeader className="text-left border-b border-border pb-4">
+            <SheetTitle className="text-sm font-semibold">Filter drinks</SheetTitle>
+          </SheetHeader>
 
-            <div className="flex-1 overflow-y-auto px-6 py-7">
-              {filterPanel}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 border-t border-black/10 p-6">
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                className="h-12 cursor-pointer border border-black bg-white text-xs font-semibold uppercase tracking-wider transition-colors hover:bg-neutral-100"
-              >
-                Reset all
-              </button>
-              <button
-                type="button"
-                onClick={() => setMobileFilterOpen(false)}
-                className="h-12 cursor-pointer bg-black text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800"
-              >
-                Apply
-              </button>
-            </div>
+          <div className="flex-1 overflow-y-auto py-6">
+            {filterPanel}
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-3 border-t border-border pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleResetFilters}
+              className="text-xs"
+            >
+              Reset all
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setMobileFilterOpen(false)}
+              className="text-xs"
+            >
+              Apply
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Footer />
     </div>

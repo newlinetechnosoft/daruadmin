@@ -8,35 +8,47 @@ import {
 } from '#/server/operations/operations.functions'
 import type { Rider } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
-import { PageHeader } from '#/components/admin/page-header'
-import { KpiCard } from '#/components/admin/kpi-card'
-import {
-  pageClass,
-  cardClass,
-  tableWrap,
-  thClass,
-  tdClass,
-  btnPrimary,
-  btnSecondary,
-  inputClass,
-  selectClass,
-  labelClass,
-} from '#/components/admin/styles'
+import { PageHeader } from '#/components/shared/page-header'
+import { KpiCard } from '#/components/shared/kpi-card'
 import {
   Bike,
   Search,
-  Filter,
   Plus,
   Download,
   CheckCircle,
   Coins,
   ShieldCheck,
   Star,
-  X,
   Radio,
   Navigation,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { Badge } from '#/components/ui/badge'
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '#/components/ui/native-select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
+import { Card, CardTitle } from '#/components/ui/card'
+import { EmptyState } from '#/components/shared/empty-state'
 
 export const Route = createFileRoute('/admin/riders')({
   loader: async () => {
@@ -121,7 +133,6 @@ function AdminRidersPage() {
       setIsSubmitting(true)
       const amount = rider.cashOnHand
 
-      // 1. Clear cash on hand
       await updateRiderLiveFn({
         data: {
           id: rider.id,
@@ -129,7 +140,6 @@ function AdminRidersPage() {
         },
       })
 
-      // 2. Post remittance to General Ledger in Neon DB
       await addLedgerFn({
         data: {
           type: 'credit',
@@ -141,7 +151,7 @@ function AdminRidersPage() {
       })
 
       toast.success(
-        `Settled ${formatNPR(amount)} from ${rider.name}! Credited to Bank Account in General Ledger.`
+        `Settled ${formatNPR(amount)} from ${rider.name}! Credited to bank in ledger.`
       )
       await router.invalidate()
     } catch {
@@ -173,7 +183,7 @@ function AdminRidersPage() {
           available: true,
         },
       })
-      toast.success('Rider onboarded successfully to Neon DB!')
+      toast.success('Rider onboarded successfully')
       setIsAddRiderOpen(false)
       setRiderForm({
         name: '',
@@ -210,21 +220,21 @@ function AdminRidersPage() {
   }
 
   return (
-    <div className={pageClass}>
+    <div className="space-y-6">
       <PageHeader
         kicker="Operations"
-        title="Rider & Fleet Logistics"
+        title="Rider and fleet logistics"
         description="Live Kathmandu Valley delivery radar, courier telemetry, and COD cash remittance settlement."
         actions={
           <div className="flex items-center gap-2">
-            <button type="button" onClick={handleExportCSV} className={btnSecondary}>
-              <Download className="h-4 w-4" />
-              Export Roster
-            </button>
-            <button type="button" onClick={() => setIsAddRiderOpen(true)} className={btnPrimary}>
-              <Plus className="h-4 w-4" />
-              Onboard Rider
-            </button>
+            <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-8 gap-1.5 text-xs">
+              <Download className="h-3.5 w-3.5" />
+              Export roster
+            </Button>
+            <Button size="sm" onClick={() => setIsAddRiderOpen(true)} className="h-8 gap-1.5 text-xs">
+              <Plus className="h-3.5 w-3.5" />
+              Onboard rider
+            </Button>
           </div>
         }
       />
@@ -232,27 +242,27 @@ function AdminRidersPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <KpiCard
-          label="Total Fleet Couriers"
+          label="Total fleet couriers"
           value={totalRidersCount}
           note="Registered delivery personnel"
           icon={Bike}
         />
         <KpiCard
-          label="Available On Duty"
+          label="Available on duty"
           value={activeAvailableCount}
           note="Ready for dispatch"
           icon={Radio}
           tone="success"
         />
         <KpiCard
-          label="COD In Courier Custody"
+          label="COD in courier custody"
           value={formatNPR(totalCodFloat)}
           note="Unremitted cash float"
           icon={Coins}
           tone={totalCodFloat > 0 ? 'danger' : 'default'}
         />
         <KpiCard
-          label="Lifetime Deliveries"
+          label="Lifetime deliveries"
           value={totalCompletedDeliveries}
           note="Parcels completed to date"
           icon={CheckCircle}
@@ -260,44 +270,43 @@ function AdminRidersPage() {
       </div>
 
       {/* Live Fleet Radar Map Visualization */}
-      <div className={`${cardClass} p-5 space-y-4`}>
+      <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Navigation className="h-5 w-5 text-blue-600 animate-pulse" />
-            <h3 className="text-sm font-bold text-slate-900">
-              Live Fleet Telemetry Radar (Kathmandu Valley Hub)
-            </h3>
+            <Navigation className="h-4 w-4 text-foreground animate-pulse" />
+            <CardTitle className="text-xs font-semibold">
+              Live fleet telemetry radar (Kathmandu Valley Hub)
+            </CardTitle>
           </div>
-          <span className="text-xs text-slate-500 font-mono">
-            Tracking {ops.riders.length} GPS Beacon Units
+          <span className="text-[11px] text-muted-foreground font-mono">
+            Tracking {ops.riders.length} beacon units
           </span>
         </div>
 
         {/* Radar Map Sandbox Canvas */}
-        <div className="relative h-64 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 p-4">
-          <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
+        <div className="relative h-60 bg-muted/40 rounded-lg overflow-hidden border border-border p-4">
+          <div className="absolute inset-0 bg-[radial-gradient(var(--border)_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
 
-          {/* Zones */}
-          <div className="absolute top-4 left-6 text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+          {/* Sectors */}
+          <div className="absolute top-3 left-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
             Sector A: Thamel / Balaju
           </div>
-          <div className="absolute top-4 right-8 text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+          <div className="absolute top-3 right-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
             Sector B: New Road / Durbar Marg
           </div>
-          <div className="absolute bottom-4 left-6 text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+          <div className="absolute bottom-3 left-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
             Sector C: Jhamsikhel / Patan
           </div>
-          <div className="absolute bottom-4 right-8 text-[10px] font-mono text-slate-500 uppercase tracking-wider">
+          <div className="absolute bottom-3 right-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
             Sector D: Baneshwor / Koteshwor
           </div>
 
           {/* Concentric Radar Circles */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full border border-blue-500/20 pointer-events-none"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full border border-blue-500/10 pointer-events-none"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-44 rounded-full border border-foreground/10 pointer-events-none"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full border border-foreground/5 pointer-events-none"></div>
 
           {/* Couriers on Map */}
           {ops.riders.map((r, idx) => {
-            // Position couriers pseudo-randomly based on index
             const topPos = 20 + ((idx * 27) % 60)
             const leftPos = 15 + ((idx * 33) % 70)
 
@@ -306,282 +315,263 @@ function AdminRidersPage() {
                 key={r.id}
                 style={{ top: `${topPos}%`, left: `${leftPos}%` }}
                 className="absolute -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
-                onClick={() => toast.info(`Courier: ${r.name} (${r.zone}) • Status: ${r.status}`)}
+                onClick={() => toast.info(`Courier: ${r.name} (${r.zone}) · Status: ${r.status}`)}
               >
                 <div className="relative flex items-center justify-center">
-                  <div className="absolute w-6 h-6 rounded-full bg-blue-500/30 animate-ping"></div>
-                  <div className="w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-lg flex items-center justify-center text-white">
-                    <Bike className="w-2.5 h-2.5" />
+                  <div className="absolute w-5 h-5 rounded-full bg-primary/20 animate-ping"></div>
+                  <div className="w-3.5 h-3.5 rounded-full bg-primary border-2 border-background shadow-md flex items-center justify-center text-primary-foreground">
+                    <Bike className="w-2 h-2" />
                   </div>
                 </div>
 
-                <div className="absolute top-5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                  {r.name} &bull; {r.zone} &bull; {r.status}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground border border-border text-[10px] font-mono px-1.5 py-0.5 rounded shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                  {r.name} · {r.zone} · {r.status}
                 </div>
               </div>
             )
           })}
         </div>
-      </div>
+      </Card>
 
       {/* Filter and Search Bar */}
-      <div className={`${cardClass} p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3`}>
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
             placeholder="Search riders by name, phone, zone..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`${inputClass} pl-9`}
+            className="h-8 pl-9 text-xs"
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-slate-500" />
-          <select
-            value={zoneFilter}
-            onChange={(e) => setZoneFilter(e.target.value)}
-            className={selectClass}
-          >
-            <option value="all">All Delivery Zones</option>
-            <option value="Kathmandu Central">Kathmandu Central</option>
-            <option value="Patan / Lalitpur">Patan / Lalitpur</option>
-            <option value="Bhaktapur Core">Bhaktapur Core</option>
-          </select>
-        </div>
+        <NativeSelect
+          value={zoneFilter}
+          onChange={(e) => setZoneFilter(e.target.value)}
+          size="sm"
+          className="h-8 text-xs"
+        >
+          <NativeSelectOption value="all">All delivery zones</NativeSelectOption>
+          <NativeSelectOption value="Kathmandu Central">Kathmandu Central</NativeSelectOption>
+          <NativeSelectOption value="Patan / Lalitpur">Patan / Lalitpur</NativeSelectOption>
+          <NativeSelectOption value="Bhaktapur Core">Bhaktapur Core</NativeSelectOption>
+        </NativeSelect>
       </div>
 
       {/* Riders Table */}
-      <div className={tableWrap}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50/80 border-b border-slate-200">
-              <tr>
-                <th className={thClass}>Rider Name</th>
-                <th className={thClass}>Zone & Vehicle</th>
-                <th className={thClass}>KYC Status</th>
-                <th className={thClass}>Duty Status</th>
-                <th className={thClass}>Rating & Deliveries</th>
-                <th className={thClass}>Cash in Hand (COD)</th>
-                <th className={`${thClass} text-right`}>Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredRiders.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 text-sm">
-                    No riders match the current search.
-                  </td>
-                </tr>
-              ) : (
-                filteredRiders.map((rider) => (
-                  <tr key={rider.id} className="hover:bg-slate-50/70 transition">
-                    <td className={tdClass}>
-                      <div className="font-semibold text-slate-900">{rider.name}</div>
-                      <div className="text-xs text-slate-400 font-mono">{rider.phone}</div>
-                    </td>
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-xs">Rider name</TableHead>
+              <TableHead className="text-xs">Zone and vehicle</TableHead>
+              <TableHead className="text-xs">KYC status</TableHead>
+              <TableHead className="text-xs">Duty status</TableHead>
+              <TableHead className="text-xs">Rating and deliveries</TableHead>
+              <TableHead className="text-xs">Cash in hand (COD)</TableHead>
+              <TableHead className="text-right text-xs">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredRiders.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="p-0">
+                  <EmptyState
+                    title="No riders match your search"
+                    description="Try adjusting your filter or search terms."
+                  />
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredRiders.map((rider) => (
+                <TableRow key={rider.id}>
+                  <TableCell>
+                    <div className="font-medium text-xs text-foreground">{rider.name}</div>
+                    <div className="text-[11px] text-muted-foreground font-mono">{rider.phone}</div>
+                  </TableCell>
 
-                    <td className={tdClass}>
-                      <div className="text-slate-800 font-medium">{rider.zone}</div>
-                      <span className="text-xs text-slate-400 capitalize">
-                        {rider.vehicle} &bull; Plate: {rider.licenseNo || 'BA-2-PA'}
-                      </span>
-                    </td>
+                  <TableCell>
+                    <div className="text-xs font-medium text-foreground">{rider.zone}</div>
+                    <span className="text-[11px] text-muted-foreground capitalize">
+                      {rider.vehicle} · Plate: {rider.licenseNo || 'BA-2-PA'}
+                    </span>
+                  </TableCell>
 
-                    <td className={tdClass}>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleKyc(rider)}
-                        disabled={isSubmitting}
-                        className="cursor-pointer"
-                        title="Click to toggle KYC verification"
-                      >
-                        {rider.verified ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                            <ShieldCheck className="h-3.5 w-3.5" />
-                            Verified
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase px-2 py-0.5 rounded bg-amber-100 text-amber-800">
-                            Pending
-                          </span>
-                        )}
-                      </button>
-                    </td>
-
-                    <td className={tdClass}>
-                      <span
-                        className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase px-2 py-0.5 rounded ${
-                          rider.status === 'available'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : rider.status === 'busy'
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        {rider.status}
-                      </span>
-                    </td>
-
-                    <td className={tdClass}>
-                      <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
-                        <Star className="h-3.5 w-3.5 fill-current" />
-                        <span>{rider.rating.toFixed(1)}</span>
-                      </div>
-                      <span className="text-xs text-slate-400">
-                        {rider.deliveries} deliveries
-                      </span>
-                    </td>
-
-                    <td className={tdClass}>
-                      <span
-                        className={`font-mono font-bold block ${
-                          rider.cashOnHand > 0 ? 'text-amber-700' : 'text-slate-800'
-                        }`}
-                      >
-                        {formatNPR(rider.cashOnHand)}
-                      </span>
-                      {rider.cashOnHand > 0 && (
-                        <span className="text-[10px] text-amber-600 font-semibold">
-                          Pending Handover
-                        </span>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleToggleKyc(rider)}
+                      disabled={isSubmitting}
+                      className="h-6 p-0 hover:bg-transparent"
+                    >
+                      {rider.verified ? (
+                        <Badge variant="outline" className="gap-1 text-[10px] font-normal text-emerald-600 dark:text-emerald-400">
+                          <ShieldCheck className="h-3 w-3" />
+                          Verified
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-[10px] font-normal">
+                          Pending
+                        </Badge>
                       )}
-                    </td>
+                    </Button>
+                  </TableCell>
 
-                    <td className={`${tdClass} text-right`}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          disabled={rider.cashOnHand === 0 || isSubmitting}
-                          onClick={() => handleSettleRiderCash(rider)}
-                          className={rider.cashOnHand > 0 ? btnPrimary : btnSecondary}
-                          style={{ height: '32px', padding: '0 10px', fontSize: '11px' }}
-                        >
-                          <Coins className="h-3 w-3" />
-                          {rider.cashOnHand > 0 ? 'Settle COD' : 'Settled'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                  <TableCell>
+                    <Badge
+                      variant={rider.status === 'available' ? 'default' : 'secondary'}
+                      className="text-[10px] font-normal capitalize"
+                    >
+                      {rider.status}
+                    </Badge>
+                  </TableCell>
+
+                  <TableCell>
+                    <div className="flex items-center gap-1 font-mono text-xs text-foreground">
+                      <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+                      <span>{rider.rating.toFixed(1)}</span>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">
+                      {rider.deliveries} deliveries
+                    </span>
+                  </TableCell>
+
+                  <TableCell>
+                    <span
+                      className={`font-mono text-xs font-medium block tabular-nums ${
+                        rider.cashOnHand > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'
+                      }`}
+                    >
+                      {formatNPR(rider.cashOnHand)}
+                    </span>
+                    {rider.cashOnHand > 0 && (
+                      <span className="text-[10px] text-muted-foreground">
+                        Pending handover
+                      </span>
+                    )}
+                  </TableCell>
+
+                  <TableCell className="text-right">
+                    <Button
+                      variant={rider.cashOnHand > 0 ? 'default' : 'outline'}
+                      size="sm"
+                      disabled={rider.cashOnHand === 0 || isSubmitting}
+                      onClick={() => handleSettleRiderCash(rider)}
+                      className="h-7 gap-1 px-2 text-xs"
+                    >
+                      <Coins className="h-3 w-3" />
+                      {rider.cashOnHand > 0 ? 'Settle COD' : 'Settled'}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
 
-      {/* Onboard Rider Modal */}
-      {isAddRiderOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3 border-slate-200">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Onboard Fleet Courier</h3>
-                <p className="text-xs text-slate-500">Register new delivery personnel to Neon DB</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAddRiderOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
+      {/* Onboard Rider Dialog */}
+      <Dialog open={isAddRiderOpen} onOpenChange={setIsAddRiderOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">Onboard fleet courier</DialogTitle>
+            <DialogDescription className="text-xs">Register new delivery personnel</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateRider} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Full name *</Label>
+              <Input
+                required
+                value={riderForm.name}
+                onChange={(e) => setRiderForm({ ...riderForm, name: e.target.value })}
+                placeholder="e.g. Ramesh Shrestha"
+                className="h-8 text-xs"
+              />
             </div>
 
-            <form onSubmit={handleCreateRider} className="space-y-3.5 text-xs">
-              <div>
-                <label className={labelClass}>Full Name *</label>
-                <input
-                  type="text"
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Contact phone *</Label>
+                <Input
                   required
-                  value={riderForm.name}
-                  onChange={(e) => setRiderForm({ ...riderForm, name: e.target.value })}
-                  placeholder="e.g. Ramesh Shrestha"
-                  className={inputClass}
+                  value={riderForm.phone}
+                  onChange={(e) => setRiderForm({ ...riderForm, phone: e.target.value })}
+                  placeholder="+977 98..."
+                  className="h-8 font-mono text-xs"
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>Contact Phone *</label>
-                  <input
-                    type="text"
-                    required
-                    value={riderForm.phone}
-                    onChange={(e) => setRiderForm({ ...riderForm, phone: e.target.value })}
-                    placeholder="+977 98..."
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Vehicle Type</label>
-                  <select
-                    value={riderForm.vehicle}
-                    onChange={(e) =>
-                      setRiderForm({ ...riderForm, vehicle: e.target.value as any })
-                    }
-                    className={selectClass}
-                  >
-                    <option value="bike">Motorcycle</option>
-                    <option value="scooter">Scooter</option>
-                    <option value="car">Delivery Van / Car</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>Vehicle Plate No.</label>
-                  <input
-                    type="text"
-                    value={riderForm.licenseNo}
-                    onChange={(e) => setRiderForm({ ...riderForm, licenseNo: e.target.value })}
-                    placeholder="BA-2-PA-8899"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Delivery Zone</label>
-                  <select
-                    value={riderForm.zone}
-                    onChange={(e) => setRiderForm({ ...riderForm, zone: e.target.value })}
-                    className={selectClass}
-                  >
-                    <option value="Kathmandu Central">Kathmandu Central</option>
-                    <option value="Patan / Lalitpur">Patan / Lalitpur</option>
-                    <option value="Bhaktapur Core">Bhaktapur Core</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className={labelClass}>Per-Delivery Commission Rate (NPR)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={riderForm.commissionRate}
-                  onChange={(e) => setRiderForm({ ...riderForm, commissionRate: Number(e.target.value) })}
-                  className={inputClass}
-                />
-              </div>
-
-              <div className="pt-3 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddRiderOpen(false)}
-                  className={btnSecondary}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Vehicle type</Label>
+                <NativeSelect
+                  value={riderForm.vehicle}
+                  onChange={(e) =>
+                    setRiderForm({ ...riderForm, vehicle: e.target.value as any })
+                  }
+                  size="sm"
+                  className="w-full text-xs"
                 >
-                  Cancel
-                </button>
-                <button type="submit" disabled={isSubmitting} className={btnPrimary}>
-                  {isSubmitting ? 'Onboarding...' : 'Register Courier'}
-                </button>
+                  <NativeSelectOption value="bike">Motorcycle</NativeSelectOption>
+                  <NativeSelectOption value="scooter">Scooter</NativeSelectOption>
+                  <NativeSelectOption value="car">Delivery van / car</NativeSelectOption>
+                </NativeSelect>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Vehicle plate no.</Label>
+                <Input
+                  value={riderForm.licenseNo}
+                  onChange={(e) => setRiderForm({ ...riderForm, licenseNo: e.target.value })}
+                  placeholder="BA-2-PA-8899"
+                  className="h-8 font-mono text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Delivery zone</Label>
+                <NativeSelect
+                  value={riderForm.zone}
+                  onChange={(e) => setRiderForm({ ...riderForm, zone: e.target.value })}
+                  size="sm"
+                  className="w-full text-xs"
+                >
+                  <NativeSelectOption value="Kathmandu Central">Kathmandu Central</NativeSelectOption>
+                  <NativeSelectOption value="Patan / Lalitpur">Patan / Lalitpur</NativeSelectOption>
+                  <NativeSelectOption value="Bhaktapur Core">Bhaktapur Core</NativeSelectOption>
+                </NativeSelect>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Per-delivery commission rate (NPR)</Label>
+              <Input
+                type="number"
+                min="0"
+                value={riderForm.commissionRate}
+                onChange={(e) => setRiderForm({ ...riderForm, commissionRate: Number(e.target.value) })}
+                className="h-8 font-mono text-xs"
+              />
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAddRiderOpen(false)}
+                className="h-8 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={isSubmitting} className="h-8 text-xs">
+                {isSubmitting ? 'Onboarding...' : 'Register courier'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

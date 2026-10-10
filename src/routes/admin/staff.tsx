@@ -7,19 +7,8 @@ import {
 import { updateUserRoleFn } from '#/server/catalog/catalog.functions'
 import { MODULES, ACTIONS } from '#/server/operations/types'
 import type { ModuleKey, ActionKey } from '#/server/operations/types'
-import { PageHeader } from '#/components/admin/page-header'
-import { KpiCard } from '#/components/admin/kpi-card'
-import {
-  pageClass,
-  cardClass,
-  tableWrap,
-  thClass,
-  tdClass,
-  btnPrimary,
-  btnSecondary,
-  inputClass,
-  selectClass,
-} from '#/components/admin/styles'
+import { PageHeader } from '#/components/shared/page-header'
+import { KpiCard } from '#/components/shared/kpi-card'
 import {
   KeyRound,
   History,
@@ -30,6 +19,29 @@ import {
   Save,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Badge } from '#/components/ui/badge'
+import { Checkbox } from '#/components/ui/checkbox'
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from '#/components/ui/tabs'
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '#/components/ui/native-select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui/table'
+import { Card } from '#/components/ui/card'
+import { EmptyState } from '#/components/shared/empty-state'
 
 export const Route = createFileRoute('/admin/staff')({
   loader: async () => {
@@ -143,7 +155,7 @@ function AdminStaffPage() {
     try {
       setIsUpdating(true)
       await updateUserRoleFn({ data: { userId, role: newRole } })
-      toast.success(`User role updated to ${newRole.toUpperCase()}`)
+      toast.success(`User role updated to ${newRole}`)
       await router.invalidate()
     } catch {
       toast.error('Failed to update role')
@@ -170,82 +182,60 @@ function AdminStaffPage() {
   }
 
   return (
-    <div className={pageClass}>
+    <div className="space-y-6">
       <PageHeader
         kicker="Operations"
-        title="Staff & Role-Based Access Control"
-        description="Configure granular module action privileges across Managers, Couriers, and Support staff."
+        title="Staff and access control"
+        description="Configure granular module action privileges across managers, couriers, and support staff."
       />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard
-          label="Staff & Operators"
+          label="Staff and operators"
           value={staffUsers.length}
           note="Active administrative accounts"
           icon={ShieldCheck}
         />
         <KpiCard
-          label="RBAC Protected Modules"
+          label="Protected modules"
           value={MODULES.length}
           note="Granular permission nodes"
           icon={KeyRound}
           tone="success"
         />
         <KpiCard
-          label="Audit Log Entries"
+          label="Audit log entries"
           value={ops.audit.length}
           note="Recorded actions in Neon DB"
           icon={History}
         />
       </div>
 
-      {/* Sub Tabs */}
-      <div className="flex border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab('users')}
-          className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition ${
-            activeTab === 'users'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>Staff Accounts ({staffUsers.length})</span>
-        </button>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)}>
+        <TabsList className="h-9">
+          <TabsTrigger value="users" className="gap-2 text-xs">
+            <Users className="h-3.5 w-3.5" />
+            <span>Staff accounts ({staffUsers.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="matrix" className="gap-2 text-xs">
+            <KeyRound className="h-3.5 w-3.5" />
+            <span>Permission matrix</span>
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="gap-2 text-xs">
+            <History className="h-3.5 w-3.5" />
+            <span>Audit trail ({ops.audit.length})</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-        <button
-          onClick={() => setActiveTab('matrix')}
-          className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition ${
-            activeTab === 'matrix'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <KeyRound className="w-4 h-4" />
-          <span>Granular Permission Matrix</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('audit')}
-          className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 cursor-pointer transition ${
-            activeTab === 'audit'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <History className="w-4 h-4" />
-          <span>Security Audit Trail ({ops.audit.length})</span>
-        </button>
-      </div>
-
-      {/* Search Input */}
+      {/* Search Bar */}
       {activeTab !== 'matrix' && (
-        <div className={`${cardClass} p-4`}>
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
+        <div className="flex rounded-lg border border-border bg-card p-3">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
               placeholder={
                 activeTab === 'users'
                   ? 'Search staff by name, email, role...'
@@ -253,7 +243,7 @@ function AdminStaffPage() {
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`${inputClass} pl-9`}
+              className="h-8 pl-9 text-xs"
             />
           </div>
         </div>
@@ -261,220 +251,225 @@ function AdminStaffPage() {
 
       {activeTab === 'users' ? (
         /* Staff Users Table */
-        <div className={tableWrap}>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50/80 border-b border-slate-200">
-                <tr>
-                  <th className={thClass}>Staff Name</th>
-                  <th className={thClass}>Email Address</th>
-                  <th className={thClass}>Current Role</th>
-                  <th className={thClass}>Access Rights</th>
-                  <th className={`${thClass} text-right`}>Change Role</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredStaff.map((staff) => (
-                  <tr key={staff.id} className="hover:bg-slate-50/70 transition">
-                    <td className={tdClass}>
-                      <div className="font-semibold text-slate-900">{staff.name}</div>
-                      <span className="text-xs text-slate-400 font-mono">ID: {staff.id}</span>
-                    </td>
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs">Staff name</TableHead>
+                <TableHead className="text-xs">Email address</TableHead>
+                <TableHead className="text-xs">Current role</TableHead>
+                <TableHead className="text-xs">Access rights</TableHead>
+                <TableHead className="text-right text-xs">Change role</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStaff.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="p-0">
+                    <EmptyState
+                      title="No staff members found"
+                      description="Try adjusting your search terms."
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredStaff.map((staff) => (
+                  <TableRow key={staff.id}>
+                    <TableCell>
+                      <div className="font-medium text-xs text-foreground">{staff.name}</div>
+                      <span className="font-mono text-[11px] text-muted-foreground">ID: {staff.id.slice(0, 10)}...</span>
+                    </TableCell>
 
-                    <td className={tdClass}>
-                      <span className="font-mono text-xs text-slate-600">{staff.email}</span>
-                    </td>
+                    <TableCell>
+                      <span className="font-mono text-xs text-muted-foreground">{staff.email}</span>
+                    </TableCell>
 
-                    <td className={tdClass}>
-                      <span
-                        className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase px-2 py-0.5 rounded ${
-                          staff.role === 'admin'
-                            ? 'bg-purple-100 text-purple-800'
-                            : staff.role === 'manager'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-emerald-100 text-emerald-800'
-                        }`}
+                    <TableCell>
+                      <Badge
+                        variant={staff.role === 'admin' ? 'default' : 'secondary'}
+                        className="text-[11px] font-normal capitalize"
                       >
                         {staff.role}
-                      </span>
-                    </td>
+                      </Badge>
+                    </TableCell>
 
-                    <td className={tdClass}>
-                      <button
-                        type="button"
+                    <TableCell>
+                      <Button
+                        variant="link"
+                        size="sm"
                         onClick={() => {
                           handleSelectStaffForMatrix(staff.id)
                           setActiveTab('matrix')
                         }}
-                        className="text-xs text-blue-600 hover:underline font-semibold"
+                        className="h-auto p-0 text-xs text-primary"
                       >
-                        Configure RBAC Node &rarr;
-                      </button>
-                    </td>
+                        Configure RBAC node →
+                      </Button>
+                    </TableCell>
 
-                    <td className={`${tdClass} text-right`}>
-                      <select
+                    <TableCell className="text-right">
+                      <NativeSelect
                         value={staff.role || 'customer'}
                         onChange={(e) => handleRoleChange(staff.id, e.target.value)}
                         disabled={isUpdating}
-                        className={selectClass}
-                        style={{ height: '32px', width: 'auto', display: 'inline-block' }}
+                        size="sm"
+                        className="h-7 text-xs"
                       >
-                        <option value="admin">Admin</option>
-                        <option value="manager">Manager</option>
-                        <option value="rider">Rider</option>
-                        <option value="customer">Demote to Customer</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        <NativeSelectOption value="admin">Admin</NativeSelectOption>
+                        <NativeSelectOption value="manager">Manager</NativeSelectOption>
+                        <NativeSelectOption value="rider">Rider</NativeSelectOption>
+                        <NativeSelectOption value="customer">Demote to customer</NativeSelectOption>
+                      </NativeSelect>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       ) : activeTab === 'matrix' ? (
         /* Granular RBAC Matrix */
-        <div className={`${cardClass} p-5 space-y-5`}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+        <Card className="p-4 space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-border">
             <div>
-              <h3 className="text-sm font-bold text-slate-900">
-                Grant Matrix for: <span className="text-blue-600">{selectedStaff?.name}</span> (
+              <h3 className="text-xs font-semibold text-foreground">
+                Grant matrix for: <span className="text-primary">{selectedStaff?.name}</span> (
                 {selectedStaff?.role})
               </h3>
-              <p className="text-xs text-slate-500">
-                Toggle specific privileges per module. Changes persist to the operational store.
+              <p className="text-[11px] text-muted-foreground">
+                Toggle privileges per module. Changes persist to the operational store.
               </p>
             </div>
 
             <div className="flex items-center gap-2">
-              <select
+              <NativeSelect
                 value={selectedStaffId}
                 onChange={(e) => handleSelectStaffForMatrix(e.target.value)}
-                className={selectClass}
+                size="sm"
+                className="h-8 text-xs"
               >
                 {staffUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
+                  <NativeSelectOption key={u.id} value={u.id}>
                     {u.name} ({u.role})
-                  </option>
+                  </NativeSelectOption>
                 ))}
-              </select>
+              </NativeSelect>
 
-              <button
-                type="button"
+              <Button
+                size="sm"
                 onClick={handleSaveMatrix}
                 disabled={isUpdating || selectedStaff?.role === 'admin'}
-                className={btnPrimary}
+                className="h-8 gap-1.5 text-xs"
               >
-                <Save className="h-4 w-4" />
-                {isUpdating ? 'Saving...' : 'Save Matrix'}
-              </button>
+                <Save className="h-3.5 w-3.5" />
+                {isUpdating ? 'Saving...' : 'Save matrix'}
+              </Button>
             </div>
           </div>
 
           {selectedStaff?.role === 'admin' && (
-            <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 text-xs text-purple-900 flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-purple-700 shrink-0" />
-              <span>
-                <strong>Super Admin Notice:</strong> Full unrestricted access is automatically granted
-                across all modules and actions.
+            <div className="p-3 bg-muted/40 rounded-md border border-border text-xs flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-foreground shrink-0" />
+              <span className="text-muted-foreground">
+                <strong className="text-foreground">Super admin notice:</strong> Full unrestricted access is automatically granted across all modules and actions.
               </span>
             </div>
           )}
 
-          <div className="overflow-x-auto border border-slate-200 rounded-xl">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px]">
-                <tr>
-                  <th className="py-2.5 px-3">System Module</th>
+          <div className="overflow-hidden border border-border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">System module</TableHead>
                   {ACTIONS.map((act) => (
-                    <th key={act} className="py-2.5 px-3 text-center">
+                    <TableHead key={act} className="text-center text-xs capitalize">
                       {act}
-                    </th>
+                    </TableHead>
                   ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {MODULES.map((mod) => {
                   const currentModGrants = localGrants[mod] || []
                   return (
-                    <tr key={mod} className="hover:bg-slate-50/70 transition">
-                      <td className="py-2.5 px-3 font-semibold text-slate-800 capitalize">
+                    <TableRow key={mod}>
+                      <TableCell className="font-medium text-xs capitalize">
                         {mod.replace('_', ' ')}
-                      </td>
+                      </TableCell>
                       {ACTIONS.map((act) => {
                         const hasGrant = currentModGrants.includes(act)
                         return (
-                          <td key={act} className="py-2.5 px-3 text-center">
-                            <input
-                              type="checkbox"
+                          <TableCell key={act} className="text-center">
+                            <Checkbox
                               checked={hasGrant}
                               disabled={selectedStaff?.role === 'admin' || isUpdating}
-                              onChange={() => handleTogglePermission(mod, act)}
-                              className="h-4 w-4 rounded border-slate-300 text-blue-600 cursor-pointer disabled:cursor-not-allowed"
+                              onCheckedChange={() => handleTogglePermission(mod, act)}
+                              aria-label={`${act} on ${mod}`}
                             />
-                          </td>
+                          </TableCell>
                         )
                       })}
-                    </tr>
+                    </TableRow>
                   )
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
-        </div>
+        </Card>
       ) : (
         /* Audit Trail Table */
         <div className="space-y-3">
           <div className="flex justify-end">
-            <button type="button" onClick={handleExportAuditCSV} className={btnSecondary}>
-              <Download className="h-4 w-4" />
-              Export Audit CSV
-            </button>
+            <Button variant="outline" size="sm" onClick={handleExportAuditCSV} className="h-8 gap-1.5 text-xs">
+              <Download className="h-3.5 w-3.5" />
+              Export audit CSV
+            </Button>
           </div>
 
-          <div className={tableWrap}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50/80 border-b border-slate-200">
-                  <tr>
-                    <th className={thClass}>Timestamp</th>
-                    <th className={thClass}>Operator</th>
-                    <th className={thClass}>Module</th>
-                    <th className={thClass}>Action</th>
-                    <th className={thClass}>Audit Summary</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredAudit.map((log) => (
-                    <tr key={log.id} className="hover:bg-slate-50/70 transition text-xs">
-                      <td className={tdClass}>
-                        <span className="font-mono text-slate-500 whitespace-nowrap">
-                          {new Date(log.at).toLocaleString()}
-                        </span>
-                      </td>
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Timestamp</TableHead>
+                  <TableHead className="text-xs">Operator</TableHead>
+                  <TableHead className="text-xs">Module</TableHead>
+                  <TableHead className="text-xs">Action</TableHead>
+                  <TableHead className="text-xs">Audit summary</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAudit.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="p-0">
+                      <EmptyState
+                        title="No audit entries found"
+                        description="Try adjusting your search criteria."
+                      />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredAudit.map((log) => (
+                    <TableRow key={log.id} className="text-xs">
+                      <TableCell className="font-mono text-muted-foreground whitespace-nowrap">
+                        {new Date(log.at).toLocaleString()}
+                      </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="font-semibold text-slate-900">{log.actor}</span>
-                      </td>
+                      <TableCell className="font-medium text-foreground">{log.actor}</TableCell>
 
-                      <td className={tdClass}>
-                        <span className="font-semibold text-blue-600 capitalize">{log.module}</span>
-                      </td>
+                      <TableCell className="capitalize text-foreground">{log.module}</TableCell>
 
-                      <td className={tdClass}>
-                        <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-700">
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px] font-mono uppercase">
                           {log.action}
-                        </span>
-                      </td>
+                        </Badge>
+                      </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="text-slate-700">{log.detail}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      <TableCell className="text-muted-foreground">{log.detail}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}

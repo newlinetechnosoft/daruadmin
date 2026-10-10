@@ -5,25 +5,11 @@ import {
   addLedgerFn,
 } from '#/server/operations/operations.functions'
 import { formatNPR } from '#/lib/money'
-import { PageHeader } from '#/components/admin/page-header'
-import { KpiCard } from '#/components/admin/kpi-card'
-import {
-  pageClass,
-  cardClass,
-  tableWrap,
-  thClass,
-  tdClass,
-  btnPrimary,
-  btnSecondary,
-  btnGhost,
-  inputClass,
-  selectClass,
-  labelClass,
-} from '#/components/admin/styles'
+import { PageHeader } from '#/components/shared/page-header'
+import { KpiCard } from '#/components/shared/kpi-card'
 import {
   Package,
   Search,
-  Filter,
   Download,
   AlertTriangle,
   Boxes,
@@ -31,9 +17,33 @@ import {
   Wine,
   ShoppingBag,
   ArrowUpRight,
-  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { Badge } from '#/components/ui/badge'
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '#/components/ui/native-select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
+import { EmptyState } from '#/components/shared/empty-state'
 
 export const Route = createFileRoute('/admin/inventory')({
   loader: async () => {
@@ -43,7 +53,7 @@ export const Route = createFileRoute('/admin/inventory')({
 })
 
 function AdminInventoryPage() {
-  const { ops, liquor, grocery } = Route.useLoaderData()
+  const { liquor, grocery } = Route.useLoaderData()
   const router = useRouter()
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -86,7 +96,7 @@ function AdminInventoryPage() {
             brand: l.brandName || 'Mezmani Spirits',
             category: l.categoryName || 'Liquor',
             sku: v.sku,
-            variantName: v.sizeVolume,
+            variantName: v.name || `${v.volumeMl}ml`,
             stock: v.stock ?? 25,
             price: v.price,
             lowStockThreshold: 20,
@@ -96,18 +106,22 @@ function AdminInventoryPage() {
     }
 
     for (const g of grocery) {
-      list.push({
-        id: g.id,
-        type: 'grocery',
-        name: g.name,
-        brand: g.brand || 'Local Merchant',
-        category: g.categoryName || 'Grocery',
-        sku: g.sku,
-        variantName: g.weightVolume || 'Standard',
-        stock: g.stock ?? 30,
-        price: g.price,
-        lowStockThreshold: 20,
-      })
+      if (g.variants && g.variants.length > 0) {
+        for (const v of g.variants) {
+          list.push({
+            id: `${g.id}-${v.id}`,
+            type: 'grocery',
+            name: g.name,
+            brand: 'Local Merchant',
+            category: g.categoryName || 'Grocery',
+            sku: v.sku,
+            variantName: v.name || `${v.quantity} ${v.unit}`,
+            stock: v.stock ?? 30,
+            price: v.price,
+            lowStockThreshold: 20,
+          })
+        }
+      }
     }
 
     return list
@@ -145,7 +159,6 @@ function AdminInventoryPage() {
       setIsSubmitting(true)
       const totalExpense = restockQty * costPerUnit
 
-      // Post COGS bill to General Ledger in Neon DB
       await addLedgerFn({
         data: {
           type: 'debit',
@@ -157,7 +170,7 @@ function AdminInventoryPage() {
       })
 
       toast.success(
-        `Restocked ${restockQty} units! COGS bill of ${formatNPR(totalExpense)} logged to Ledger.`
+        `Restocked ${restockQty} units. COGS bill of ${formatNPR(totalExpense)} logged to Ledger.`
       )
       setRestockItem(null)
       await router.invalidate()
@@ -186,16 +199,16 @@ function AdminInventoryPage() {
   }
 
   return (
-    <div className={pageClass}>
+    <div className="space-y-6">
       <PageHeader
         kicker="Commerce"
-        title="Inventory & Stock Tracking"
+        title="Inventory and stock tracking"
         description="Unified warehouse stock management across Liquor and Grocery catalogs with automated COGS ledger sync."
         actions={
-          <button type="button" onClick={handleExportCSV} className={btnSecondary}>
-            <Download className="h-4 w-4" />
-            Export Stock CSV
-          </button>
+          <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-8 gap-1.5 text-xs">
+            <Download className="h-3.5 w-3.5" />
+            Export stock CSV
+          </Button>
         }
       />
 
@@ -208,20 +221,20 @@ function AdminInventoryPage() {
           icon={Package}
         />
         <KpiCard
-          label="Total Units On Hand"
+          label="Total units on hand"
           value={totalUnitsOnHand}
           note="Combined warehouse count"
           icon={Boxes}
         />
         <KpiCard
-          label="Estimated Asset Valuation"
+          label="Asset valuation"
           value={formatNPR(totalInventoryValuation)}
           note="COGS inventory cost basis"
           icon={ArrowUpRight}
           tone="success"
         />
         <KpiCard
-          label="Low Stock Alerts"
+          label="Low stock alerts"
           value={lowStockCount}
           note="Variants at or below 20 units"
           icon={AlertTriangle}
@@ -230,206 +243,202 @@ function AdminInventoryPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className={`${cardClass} p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3`}>
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 md:flex-row md:items-center md:justify-between">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
             placeholder="Search by product name, SKU, brand..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`${inputClass} pl-9`}
+            className="h-8 pl-9 text-xs"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <select
+          <NativeSelect
             value={catalogFilter}
             onChange={(e) => setCatalogFilter(e.target.value as any)}
-            className={selectClass}
+            size="sm"
+            className="h-8 text-xs"
           >
-            <option value="all">All Catalogs</option>
-            <option value="liquor">Liquor Only</option>
-            <option value="grocery">Grocery Only</option>
-          </select>
+            <NativeSelectOption value="all">All catalogs</NativeSelectOption>
+            <NativeSelectOption value="liquor">Liquor only</NativeSelectOption>
+            <NativeSelectOption value="grocery">Grocery only</NativeSelectOption>
+          </NativeSelect>
 
-          <select
+          <NativeSelect
             value={stockFilter}
             onChange={(e) => setStockFilter(e.target.value as any)}
-            className={selectClass}
+            size="sm"
+            className="h-8 text-xs"
           >
-            <option value="all">All Stock Statuses</option>
-            <option value="low">Low Stock Alerts (≤20)</option>
-            <option value="out">Out of Stock (0)</option>
-          </select>
+            <NativeSelectOption value="all">All stock statuses</NativeSelectOption>
+            <NativeSelectOption value="low">Low stock alerts (≤20)</NativeSelectOption>
+            <NativeSelectOption value="out">Out of stock (0)</NativeSelectOption>
+          </NativeSelect>
         </div>
       </div>
 
       {/* Inventory Table */}
-      <div className={tableWrap}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50/80 border-b border-slate-200">
-              <tr>
-                <th className={thClass}>SKU & Variant</th>
-                <th className={thClass}>Product Details</th>
-                <th className={thClass}>Catalog</th>
-                <th className={thClass}>Retail Price</th>
-                <th className={thClass}>Units On Hand</th>
-                <th className={thClass}>Status</th>
-                <th className={`${thClass} text-right`}>Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredItems.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 text-sm">
-                    No inventory records match your filters.
-                  </td>
-                </tr>
-              ) : (
-                filteredItems.map((item) => {
-                  const isLow = item.stock <= item.lowStockThreshold
-                  return (
-                    <tr key={item.id} className="hover:bg-slate-50/70 transition">
-                      <td className={tdClass}>
-                        <span className="font-mono font-bold text-slate-900 block">{item.sku}</span>
-                        <span className="text-xs text-slate-500">{item.variantName}</span>
-                      </td>
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-xs">SKU and variant</TableHead>
+              <TableHead className="text-xs">Product details</TableHead>
+              <TableHead className="text-xs">Catalog</TableHead>
+              <TableHead className="text-xs">Retail price</TableHead>
+              <TableHead className="text-xs">Units on hand</TableHead>
+              <TableHead className="text-xs">Status</TableHead>
+              <TableHead className="text-right text-xs">Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredItems.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="p-0">
+                  <EmptyState
+                    title="No inventory records match"
+                    description="Try clearing filters or search terms."
+                  />
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredItems.map((item) => {
+                const isLow = item.stock <= item.lowStockThreshold
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <span className="font-mono text-xs font-semibold text-foreground block">{item.sku}</span>
+                      <span className="text-[11px] text-muted-foreground">{item.variantName}</span>
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <div className="font-semibold text-slate-900">{item.name}</div>
-                        <div className="text-xs text-slate-400">{item.brand} &bull; {item.category}</div>
-                      </td>
+                    <TableCell>
+                      <div className="font-medium text-xs text-foreground">{item.name}</div>
+                      <div className="text-[11px] text-muted-foreground">{item.brand} · {item.category}</div>
+                    </TableCell>
 
-                      <td className={tdClass}>
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-700">
-                          {item.type === 'liquor' ? (
-                            <Wine className="h-3 w-3 text-amber-700" />
-                          ) : (
-                            <ShoppingBag className="h-3 w-3 text-emerald-700" />
-                          )}
-                          {item.type}
-                        </span>
-                      </td>
-
-                      <td className={tdClass}>
-                        <span className="font-mono font-semibold text-slate-900">
-                          {formatNPR(item.price)}
-                        </span>
-                      </td>
-
-                      <td className={tdClass}>
-                        <span className={`font-mono font-bold ${isLow ? 'text-rose-600' : 'text-slate-900'}`}>
-                          {item.stock} units
-                        </span>
-                      </td>
-
-                      <td className={tdClass}>
-                        {isLow ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase px-2 py-0.5 rounded bg-rose-100 text-rose-800">
-                            <AlertTriangle className="h-3 w-3" />
-                            Low Stock
-                          </span>
+                    <TableCell>
+                      <Badge variant="secondary" className="gap-1 text-[11px] font-normal capitalize">
+                        {item.type === 'liquor' ? (
+                          <Wine className="h-3 w-3 text-muted-foreground" />
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                            Adequate
-                          </span>
+                          <ShoppingBag className="h-3 w-3 text-muted-foreground" />
                         )}
-                      </td>
+                        {item.type}
+                      </Badge>
+                    </TableCell>
 
-                      <td className={`${tdClass} text-right`}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setRestockItem(item)
-                            setCostPerUnit(Math.round(item.price * 0.65))
-                          }}
-                          className={btnSecondary}
-                          style={{ height: '32px', padding: '0 10px', fontSize: '12px' }}
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          Restock
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                    <TableCell>
+                      <span className="font-mono text-xs tabular-nums text-foreground">
+                        {formatNPR(item.price)}
+                      </span>
+                    </TableCell>
+
+                    <TableCell>
+                      <span className={`font-mono text-xs font-medium tabular-nums ${isLow ? 'text-destructive font-semibold' : 'text-foreground'}`}>
+                        {item.stock} units
+                      </span>
+                    </TableCell>
+
+                    <TableCell>
+                      {isLow ? (
+                        <Badge variant="destructive" className="gap-1 text-[10px] font-normal">
+                          <AlertTriangle className="h-3 w-3" /> Low stock
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground">
+                          Adequate
+                        </Badge>
+                      )}
+                    </TableCell>
+
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setRestockItem(item)
+                          setCostPerUnit(Math.round(item.price * 0.65))
+                        }}
+                        className="h-7 gap-1 px-2 text-xs"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Restock
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
+          </TableBody>
+        </Table>
       </div>
 
-      {/* Quick Restock Modal */}
-      {restockItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3 border-slate-200">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Restock Inventory</h3>
-                <p className="text-xs text-slate-500">{restockItem.name} ({restockItem.variantName})</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRestockItem(null)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      {/* Quick Restock Dialog */}
+      <Dialog open={Boolean(restockItem)} onOpenChange={(open) => !open && setRestockItem(null)}>
+        {restockItem && (
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-sm font-semibold">Restock inventory</DialogTitle>
+              <DialogDescription className="text-xs">
+                {restockItem.name} ({restockItem.variantName})
+              </DialogDescription>
+            </DialogHeader>
 
-            <form onSubmit={handleQuickRestock} className="space-y-4 text-xs">
-              <div>
-                <label className={labelClass}>Units to Add to Warehouse *</label>
-                <input
+            <form onSubmit={handleQuickRestock} className="space-y-4 pt-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Units to add to warehouse *</Label>
+                <Input
                   type="number"
                   min="1"
                   required
                   value={restockQty}
                   onChange={(e) => setRestockQty(Number(e.target.value))}
-                  className={inputClass}
+                  className="h-8 text-xs font-mono"
                 />
               </div>
 
-              <div>
-                <label className={labelClass}>Vendor Purchase Cost per Unit (NPR) *</label>
-                <input
+              <div className="space-y-1.5">
+                <Label className="text-xs">Vendor purchase cost per unit (NPR) *</Label>
+                <Input
                   type="number"
                   min="1"
                   required
                   value={costPerUnit}
                   onChange={(e) => setCostPerUnit(Number(e.target.value))}
-                  className={inputClass}
+                  className="h-8 text-xs font-mono"
                 />
-                <span className="text-[11px] text-slate-400 mt-1 block">
-                  Automatically logged as COGS purchase bill in the General Ledger
+                <span className="text-[11px] text-muted-foreground">
+                  Automatically logged as COGS purchase bill in the general ledger
                 </span>
               </div>
 
-              <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-xs flex justify-between items-center">
-                <span className="font-semibold text-blue-900">Total Purchase Expenditure:</span>
-                <span className="font-mono font-bold text-blue-700 text-sm">
+              <div className="flex items-center justify-between rounded-md bg-muted/40 p-3 text-xs">
+                <span className="text-muted-foreground">Total purchase expenditure:</span>
+                <span className="font-mono text-sm font-bold text-foreground">
                   {formatNPR(restockQty * costPerUnit)}
                 </span>
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
-                <button
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setRestockItem(null)}
-                  className={btnSecondary}
+                  className="h-8 text-xs"
                 >
                   Cancel
-                </button>
-                <button type="submit" disabled={isSubmitting} className={btnPrimary}>
-                  {isSubmitting ? 'Posting...' : 'Confirm Restock & Log COGS'}
-                </button>
-              </div>
+                </Button>
+                <Button type="submit" size="sm" disabled={isSubmitting} className="h-8 text-xs">
+                  {isSubmitting ? 'Posting...' : 'Confirm restock and log COGS'}
+                </Button>
+              </DialogFooter>
             </form>
-          </div>
-        </div>
-      )}
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   )
 }
