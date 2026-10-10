@@ -253,17 +253,25 @@ function AdminLayout() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background text-foreground antialiased">
         <Sidebar collapsible="icon" className="border-r border-border bg-sidebar">
-          <SidebarHeader className="border-b border-border/40 p-3">
+          <SidebarHeader className="border-b border-border/40">
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton size="lg" asChild>
-                  <Link to="/admin" className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary font-bold text-xs text-primary-foreground">
+                  <Link
+                    to="/admin"
+                    className="flex items-center gap-2.5"
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary font-bold text-xs text-primary-foreground">
                       M
                     </div>
-                    <div className="grid flex-1 text-left text-xs leading-tight">
-                      <span className="font-semibold text-foreground">Mezmani</span>
-                      <span className="text-muted-foreground text-[11px]">Admin console</span>
+
+                    <div className="grid min-w-0 flex-1 text-left text-xs leading-tight">
+                      <span className="font-semibold text-foreground">
+                        Mezmani
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        Admin console
+                      </span>
                     </div>
                   </Link>
                 </SidebarMenuButton>
@@ -274,7 +282,7 @@ function AdminLayout() {
           <SidebarContent className="gap-2 px-2 py-2">
             {NAV_GROUPS.map((group) => (
               <SidebarGroup key={group.label} className="p-0">
-                <SidebarGroupLabel className="px-2 text-[11px] font-medium text-muted-foreground/70 tracking-normal">
+                <SidebarGroupLabel className="px-2 text-[11px] font-medium tracking-normal text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
                   {group.label}
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
