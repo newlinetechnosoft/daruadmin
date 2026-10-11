@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
   createFileRoute,
   Outlet,
@@ -7,12 +7,14 @@ import {
   useRouterState,
   useNavigate,
 } from '@tanstack/react-router'
-import { checkAdminSessionFn } from '#/server/catalog/catalog.functions'
 import {
   getAdminChromeFn,
+  getMyAccessFn,
   globalSearchFn,
   markNotificationsFn,
 } from '#/server/operations/operations.functions'
+import { can } from '#/server/auth/permissions-shared'
+import type { ModuleKey } from '#/server/operations/types'
 import { authClient } from '#/lib/auth-client'
 import {
   LayoutDashboard,
@@ -92,17 +94,30 @@ import { ThemeToggle } from '#/components/shared/theme-toggle'
 
 export const Route = createFileRoute('/admin')({
   beforeLoad: async ({ location }) => {
-    const session = await checkAdminSessionFn()
-    if (!session.authenticated) {
+    const access = await getMyAccessFn()
+    if (!access.authenticated || !access.user) {
       throw redirect({
         to: '/login',
         search: { redirect: location.pathname },
       })
     }
-    if (!session.isAdmin) {
+    if (!access.user.isActive || access.user.banned) {
+      throw redirect({
+        to: '/login',
+        search: { redirect: location.pathname },
+      })
+    }
+    if (access.user.role === 'rider') {
+      throw redirect({ to: '/rider' })
+    }
+    if (access.user.role !== 'admin' && access.user.role !== 'manager') {
       throw redirect({ to: '/' })
     }
-    return { adminUser: session.user }
+    return {
+      user: access.user,
+      grants: access.grants,
+      adminUser: access.user,
+    }
   },
   loader: async () => {
     return getAdminChromeFn()
@@ -115,54 +130,55 @@ type NavItem = {
   to: string
   exact?: boolean
   icon: LucideIcon
+  module: ModuleKey
 }
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Overview',
-    items: [{ label: 'Dashboard', to: '/admin', exact: true, icon: LayoutDashboard }],
+    items: [{ label: 'Dashboard', to: '/admin', exact: true, icon: LayoutDashboard, module: 'dashboard' }],
   },
   {
     label: 'Catalog',
     items: [
-      { label: 'Liquor', to: '/admin/liquor', icon: Wine },
-      { label: 'Grocery', to: '/admin/grocery', icon: ShoppingBag },
-      { label: 'Categories', to: '/admin/taxonomy', icon: Tags },
+      { label: 'Liquor', to: '/admin/liquor', icon: Wine, module: 'products' },
+      { label: 'Grocery', to: '/admin/grocery', icon: ShoppingBag, module: 'products' },
+      { label: 'Categories', to: '/admin/taxonomy', icon: Tags, module: 'products' },
     ],
   },
   {
     label: 'Commerce',
     items: [
-      { label: 'Orders', to: '/admin/orders', icon: ClipboardList },
-      { label: 'Customers', to: '/admin/customers', icon: Users },
-      { label: 'Inventory', to: '/admin/inventory', icon: Package },
+      { label: 'Orders', to: '/admin/orders', icon: ClipboardList, module: 'orders' },
+      { label: 'Customers', to: '/admin/customers', icon: Users, module: 'customers' },
+      { label: 'Inventory', to: '/admin/inventory', icon: Package, module: 'products' },
     ],
   },
   {
     label: 'Operations',
     items: [
-      { label: 'Riders', to: '/admin/riders', icon: Bike },
-      { label: 'Staff', to: '/admin/staff', icon: Shield },
-      { label: 'Shipping', to: '/admin/shipping', icon: Truck },
+      { label: 'Riders', to: '/admin/riders', icon: Bike, module: 'riders' },
+      { label: 'Staff', to: '/admin/staff', icon: Shield, module: 'staff' },
+      { label: 'Shipping', to: '/admin/shipping', icon: Truck, module: 'shipping' },
     ],
   },
   {
     label: 'Finance',
     items: [
-      { label: 'Accounts', to: '/admin/accounts', icon: Wallet },
-      { label: 'Payments', to: '/admin/payments', icon: CreditCard },
+      { label: 'Accounts', to: '/admin/accounts', icon: Wallet, module: 'accounts' },
+      { label: 'Payments', to: '/admin/payments', icon: CreditCard, module: 'payments' },
     ],
   },
   {
     label: 'Growth',
     items: [
-      { label: 'Marketing', to: '/admin/marketing', icon: Megaphone },
-      { label: 'Reports', to: '/admin/reports', icon: BarChart3 },
+      { label: 'Marketing', to: '/admin/marketing', icon: Megaphone, module: 'marketing' },
+      { label: 'Reports', to: '/admin/reports', icon: BarChart3, module: 'reports' },
     ],
   },
   {
     label: 'System',
-    items: [{ label: 'Settings', to: '/admin/settings', icon: Settings }],
+    items: [{ label: 'Settings', to: '/admin/settings', icon: Settings, module: 'settings' }],
   },
 ]
 
@@ -177,7 +193,7 @@ function crumbLabel(path: string) {
 }
 
 function AdminLayout() {
-  const { adminUser } = Route.useRouteContext()
+  const { adminUser, grants } = Route.useRouteContext()
   const { unread, notifications } = Route.useLoaderData()
   const routerState = useRouterState()
   const navigate = useNavigate()
@@ -249,6 +265,13 @@ function AdminLayout() {
 
   const unreadCount = notificationsRead ? 0 : unread
 
+  const visibleNavGroups = useMemo(() => {
+    return NAV_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => can(grants, item.module, 'view')),
+    })).filter((group) => group.items.length > 0)
+  }, [grants])
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background text-foreground antialiased">
@@ -280,7 +303,7 @@ function AdminLayout() {
           </SidebarHeader>
 
           <SidebarContent className="gap-2 px-2 py-2">
-            {NAV_GROUPS.map((group) => (
+            {visibleNavGroups.map((group) => (
               <SidebarGroup key={group.label} className="p-0">
                 <SidebarGroupLabel className="px-2 text-[11px] font-medium tracking-normal text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
                   {group.label}
@@ -478,7 +501,7 @@ function AdminLayout() {
                 : 'No results found.'}
             </CommandEmpty>
 
-            {results?.products && results.products.length > 0 && (
+            {can(grants, 'products', 'view') && results?.products && results.products.length > 0 && (
               <CommandGroup heading="Products">
                 {results.products.map((p) => (
                   <CommandItem
@@ -495,7 +518,7 @@ function AdminLayout() {
               </CommandGroup>
             )}
 
-            {results?.orders && results.orders.length > 0 && (
+            {can(grants, 'orders', 'view') && results?.orders && results.orders.length > 0 && (
               <CommandGroup heading="Orders">
                 {results.orders.map((o) => (
                   <CommandItem
@@ -512,7 +535,7 @@ function AdminLayout() {
               </CommandGroup>
             )}
 
-            {results?.customers && results.customers.length > 0 && (
+            {can(grants, 'customers', 'view') && results?.customers && results.customers.length > 0 && (
               <CommandGroup heading="Customers">
                 {results.customers.map((c) => (
                   <CommandItem
@@ -529,7 +552,7 @@ function AdminLayout() {
               </CommandGroup>
             )}
 
-            {results?.riders && results.riders.length > 0 && (
+            {can(grants, 'riders', 'view') && results?.riders && results.riders.length > 0 && (
               <CommandGroup heading="Riders">
                 {results.riders.map((r) => (
                   <CommandItem

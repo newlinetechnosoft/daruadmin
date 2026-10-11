@@ -12,6 +12,7 @@ import {
   Search,
   ShoppingCart,
   Shield,
+  Bike,
 } from 'lucide-react'
 import { ThemeToggle } from '#/components/shared/theme-toggle'
 import { Button } from '#/components/ui/button'
@@ -97,6 +98,25 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
             <a href="/#about" className="hover:text-foreground transition-colors">
               About
             </a>
+            {(session?.user?.role === 'admin' || session?.user?.role === 'manager') && (
+              <Link
+                to="/admin"
+                className="hover:text-foreground transition-colors text-primary font-semibold"
+                activeProps={{ className: 'text-foreground font-semibold' }}
+              >
+                Admin
+              </Link>
+            )}
+            {session?.user?.role === 'rider' && (
+              <Link
+                to="/rider"
+                className="hover:text-foreground transition-colors text-primary font-semibold flex items-center gap-1"
+                activeProps={{ className: 'text-foreground font-semibold' }}
+              >
+                <Bike className="h-3.5 w-3.5" />
+                Rider Portal
+              </Link>
+            )}
           </nav>
         </div>
 
@@ -157,12 +177,23 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                   )}
                 </div>
                 <DropdownMenuSeparator />
-                {session.user.role === 'admin' && (
+                {(session.user.role === 'admin' || session.user.role === 'manager') && (
                   <>
                     <DropdownMenuItem asChild>
                       <Link to="/admin" className="cursor-pointer">
                         <Shield className="h-3.5 w-3.5 mr-2" />
                         Admin Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                {session.user.role === 'rider' && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link to="/rider" className="cursor-pointer">
+                        <Bike className="h-3.5 w-3.5 mr-2" />
+                        Rider Portal
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -258,7 +289,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                   >
                     About Us
                   </a>
-                  {session?.user.role === 'admin' && (
+                  {(session?.user.role === 'admin' || session?.user.role === 'manager') && (
                     <Link
                       to="/admin"
                       onClick={() => setMobileMenuOpen(false)}
@@ -266,6 +297,19 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                     >
                       <span>Admin Portal</span>
                       <Badge variant="outline" className="text-[10px]">OPS</Badge>
+                    </Link>
+                  )}
+                  {session?.user.role === 'rider' && (
+                    <Link
+                      to="/rider"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-primary font-semibold transition-colors py-1 flex items-center justify-between"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Bike className="h-3.5 w-3.5" />
+                        Rider Portal
+                      </span>
+                      <Badge variant="outline" className="text-[10px]">FLEET</Badge>
                     </Link>
                   )}
                 </nav>
