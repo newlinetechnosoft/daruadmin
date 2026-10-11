@@ -99,7 +99,7 @@ function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
+    <div className="storefront min-h-screen bg-background text-foreground flex flex-col font-sans">
       <Header />
 
       <main className="flex-1 flex items-center justify-center py-12 sm:py-16 px-4">

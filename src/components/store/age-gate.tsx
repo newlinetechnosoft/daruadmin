@@ -41,14 +41,14 @@ export function AgeGate() {
 
   if (isBlocked) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 p-6 text-center text-white">
-        <ShieldAlert className="mb-4 h-16 w-16 text-amber-500" />
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 p-6 text-center text-foreground">
+        <ShieldAlert className="mb-4 h-16 w-16 text-warning" />
         <h1 className="text-3xl font-bold tracking-tight">Access Restricted</h1>
-        <p className="mt-3 max-w-md text-zinc-400">
+        <p className="mt-3 max-w-md text-muted-foreground">
           You must be 18 years of age or older to enter Mezmani and view alcohol
           products in accordance with Nepal Liquor Regulations.
         </p>
-        <p className="mt-6 text-sm text-zinc-500">
+        <p className="mt-6 text-sm text-muted-foreground">
           Please revisit when you meet the legal drinking age. Drink
           responsibly.
         </p>
@@ -59,21 +59,21 @@ export function AgeGate() {
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent
-        className="border-zinc-800 bg-zinc-950 text-white sm:max-w-md"
+        className="border-border bg-card text-card-foreground sm:max-w-md"
         showCloseButton={false}
       >
         <DialogHeader className="flex flex-col items-center text-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20">
+          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20">
             <Wine className="h-7 w-7" />
           </div>
           <DialogTitle className="text-2xl font-bold tracking-tight">
             Age Verification
           </DialogTitle>
-          <DialogDescription className="mt-2 text-zinc-400">
+          <DialogDescription className="mt-2 text-muted-foreground">
             Welcome to{' '}
-            <span className="font-semibold text-amber-400">Mezmani</span>. You must
+            <span className="font-semibold text-primary">Mezmani</span>. You must
             be at least{' '}
-            <span className="font-semibold text-white">18 years of age</span> to
+            <span className="font-semibold text-foreground">18 years of age</span> to
             purchase alcohol and enter this site in Nepal.
           </DialogDescription>
         </DialogHeader>
@@ -81,7 +81,7 @@ export function AgeGate() {
         <div className="mt-6 flex flex-col gap-3">
           <Button
             size="lg"
-            className="w-full bg-amber-500 font-semibold text-zinc-950 hover:bg-amber-400"
+            className="w-full"
             onClick={handleConfirm}
           >
             I am 18 or older
@@ -89,14 +89,14 @@ export function AgeGate() {
           <Button
             variant="outline"
             size="lg"
-            className="w-full border-zinc-800 bg-transparent text-zinc-400 hover:bg-zinc-900 hover:text-white"
+            className="w-full"
             onClick={handleDecline}
           >
             I am under 18
           </Button>
         </div>
 
-        <p className="mt-2 text-center text-xs text-zinc-500">
+        <p className="mt-2 text-center text-xs text-muted-foreground">
           By entering, you confirm you are of legal drinking age and accept our
           terms.
         </p>

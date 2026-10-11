@@ -64,7 +64,7 @@ function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
+    <div className="storefront min-h-screen bg-background text-foreground flex flex-col font-sans">
       <Header />
 
       <main className="flex-1 flex items-center justify-center py-12 sm:py-16 px-4">
@@ -205,12 +205,12 @@ function LoginPage() {
           {/* Compliance & Trust Strip */}
           <div className="flex items-center justify-center gap-4 text-[11px] text-muted-foreground">
             <div className="flex items-center gap-1.5">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <ShieldCheck className="h-3.5 w-3.5 text-success" />
               <span>18+ Verified Platform</span>
             </div>
             <span>•</span>
             <div className="flex items-center gap-1.5">
-              <Zap className="h-3.5 w-3.5 text-amber-500" />
+              <Zap className="h-3.5 w-3.5 text-warning" />
               <span>40-Minute Valley Delivery</span>
             </div>
           </div>

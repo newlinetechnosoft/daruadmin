@@ -337,7 +337,7 @@ function DrinksPage() {
   )
 
   return (
-    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
+    <div className="storefront flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
       <Header />
 
       <main className="flex-1">

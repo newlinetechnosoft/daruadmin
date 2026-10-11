@@ -59,7 +59,7 @@ const REVIEWS = [
  * one tile softly dims the others.
  */
 const drinkTile =
-  'group relative isolate block h-full min-w-0 overflow-hidden rounded-2xl ring-1 ring-black/10 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl hover:ring-black/40 group-hover/bento:[&:not(:hover)]:opacity-60 focus-visible:-translate-y-1 focus-visible:ring-2 focus-visible:ring-black focus-visible:outline-none'
+  'group relative isolate block h-full min-w-0 overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl focus-visible:-translate-y-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
 
 /** Vertical label scale, tuned per tile footprint */
 const LABEL_SIZE = {
@@ -75,7 +75,7 @@ function DrinkTileBody({
   src,
   alt,
   tone,
-  chip = 'bg-black text-white',
+  chip = 'bg-primary text-primary-foreground',
   size = 'sm',
 }: {
   /** label split into lines, e.g. ['Domestic', 'Spirits'] */
@@ -95,7 +95,7 @@ function DrinkTileBody({
         src={src}
         alt={alt}
         loading="lazy"
-        className="absolute inset-y-0 right-0 h-full w-[calc(100%-2.5rem)] object-contain p-2 drop-shadow-[0_16px_22px_rgba(0,0,0,0.28)] transition-transform duration-500 ease-out  group-hover:-rotate-2 sm:w-[calc(100%-3rem)] sm:p-3"
+        className="absolute inset-y-0 right-0 h-full w-[calc(100%-2.5rem)] object-contain p-2 drop-shadow-md transition-transform duration-500 ease-out  group-hover:-rotate-2 sm:w-[calc(100%-3rem)] sm:p-3"
       />
 
       {/* Vertical label, reads bottom-to-top, anchored bottom-left */}
@@ -178,17 +178,17 @@ export function HomePage() {
 
   const wrap = 'mx-auto w-full max-w-7xl px-5 sm:px-8'
   const eyebrow =
-    'text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500'
+    'text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground'
 
   return (
-    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
+    <div className="storefront flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
       <Header />
 
       <main className="flex-1">
         {/* HERO WITH 5 AUTO-SCROLLING BACKGROUNDS IN 5-SECOND LOOP */}
         {/* HERO SECTION MATCHING USER REFERENCE DESIGN */}
         <section
-          className="relative min-h-[82vh] sm:min-h-[88vh] lg:min-h-[90vh] flex flex-col justify-between overflow-hidden bg-[#16082b] select-none"
+          className="relative min-h-[82vh] sm:min-h-[88vh] lg:min-h-[90vh] flex flex-col justify-between overflow-hidden bg-background select-none"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
           aria-label="Hero Showcase"
@@ -218,26 +218,26 @@ export function HomePage() {
           {/* HERO FOREGROUND CONTENT */}
           <div className="mx-auto max-w-5xl px-4 sm:px-8 w-full flex-1 flex flex-col items-center justify-center text-center relative z-10 py-16 sm:py-24">
             {/* TOP PILL BADGE */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-4 sm:px-5 py-1.5 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-md shadow-lg mb-6">
-              <Sparkles size={15} className="text-[#ff5b00]" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-4 sm:px-5 py-1.5 text-xs font-bold uppercase tracking-widest text-card-foreground backdrop-blur-md shadow-lg mb-6">
+              <Sparkles size={15} className="text-primary" />
               <span>NEPAL&apos;S #1 FASTEST DELIVERY PLATFORM</span>
             </div>
 
             {/* BOLD HEADLINE */}
-            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.25rem] font-black tracking-tight uppercase leading-[1.05] drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
-              <span className="text-[#ff5b00] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.25rem] font-black tracking-tight uppercase leading-[1.05] text-foreground">
+              <span className="text-primary">
                 FOOD &amp;{' '}
               </span>
-              <span className="text-[#00e5ff] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+              <span>
                 DRINKS{' '}
               </span>
-              <span className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+              <span>
                 DELIVERY
               </span>
             </h1>
 
             {/* SUBTITLE */}
-            <p className="mt-4 text-xs sm:text-sm md:text-base font-bold tracking-[0.2em] text-white uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
+            <p className="mt-4 text-xs sm:text-sm md:text-base font-bold tracking-[0.2em] text-muted-foreground uppercase">
               EASY, FAST &amp; CONVENIENT
             </p>
 
@@ -246,19 +246,19 @@ export function HomePage() {
               onSubmit={handleHeroSearch}
               className="mt-8 sm:mt-10 w-full max-w-2xl"
             >
-              <div className="relative flex items-center rounded-full border border-white/40 bg-white/95 p-1.5 sm:p-2 shadow-[0_8px_30px_rgb(0,0,0,0.4)] backdrop-blur-md transition-all focus-within:border-[#ff5b00] focus-within:ring-4 focus-within:ring-orange-500/30">
-                <SearchIcon className="ml-3 sm:ml-4 h-5 w-5 sm:h-6 sm:w-6 text-slate-400 shrink-0" />
+              <div className="relative flex items-center rounded-full border border-border bg-card/95 p-1.5 sm:p-2 shadow-lg backdrop-blur-md transition-all focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20">
+                <SearchIcon className="ml-3 sm:ml-4 h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground shrink-0" />
                 <input
                   id="hero-search-input"
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search for food or drinks (beer, whisky, momo, pizza, snacks...)"
-                  className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm md:text-base font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                  className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm md:text-base font-semibold text-foreground outline-none placeholder:text-muted-foreground"
                 />
                 <button
                   type="submit"
-                  className="flex items-center gap-2 rounded-full bg-[#ff5b00] hover:bg-[#e05000] px-5 sm:px-7 py-2.5 sm:py-3 text-xs sm:text-sm font-black text-white shadow-lg transition-transform hover:scale-105 shrink-0 cursor-pointer"
+                  className="flex items-center gap-2 rounded-full bg-primary hover:bg-primary/90 px-5 sm:px-7 py-2.5 sm:py-3 text-xs sm:text-sm font-black text-primary-foreground shadow-md transition-transform hover:scale-105 shrink-0 cursor-pointer"
                 >
                   <span>SHOP</span>
                   <ArrowRight size={16} />
@@ -267,12 +267,12 @@ export function HomePage() {
             </form>
 
             {/* SPEED FOOTER */}
-            <p className="mt-5 sm:mt-6 text-xs sm:text-sm font-bold tracking-[0.18em] text-cyan-300 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
+            <p className="mt-5 sm:mt-6 text-xs sm:text-sm font-bold tracking-[0.18em] text-muted-foreground uppercase">
               ALCOHOL, BEVERAGES &amp; FOOD DELIVERY WITHIN 45 MINS
             </p>
 
             {/* 5-SLIDE LOOP INDICATORS */}
-            <div className="mt-8 flex items-center gap-2.5 rounded-full bg-black/50 px-3.5 py-1.5 backdrop-blur-md shadow-md">
+            <div className="mt-8 flex items-center gap-2.5 rounded-full bg-card/70 border border-border px-3.5 py-1.5 backdrop-blur-md shadow-md">
               {HERO_SLIDES.map((_, idx) => (
                 <button
                   key={idx}
@@ -280,8 +280,8 @@ export function HomePage() {
                   onClick={() => setCurrentSlide(idx)}
                   className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
                     idx === currentSlide
-                      ? 'w-8 bg-[#ff5b00] shadow-md shadow-orange-500/50'
-                      : 'w-2.5 bg-white/70 hover:bg-white'
+                      ? 'w-8 bg-primary shadow-sm'
+                      : 'w-2.5 bg-muted-foreground/40 hover:bg-muted-foreground'
                   }`}
                   aria-label={`Go to slide ${idx + 1}`}
                 />
@@ -290,18 +290,18 @@ export function HomePage() {
           </div>
 
           {/* BOTTOM TRUST BADGES */}
-          <div className="relative z-20 border-t border-white/15 bg-black/60 backdrop-blur-md py-3.5 text-xs font-semibold text-slate-200">
+          <div className="relative z-20 border-t border-border bg-card/80 backdrop-blur-md py-3.5 text-xs font-semibold text-card-foreground">
             <div className="mx-auto flex max-w-7xl items-center justify-around px-4">
               <div className="flex items-center gap-2">
-                <ShieldCheck size={16} className="text-[#ff5b00]" />
+                <ShieldCheck size={16} className="text-primary" />
                 <span>100% Genuine Quality</span>
               </div>
               <div className="flex items-center gap-2">
-                <Clock size={16} className="text-cyan-400" />
+                <Clock size={16} className="text-info" />
                 <span>45 Min Express Delivery</span>
               </div>
               <div className="flex items-center gap-2">
-                <Award size={16} className="text-[#ff5b00]" />
+                <Award size={16} className="text-primary" />
                 <span>24/7 Late-Night Delivery</span>
               </div>
             </div>
@@ -310,7 +310,7 @@ export function HomePage() {
 
         {/* SHOP BY DRINKS */}
         <section
-          className="h-[90%] scroll-mt-24 bg-white py-16 sm:py-24"
+          className="h-[90%] scroll-mt-24 bg-card py-16 sm:py-24"
           id="drinks"
         >
           <div className={wrap}>
@@ -323,7 +323,7 @@ export function HomePage() {
               </div>
               <Link
                 to="/drinks"
-                className="shrink-0 border-b border-black pb-0.5 text-sm font-semibold transition-opacity hover:opacity-60"
+                className="shrink-0 border-b border-foreground pb-0.5 text-sm font-semibold transition-opacity hover:opacity-60 text-foreground"
               >
                 View all →
               </Link>
@@ -333,13 +333,13 @@ export function HomePage() {
               <Link
                 to="/drinks"
                 search={{ category: 'whiskey' }}
-                className={`${drinkTile} col-span-2 lg:col-span-4 lg:col-start-1 lg:row-start-1 bg-[#f3e9e4]`}
+                className={`${drinkTile} col-span-2 lg:col-span-4 lg:col-start-1 lg:row-start-1 bg-secondary/40`}
               >
                 <DrinkTileBody
                   lines={['Domestic', 'Spirits']}
                   src="/images/spirits.png"
                   alt="Domestic Spirits"
-                  tone="text-[#a1887f]"
+                  tone="text-foreground"
                   size="md"
                 />
               </Link>
@@ -347,13 +347,13 @@ export function HomePage() {
               <Link
                 to="/drinks"
                 search={{ category: 'vodka' }}
-                className={`${drinkTile} lg:col-span-2 lg:col-start-1 lg:row-start-2 bg-[#eceecf]`}
+                className={`${drinkTile} lg:col-span-2 lg:col-start-1 lg:row-start-2 bg-secondary/40`}
               >
                 <DrinkTileBody
                   lines={['Vodka']}
                   src="/images/vodka.png"
                   alt="Vodka"
-                  tone="text-[#9a9a2e]"
+                  tone="text-foreground"
                   size="sm"
                 />
               </Link>
@@ -361,13 +361,13 @@ export function HomePage() {
               <Link
                 to="/drinks"
                 search={{ category: 'whiskey' }}
-                className={`${drinkTile} lg:col-span-2 lg:col-start-3 lg:row-start-2 bg-[#fddcc2]`}
+                className={`${drinkTile} lg:col-span-2 lg:col-start-3 lg:row-start-2 bg-secondary/40`}
               >
                 <DrinkTileBody
                   lines={['Whiskey']}
                   src="/images/whiskey.png"
                   alt="Whiskey"
-                  tone="text-[#d1621f]"
+                  tone="text-foreground"
                   size="sm"
                 />
               </Link>
@@ -375,14 +375,14 @@ export function HomePage() {
               <Link
                 to="/drinks"
                 search={{ category: 'beer-cider' }}
-                className={`${drinkTile} col-span-2 row-span-2 lg:col-span-4 lg:col-start-5 lg:row-start-1 bg-[#151515]`}
+                className={`${drinkTile} col-span-2 row-span-2 lg:col-span-4 lg:col-start-5 lg:row-start-1 bg-secondary/60`}
               >
                 <DrinkTileBody
                   lines={['Beer']}
                   src="/images/beer.png"
                   alt="Beer"
-                  tone="text-white/90"
-                  chip="bg-white text-black"
+                  tone="text-foreground"
+                  chip="bg-primary text-primary-foreground"
                   size="lg"
                 />
               </Link>
@@ -390,13 +390,13 @@ export function HomePage() {
               <Link
                 to="/grocery"
                 search={{ category: 'party-essentials' }}
-                className={`${drinkTile} lg:col-span-4 lg:col-start-9 lg:row-start-1 bg-[#fcd34d]`}
+                className={`${drinkTile} lg:col-span-4 lg:col-start-9 lg:row-start-1 bg-secondary/40`}
               >
                 <DrinkTileBody
                   lines={['Tobacco']}
                   src="/images/tobacco.png"
                   alt="Tobacco"
-                  tone="text-[#6f5e12]"
+                  tone="text-foreground"
                   size="md"
                 />
               </Link>
@@ -404,13 +404,13 @@ export function HomePage() {
               <Link
                 to="/drinks"
                 search={{ category: 'wine' }}
-                className={`${drinkTile} lg:col-span-4 lg:col-start-9 lg:row-start-2 bg-[#c3e58f]`}
+                className={`${drinkTile} lg:col-span-4 lg:col-start-9 lg:row-start-2 bg-secondary/40`}
               >
                 <DrinkTileBody
                   lines={['Wine']}
                   src="/images/wine.png"
                   alt="Wine"
-                  tone="text-[#527f2c]"
+                  tone="text-foreground"
                   size="md"
                 />
               </Link>
@@ -420,7 +420,7 @@ export function HomePage() {
 
         {/* FOOD */}
         <section
-          className="scroll-mt-24 border-t border-black/10 py-16 sm:py-24"
+          className="scroll-mt-24 border-t border-border py-16 sm:py-24"
           id="food"
         >
           <div
@@ -433,29 +433,29 @@ export function HomePage() {
               </h2>
               <Link
                 to="/grocery"
-                className="mt-8 inline-block border-b border-black pb-0.5 text-sm font-semibold transition-opacity hover:opacity-60"
+                className="mt-8 inline-block border-b border-foreground pb-0.5 text-sm font-semibold transition-opacity hover:opacity-60 text-foreground"
               >
                 View all →
               </Link>
             </div>
 
-            <ul className="border-t border-black">
+            <ul className="border-t border-border">
               {FOOD_ITEMS.map((item, i) => (
-                <li key={item} className="border-b border-black/15">
+                <li key={item} className="border-b border-border">
                   <Link
                     to="/grocery"
                     search={{ category: 'late-night-bites' }}
-                    className="group flex items-center justify-between gap-4 py-5 transition-colors hover:bg-neutral-50 sm:py-6"
+                    className="group flex items-center justify-between gap-4 py-5 transition-colors hover:bg-accent sm:py-6"
                   >
                     <span className="flex items-baseline gap-5 sm:gap-8">
-                      <span className="w-6 text-xs font-medium tabular-nums text-neutral-400">
+                      <span className="w-6 text-xs font-medium tabular-nums text-muted-foreground">
                         {String(i + 1).padStart(2, '0')}
                       </span>
-                      <span className="text-2xl font-bold uppercase tracking-tight transition-transform group-hover:translate-x-2 sm:text-4xl">
+                      <span className="text-2xl font-bold uppercase tracking-tight transition-transform group-hover:translate-x-2 sm:text-4xl text-foreground">
                         {item}
                       </span>
                     </span>
-                    <span className="text-xl transition-transform group-hover:translate-x-1">
+                    <span className="text-xl transition-transform group-hover:translate-x-1 text-foreground">
                       →
                     </span>
                   </Link>
@@ -466,13 +466,13 @@ export function HomePage() {
         </section>
 
         {/* APP */}
-        <section className="bg-[#f3f2ee]">
+        <section className="bg-secondary/30 border-y border-border">
           <div
             className={`${wrap} grid items-center gap-14 py-16 sm:py-24 lg:grid-cols-2`}
           >
             <div className="flex justify-center lg:justify-start">
-              <div className="w-60 rounded-[2.5rem] bg-black p-2.5 shadow-2xl sm:w-72">
-                <div className="relative flex aspect-[9/17] flex-col justify-between overflow-hidden rounded-[2rem] bg-[#c3e58f] p-6">
+              <div className="w-60 rounded-[2.5rem] bg-foreground text-background p-2.5 shadow-2xl sm:w-72">
+                <div className="relative flex aspect-[9/17] flex-col justify-between overflow-hidden rounded-[2rem] bg-card border border-border p-6 text-card-foreground">
                   <div>
                     <span className="text-xs font-black uppercase tracking-tighter">
                       <img
@@ -505,9 +505,9 @@ export function HomePage() {
               <h2 className="mt-3 text-4xl font-black uppercase leading-[0.92] tracking-tighter sm:text-6xl">
                 Your drinks.
                 <br />
-                <span className="text-neutral-400">Wherever you go.</span>
+                <span className="text-muted-foreground">Wherever you go.</span>
               </h2>
-              <p className="mt-6 max-w-md text-base leading-relaxed text-neutral-600">
+              <p className="mt-6 max-w-md text-base leading-relaxed text-muted-foreground">
                 Get your liquor, food and party supplies delivered with just a
                 few taps.
               </p>
@@ -521,11 +521,11 @@ export function HomePage() {
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="Enter your number (98XXXXXXXX)"
-                  className="h-14 min-w-0 flex-1 border-2 border-black bg-white px-4 text-base outline-none placeholder:text-neutral-400 focus:shadow-[4px_4px_0_0_#000]"
+                  className="h-14 min-w-0 flex-1 border border-input bg-card px-4 text-base text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring rounded-md"
                 />
                 <button
                   type="submit"
-                  className="h-14 bg-black px-8 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-neutral-800 cursor-pointer"
+                  className="h-14 bg-primary px-8 text-sm font-semibold uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90 cursor-pointer rounded-md"
                 >
                   Get App
                 </button>
@@ -534,14 +534,14 @@ export function HomePage() {
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   type="button"
-                  className="h-11 border border-black px-5 text-sm font-semibold transition-colors hover:bg-black hover:text-white cursor-pointer"
+                  className="h-11 border border-border bg-card px-5 text-sm font-semibold text-foreground transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-md"
                   onClick={() => toast.success('iOS App download link sent!')}
                 >
                   App Store
                 </button>
                 <button
                   type="button"
-                  className="h-11 border border-black px-5 text-sm font-semibold transition-colors hover:bg-black hover:text-white cursor-pointer"
+                  className="h-11 border border-border bg-card px-5 text-sm font-semibold text-foreground transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-md"
                   onClick={() =>
                     toast.success('Google Play download link sent!')
                   }
@@ -557,14 +557,14 @@ export function HomePage() {
         <section className="py-14 sm:py-20">
           <div className={`${wrap} grid gap-10 sm:grid-cols-3 sm:gap-8`}>
             {FEATURES.map((f, i) => (
-              <div key={f.title} className="border-t-2 border-black pt-5">
-                <span className="text-xs font-medium tabular-nums text-neutral-400">
+              <div key={f.title} className="border-t-2 border-border pt-5">
+                <span className="text-xs font-medium tabular-nums text-muted-foreground">
                   {String(i + 1).padStart(2, '0')}
                 </span>
-                <h3 className="mt-3 text-xl font-bold tracking-tight">
+                <h3 className="mt-3 text-xl font-bold tracking-tight text-foreground">
                   {f.title}
                 </h3>
-                <p className="mt-2 text-sm text-neutral-600">{f.body}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{f.body}</p>
               </div>
             ))}
           </div>
@@ -572,16 +572,16 @@ export function HomePage() {
 
         {/* REVIEWS */}
         <section
-          className="scroll-mt-24 border-t border-black/10 bg-[#f3f2ee] py-16 sm:py-24"
+          className="scroll-mt-24 border-t border-border bg-secondary/30 py-16 sm:py-24"
           id="reviews"
         >
           <div className={wrap}>
             <div className="mb-10 max-w-2xl sm:mb-14">
               <p className={eyebrow}>Customer love</p>
-              <h2 className="mt-3 text-4xl font-black uppercase leading-none tracking-tighter sm:text-6xl">
+              <h2 className="mt-3 text-4xl font-black uppercase leading-none tracking-tighter sm:text-6xl text-foreground">
                 What customers say
               </h2>
-              <p className="mt-4 text-neutral-600">
+              <p className="mt-4 text-muted-foreground">
                 Here&apos;s what our satisfied customers have to say.
               </p>
             </div>
@@ -590,27 +590,27 @@ export function HomePage() {
               {REVIEWS.map((r) => (
                 <article
                   key={r.name}
-                  className="flex flex-col justify-between bg-white p-7 sm:p-8"
+                  className="flex flex-col justify-between bg-card border border-border p-7 sm:p-8 rounded-xl shadow-xs text-card-foreground"
                 >
                   <div>
                     <div
-                      className="text-sm tracking-[0.2em]"
+                      className="text-sm tracking-[0.2em] text-warning font-bold"
                       aria-label="5 out of 5 stars"
                     >
                       ★★★★★
                     </div>
-                    <blockquote className="mt-6 text-xl font-semibold leading-snug tracking-tight">
+                    <blockquote className="mt-6 text-xl font-semibold leading-snug tracking-tight text-foreground">
                       “{r.quote}”
                     </blockquote>
                   </div>
 
                   <div className="mt-10 flex items-center gap-3">
-                    <div className="grid h-10 w-10 place-items-center rounded-full bg-black text-sm font-bold text-white">
+                    <div className="grid h-10 w-10 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
                       {r.name.charAt(0)}
                     </div>
                     <div className="leading-tight">
-                      <strong className="block text-sm">{r.name}</strong>
-                      <small className="text-xs text-neutral-500">
+                      <strong className="block text-sm text-foreground">{r.name}</strong>
+                      <small className="text-xs text-muted-foreground">
                         Verified customer
                       </small>
                     </div>
@@ -623,13 +623,13 @@ export function HomePage() {
       </main>
 
       {/* FOOTER */}
-      <footer className="scroll-mt-24 bg-black text-white" id="about">
+      <footer className="scroll-mt-24 bg-sidebar text-sidebar-foreground border-t border-sidebar-border" id="about">
         <div className={`${wrap} py-16 sm:py-20`}>
           <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
             <div>
               <Link
                 to="/"
-                className="text-3xl font-black uppercase tracking-tighter"
+                className="text-3xl font-black uppercase tracking-tighter text-sidebar-foreground"
               >
                 <img
                   src="/mezmani_logo_bg.svg"
@@ -638,7 +638,7 @@ export function HomePage() {
                   loading="lazy"
                 />
               </Link>
-              <p className="mt-4 max-w-xs text-sm leading-relaxed text-neutral-400">
+              <p className="mt-4 max-w-xs text-sm leading-relaxed text-sidebar-foreground/70">
                 Food &amp; drinks delivery.
                 <br />
                 Let the good times roll.
@@ -646,53 +646,53 @@ export function HomePage() {
             </div>
 
             <div className="flex flex-col gap-3 text-sm">
-              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
+              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/50">
                 Extras
               </h4>
-              <Link to="/drinks" className="text-neutral-300 hover:text-white">
+              <Link to="/drinks" className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
                 Cocktail Recipes
               </Link>
-              <Link to="/drinks" className="text-neutral-300 hover:text-white">
+              <Link to="/drinks" className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
                 Give a Gift
               </Link>
-              <a href="#reviews" className="text-neutral-300 hover:text-white">
+              <a href="#reviews" className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
                 Reviews
               </a>
-              <Link to="/drinks" className="text-neutral-300 hover:text-white">
+              <Link to="/drinks" className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
                 Share &amp; Save 20%
               </Link>
             </div>
 
             <div className="flex flex-col gap-3 text-sm">
-              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
+              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/50">
                 About
               </h4>
-              <a href="#about" className="text-neutral-300 hover:text-white">
+              <a href="#about" className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
                 About Us
               </a>
-              <a href="#about" className="text-neutral-300 hover:text-white">
+              <a href="#about" className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
                 Find Us
               </a>
               <a
                 href="tel:+9779802088800"
-                className="text-neutral-300 hover:text-white"
+                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
               >
                 Contact (+977-9802088800)
               </a>
-              <a href="#about" className="text-neutral-300 hover:text-white">
+              <a href="#about" className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
                 Help &amp; Support
               </a>
             </div>
 
             <div className="flex flex-col gap-3 text-sm">
-              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
+              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/50">
                 Connect
               </h4>
               <a
                 href="https://facebook.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-neutral-300 hover:text-white"
+                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
               >
                 Facebook
               </a>
@@ -700,7 +700,7 @@ export function HomePage() {
                 href="https://instagram.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-neutral-300 hover:text-white"
+                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
               >
                 Instagram
               </a>
@@ -708,17 +708,17 @@ export function HomePage() {
                 href="https://tiktok.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-neutral-300 hover:text-white"
+                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
               >
                 TikTok
               </a>
             </div>
           </div>
 
-          <div className="mt-16 flex flex-col gap-5 border-t border-white/15 pt-6 text-xs text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-16 flex flex-col gap-5 border-t border-sidebar-border pt-6 text-xs text-sidebar-foreground/60 sm:flex-row sm:items-center sm:justify-between">
             <p>© 2026 Mezmani Pvt. Ltd. All Rights Reserved.</p>
 
-            <div className="flex flex-wrap gap-x-5 gap-y-2 font-medium text-neutral-300">
+            <div className="flex flex-wrap gap-x-5 gap-y-2 font-medium text-sidebar-foreground/80">
               <span>eSewa</span>
               <span>Khalti</span>
               <span>fonepay</span>
@@ -726,7 +726,7 @@ export function HomePage() {
             </div>
           </div>
 
-          <p className="mt-6 text-xs text-neutral-500">
+          <p className="mt-6 text-xs text-sidebar-foreground/60">
             Please drink responsibly. 18+ only.
           </p>
         </div>
