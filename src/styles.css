@@ -74,7 +74,7 @@
   --sidebar-ring: #d99a32;
 }
 
-/* Customer-facing pages: cream background, same tokens otherwise */
+/* Customer-facing pages: cream background in light mode, dark mode preserves midnight */
 .storefront {
   --background: #f7f5ef;
   --border: #e5e5e0;
@@ -82,6 +82,24 @@
   --muted: #efece3;
   --accent: #ece8dc;
   --muted-foreground: #6b7280;
+}
+
+.dark .storefront,
+.dark.storefront {
+  --background: #111315;
+  --foreground: #eceae4;
+  --card: #1c2023;
+  --card-foreground: #eceae4;
+  --popover: #1c2023;
+  --popover-foreground: #eceae4;
+  --secondary: #23282c;
+  --secondary-foreground: #eceae4;
+  --muted: #23282c;
+  --muted-foreground: #9aa0a8;
+  --accent: #262b30;
+  --accent-foreground: #eceae4;
+  --border: #2a2f34;
+  --input: #32383e;
 }
 
 .dark {

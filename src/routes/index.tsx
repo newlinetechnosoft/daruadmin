@@ -215,29 +215,32 @@ export function HomePage() {
             ))}
           </div>
 
+          {/* DARK VIGNETTE OVERLAY FOR CRISP TEXT CONTRAST OVER PHOTOS */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/45 to-black/80 z-[1] pointer-events-none" />
+
           {/* HERO FOREGROUND CONTENT */}
           <div className="mx-auto max-w-5xl px-4 sm:px-8 w-full flex-1 flex flex-col items-center justify-center text-center relative z-10 py-16 sm:py-24">
             {/* TOP PILL BADGE */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-4 sm:px-5 py-1.5 text-xs font-bold uppercase tracking-widest text-card-foreground backdrop-blur-md shadow-lg mb-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-4 sm:px-5 py-1.5 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-md shadow-lg mb-6">
               <Sparkles size={15} className="text-primary" />
               <span>NEPAL&apos;S #1 FASTEST DELIVERY PLATFORM</span>
             </div>
 
             {/* BOLD HEADLINE */}
-            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.25rem] font-black tracking-tight uppercase leading-[1.05] text-foreground">
-              <span className="text-primary">
+            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.25rem] font-black tracking-tight uppercase leading-[1.05] drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
+              <span className="text-primary drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                 FOOD &amp;{' '}
               </span>
-              <span>
+              <span className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                 DRINKS{' '}
               </span>
-              <span>
+              <span className="text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                 DELIVERY
               </span>
             </h1>
 
             {/* SUBTITLE */}
-            <p className="mt-4 text-xs sm:text-sm md:text-base font-bold tracking-[0.2em] text-muted-foreground uppercase">
+            <p className="mt-4 text-xs sm:text-sm md:text-base font-bold tracking-[0.2em] text-white/90 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
               EASY, FAST &amp; CONVENIENT
             </p>
 
@@ -246,15 +249,15 @@ export function HomePage() {
               onSubmit={handleHeroSearch}
               className="mt-8 sm:mt-10 w-full max-w-2xl"
             >
-              <div className="relative flex items-center rounded-full border border-border bg-card/95 p-1.5 sm:p-2 shadow-lg backdrop-blur-md transition-all focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20">
-                <SearchIcon className="ml-3 sm:ml-4 h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground shrink-0" />
+              <div className="relative flex items-center rounded-full border border-white/30 bg-black/70 p-1.5 sm:p-2 shadow-[0_8px_30px_rgb(0,0,0,0.5)] backdrop-blur-md transition-all focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/30">
+                <SearchIcon className="ml-3 sm:ml-4 h-5 w-5 sm:h-6 sm:w-6 text-white/70 shrink-0" />
                 <input
                   id="hero-search-input"
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search for food or drinks (beer, whisky, momo, pizza, snacks...)"
-                  className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm md:text-base font-semibold text-foreground outline-none placeholder:text-muted-foreground"
+                  className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm md:text-base font-semibold text-white outline-none placeholder:text-white/60"
                 />
                 <button
                   type="submit"
@@ -267,12 +270,12 @@ export function HomePage() {
             </form>
 
             {/* SPEED FOOTER */}
-            <p className="mt-5 sm:mt-6 text-xs sm:text-sm font-bold tracking-[0.18em] text-muted-foreground uppercase">
+            <p className="mt-5 sm:mt-6 text-xs sm:text-sm font-bold tracking-[0.18em] text-amber-300 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
               ALCOHOL, BEVERAGES &amp; FOOD DELIVERY WITHIN 45 MINS
             </p>
 
             {/* 5-SLIDE LOOP INDICATORS */}
-            <div className="mt-8 flex items-center gap-2.5 rounded-full bg-card/70 border border-border px-3.5 py-1.5 backdrop-blur-md shadow-md">
+            <div className="mt-8 flex items-center gap-2.5 rounded-full bg-black/60 border border-white/20 px-3.5 py-1.5 backdrop-blur-md shadow-md">
               {HERO_SLIDES.map((_, idx) => (
                 <button
                   key={idx}
@@ -280,8 +283,8 @@ export function HomePage() {
                   onClick={() => setCurrentSlide(idx)}
                   className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
                     idx === currentSlide
-                      ? 'w-8 bg-primary shadow-sm'
-                      : 'w-2.5 bg-muted-foreground/40 hover:bg-muted-foreground'
+                      ? 'w-8 bg-primary shadow-md shadow-primary/50'
+                      : 'w-2.5 bg-white/70 hover:bg-white'
                   }`}
                   aria-label={`Go to slide ${idx + 1}`}
                 />
@@ -290,14 +293,14 @@ export function HomePage() {
           </div>
 
           {/* BOTTOM TRUST BADGES */}
-          <div className="relative z-20 border-t border-border bg-card/80 backdrop-blur-md py-3.5 text-xs font-semibold text-card-foreground">
+          <div className="relative z-20 border-t border-white/15 bg-black/75 backdrop-blur-md py-3.5 text-xs font-semibold text-white/90">
             <div className="mx-auto flex max-w-7xl items-center justify-around px-4">
               <div className="flex items-center gap-2">
                 <ShieldCheck size={16} className="text-primary" />
                 <span>100% Genuine Quality</span>
               </div>
               <div className="flex items-center gap-2">
-                <Clock size={16} className="text-info" />
+                <Clock size={16} className="text-cyan-400" />
                 <span>45 Min Express Delivery</span>
               </div>
               <div className="flex items-center gap-2">
