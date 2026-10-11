@@ -13,6 +13,7 @@ const STATUS_MAP: Record<string, Tone> = {
   approved: 'success',
   available: 'success',
   published: 'success',
+  completed: 'success',
 
   // Warning
   pending: 'warning',
@@ -30,6 +31,8 @@ const STATUS_MAP: Record<string, Tone> = {
 
   // Info / In-progress
   confirmed: 'info',
+  preparing: 'info',
+  processing: 'info',
   packing: 'info',
   assigned: 'info',
   out_for_delivery: 'info',
@@ -45,14 +48,15 @@ const STATUS_MAP: Record<string, Tone> = {
   manager: 'neutral',
   rider: 'neutral',
   customer: 'neutral',
+  unknown: 'neutral',
 }
 
 const DOT_COLORS: Record<Tone, string> = {
-  success: 'bg-emerald-500 dark:bg-emerald-400',
-  warning: 'bg-amber-500 dark:bg-amber-400',
-  destructive: 'bg-red-500 dark:bg-red-400',
-  info: 'bg-blue-500 dark:bg-blue-400',
-  neutral: 'bg-neutral-400 dark:bg-neutral-500',
+  success: 'bg-success',
+  warning: 'bg-warning',
+  destructive: 'bg-destructive',
+  info: 'bg-info',
+  neutral: 'bg-muted-foreground',
 }
 
 export function formatStatusLabel(val: string): string {

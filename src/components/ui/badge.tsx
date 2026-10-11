@@ -5,7 +5,7 @@ import { cn } from '#/lib/utils'
 import { Slot } from 'radix-ui'
 
 const badgeVariants = cva(
-  'inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3',
+  'inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 [&>svg]:pointer-events-none [&>svg]:size-3',
   {
     variants: {
       variant: {
@@ -13,13 +13,13 @@ const badgeVariants = cva(
         secondary:
           'bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90',
         destructive:
-          'bg-destructive text-white focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40 [a&]:hover:bg-destructive/90',
+          'bg-destructive/10 text-destructive border border-destructive/20 focus-visible:ring-destructive/20 [a&]:hover:bg-destructive/20',
         success:
-          'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 [a&]:hover:bg-emerald-500/25',
+          'bg-success/10 text-success border border-success/20 [a&]:hover:bg-success/20',
         warning:
-          'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20 [a&]:hover:bg-amber-500/25',
+          'bg-warning/10 text-warning border border-warning/20 [a&]:hover:bg-warning/20',
         info:
-          'bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/20 [a&]:hover:bg-blue-500/25',
+          'bg-info/10 text-info border border-info/20 [a&]:hover:bg-info/20',
         outline:
           'border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
         ghost: '[a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
