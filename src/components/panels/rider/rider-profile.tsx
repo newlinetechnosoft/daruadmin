@@ -73,11 +73,11 @@ export function RiderProfile({ rider }: RiderProfileProps) {
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <h3 className="text-base font-semibold text-foreground">{rider.name}</h3>
                 <div className="flex items-center justify-center sm:justify-start gap-1.5">
-                  <Badge variant={rider.available ? 'default' : 'secondary'} className="text-[10px]">
+                  <Badge variant={rider.available ? 'success' : 'secondary'} className="text-[10px]">
                     {rider.status.toUpperCase()}
                   </Badge>
                   {rider.verified && (
-                    <Badge variant="outline" className="text-[10px] text-emerald-500 border-emerald-500/30 gap-1">
+                    <Badge variant="success" className="text-[10px] gap-1">
                       <ShieldCheck className="h-3 w-3" />
                       Verified
                     </Badge>
@@ -125,7 +125,7 @@ export function RiderProfile({ rider }: RiderProfileProps) {
           <div className="py-2.5 flex justify-between items-center">
             <span className="text-muted-foreground">Customer Rating</span>
             <span className="font-medium text-foreground flex items-center gap-1">
-              <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+              <Star className="h-3.5 w-3.5 text-warning fill-warning" />
               {rider.rating.toFixed(1)} / 5.0
             </span>
           </div>
