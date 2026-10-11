@@ -14,10 +14,12 @@ import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as DrinksRouteImport } from './routes/drinks'
 import { Route as GroceryRouteImport } from './routes/grocery'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RiderRouteRouteImport } from './routes/rider/route'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAccountsRouteImport } from './routes/admin/accounts'
 import { Route as AdminCustomersRouteImport } from './routes/admin/customers'
+import { Route as AdminForbiddenRouteImport } from './routes/admin/forbidden'
 import { Route as AdminGroceryRouteImport } from './routes/admin/grocery'
 import { Route as AdminInventoryRouteImport } from './routes/admin/inventory'
 import { Route as AdminLiquorRouteImport } from './routes/admin/liquor'
@@ -31,6 +33,10 @@ import { Route as AdminShippingRouteImport } from './routes/admin/shipping'
 import { Route as AdminStaffRouteImport } from './routes/admin/staff'
 import { Route as AdminTaxonomyRouteImport } from './routes/admin/taxonomy'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as RiderIndexRouteImport } from './routes/rider/index'
+import { Route as RiderDeliveriesRouteImport } from './routes/rider/deliveries'
+import { Route as RiderEarningsRouteImport } from './routes/rider/earnings'
+import { Route as RiderProfileRouteImport } from './routes/rider/profile'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -58,6 +64,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RiderRouteRoute = RiderRouteRouteImport.update({
+  id: '/rider',
+  path: '/rider',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -76,6 +87,11 @@ const AdminAccountsRoute = AdminAccountsRouteImport.update({
 const AdminCustomersRoute = AdminCustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminForbiddenRoute = AdminForbiddenRouteImport.update({
+  id: '/forbidden',
+  path: '/forbidden',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminGroceryRoute = AdminGroceryRouteImport.update({
@@ -143,6 +159,26 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const RiderIndexRoute = RiderIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => RiderRouteRoute,
+} as any)
+const RiderDeliveriesRoute = RiderDeliveriesRouteImport.update({
+  id: '/deliveries',
+  path: '/deliveries',
+  getParentRoute: () => RiderRouteRoute,
+} as any)
+const RiderEarningsRoute = RiderEarningsRouteImport.update({
+  id: '/earnings',
+  path: '/earnings',
+  getParentRoute: () => RiderRouteRoute,
+} as any)
+const RiderProfileRoute = RiderProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => RiderRouteRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -152,12 +188,14 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
+  '/rider': typeof RiderRouteRouteWithChildren
   '/drinks': typeof DrinksRoute
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/forbidden': typeof AdminForbiddenRoute
   '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/liquor': typeof AdminLiquorRoute
@@ -171,7 +209,11 @@ export interface FileRoutesByFullPath {
   '/admin/staff': typeof AdminStaffRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
+  '/rider/deliveries': typeof RiderDeliveriesRoute
+  '/rider/earnings': typeof RiderEarningsRoute
+  '/rider/profile': typeof RiderProfileRoute
   '/admin/': typeof AdminIndexRoute
+  '/rider/': typeof RiderIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -182,6 +224,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/forbidden': typeof AdminForbiddenRoute
   '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/liquor': typeof AdminLiquorRoute
@@ -195,19 +238,25 @@ export interface FileRoutesByTo {
   '/admin/staff': typeof AdminStaffRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
+  '/rider/deliveries': typeof RiderDeliveriesRoute
+  '/rider/earnings': typeof RiderEarningsRoute
+  '/rider/profile': typeof RiderProfileRoute
   '/admin': typeof AdminIndexRoute
+  '/rider': typeof RiderIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
+  '/rider': typeof RiderRouteRouteWithChildren
   '/drinks': typeof DrinksRoute
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/forbidden': typeof AdminForbiddenRoute
   '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/liquor': typeof AdminLiquorRoute
@@ -221,7 +270,11 @@ export interface FileRoutesById {
   '/admin/staff': typeof AdminStaffRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
+  '/rider/deliveries': typeof RiderDeliveriesRoute
+  '/rider/earnings': typeof RiderEarningsRoute
+  '/rider/profile': typeof RiderProfileRoute
   '/admin/': typeof AdminIndexRoute
+  '/rider/': typeof RiderIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
@@ -229,12 +282,14 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/rider'
     | '/drinks'
     | '/grocery'
     | '/login'
     | '/signup'
     | '/admin/accounts'
     | '/admin/customers'
+    | '/admin/forbidden'
     | '/admin/grocery'
     | '/admin/inventory'
     | '/admin/liquor'
@@ -248,7 +303,11 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/admin/taxonomy'
     | '/admin/users'
+    | '/rider/deliveries'
+    | '/rider/earnings'
+    | '/rider/profile'
     | '/admin/'
+    | '/rider/'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -259,6 +318,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin/accounts'
     | '/admin/customers'
+    | '/admin/forbidden'
     | '/admin/grocery'
     | '/admin/inventory'
     | '/admin/liquor'
@@ -272,18 +332,24 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/admin/taxonomy'
     | '/admin/users'
+    | '/rider/deliveries'
+    | '/rider/earnings'
+    | '/rider/profile'
     | '/admin'
+    | '/rider'
     | '/api/auth/$'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/rider'
     | '/drinks'
     | '/grocery'
     | '/login'
     | '/signup'
     | '/admin/accounts'
     | '/admin/customers'
+    | '/admin/forbidden'
     | '/admin/grocery'
     | '/admin/inventory'
     | '/admin/liquor'
@@ -297,13 +363,18 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/admin/taxonomy'
     | '/admin/users'
+    | '/rider/deliveries'
+    | '/rider/earnings'
+    | '/rider/profile'
     | '/admin/'
+    | '/rider/'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
+  RiderRouteRoute: typeof RiderRouteRouteWithChildren
   DrinksRoute: typeof DrinksRoute
   GroceryRoute: typeof GroceryRoute
   LoginRoute: typeof LoginRoute
@@ -348,6 +419,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/rider': {
+      id: '/rider'
+      path: '/rider'
+      fullPath: '/rider'
+      preLoaderRoute: typeof RiderRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -374,6 +452,13 @@ declare module '@tanstack/react-router' {
       path: '/customers'
       fullPath: '/admin/customers'
       preLoaderRoute: typeof AdminCustomersRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/forbidden': {
+      id: '/admin/forbidden'
+      path: '/forbidden'
+      fullPath: '/admin/forbidden'
+      preLoaderRoute: typeof AdminForbiddenRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/grocery': {
@@ -467,6 +552,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/rider/': {
+      id: '/rider/'
+      path: '/'
+      fullPath: '/rider/'
+      preLoaderRoute: typeof RiderIndexRouteImport
+      parentRoute: typeof RiderRouteRoute
+    }
+    '/rider/deliveries': {
+      id: '/rider/deliveries'
+      path: '/deliveries'
+      fullPath: '/rider/deliveries'
+      preLoaderRoute: typeof RiderDeliveriesRouteImport
+      parentRoute: typeof RiderRouteRoute
+    }
+    '/rider/earnings': {
+      id: '/rider/earnings'
+      path: '/earnings'
+      fullPath: '/rider/earnings'
+      preLoaderRoute: typeof RiderEarningsRouteImport
+      parentRoute: typeof RiderRouteRoute
+    }
+    '/rider/profile': {
+      id: '/rider/profile'
+      path: '/profile'
+      fullPath: '/rider/profile'
+      preLoaderRoute: typeof RiderProfileRouteImport
+      parentRoute: typeof RiderRouteRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -480,6 +593,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteRouteChildren {
   AdminAccountsRoute: typeof AdminAccountsRoute
   AdminCustomersRoute: typeof AdminCustomersRoute
+  AdminForbiddenRoute: typeof AdminForbiddenRoute
   AdminGroceryRoute: typeof AdminGroceryRoute
   AdminInventoryRoute: typeof AdminInventoryRoute
   AdminLiquorRoute: typeof AdminLiquorRoute
@@ -499,6 +613,7 @@ interface AdminRouteRouteChildren {
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAccountsRoute: AdminAccountsRoute,
   AdminCustomersRoute: AdminCustomersRoute,
+  AdminForbiddenRoute: AdminForbiddenRoute,
   AdminGroceryRoute: AdminGroceryRoute,
   AdminInventoryRoute: AdminInventoryRoute,
   AdminLiquorRoute: AdminLiquorRoute,
@@ -519,9 +634,28 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
   AdminRouteRouteChildren,
 )
 
+interface RiderRouteRouteChildren {
+  RiderDeliveriesRoute: typeof RiderDeliveriesRoute
+  RiderEarningsRoute: typeof RiderEarningsRoute
+  RiderProfileRoute: typeof RiderProfileRoute
+  RiderIndexRoute: typeof RiderIndexRoute
+}
+
+const RiderRouteRouteChildren: RiderRouteRouteChildren = {
+  RiderDeliveriesRoute: RiderDeliveriesRoute,
+  RiderEarningsRoute: RiderEarningsRoute,
+  RiderProfileRoute: RiderProfileRoute,
+  RiderIndexRoute: RiderIndexRoute,
+}
+
+const RiderRouteRouteWithChildren = RiderRouteRoute._addFileChildren(
+  RiderRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRouteRoute: AdminRouteRouteWithChildren,
+  RiderRouteRoute: RiderRouteRouteWithChildren,
   DrinksRoute: DrinksRoute,
   GroceryRoute: GroceryRoute,
   LoginRoute: LoginRoute,

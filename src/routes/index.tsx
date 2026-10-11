@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { getFrontpageDataFn } from '#/server/catalog/catalog.functions'
-import { useCart } from '#/lib/cart-context'
+import { Header } from '#/components/store/header'
 import { toast } from 'sonner'
 import { Sparkles, ArrowRight, ShieldCheck, Clock, Award } from 'lucide-react'
 
@@ -141,7 +141,6 @@ function SearchIcon({ className = 'h-5 w-5' }: { className?: string }) {
 
 export function HomePage() {
   const navigate = useNavigate()
-  const { itemCount, setIsOpen } = useCart()
   const [searchQuery, setSearchQuery] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -182,76 +181,10 @@ export function HomePage() {
     'text-[11px] font-semibold uppercase tracking-[0.22em] text-neutral-500'
 
   return (
-    <div className="min-h-screen bg-white text-[#101010] antialiased">
-      {/* HEADER */}
-      <header className="sticky top-0 z-40 border-b border-black/10 bg-white/90 backdrop-blur">
-        <div className={`${wrap} flex h-16 items-center justify-between gap-6`}>
-          <Link
-            to="/"
-            className="text-xl font-black uppercase tracking-tighter sm:text-2xl"
-          >
-            {/* Mezmani */}
-            <img
-              src="/mezmani_logo.png"
-              alt="LOGO"
-              width="180"
-              height="180"
-              loading="lazy"
-              className="transition-all duration-300 hover:scale-110"
-            />
-          </Link>
+    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
+      <Header />
 
-          <nav className="hidden items-center gap-9 text-sm font-medium md:flex">
-            <Link to="/drinks" className="hover:underline underline-offset-8">
-              Drinks
-            </Link>
-            <Link to="/grocery" className="hover:underline underline-offset-8">
-              Food
-            </Link>
-            <a href="#reviews" className="hover:underline underline-offset-8">
-              Reviews
-            </a>
-            <a href="#about" className="hover:underline underline-offset-8">
-              About
-            </a>
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label="Search"
-              className="grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-neutral-100 cursor-pointer"
-              onClick={() => {
-                const el = document.getElementById('hero-search-input')
-                el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                el?.focus()
-              }}
-            >
-              <SearchIcon />
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-10 items-center gap-2 rounded-full bg-black px-5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 cursor-pointer"
-              onClick={() => setIsOpen(true)}
-            >
-              Cart
-              <span className="grid h-5 min-w-5 place-items-center rounded-full bg-white px-1 text-[11px] font-bold text-black">
-                {itemCount}
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* mobile nav */}
-        <nav className="flex items-center gap-6 overflow-x-auto border-t border-black/5 px-5 py-2.5 text-sm font-medium md:hidden">
-          <Link to="/drinks">Drinks</Link>
-          <Link to="/grocery">Food</Link>
-          <a href="#reviews">Reviews</a>
-          <a href="#about">About</a>
-        </nav>
-      </header>
-
-      <main>
+      <main className="flex-1">
         {/* HERO WITH 5 AUTO-SCROLLING BACKGROUNDS IN 5-SECOND LOOP */}
         {/* HERO SECTION MATCHING USER REFERENCE DESIGN */}
         <section
