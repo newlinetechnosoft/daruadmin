@@ -305,7 +305,7 @@ export function PaymentsPanel() {
                   <CardFooter className="flex items-center justify-between border-t border-border/50 pt-3">
                     <div>
                       {ping?.latency ? (
-                        <span className="text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                        <span className="text-[11px] font-mono font-medium text-success">
                           {ping.latency}ms OK
                         </span>
                       ) : (

@@ -460,7 +460,7 @@ export function LiquorPanel() {
                     >
                       {p.isActive ? (
                         <>
-                          <CheckCircle2 className="h-3 w-3 text-emerald-500" /> Active
+                          <CheckCircle2 className="h-3 w-3 text-success" /> Active
                         </>
                       ) : (
                         <>

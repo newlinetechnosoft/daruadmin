@@ -382,12 +382,12 @@ export function MarketingPanel() {
                       alt={banner.title}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-4 text-white">
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent flex flex-col justify-end p-4 text-foreground">
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-primary text-primary-foreground w-fit mb-1">
                         Placement: {banner.placement}
                       </span>
-                      <h4 className="text-sm font-semibold text-white">{banner.title}</h4>
-                      <p className="text-xs text-white/80 font-mono">Link: {banner.href}</p>
+                      <h4 className="text-sm font-semibold text-foreground">{banner.title}</h4>
+                      <p className="text-xs text-muted-foreground font-mono">Link: {banner.href}</p>
                     </div>
                   </div>
 
@@ -431,7 +431,7 @@ export function MarketingPanel() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <div className="flex items-center text-amber-500 font-bold">
+                          <div className="flex items-center text-warning font-bold">
                             {'★'.repeat(rev.rating)}
                             <span className="text-muted-foreground/30">{'★'.repeat(5 - rev.rating)}</span>
                           </div>
@@ -459,7 +459,7 @@ export function MarketingPanel() {
                             className="h-7 text-xs gap-1"
                             onClick={() => handleUpdateReview(rev.id, 'published')}
                           >
-                            <Check className="h-3.5 w-3.5 text-emerald-600" />
+                            <Check className="h-3.5 w-3.5 text-success" />
                             Approve
                           </Button>
                         )}

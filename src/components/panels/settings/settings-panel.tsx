@@ -167,7 +167,7 @@ export function SettingsPanel() {
             >
               {isSaving ? (
                 <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                   Saving...
                 </>
               ) : (
@@ -545,7 +545,7 @@ export function SettingsPanel() {
                     </div>
                     <div className="flex items-center justify-between font-semibold text-foreground pt-1">
                       <span>Net Payable Total</span>
-                      <span className="text-emerald-600 dark:text-emerald-400">Calculated</span>
+                      <span className="text-success">Calculated</span>
                     </div>
                   </div>
                 </CardContent>
@@ -619,12 +619,12 @@ export function SettingsPanel() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-800 dark:text-emerald-300">
+                  <div className="rounded-lg border border-success/20 bg-success/10 p-3 text-xs text-success">
                     <div className="flex items-center gap-1.5 font-semibold">
                       <CheckCircle2 className="h-4 w-4" />
                       Excise License Valid
                     </div>
-                    <p className="mt-1 text-[11px] text-emerald-700 dark:text-emerald-400">
+                    <p className="mt-1 text-[11px] text-success">
                       Compliant with Nepal Excise Act and Tobacco & Alcohol Control Regulations.
                     </p>
                   </div>
@@ -854,8 +854,8 @@ export function SettingsPanel() {
                 </div>
                 <div className="flex items-center justify-between rounded-lg border border-border p-2.5">
                   <span className="text-muted-foreground">Connection Status</span>
-                  <span className="inline-flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="inline-flex items-center gap-1.5 font-medium text-success">
+                    <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
                     Live & Healthy (Auto-Sync)
                   </span>
                 </div>

@@ -401,12 +401,12 @@ export function RidersPanel() {
                       className="h-6 p-0 hover:bg-transparent"
                     >
                       {rider.verified ? (
-                        <Badge variant="outline" className="gap-1 text-[10px] font-normal text-emerald-600 dark:text-emerald-400">
+                        <Badge variant="success" className="gap-1 text-[10px] font-normal">
                           <ShieldCheck className="h-3 w-3" />
                           Verified
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-[10px] font-normal">
+                        <Badge variant="warning" className="text-[10px] font-normal">
                           Pending
                         </Badge>
                       )}
@@ -415,7 +415,7 @@ export function RidersPanel() {
 
                   <TableCell>
                     <Badge
-                      variant={rider.status === 'available' ? 'default' : 'secondary'}
+                      variant={rider.status === 'available' ? 'success' : 'secondary'}
                       className="text-[10px] font-normal capitalize"
                     >
                       {rider.status}
@@ -424,7 +424,7 @@ export function RidersPanel() {
 
                   <TableCell>
                     <div className="flex items-center gap-1 font-mono text-xs text-foreground">
-                      <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+                      <Star className="h-3 w-3 fill-warning text-warning" />
                       <span>{rider.rating.toFixed(1)}</span>
                     </div>
                     <span className="text-[11px] text-muted-foreground">
@@ -435,7 +435,7 @@ export function RidersPanel() {
                   <TableCell>
                     <span
                       className={`font-mono text-xs font-medium block tabular-nums ${
-                        rider.cashOnHand > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'
+                        rider.cashOnHand > 0 ? 'text-warning' : 'text-foreground'
                       }`}
                     >
                       {formatNPR(rider.cashOnHand)}
