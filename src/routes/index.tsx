@@ -23,12 +23,10 @@ const FOOD_ITEMS = [
 ]
 
 const HERO_SLIDES = [
-  // '/images/butwal-night.webp',
-  '/images/butwal_night_view.png',
-  '/images/drinks-bg.jpg',
-  'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=1600&auto=format&fit=crop',
-  '/images/bg_beer_butwal.png',
-  '/images/bg_bike.png',
+  '/images/butwal_night_view.webp',
+  '/images/beer-bg.webp',
+  '/images/pizza-bg.webp',
+  '/images/bg_bike.webp',
 ]
 
 const FEATURES = [
@@ -340,7 +338,7 @@ export function HomePage() {
               >
                 <DrinkTileBody
                   lines={['Domestic', 'Spirits']}
-                  src="/images/spirits.png"
+                  src="/images/spirits.webp"
                   alt="Domestic Spirits"
                   tone="text-foreground"
                   size="md"
@@ -354,7 +352,7 @@ export function HomePage() {
               >
                 <DrinkTileBody
                   lines={['Vodka']}
-                  src="/images/vodka.png"
+                  src="/images/vodka.webp"
                   alt="Vodka"
                   tone="text-foreground"
                   size="sm"
@@ -368,7 +366,7 @@ export function HomePage() {
               >
                 <DrinkTileBody
                   lines={['Whiskey']}
-                  src="/images/whiskey.png"
+                  src="/images/whiskey.webp"
                   alt="Whiskey"
                   tone="text-foreground"
                   size="sm"
@@ -382,7 +380,7 @@ export function HomePage() {
               >
                 <DrinkTileBody
                   lines={['Beer']}
-                  src="/images/beer.png"
+                  src="/images/beer.webp"
                   alt="Beer"
                   tone="text-foreground"
                   chip="bg-primary text-primary-foreground"
@@ -397,7 +395,7 @@ export function HomePage() {
               >
                 <DrinkTileBody
                   lines={['Tobacco']}
-                  src="/images/tobacco.png"
+                  src="/images/tobacco.webp"
                   alt="Tobacco"
                   tone="text-foreground"
                   size="md"
@@ -411,7 +409,7 @@ export function HomePage() {
               >
                 <DrinkTileBody
                   lines={['Wine']}
-                  src="/images/wine.png"
+                  src="/images/wine.webp"
                   alt="Wine"
                   tone="text-foreground"
                   size="md"
@@ -479,7 +477,7 @@ export function HomePage() {
                   <div>
                     <span className="text-xs font-black uppercase tracking-tighter">
                       <img
-                        src="/mezmani_logo.png"
+                        src="/mezmani_logo.webp"
                         alt="LOGO"
                         width="180"
                         height="180"
@@ -494,7 +492,7 @@ export function HomePage() {
                     </strong>
                   </div>
                   <img
-                    src="/images/wine.png"
+                    src="/images/wine.webp"
                     alt=""
                     aria-hidden="true"
                     className="mx-auto h-[55%] w-full object-contain"
