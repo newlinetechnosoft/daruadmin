@@ -76,6 +76,9 @@ export interface Order {
   customerPhone: string
   address: string
   city: string
+  landmark?: string | null
+  lat?: number | null
+  lng?: number | null
   status: OrderStatus
   paymentMethod: PaymentMethod
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded' | 'cod_pending'
@@ -88,6 +91,7 @@ export interface Order {
   trackingCode: string
   notes: string
   couponCode: string | null
+  idempotencyKey?: string | null
   items: OrderItem[]
   events: OrderEvent[]
   createdAt: string

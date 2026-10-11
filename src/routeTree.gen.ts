@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
+import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as DrinksRouteImport } from './routes/drinks'
+import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as GroceryRouteImport } from './routes/grocery'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RiderRouteRouteImport } from './routes/rider/route'
@@ -33,11 +35,14 @@ import { Route as AdminShippingRouteImport } from './routes/admin/shipping'
 import { Route as AdminStaffRouteImport } from './routes/admin/staff'
 import { Route as AdminTaxonomyRouteImport } from './routes/admin/taxonomy'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as OrderConfirmationOrderIdRouteImport } from './routes/order-confirmation.$orderId'
 import { Route as RiderIndexRouteImport } from './routes/rider/index'
 import { Route as RiderDeliveriesRouteImport } from './routes/rider/deliveries'
 import { Route as RiderEarningsRouteImport } from './routes/rider/earnings'
 import { Route as RiderProfileRouteImport } from './routes/rider/profile'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as CheckoutPaymentEsewaFailureRouteImport } from './routes/checkout.payment.esewa.failure'
+import { Route as CheckoutPaymentEsewaSuccessRouteImport } from './routes/checkout.payment.esewa.success'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -49,9 +54,19 @@ const AdminRouteRoute = AdminRouteRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckoutRoute = CheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DrinksRoute = DrinksRouteImport.update({
   id: '/drinks',
   path: '/drinks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FavoritesRoute = FavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GroceryRoute = GroceryRouteImport.update({
@@ -159,6 +174,12 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const OrderConfirmationOrderIdRoute =
+  OrderConfirmationOrderIdRouteImport.update({
+    id: '/order-confirmation/$orderId',
+    path: '/order-confirmation/$orderId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const RiderIndexRoute = RiderIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -184,12 +205,26 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckoutPaymentEsewaFailureRoute =
+  CheckoutPaymentEsewaFailureRouteImport.update({
+    id: '/payment/esewa/failure',
+    path: '/payment/esewa/failure',
+    getParentRoute: () => CheckoutRoute,
+  } as any)
+const CheckoutPaymentEsewaSuccessRoute =
+  CheckoutPaymentEsewaSuccessRouteImport.update({
+    id: '/payment/esewa/success',
+    path: '/payment/esewa/success',
+    getParentRoute: () => CheckoutRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
   '/rider': typeof RiderRouteRouteWithChildren
+  '/checkout': typeof CheckoutRouteWithChildren
   '/drinks': typeof DrinksRoute
+  '/favorites': typeof FavoritesRoute
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
@@ -209,16 +244,21 @@ export interface FileRoutesByFullPath {
   '/admin/staff': typeof AdminStaffRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
+  '/order-confirmation/$orderId': typeof OrderConfirmationOrderIdRoute
   '/rider/deliveries': typeof RiderDeliveriesRoute
   '/rider/earnings': typeof RiderEarningsRoute
   '/rider/profile': typeof RiderProfileRoute
   '/admin/': typeof AdminIndexRoute
   '/rider/': typeof RiderIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
+  '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/checkout': typeof CheckoutRouteWithChildren
   '/drinks': typeof DrinksRoute
+  '/favorites': typeof FavoritesRoute
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
@@ -238,19 +278,24 @@ export interface FileRoutesByTo {
   '/admin/staff': typeof AdminStaffRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
+  '/order-confirmation/$orderId': typeof OrderConfirmationOrderIdRoute
   '/rider/deliveries': typeof RiderDeliveriesRoute
   '/rider/earnings': typeof RiderEarningsRoute
   '/rider/profile': typeof RiderProfileRoute
   '/admin': typeof AdminIndexRoute
   '/rider': typeof RiderIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
+  '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
   '/rider': typeof RiderRouteRouteWithChildren
+  '/checkout': typeof CheckoutRouteWithChildren
   '/drinks': typeof DrinksRoute
+  '/favorites': typeof FavoritesRoute
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
@@ -270,12 +315,15 @@ export interface FileRoutesById {
   '/admin/staff': typeof AdminStaffRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
+  '/order-confirmation/$orderId': typeof OrderConfirmationOrderIdRoute
   '/rider/deliveries': typeof RiderDeliveriesRoute
   '/rider/earnings': typeof RiderEarningsRoute
   '/rider/profile': typeof RiderProfileRoute
   '/admin/': typeof AdminIndexRoute
   '/rider/': typeof RiderIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
+  '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -283,7 +331,9 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/rider'
+    | '/checkout'
     | '/drinks'
+    | '/favorites'
     | '/grocery'
     | '/login'
     | '/signup'
@@ -303,16 +353,21 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/admin/taxonomy'
     | '/admin/users'
+    | '/order-confirmation/$orderId'
     | '/rider/deliveries'
     | '/rider/earnings'
     | '/rider/profile'
     | '/admin/'
     | '/rider/'
     | '/api/auth/$'
+    | '/checkout/payment/esewa/failure'
+    | '/checkout/payment/esewa/success'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/checkout'
     | '/drinks'
+    | '/favorites'
     | '/grocery'
     | '/login'
     | '/signup'
@@ -332,18 +387,23 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/admin/taxonomy'
     | '/admin/users'
+    | '/order-confirmation/$orderId'
     | '/rider/deliveries'
     | '/rider/earnings'
     | '/rider/profile'
     | '/admin'
     | '/rider'
     | '/api/auth/$'
+    | '/checkout/payment/esewa/failure'
+    | '/checkout/payment/esewa/success'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/rider'
+    | '/checkout'
     | '/drinks'
+    | '/favorites'
     | '/grocery'
     | '/login'
     | '/signup'
@@ -363,22 +423,28 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/admin/taxonomy'
     | '/admin/users'
+    | '/order-confirmation/$orderId'
     | '/rider/deliveries'
     | '/rider/earnings'
     | '/rider/profile'
     | '/admin/'
     | '/rider/'
     | '/api/auth/$'
+    | '/checkout/payment/esewa/failure'
+    | '/checkout/payment/esewa/success'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   RiderRouteRoute: typeof RiderRouteRouteWithChildren
+  CheckoutRoute: typeof CheckoutRouteWithChildren
   DrinksRoute: typeof DrinksRoute
+  FavoritesRoute: typeof FavoritesRoute
   GroceryRoute: typeof GroceryRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  OrderConfirmationOrderIdRoute: typeof OrderConfirmationOrderIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -398,11 +464,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/checkout': {
+      id: '/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/drinks': {
       id: '/drinks'
       path: '/drinks'
       fullPath: '/drinks'
       preLoaderRoute: typeof DrinksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/favorites': {
+      id: '/favorites'
+      path: '/favorites'
+      fullPath: '/favorites'
+      preLoaderRoute: typeof FavoritesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/grocery': {
@@ -552,6 +632,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/order-confirmation/$orderId': {
+      id: '/order-confirmation/$orderId'
+      path: '/order-confirmation/$orderId'
+      fullPath: '/order-confirmation/$orderId'
+      preLoaderRoute: typeof OrderConfirmationOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/rider/': {
       id: '/rider/'
       path: '/'
@@ -586,6 +673,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/checkout/payment/esewa/failure': {
+      id: '/checkout/payment/esewa/failure'
+      path: '/payment/esewa/failure'
+      fullPath: '/checkout/payment/esewa/failure'
+      preLoaderRoute: typeof CheckoutPaymentEsewaFailureRouteImport
+      parentRoute: typeof CheckoutRoute
+    }
+    '/checkout/payment/esewa/success': {
+      id: '/checkout/payment/esewa/success'
+      path: '/payment/esewa/success'
+      fullPath: '/checkout/payment/esewa/success'
+      preLoaderRoute: typeof CheckoutPaymentEsewaSuccessRouteImport
+      parentRoute: typeof CheckoutRoute
     }
   }
 }
@@ -652,14 +753,31 @@ const RiderRouteRouteWithChildren = RiderRouteRoute._addFileChildren(
   RiderRouteRouteChildren,
 )
 
+interface CheckoutRouteChildren {
+  CheckoutPaymentEsewaFailureRoute: typeof CheckoutPaymentEsewaFailureRoute
+  CheckoutPaymentEsewaSuccessRoute: typeof CheckoutPaymentEsewaSuccessRoute
+}
+
+const CheckoutRouteChildren: CheckoutRouteChildren = {
+  CheckoutPaymentEsewaFailureRoute: CheckoutPaymentEsewaFailureRoute,
+  CheckoutPaymentEsewaSuccessRoute: CheckoutPaymentEsewaSuccessRoute,
+}
+
+const CheckoutRouteWithChildren = CheckoutRoute._addFileChildren(
+  CheckoutRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRouteRoute: AdminRouteRouteWithChildren,
   RiderRouteRoute: RiderRouteRouteWithChildren,
+  CheckoutRoute: CheckoutRouteWithChildren,
   DrinksRoute: DrinksRoute,
+  FavoritesRoute: FavoritesRoute,
   GroceryRoute: GroceryRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  OrderConfirmationOrderIdRoute: OrderConfirmationOrderIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

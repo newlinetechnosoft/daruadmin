@@ -9,6 +9,7 @@ import { Separator } from '#/components/ui/separator'
 import { Button } from '#/components/ui/button'
 import { Progress } from '#/components/ui/progress'
 import { useCart } from '#/lib/cart-context'
+import { useNavigate } from '@tanstack/react-router'
 import { formatNPR } from '#/lib/money'
 import {
   ShoppingBag,
@@ -33,6 +34,7 @@ export function CartSheet() {
     totalPaisa,
     clearCart,
   } = useCart()
+  const navigate = useNavigate()
 
   const freeDeliveryProgress = Math.min(
     100,
@@ -247,12 +249,10 @@ export function CartSheet() {
 
               <Button
                 type="button"
-                className="w-full h-10 text-xs font-medium gap-2"
+                className="w-full h-10 text-xs font-medium gap-2 cursor-pointer"
                 onClick={() => {
-                  alert(
-                    'Order placement simulated! Full checkout connected to Kathmandu 40-minute express dispatch.',
-                  )
                   setIsOpen(false)
+                  navigate({ to: '/checkout' })
                 }}
               >
                 Proceed to checkout

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { useCart } from '#/lib/cart-context'
+import { useFavorites } from '#/lib/favorites'
 import { formatNPR } from '#/lib/money'
-import { Check, Heart, Wine, Package } from 'lucide-react'
+import { Heart, Wine, Package, Plus, Minus } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { Card, CardContent } from '#/components/ui/card'
@@ -34,21 +35,24 @@ export interface ProductProps {
   variants: Variant[]
 }
 
-export function ProductCard({ product }: { product: ProductProps }) {
-  const { addItem, items } = useCart()
+function ProductCardComponent({ product }: { product: ProductProps }) {
+  const { addItem, updateQuantity, getItemQuantity } = useCart()
+  const { isFavorite, toggleFavorite } = useFavorites()
   const [selectedVariantId, setSelectedVariantId] = useState<string>(
     product.variants[0]?.id ?? '',
   )
-  const [isWishlisted, setIsWishlisted] = useState(false)
-  const [justAdded, setJustAdded] = useState(false)
 
   const activeVariant =
     product.variants.find((v) => v.id === selectedVariantId) ??
     product.variants[0]
 
-  const inCart = items.find((i) => i.variantId === activeVariant.id)
+  const isWishlisted = isFavorite(product.id)
+  const qty = activeVariant ? getItemQuantity(activeVariant.id) : 0
+  const isOutOfStock = !activeVariant || activeVariant.stock <= 0
+  const isMaxStockReached = Boolean(activeVariant && qty >= activeVariant.stock)
 
   const handleAddToCart = () => {
+    if (!activeVariant || isOutOfStock) return
     addItem({
       id: activeVariant.id,
       productId: product.id,
@@ -61,12 +65,20 @@ export function ProductCard({ product }: { product: ProductProps }) {
       mrp: activeVariant.mrp,
       imageUrl: product.primaryImage,
     })
-    setJustAdded(true)
-    setTimeout(() => setJustAdded(false), 1200)
+  }
+
+  const handleDecrement = () => {
+    if (!activeVariant) return
+    updateQuantity(activeVariant.id, qty - 1)
+  }
+
+  const handleIncrement = () => {
+    if (!activeVariant || isMaxStockReached) return
+    updateQuantity(activeVariant.id, qty + 1, activeVariant.stock)
   }
 
   const discountPercent =
-    activeVariant.mrp && activeVariant.mrp > activeVariant.price
+    activeVariant?.mrp && activeVariant.mrp > activeVariant.price
       ? Math.round(
           ((activeVariant.mrp - activeVariant.price) / activeVariant.mrp) * 100,
         )
@@ -77,14 +89,16 @@ export function ProductCard({ product }: { product: ProductProps }) {
     product.brandName ??
     (product.catalogType === 'liquor' ? 'Spirits' : 'Food')
 
-  const metaText = [
-    activeVariant.volumeMl
-      ? `${activeVariant.volumeMl}ml`
-      : (activeVariant.quantity ?? activeVariant.name),
-    activeVariant.abv ? `${activeVariant.abv}% ABV` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ')
+  const metaText = activeVariant
+    ? [
+        activeVariant.volumeMl
+          ? `${activeVariant.volumeMl}ml`
+          : (activeVariant.quantity ?? activeVariant.name),
+        activeVariant.abv ? `${activeVariant.abv}% ABV` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : ''
 
   return (
     <Card className="group relative flex flex-col justify-between overflow-hidden transition-all hover:border-foreground/20">
@@ -98,26 +112,33 @@ export function ProductCard({ product }: { product: ProductProps }) {
             </Badge>
           )}
           {discountPercent && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-semibold">
+            <Badge
+              variant="secondary"
+              className="text-[10px] px-1.5 py-0 h-5 font-semibold"
+            >
               {discountPercent}% off
             </Badge>
           )}
         </div>
 
-        {/* Wishlist Button */}
+        {/* Wishlist / Favorite Button (local-only IndexedDB, works for guests too) */}
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          onClick={() => setIsWishlisted(!isWishlisted)}
-          aria-label="Add to wishlist"
-          className="absolute right-2 top-2 z-10 h-7 w-7 rounded-full bg-background/80 hover:bg-background text-muted-foreground shadow-xs"
+          onClick={() => toggleFavorite(product.id)}
+          aria-label={
+            isWishlisted
+              ? `Remove ${product.name} from favorites`
+              : `Add ${product.name} to favorites`
+          }
+          className="absolute right-2 top-2 z-10 h-8 w-8 min-h-[40px] min-w-[40px] sm:min-h-[32px] sm:min-w-[32px] rounded-full bg-background/80 hover:bg-background text-muted-foreground shadow-xs flex items-center justify-center cursor-pointer"
         >
           <Heart
-            className={`h-3.5 w-3.5 transition-colors ${
+            className={`h-4 w-4 transition-colors ${
               isWishlisted
                 ? 'fill-destructive text-destructive'
-                : 'text-muted-foreground'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           />
         </Button>
@@ -160,7 +181,7 @@ export function ProductCard({ product }: { product: ProductProps }) {
           {product.variants.length > 1 && (
             <div className="pt-1.5 flex flex-wrap gap-1">
               {product.variants.map((v) => {
-                const isSelected = v.id === activeVariant.id
+                const isSelected = v.id === activeVariant?.id
                 const label = v.volumeMl
                   ? `${v.volumeMl}ml`
                   : (v.quantity ?? v.name)
@@ -181,38 +202,81 @@ export function ProductCard({ product }: { product: ProductProps }) {
           )}
         </div>
 
-        {/* Price and Add button */}
+        {/* Price and Add/Stepper button */}
         <div className="mt-3 pt-2.5 flex items-center justify-between border-t border-border">
           <div className="flex items-baseline gap-1.5">
             <span className="text-xs font-semibold text-foreground font-mono">
-              {formatNPR(activeVariant.price)}
+              {activeVariant ? formatNPR(activeVariant.price) : '—'}
             </span>
-            {activeVariant.mrp && activeVariant.mrp > activeVariant.price && (
+            {activeVariant?.mrp && activeVariant.mrp > activeVariant.price && (
               <span className="text-[10px] text-muted-foreground line-through font-mono">
                 {formatNPR(activeVariant.mrp)}
               </span>
             )}
           </div>
 
-          <Button
-            type="button"
-            size="sm"
-            onClick={handleAddToCart}
-            variant={justAdded ? 'secondary' : inCart ? 'outline' : 'default'}
-            className="h-7 px-2.5 text-[11px] font-medium"
-          >
-            {justAdded ? (
-              <span className="flex items-center gap-1 text-success">
-                <Check className="h-3 w-3" /> Added
+          {/* In-place Stepper or Add button with matching dimensions */}
+          {qty >= 1 ? (
+            <div
+              className="flex items-center justify-between h-8 w-24 rounded-md border border-primary/40 bg-muted/40 px-1"
+              role="group"
+              aria-label={`Quantity for ${product.name}`}
+            >
+              <button
+                type="button"
+                onClick={handleDecrement}
+                aria-label={`Decrease quantity of ${product.name} (${activeVariant?.name})`}
+                className="flex items-center justify-center h-7 w-7 min-h-[36px] min-w-[36px] sm:min-h-[28px] sm:min-w-[28px] rounded text-muted-foreground hover:text-foreground hover:bg-background/80 transition-colors cursor-pointer"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+
+              <span
+                aria-live="polite"
+                className="text-xs font-bold font-mono text-foreground min-w-5 text-center select-none"
+              >
+                {qty}
               </span>
-            ) : inCart ? (
-              `In cart (${inCart.quantity})`
-            ) : (
-              'Add'
-            )}
-          </Button>
+
+              <button
+                type="button"
+                disabled={isMaxStockReached}
+                onClick={handleIncrement}
+                title={isMaxStockReached ? 'Max available' : undefined}
+                aria-label={
+                  isMaxStockReached
+                    ? `Max stock reached for ${product.name}`
+                    : `Increase quantity of ${product.name} (${activeVariant?.name})`
+                }
+                className={`flex items-center justify-center h-7 w-7 min-h-[36px] min-w-[36px] sm:min-h-[28px] sm:min-w-[28px] rounded transition-colors ${
+                  isMaxStockReached
+                    ? 'text-muted-foreground/30 cursor-not-allowed'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/80 cursor-pointer'
+                }`}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              disabled={isOutOfStock}
+              onClick={handleAddToCart}
+              aria-label={
+                isOutOfStock
+                  ? `${product.name} is out of stock`
+                  : `Add ${product.name} to cart`
+              }
+              className="h-8 w-24 text-[11px] font-medium"
+            >
+              {isOutOfStock ? 'Sold out' : 'Add'}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
   )
 }
+
+export const ProductCard = memo(ProductCardComponent)

@@ -13,6 +13,7 @@ import {
   ShoppingCart,
   Shield,
   Bike,
+  Heart,
 } from 'lucide-react'
 import { ThemeToggle } from '#/components/shared/theme-toggle'
 import { Button } from '#/components/ui/button'
@@ -216,6 +217,19 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
               </Link>
             </Button>
           )}
+
+          {/* Favorites Link */}
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            aria-label="View favorites"
+          >
+            <Link to="/favorites">
+              <Heart className="h-4 w-4" />
+            </Link>
+          </Button>
 
           {/* Cart Button */}
           <Button

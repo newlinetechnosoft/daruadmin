@@ -30,6 +30,7 @@ import {
   deleteItemQuery,
   getAdminUsersQuery,
   updateUserRoleQuery,
+  getProductsByIdsQuery,
 } from './catalog.queries'
 import {
   requirePermission,
@@ -89,6 +90,12 @@ export const getFrontpageDataFn = createServerFn({ method: 'GET' }).handler(
     }
   },
 )
+
+export const getProductsByIdsFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) => z.object({ ids: z.array(z.string()) }).parse(d ?? { ids: [] }))
+  .handler(async ({ data }) => {
+    return getProductsByIdsQuery(data.ids)
+  })
 
 // -------------------------------------------------------------
 // ADMIN SERVER FUNCTIONS WITH PERMISSION ENFORCEMENT

@@ -11,7 +11,7 @@ import {
   groceryImages,
   user,
 } from '#/db/schema'
-import { and, eq, ilike, or, asc, desc, count } from 'drizzle-orm'
+import { and, eq, ilike, or, asc, desc, count, inArray } from 'drizzle-orm'
 import type {
   ListLiquorInput,
   ListGroceryInput,
@@ -757,3 +757,125 @@ export async function updateUserRoleQuery(input: {
     .where(eq(user.id, input.userId))
   return { success: true }
 }
+
+export async function getProductsByIdsQuery(ids: string[]) {
+  if (!ids || ids.length === 0) return []
+
+  const [liquorRows, groceryRows] = await Promise.all([
+    db
+      .select({
+        id: liquorProducts.id,
+        name: liquorProducts.name,
+        slug: liquorProducts.slug,
+        description: liquorProducts.description,
+        isFeatured: liquorProducts.isFeatured,
+        categoryName: liquorCategories.name,
+        categorySlug: liquorCategories.slug,
+        brandName: liquorBrands.name,
+        brandSlug: liquorBrands.slug,
+      })
+      .from(liquorProducts)
+      .innerJoin(
+        liquorCategories,
+        eq(liquorProducts.categoryId, liquorCategories.id),
+      )
+      .leftJoin(liquorBrands, eq(liquorProducts.brandId, liquorBrands.id))
+      .where(and(eq(liquorProducts.isActive, true), inArray(liquorProducts.id, ids))),
+
+    db
+      .select({
+        id: groceryProducts.id,
+        name: groceryProducts.name,
+        slug: groceryProducts.slug,
+        description: groceryProducts.description,
+        isFeatured: groceryProducts.isFeatured,
+        categoryName: groceryCategories.name,
+        categorySlug: groceryCategories.slug,
+      })
+      .from(groceryProducts)
+      .innerJoin(
+        groceryCategories,
+        eq(groceryProducts.categoryId, groceryCategories.id),
+      )
+      .where(and(eq(groceryProducts.isActive, true), inArray(groceryProducts.id, ids))),
+  ])
+
+  const liquorIds = liquorRows.map((p) => p.id)
+  const groceryIds = groceryRows.map((p) => p.id)
+
+  const [liqVariants, liqImages, grocVariants, grocImages] = await Promise.all([
+    liquorIds.length > 0
+      ? db
+          .select()
+          .from(liquorVariants)
+          .where(and(eq(liquorVariants.isActive, true), inArray(liquorVariants.productId, liquorIds)))
+      : [],
+    liquorIds.length > 0
+      ? db
+          .select()
+          .from(liquorImages)
+          .where(inArray(liquorImages.productId, liquorIds))
+      : [],
+    groceryIds.length > 0
+      ? db
+          .select()
+          .from(groceryVariants)
+          .where(and(eq(groceryVariants.isActive, true), inArray(groceryVariants.productId, groceryIds)))
+      : [],
+    groceryIds.length > 0
+      ? db
+          .select()
+          .from(groceryImages)
+          .where(inArray(groceryImages.productId, groceryIds))
+      : [],
+  ])
+
+  const liquorVariantsMap = new Map<string, typeof liqVariants>()
+  for (const v of liqVariants) {
+    const list = liquorVariantsMap.get(v.productId) ?? []
+    list.push(v)
+    liquorVariantsMap.set(v.productId, list)
+  }
+
+  const liquorImagesMap = new Map<string, string>()
+  for (const img of liqImages) {
+    if (img.isPrimary || !liquorImagesMap.has(img.productId)) {
+      liquorImagesMap.set(img.productId, img.url)
+    }
+  }
+
+  const groceryVariantsMap = new Map<string, typeof grocVariants>()
+  for (const v of grocVariants) {
+    const list = groceryVariantsMap.get(v.productId) ?? []
+    list.push(v)
+    groceryVariantsMap.set(v.productId, list)
+  }
+
+  const groceryImagesMap = new Map<string, string>()
+  for (const img of grocImages) {
+    if (img.isPrimary || !groceryImagesMap.has(img.productId)) {
+      groceryImagesMap.set(img.productId, img.url)
+    }
+  }
+
+  const result = [
+    ...liquorRows.map((p) => ({
+      ...p,
+      catalogType: 'liquor' as const,
+      primaryImage: liquorImagesMap.get(p.id) ?? null,
+      variants: (liquorVariantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
+    })),
+    ...groceryRows.map((p) => ({
+      ...p,
+      brandName: null,
+      brandSlug: null,
+      catalogType: 'grocery' as const,
+      primaryImage: groceryImagesMap.get(p.id) ?? null,
+      variants: (groceryVariantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
+    })),
+  ]
+
+  // Filter out any products that have no active variants
+  return result.filter((p) => p.variants.length > 0)
+}
+

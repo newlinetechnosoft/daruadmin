@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { formatNPR } from './money'
+import { authClient } from '#/lib/auth-client'
 
 export interface CartItem {
   id: string // unique identifier: variantId
@@ -19,9 +20,10 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[]
-  addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void
+  addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => boolean
   removeItem: (variantId: string) => void
-  updateQuantity: (variantId: string, quantity: number) => void
+  updateQuantity: (variantId: string, quantity: number, maxStock?: number) => boolean
+  getItemQuantity: (variantId: string) => number
   clearCart: () => void
   totalPaisa: number
   itemCount: number
@@ -33,10 +35,37 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 
 const CART_STORAGE_KEY = 'Mezmani_cart_items_v1'
 
+/**
+ * Hook to enforce authentication before customer actions.
+ */
+export function useRequireAuth() {
+  const { data: session } = authClient.useSession()
+  const navigate = useNavigate()
+
+  return (callback?: () => void): boolean => {
+    if (!session?.user) {
+      const redirect =
+        typeof window !== 'undefined'
+          ? window.location.pathname + window.location.search
+          : '/drinks'
+      toast.info('Please sign in to add items to your cart')
+      navigate({
+        to: '/login',
+        search: { redirect },
+      })
+      return false
+    }
+    callback?.()
+    return true
+  }
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+  const { data: session } = authClient.useSession()
+  const navigate = useNavigate()
 
   // Load from localStorage on client mount
   useEffect(() => {
@@ -62,7 +91,42 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items, isLoaded])
 
-  const addItem = (item: Omit<CartItem, 'quantity'>, quantity = 1) => {
+  // Map for fast O(1) quantity lookup
+  const itemMap = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const item of items) {
+      map.set(item.variantId, item.quantity)
+    }
+    return map
+  }, [items])
+
+  const getItemQuantity = (variantId: string) => {
+    return itemMap.get(variantId) ?? 0
+  }
+
+  const checkAuth = (): boolean => {
+    if (!session?.user) {
+      const redirect =
+        typeof window !== 'undefined'
+          ? window.location.pathname + window.location.search
+          : '/drinks'
+      toast.info('Please sign in to add items to your cart')
+      navigate({
+        to: '/login',
+        search: { redirect },
+      })
+      return false
+    }
+    return true
+  }
+
+  const addItem = (item: Omit<CartItem, 'quantity'>, quantity = 1): boolean => {
+    // 1. LOGIN REQUIRED TO ADD TO CART
+    if (!checkAuth()) {
+      return false
+    }
+
+    let isFirstAdd = false
     setItems((prev) => {
       const existing = prev.find((i) => i.variantId === item.variantId)
       if (existing) {
@@ -72,25 +136,47 @@ export function CartProvider({ children }: { children: ReactNode }) {
             : i,
         )
       }
+      isFirstAdd = true
       return [...prev, { ...item, quantity }]
     })
-    toast.success(`Added ${item.productName} (${item.variantName}) to cart`, {
-      description: formatNPR(item.price),
-    })
+
+    // At most one subtle toast on the first add (no toast spam on repeated adds)
+    if (isFirstAdd) {
+      toast.success(`Added ${item.productName} to cart`)
+    }
+    return true
   }
 
   const removeItem = (variantId: string) => {
     setItems((prev) => prev.filter((i) => i.variantId !== variantId))
   }
 
-  const updateQuantity = (variantId: string, quantity: number) => {
+  const updateQuantity = (
+    variantId: string,
+    quantity: number,
+    maxStock?: number,
+  ): boolean => {
+    const currentQty = getItemQuantity(variantId)
+
+    // If increasing quantity, require auth
+    if (quantity > currentQty && !checkAuth()) {
+      return false
+    }
+
     if (quantity <= 0) {
       removeItem(variantId)
-      return
+      return true
     }
+
+    if (maxStock !== undefined && quantity > maxStock) {
+      toast.warning(`Only ${maxStock} available in stock`)
+      return false
+    }
+
     setItems((prev) =>
       prev.map((i) => (i.variantId === variantId ? { ...i, quantity } : i)),
     )
+    return true
   }
 
   const clearCart = () => {
@@ -110,6 +196,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         addItem,
         removeItem,
         updateQuantity,
+        getItemQuantity,
         clearCart,
         totalPaisa,
         itemCount,
