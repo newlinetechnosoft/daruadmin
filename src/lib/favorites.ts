@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore, useCallback } from 'react'
 import { createStore, set, del, keys } from 'idb-keyval'
 
 /**
@@ -23,6 +23,13 @@ const listeners = new Set<() => void>()
 let isHydrated = false
 let idbStore: ReturnType<typeof createStore> | null = null
 
+// IMMUTABLE STABLE SNAPSHOTS:
+// useSyncExternalStore requires getSnapshot to return a referentially stable value
+// unless the store has actually mutated. Returning new arrays inside getSnapshot
+// causes React to detect infinite loops ("Maximum update depth exceeded").
+const EMPTY_SNAPSHOT: readonly string[] = Object.freeze([])
+let cachedSnapshot: readonly string[] = EMPTY_SNAPSHOT
+
 function getStore() {
   if (typeof window === 'undefined') return null
   if (!idbStore) {
@@ -36,7 +43,8 @@ function getStore() {
   return idbStore
 }
 
-function notify() {
+function updateSnapshotAndNotify() {
+  cachedSnapshot = Object.freeze(Array.from(memoryFavorites))
   listeners.forEach((listener) => listener())
 }
 
@@ -52,15 +60,16 @@ if (typeof window !== 'undefined') {
           }
         })
         isHydrated = true
-        notify()
+        updateSnapshotAndNotify()
       })
       .catch((err) => {
         console.warn('[Favorites] Error hydrating from IndexedDB:', err)
         isHydrated = true
-        notify()
+        updateSnapshotAndNotify()
       })
   } else {
     isHydrated = true
+    updateSnapshotAndNotify()
   }
 }
 
@@ -92,7 +101,7 @@ export function toggleFavorite(productId: string): boolean {
     }
   }
 
-  notify()
+  updateSnapshotAndNotify()
   return nextState
 }
 
@@ -101,20 +110,27 @@ export function toggleFavorite(productId: string): boolean {
  */
 export function cleanupFavorites(invalidIds: string[]) {
   if (!invalidIds || invalidIds.length === 0) return
+  let changed = false
   const store = getStore()
   for (const id of invalidIds) {
-    memoryFavorites.delete(id)
-    if (store) {
-      del(id, store).catch(() => {})
+    if (memoryFavorites.has(id)) {
+      memoryFavorites.delete(id)
+      changed = true
+      if (store) {
+        del(id, store).catch(() => {})
+      }
     }
   }
-  notify()
+  if (changed) {
+    updateSnapshotAndNotify()
+  }
 }
 
 /**
  * Clear all favorites from memory and IndexedDB.
  */
 export function clearAllFavorites() {
+  if (memoryFavorites.size === 0) return
   memoryFavorites.clear()
   const store = getStore()
   if (store) {
@@ -124,7 +140,7 @@ export function clearAllFavorites() {
       })
       .catch(() => {})
   }
-  notify()
+  updateSnapshotAndNotify()
 }
 
 // React useSyncExternalStore subscribe function
@@ -135,27 +151,44 @@ function subscribe(listener: () => void) {
   }
 }
 
-// Snapshot returning the list of active favorite IDs
-function getSnapshot(): string[] {
-  // During SSR or before client hydration, always return empty array to prevent hydration mismatch
-  if (!isHydrated) return []
-  return Array.from(memoryFavorites)
+function getSnapshot(): readonly string[] {
+  if (!isHydrated) return EMPTY_SNAPSHOT
+  return cachedSnapshot
 }
 
-function getServerSnapshot(): string[] {
-  return []
+function getServerSnapshot(): readonly string[] {
+  return EMPTY_SNAPSHOT
 }
 
 /**
- * Hook to access and manipulate local favorites.
+ * Highly optimized selector hook to check if a specific product is favorited.
+ * Returns a boolean primitive, so other product cards in the grid NEVER re-render
+ * when an unrelated product is favorited!
+ */
+export function useIsFavorite(productId: string): boolean {
+  const check = useCallback(() => {
+    if (!isHydrated) return false
+    return memoryFavorites.has(productId)
+  }, [productId])
+
+  const checkServer = useCallback(() => false, [])
+
+  return useSyncExternalStore(subscribe, check, checkServer)
+}
+
+/**
+ * Hook to access all favorites and actions.
  */
 export function useFavorites() {
   const favoriteIds = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
-  const isFavorite = (productId: string) => {
-    if (!isHydrated) return false
-    return memoryFavorites.has(productId)
-  }
+  const isFavorite = useCallback(
+    (productId: string) => {
+      if (!isHydrated) return false
+      return memoryFavorites.has(productId)
+    },
+    [],
+  )
 
   return {
     favoriteIds,

@@ -1,6 +1,6 @@
 import { memo, useState } from 'react'
 import { useCart } from '#/lib/cart-context'
-import { useFavorites } from '#/lib/favorites'
+import { useIsFavorite, toggleFavorite } from '#/lib/favorites'
 import { formatNPR } from '#/lib/money'
 import { Heart, Wine, Package, Plus, Minus } from 'lucide-react'
 import { Button } from '#/components/ui/button'
@@ -37,7 +37,7 @@ export interface ProductProps {
 
 function ProductCardComponent({ product }: { product: ProductProps }) {
   const { addItem, updateQuantity, getItemQuantity } = useCart()
-  const { isFavorite, toggleFavorite } = useFavorites()
+  const isWishlisted = useIsFavorite(product.id)
   const [selectedVariantId, setSelectedVariantId] = useState<string>(
     product.variants[0]?.id ?? '',
   )
@@ -46,7 +46,6 @@ function ProductCardComponent({ product }: { product: ProductProps }) {
     product.variants.find((v) => v.id === selectedVariantId) ??
     product.variants[0]
 
-  const isWishlisted = isFavorite(product.id)
   const qty = activeVariant ? getItemQuantity(activeVariant.id) : 0
   const isOutOfStock = !activeVariant || activeVariant.stock <= 0
   const isMaxStockReached = Boolean(activeVariant && qty >= activeVariant.stock)

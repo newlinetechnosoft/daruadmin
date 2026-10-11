@@ -26,6 +26,8 @@ export function FavoritesPanel() {
   const [products, setProducts] = useState<ProductProps[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
+  const favKey = favoriteIds.join(',')
+
   useEffect(() => {
     if (!isHydrated) return
 
@@ -38,7 +40,7 @@ export function FavoritesPanel() {
     setIsLoading(true)
 
     getProductsByIdsFn({
-      data: { ids: favoriteIds },
+      data: { ids: Array.from(favoriteIds) },
     })
       .then((data) => {
         if (!isMounted) return
@@ -62,7 +64,7 @@ export function FavoritesPanel() {
     return () => {
       isMounted = false
     }
-  }, [favoriteIds, isHydrated, cleanupFavorites])
+  }, [favKey, isHydrated, cleanupFavorites])
 
   // Filter out products that were removed from favorites in current view
   const visibleProducts = products.filter((p) => favoriteIds.includes(p.id))
