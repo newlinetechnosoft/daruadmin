@@ -624,7 +624,7 @@ export function OrdersPanel() {
                   <span className="font-mono">{formatNPR(selectedOrder.subtotal)}</span>
                 </div>
                 {selectedOrder.discount > 0 && (
-                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                  <div className="flex justify-between text-success">
                     <span>Discount:</span>
                     <span className="font-mono">-{formatNPR(selectedOrder.discount)}</span>
                   </div>
@@ -779,7 +779,7 @@ export function OrdersPanel() {
                     <span className="font-mono">{formatNPR(selectedOrder.subtotal)}</span>
                   </div>
                   {selectedOrder.discount > 0 && (
-                    <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                    <div className="flex justify-between text-success">
                       <span>Discount:</span>
                       <span className="font-mono">-{formatNPR(selectedOrder.discount)}</span>
                     </div>

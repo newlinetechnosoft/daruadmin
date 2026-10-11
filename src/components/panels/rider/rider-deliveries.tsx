@@ -147,11 +147,11 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                       </span>
                       <div className="text-[10px]">
                         {isCOD ? (
-                          <span className="text-amber-500 font-semibold">
+                          <span className="text-warning font-semibold">
                             Collect COD
                           </span>
                         ) : (
-                          <span className="text-emerald-500 font-medium">
+                          <span className="text-success font-medium">
                             Prepaid ({order.paymentMethod})
                           </span>
                         )}
@@ -243,7 +243,7 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                               handleUpdateStatus(order.id, 'out_for_delivery')
                             }
                             disabled={isUpdating}
-                            className="h-8 text-xs flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                            className="h-8 text-xs flex-1 bg-info hover:bg-info/90 text-info-foreground"
                           >
                             <Truck className="h-3.5 w-3.5 mr-1" />
                             {isUpdating ? 'Updating...' : 'Start'}
@@ -255,7 +255,7 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                               handleUpdateStatus(order.id, 'delivered')
                             }
                             disabled={isUpdating}
-                            className="h-8 text-xs flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            className="h-8 text-xs flex-1 bg-success hover:bg-success/90 text-success-foreground"
                           >
                             <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                             {isUpdating

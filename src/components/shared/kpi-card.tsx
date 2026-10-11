@@ -39,9 +39,9 @@ export function KpiCard({
               <span
                 className={cn(
                   'font-medium',
-                  tone === 'success' && 'text-emerald-600 dark:text-emerald-400',
-                  tone === 'warning' && 'text-amber-600 dark:text-amber-400',
-                  tone === 'danger' && 'text-red-600 dark:text-red-400',
+                  tone === 'success' && 'text-success',
+                  tone === 'warning' && 'text-warning',
+                  tone === 'danger' && 'text-destructive',
                 )}
               >
                 {delta}

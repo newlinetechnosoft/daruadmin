@@ -88,7 +88,7 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
               <span className="text-xs text-muted-foreground font-medium">
                 Cash in Hand (COD Float)
               </span>
-              <Wallet className="h-5 w-5 text-amber-500" />
+              <Wallet className="h-5 w-5 text-warning" />
             </div>
             <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground font-mono mt-1">
               {formatNPR(rider.cashOnHand)}
@@ -120,7 +120,7 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
               <span className="text-xs text-muted-foreground font-medium">
                 Total Earned Commission
               </span>
-              <Coins className="h-5 w-5 text-emerald-500" />
+              <Coins className="h-5 w-5 text-success" />
             </div>
             <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground font-mono mt-1">
               {formatNPR(rider.earnings)}
@@ -175,7 +175,7 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
                           {order.city}
                         </Badge>
                         {isCOD && (
-                          <Badge variant="outline" className="text-[10px] text-amber-500">
+                          <Badge variant="warning" className="text-[10px]">
                             COD: {formatNPR(order.total)}
                           </Badge>
                         )}
@@ -186,7 +186,7 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
                     </div>
 
                     <div className="text-right sm:text-right">
-                      <div className="text-emerald-500 font-bold font-mono text-sm">
+                      <div className="text-success font-bold font-mono text-sm">
                         +{formatNPR(commission)}
                       </div>
                       <div className="text-[10px] text-muted-foreground">

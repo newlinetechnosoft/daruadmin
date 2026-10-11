@@ -7,114 +7,153 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+  Mezmani theme: Midnight Black + Amber Gold (+ Cream on the storefront).
+  - primary  = amber, main CTAs only (text on it is midnight, not white)
+  - accent   = barely-there neutral hover/selected surface
+  - status colors are semantic and never reused as brand:
+      success = delivered/paid, warning = pending/low stock,
+      info = processing, destructive = cancelled/error/discount
+  - sidebar is always dark (midnight) in both modes
+  - wrap customer-facing pages in className="storefront" for the cream background
+*/
+
 :root {
   --radius: 0.5rem;
 
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f6f8;
+  --foreground: #202124;
 
   --card: #ffffff;
-  --card-foreground: #171717;
+  --card-foreground: #202124;
 
   --popover: #ffffff;
-  --popover-foreground: #171717;
+  --popover-foreground: #202124;
 
-  --primary: #171717;
-  --primary-foreground: #ffffff;
+  --primary: #d99a32;
+  --primary-foreground: #111315;
 
-  --secondary: #f5f5f5;
-  --secondary-foreground: #171717;
+  --secondary: #eef0f3;
+  --secondary-foreground: #202124;
 
-  --muted: #f5f5f5;
-  --muted-foreground: #666666;
+  --muted: #eef0f3;
+  --muted-foreground: #737780;
 
-  --accent: #f5f5f5;
-  --accent-foreground: #171717;
+  --accent: #eceef1;
+  --accent-foreground: #202124;
 
-  --destructive: #dc2626;
+  --destructive: #d93636;
   --destructive-foreground: #ffffff;
 
-  --success: #16a34a;
+  --success: #23865b;
   --success-foreground: #ffffff;
 
-  --warning: #d97706;
+  --warning: #b7791f;
   --warning-foreground: #ffffff;
 
-  --info: #0070f3;
+  --info: #2563eb;
   --info-foreground: #ffffff;
 
-  --border: #eaeaea;
-  --input: #e5e5e5;
-  --ring: rgba(163, 163, 163, 0.4);
+  --border: #e6e7ea;
+  --input: #d9dbe0;
+  --ring: #d99a32;
 
-  --chart-1: #171717;
-  --chart-2: #0070f3;
-  --chart-3: #737373;
-  --chart-4: #a3a3a3;
-  --chart-5: #d4d4d4;
+  --chart-1: #d99a32;
+  --chart-2: #23865b;
+  --chart-3: #2563eb;
+  --chart-4: #d93636;
+  --chart-5: #737780;
 
-  --sidebar: #fafafa;
-  --sidebar-foreground: #171717;
-  --sidebar-primary: #171717;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f5f5f5;
-  --sidebar-accent-foreground: #171717;
-  --sidebar-border: #eaeaea;
-  --sidebar-ring: rgba(163, 163, 163, 0.4);
+  --sidebar: #17191c;
+  --sidebar-foreground: #c9ccd1;
+  --sidebar-primary: #d99a32;
+  --sidebar-primary-foreground: #111315;
+  --sidebar-accent: #23272b;
+  --sidebar-accent-foreground: #f5f6f8;
+  --sidebar-border: #2a2e33;
+  --sidebar-ring: #d99a32;
+}
+
+/* Customer-facing pages: cream background in light mode, dark mode preserves midnight */
+.storefront {
+  --background: #f7f5ef;
+  --border: #e5e5e0;
+  --secondary: #efece3;
+  --muted: #efece3;
+  --accent: #ece8dc;
+  --muted-foreground: #6b7280;
+}
+
+.dark .storefront,
+.dark.storefront {
+  --background: #111315;
+  --foreground: #eceae4;
+  --card: #1c2023;
+  --card-foreground: #eceae4;
+  --popover: #1c2023;
+  --popover-foreground: #eceae4;
+  --secondary: #23282c;
+  --secondary-foreground: #eceae4;
+  --muted: #23282c;
+  --muted-foreground: #9aa0a8;
+  --accent: #262b30;
+  --accent-foreground: #eceae4;
+  --border: #2a2f34;
+  --input: #32383e;
 }
 
 .dark {
-  --background: #000000;
-  --foreground: #ededed;
+  --background: #111315;
+  --foreground: #eceae4;
 
-  --card: #0a0a0a;
-  --card-foreground: #ededed;
+  --card: #1c2023;
+  --card-foreground: #eceae4;
 
-  --popover: #0a0a0a;
-  --popover-foreground: #ededed;
+  --popover: #1c2023;
+  --popover-foreground: #eceae4;
 
-  --primary: #ededed;
-  --primary-foreground: #000000;
+  --primary: #d99a32;
+  --primary-foreground: #111315;
 
-  --secondary: #171717;
-  --secondary-foreground: #ededed;
+  --secondary: #23282c;
+  --secondary-foreground: #eceae4;
 
-  --muted: #171717;
-  --muted-foreground: #a1a1a1;
+  --muted: #23282c;
+  --muted-foreground: #9aa0a8;
 
-  --accent: #171717;
-  --accent-foreground: #ededed;
+  --accent: #262b30;
+  --accent-foreground: #eceae4;
 
-  --destructive: #ef4444;
+  --destructive: #e5484d;
   --destructive-foreground: #ffffff;
 
-  --success: #22c55e;
-  --success-foreground: #ffffff;
+  --success: #2fa372;
+  --success-foreground: #04130d;
 
-  --warning: #f59e0b;
-  --warning-foreground: #000000;
+  --warning: #e0a93f;
+  --warning-foreground: #1a1100;
 
-  --info: #0070f3;
+  --info: #5b8def;
   --info-foreground: #ffffff;
 
-  --border: #262626;
-  --input: #333333;
-  --ring: rgba(82, 82, 82, 0.5);
+  --border: #2a2f34;
+  --input: #32383e;
+  --ring: #d99a32;
 
-  --chart-1: #ededed;
-  --chart-2: #0070f3;
-  --chart-3: #a3a3a3;
-  --chart-4: #737373;
-  --chart-5: #404040;
+  --chart-1: #e0a93f;
+  --chart-2: #2fa372;
+  --chart-3: #5b8def;
+  --chart-4: #e5484d;
+  --chart-5: #9aa0a8;
 
-  --sidebar: #0a0a0a;
-  --sidebar-foreground: #ededed;
-  --sidebar-primary: #ededed;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #171717;
-  --sidebar-accent-foreground: #ededed;
-  --sidebar-border: #262626;
-  --sidebar-ring: rgba(82, 82, 82, 0.5);
+  --sidebar: #0d0f11;
+  --sidebar-foreground: #c9ccd1;
+  --sidebar-primary: #d99a32;
+  --sidebar-primary-foreground: #111315;
+  --sidebar-accent: #1a1d21;
+  --sidebar-accent-foreground: #f5f6f8;
+  --sidebar-border: #202428;
+  --sidebar-ring: #d99a32;
 }
 
 @theme inline {
@@ -191,5 +230,25 @@
   samp,
   pre {
     font-family: var(--font-mono);
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--primary) 40%, transparent);
+    color: inherit;
+  }
+
+  /* Subtle, professional depth instead of neon glow */
+  [data-slot="card"] {
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .dark [data-slot="card"] {
+    box-shadow: none;
+  }
+
+  /* Tabular numbers everywhere money/stats appear */
+  .tabular-nums,
+  .font-mono {
+    font-variant-numeric: tabular-nums;
   }
 }

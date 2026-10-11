@@ -214,7 +214,7 @@ export function CartSheet() {
                   <span>Kathmandu Valley 40m delivery</span>
                   <span className="font-medium text-foreground font-mono">
                     {remainingForFree === 0 ? (
-                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Free</span>
+                      <span className="text-success font-semibold">Free</span>
                     ) : (
                       formatNPR(15000)
                     )}
@@ -240,7 +240,7 @@ export function CartSheet() {
                   </span>
                 </div>
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <ShieldCheck className="h-3.5 w-3.5 text-success" />
                   <span>COD / Fonepay</span>
                 </div>
               </div>

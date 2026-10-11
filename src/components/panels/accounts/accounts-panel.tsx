@@ -366,7 +366,7 @@ export function AccountsPanel() {
 
                       <TableCell className="text-right">
                         {item.type === 'credit' ? (
-                          <span className="font-mono text-xs font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+                          <span className="font-mono text-xs font-semibold tabular-nums text-success">
                             +{formatNPR(item.amount)}
                           </span>
                         ) : (
@@ -439,7 +439,7 @@ export function AccountsPanel() {
 
                 <div className="flex justify-between items-center border-t border-border pt-3 bg-muted/30 p-2.5 rounded-md mt-2">
                   <span className="text-xs font-medium text-foreground">Estimated net operating profit:</span>
-                  <span className={`font-mono text-sm font-bold ${netEstimatedProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}>
+                  <span className={`font-mono text-sm font-bold ${netEstimatedProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
                     {formatNPR(netEstimatedProfit)}
                   </span>
                 </div>
@@ -550,14 +550,14 @@ export function AccountsPanel() {
                     </TableCell>
 
                     <TableCell>
-                      <span className="font-mono text-xs font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
+                      <span className="font-mono text-xs font-medium tabular-nums text-success">
                         +{formatNPR(set.commission)}
                       </span>
                     </TableCell>
 
                     <TableCell>
                       <Badge
-                        variant={set.status === 'paid' ? 'default' : 'secondary'}
+                        variant={set.status === 'paid' ? 'success' : 'secondary'}
                         className="text-[10px] font-normal uppercase"
                       >
                         {set.status}

@@ -116,7 +116,7 @@ export function ProductCard({ product }: { product: ProductProps }) {
           <Heart
             className={`h-3.5 w-3.5 transition-colors ${
               isWishlisted
-                ? 'fill-rose-500 text-rose-500'
+                ? 'fill-destructive text-destructive'
                 : 'text-muted-foreground'
             }`}
           />
@@ -202,7 +202,7 @@ export function ProductCard({ product }: { product: ProductProps }) {
             className="h-7 px-2.5 text-[11px] font-medium"
           >
             {justAdded ? (
-              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+              <span className="flex items-center gap-1 text-success">
                 <Check className="h-3 w-3" /> Added
               </span>
             ) : inCart ? (

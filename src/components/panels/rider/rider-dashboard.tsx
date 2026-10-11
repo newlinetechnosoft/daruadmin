@@ -131,7 +131,7 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Active Deliveries</span>
-              <Truck className="h-4 w-4 text-blue-500" />
+              <Truck className="h-4 w-4 text-info" />
             </div>
             <div className="mt-2 text-2xl font-bold tracking-tight text-foreground">
               {stats.activeCount}
@@ -144,7 +144,7 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Completed Today</span>
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <CheckCircle2 className="h-4 w-4 text-success" />
             </div>
             <div className="mt-2 text-2xl font-bold tracking-tight text-foreground">
               {stats.completedCount}
@@ -157,7 +157,7 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Cash in Hand (COD)</span>
-              <Wallet className="h-4 w-4 text-amber-500" />
+              <Wallet className="h-4 w-4 text-warning" />
             </div>
             <div className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono">
               {formatNPR(stats.cashOnHand)}
@@ -170,7 +170,7 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Earned Commission</span>
-              <Coins className="h-4 w-4 text-emerald-500" />
+              <Coins className="h-4 w-4 text-success" />
             </div>
             <div className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono">
               {formatNPR(stats.earnings)}
@@ -241,9 +241,9 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
                         </span>
                         <div className="text-[10px] text-muted-foreground">
                           {isCOD ? (
-                            <span className="text-amber-500 font-semibold">Collect COD</span>
+                            <span className="text-warning font-semibold">Collect COD</span>
                           ) : (
-                            <span className="text-emerald-500 font-medium">Prepaid ({order.paymentMethod})</span>
+                            <span className="text-success font-medium">Prepaid ({order.paymentMethod})</span>
                           )}
                         </div>
                       </div>
@@ -321,7 +321,7 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
                           size="sm"
                           onClick={() => handleUpdateStatus(order.id, 'out_for_delivery')}
                           disabled={isUpdating}
-                          className="h-8 text-xs flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                          className="h-8 text-xs flex-1 bg-info hover:bg-info/90 text-info-foreground"
                         >
                           <Truck className="h-3.5 w-3.5 mr-1" />
                           {isUpdating ? 'Updating...' : 'Start Delivery'}
@@ -331,7 +331,7 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
                           size="sm"
                           onClick={() => handleUpdateStatus(order.id, 'delivered')}
                           disabled={isUpdating}
-                          className="h-8 text-xs flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                          className="h-8 text-xs flex-1 bg-success hover:bg-success/90 text-success-foreground"
                         >
                           <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                           {isUpdating ? 'Saving...' : isCOD ? 'Delivered & Collect' : 'Mark Delivered'}
