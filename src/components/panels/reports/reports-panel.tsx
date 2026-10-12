@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getRouteApi,    } from '@tanstack/react-router'
+import { getRouteApi } from '@tanstack/react-router'
 import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
@@ -35,7 +35,6 @@ import {
   TableRow,
 } from '#/components/ui/table'
 
-
 const routeApi = getRouteApi('/admin/reports')
 
 export function ReportsPanel() {
@@ -45,8 +44,13 @@ export function ReportsPanel() {
 
   // Aggregate Metrics
   const grossSalesTotal = ops.orders.reduce((sum, o) => sum + o.total, 0)
-  const totalDeliveriesCount = ops.riders.reduce((sum, r) => sum + r.deliveries, 0)
-  const estimatedVatCollected = Math.round(ops.orders.reduce((sum, o) => sum + o.tax, 0))
+  const totalDeliveriesCount = ops.riders.reduce(
+    (sum, r) => sum + r.deliveries,
+    0,
+  )
+  const estimatedVatCollected = Math.round(
+    ops.orders.reduce((sum, o) => sum + o.tax, 0),
+  )
 
   const handleExportSalesCSV = () => {
     const headers =
@@ -54,7 +58,7 @@ export function ReportsPanel() {
     const rows = ops.orders
       .map(
         (o) =>
-          `"${o.number}","${o.customerName}","${o.customerPhone}","${o.city}",${o.items.length},${o.subtotal},${o.deliveryCharge},${o.discount},${o.tax},${o.total},"${o.status}","${o.paymentMethod}","${o.createdAt}"`
+          `"${o.number}","${o.customerName}","${o.customerPhone}","${o.city}",${o.items.length},${o.subtotal},${o.deliveryCharge},${o.discount},${o.tax},${o.total},"${o.status}","${o.paymentMethod}","${o.createdAt}"`,
       )
       .join('\n')
     const blob = new Blob([headers + rows], { type: 'text/csv' })
@@ -72,7 +76,7 @@ export function ReportsPanel() {
     const rows = ops.riders
       .map(
         (r) =>
-          `"${r.id}","${r.name}","${r.phone}","${r.zone}","${r.vehicle}",${r.verified},${r.available},${r.deliveries},${r.rating},${r.cashOnHand},${r.earnings}`
+          `"${r.id}","${r.name}","${r.phone}","${r.zone}","${r.vehicle}",${r.verified},${r.available},${r.deliveries},${r.rating},${r.cashOnHand},${r.earnings}`,
       )
       .join('\n')
     const blob = new Blob([headers + rows], { type: 'text/csv' })
@@ -104,7 +108,8 @@ export function ReportsPanel() {
   }
 
   const handleExportInventoryCSV = () => {
-    const headers = 'CatalogType,SKU,ProductName,Brand,Category,Variant,StockOnHand,RetailPriceNPR\n'
+    const headers =
+      'CatalogType,SKU,ProductName,Brand,Category,Variant,StockOnHand,RetailPriceNPR\n'
     const liquorRows = (liquor || []).flatMap((l: any) =>
       (l.variants || []).map(
         (v: any) =>
@@ -117,9 +122,12 @@ export function ReportsPanel() {
           `"Grocery","${v.sku}","${g.name}","","${g.categoryName || ''}","${v.name || `${v.quantity} ${v.unit}`}",${v.stock ?? 30},${v.price}`,
       ),
     )
-    const blob = new Blob([headers + [...liquorRows, ...groceryRows].join('\n')], {
-      type: 'text/csv',
-    })
+    const blob = new Blob(
+      [headers + [...liquorRows, ...groceryRows].join('\n')],
+      {
+        type: 'text/csv',
+      },
+    )
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -167,16 +175,24 @@ export function ReportsPanel() {
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
               <DollarSign className="h-4 w-4" />
             </div>
-            <CardTitle className="text-sm font-semibold">Fiscal sales and revenue audit</CardTitle>
+            <CardTitle className="text-sm font-semibold">
+              Fiscal sales and revenue audit
+            </CardTitle>
             <CardDescription className="text-xs">
-              Detailed breakdown of order transaction numbers, customer contact profiles, delivery surcharges, applied discounts, and net realized turnover.
+              Detailed breakdown of order transaction numbers, customer contact
+              profiles, delivery surcharges, applied discounts, and net realized
+              turnover.
             </CardDescription>
           </CardHeader>
           <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
             <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
               {formatNPR(grossSalesTotal)}
             </span>
-            <Button size="sm" onClick={handleExportSalesCSV} className="h-8 gap-1.5 text-xs">
+            <Button
+              size="sm"
+              onClick={handleExportSalesCSV}
+              className="h-8 gap-1.5 text-xs"
+            >
               <Download className="h-3.5 w-3.5" />
               Download CSV
             </Button>
@@ -189,16 +205,24 @@ export function ReportsPanel() {
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
               <Truck className="h-4 w-4" />
             </div>
-            <CardTitle className="text-sm font-semibold">Fleet delivery logistics performance</CardTitle>
+            <CardTitle className="text-sm font-semibold">
+              Fleet delivery logistics performance
+            </CardTitle>
             <CardDescription className="text-xs">
-              Courier-wise completion metrics, active COD floats in transit, star ratings, and commission disbursements for Kathmandu Valley corridors.
+              Courier-wise completion metrics, active COD floats in transit,
+              star ratings, and commission disbursements for Kathmandu Valley
+              corridors.
             </CardDescription>
           </CardHeader>
           <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
             <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
               {totalDeliveriesCount} parcels
             </span>
-            <Button size="sm" onClick={handleExportFleetCSV} className="h-8 gap-1.5 text-xs">
+            <Button
+              size="sm"
+              onClick={handleExportFleetCSV}
+              className="h-8 gap-1.5 text-xs"
+            >
               <Download className="h-3.5 w-3.5" />
               Download CSV
             </Button>
@@ -211,9 +235,12 @@ export function ReportsPanel() {
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
               <Building className="h-4 w-4" />
             </div>
-            <CardTitle className="text-sm font-semibold">Nepal IRD VAT Annex 13 (बिक्री खाता)</CardTitle>
+            <CardTitle className="text-sm font-semibold">
+              Nepal IRD VAT Annex 13 (बिक्री खाता)
+            </CardTitle>
             <CardDescription className="text-xs">
-              Official Government of Nepal Inland Revenue Department monthly sales ledger format ready for tax audit submission.
+              Official Government of Nepal Inland Revenue Department monthly
+              sales ledger format ready for tax audit submission.
             </CardDescription>
           </CardHeader>
           <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
@@ -230,7 +257,11 @@ export function ReportsPanel() {
                 <Printer className="h-3.5 w-3.5" />
                 Preview
               </Button>
-              <Button size="sm" onClick={handleExportIrdVatCSV} className="h-8 gap-1.5 text-xs">
+              <Button
+                size="sm"
+                onClick={handleExportIrdVatCSV}
+                className="h-8 gap-1.5 text-xs"
+              >
                 <Download className="h-3.5 w-3.5" />
                 Download CSV
               </Button>
@@ -244,16 +275,23 @@ export function ReportsPanel() {
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
               <Package className="h-4 w-4" />
             </div>
-            <CardTitle className="text-sm font-semibold">Stock valuation and asset audit</CardTitle>
+            <CardTitle className="text-sm font-semibold">
+              Stock valuation and asset audit
+            </CardTitle>
             <CardDescription className="text-xs">
-              Combined catalog inventory units on hand across Liquor and Grocery lines with cost evaluation basis and retail turnover potential.
+              Combined catalog inventory units on hand across Liquor and Grocery
+              lines with cost evaluation basis and retail turnover potential.
             </CardDescription>
           </CardHeader>
           <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
             <span className="font-mono text-xs text-muted-foreground">
               {liquor.length + grocery.length} catalog items
             </span>
-            <Button size="sm" onClick={handleExportInventoryCSV} className="h-8 gap-1.5 text-xs">
+            <Button
+              size="sm"
+              onClick={handleExportInventoryCSV}
+              className="h-8 gap-1.5 text-xs"
+            >
               <Download className="h-3.5 w-3.5" />
               Download CSV
             </Button>
@@ -283,18 +321,26 @@ export function ReportsPanel() {
               <h3 className="font-semibold text-xs text-foreground">
                 Government of Nepal · Ministry of Finance
               </h3>
-              <p className="text-muted-foreground">Inland Revenue Department (आन्तरिक राजस्व विभाग)</p>
-              <p className="text-[11px] text-muted-foreground/70">Monthly Sales Ledger (अनुसूची १३ - बिक्री खाता)</p>
+              <p className="text-muted-foreground">
+                Inland Revenue Department (आन्तरिक राजस्व विभाग)
+              </p>
+              <p className="text-[11px] text-muted-foreground/70">
+                Monthly Sales Ledger (अनुसूची १३ - बिक्री खाता)
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3 bg-muted/40 p-3 rounded-md border border-border text-xs">
               <div>
                 <span className="text-muted-foreground">Taxpayer: </span>
-                <span className="font-medium text-foreground">{ops.settings.legalName || 'MEZMANI PVT. LTD.'}</span>
+                <span className="font-medium text-foreground">
+                  {ops.settings.legalName || 'MEZMANI PVT. LTD.'}
+                </span>
               </div>
               <div>
                 <span className="text-muted-foreground">PAN: </span>
-                <span className="font-mono font-medium text-foreground">{ops.settings.pan || '609823415'}</span>
+                <span className="font-mono font-medium text-foreground">
+                  {ops.settings.pan || '609823415'}
+                </span>
               </div>
               <div>
                 <span className="text-muted-foreground">Period: </span>
@@ -313,8 +359,12 @@ export function ReportsPanel() {
                     <TableHead className="text-xs">Invoice #</TableHead>
                     <TableHead className="text-xs">Date</TableHead>
                     <TableHead className="text-xs">Buyer</TableHead>
-                    <TableHead className="text-right text-xs">Taxable</TableHead>
-                    <TableHead className="text-right text-xs">VAT (13%)</TableHead>
+                    <TableHead className="text-right text-xs">
+                      Taxable
+                    </TableHead>
+                    <TableHead className="text-right text-xs">
+                      VAT (13%)
+                    </TableHead>
                     <TableHead className="text-right text-xs">Total</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -327,10 +377,18 @@ export function ReportsPanel() {
                           {ops.settings.invoicePrefix || 'MEZ-INV-'}
                           {o.number.replace(/[^0-9]/g, '')}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{o.createdAt.slice(0, 10)}</TableCell>
-                        <TableCell className="text-xs">{o.customerName}</TableCell>
-                        <TableCell className="text-right font-mono text-xs">{formatNPR(taxable)}</TableCell>
-                        <TableCell className="text-right font-mono text-xs">{formatNPR(o.tax)}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">
+                          {o.createdAt.slice(0, 10)}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {o.customerName}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs">
+                          {formatNPR(taxable)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs">
+                          {formatNPR(o.tax)}
+                        </TableCell>
                         <TableCell className="text-right font-mono text-xs font-medium text-foreground">
                           {formatNPR(o.total)}
                         </TableCell>
@@ -342,7 +400,9 @@ export function ReportsPanel() {
             </div>
 
             <div className="p-3 bg-muted/30 rounded-md border border-border flex justify-between items-center text-xs">
-              <span className="font-medium text-foreground">Total VAT collected to remit to IRD:</span>
+              <span className="font-medium text-foreground">
+                Total VAT collected to remit to IRD:
+              </span>
               <span className="font-mono font-bold text-foreground">
                 {formatNPR(estimatedVatCollected)}
               </span>

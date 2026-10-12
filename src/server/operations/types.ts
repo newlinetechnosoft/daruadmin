@@ -15,12 +15,7 @@ export const MODULES = [
 
 export type ModuleKey = (typeof MODULES)[number]
 export type ActionKey =
-  | 'view'
-  | 'create'
-  | 'edit'
-  | 'delete'
-  | 'export'
-  | 'approve'
+  'view' | 'create' | 'edit' | 'delete' | 'export' | 'approve'
 
 export const ACTIONS: ActionKey[] = [
   'view',
@@ -44,7 +39,8 @@ export type OrderStatus =
   | 'returned'
   | 'refunded'
 
-export type PaymentMethod = 'cod' | 'esewa' | 'khalti' | 'fonepay' | 'connectips'
+export type PaymentMethod =
+  'cod' | 'esewa' | 'khalti' | 'fonepay' | 'connectips'
 
 export interface OrderItem {
   id: string
@@ -268,7 +264,10 @@ export interface StoreSettings {
   >
 }
 
-export type PermissionMap = Record<string, Partial<Record<ModuleKey, ActionKey[]>>>
+export type PermissionMap = Record<
+  string,
+  Partial<Record<ModuleKey, ActionKey[]>>
+>
 
 export interface OpsState {
   orders: Order[]

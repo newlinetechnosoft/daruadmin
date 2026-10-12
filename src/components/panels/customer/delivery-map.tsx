@@ -65,14 +65,22 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
   }, [])
 
   const currentCenter: [number, number] = useMemo(() => {
-    if (value && typeof value.lat === 'number' && typeof value.lng === 'number') {
+    if (
+      value &&
+      typeof value.lat === 'number' &&
+      typeof value.lng === 'number'
+    ) {
       return [value.lat, value.lng]
     }
     return DEFAULT_MAP_CENTER
   }, [value])
 
   const markerPosition: [number, number] | null = useMemo(() => {
-    if (value && typeof value.lat === 'number' && typeof value.lng === 'number') {
+    if (
+      value &&
+      typeof value.lat === 'number' &&
+      typeof value.lng === 'number'
+    ) {
       return [value.lat, value.lng]
     }
     return null
@@ -135,7 +143,9 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
           onClick={handleLocateMe}
           className="h-7 text-[11px] gap-1.5 cursor-pointer shadow-xs"
         >
-          <Navigation className={`h-3 w-3 ${isLocating ? 'animate-spin' : 'text-primary'}`} />
+          <Navigation
+            className={`h-3 w-3 ${isLocating ? 'animate-spin' : 'text-primary'}`}
+          />
           {isLocating ? 'Locating...' : 'Use my current location'}
         </Button>
       </div>

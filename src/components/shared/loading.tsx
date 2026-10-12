@@ -12,7 +12,12 @@ export function TableSkeleton({
   className?: string
 }) {
   return (
-    <div className={cn('rounded-lg border border-border bg-card overflow-hidden', className)}>
+    <div
+      className={cn(
+        'rounded-lg border border-border bg-card overflow-hidden',
+        className,
+      )}
+    >
       <div className="h-10 bg-muted/40 border-b border-border flex items-center px-4 gap-4">
         {Array.from({ length: columns }).map((_, i) => (
           <Skeleton key={i} className="h-4 w-24" />
@@ -31,9 +36,20 @@ export function TableSkeleton({
   )
 }
 
-export function StatsSkeleton({ count = 4, className }: { count?: number; className?: string }) {
+export function StatsSkeleton({
+  count = 4,
+  className,
+}: {
+  count?: number
+  className?: string
+}) {
   return (
-    <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4', className)}>
+    <div
+      className={cn(
+        'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4',
+        className,
+      )}
+    >
       {Array.from({ length: count }).map((_, i) => (
         <Card key={i} className="p-4 sm:p-5 shadow-none border-border">
           <CardContent className="p-0 space-y-2">
@@ -50,9 +66,20 @@ export function StatsSkeleton({ count = 4, className }: { count?: number; classN
   )
 }
 
-export function CardSkeleton({ count = 3, className }: { count?: number; className?: string }) {
+export function CardSkeleton({
+  count = 3,
+  className,
+}: {
+  count?: number
+  className?: string
+}) {
   return (
-    <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3', className)}>
+    <div
+      className={cn(
+        'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3',
+        className,
+      )}
+    >
       {Array.from({ length: count }).map((_, i) => (
         <Card key={i} className="p-5 shadow-none border-border">
           <CardContent className="p-0 space-y-3">

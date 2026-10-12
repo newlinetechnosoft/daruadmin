@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getRouteApi,   useRouter  } from '@tanstack/react-router'
+import { getRouteApi, useRouter } from '@tanstack/react-router'
 import {
   saveSettingsFn,
   resetOpsFn,
@@ -13,7 +13,13 @@ import { Label } from '#/components/ui/label'
 import { NativeSelect } from '#/components/ui/native-select'
 import { Switch } from '#/components/ui/switch'
 import { Badge } from '#/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '#/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '#/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '#/components/ui/tabs'
 import {
   Dialog,
@@ -43,13 +49,30 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-
-const GATEWAY_NAMES: Record<PaymentMethod, { title: string; subtitle: string }> = {
-  esewa: { title: 'eSewa Mobile Wallet', subtitle: 'Nepal largest digital wallet' },
-  khalti: { title: 'Khalti Digital Wallet', subtitle: 'Sparrow Pay web & app SDK' },
-  fonepay: { title: 'Fonepay Interbank QR', subtitle: 'Direct bank account payment QR' },
-  connectips: { title: 'ConnectIPS NCHL', subtitle: 'National clearing house gateway' },
-  cod: { title: 'Cash on Delivery (COD)', subtitle: 'Physical cash float by rider fleet' },
+const GATEWAY_NAMES: Record<
+  PaymentMethod,
+  { title: string; subtitle: string }
+> = {
+  esewa: {
+    title: 'eSewa Mobile Wallet',
+    subtitle: 'Nepal largest digital wallet',
+  },
+  khalti: {
+    title: 'Khalti Digital Wallet',
+    subtitle: 'Sparrow Pay web & app SDK',
+  },
+  fonepay: {
+    title: 'Fonepay Interbank QR',
+    subtitle: 'Direct bank account payment QR',
+  },
+  connectips: {
+    title: 'ConnectIPS NCHL',
+    subtitle: 'National clearing house gateway',
+  },
+  cod: {
+    title: 'Cash on Delivery (COD)',
+    subtitle: 'Physical cash float by rider fleet',
+  },
 }
 
 const routeApi = getRouteApi('/admin/settings')
@@ -119,7 +142,8 @@ export function SettingsPanel() {
       setResetConfirmationText('')
       await router.invalidate()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to re-seed demo data'
+      const msg =
+        err instanceof Error ? err.message : 'Failed to re-seed demo data'
       toast.error(msg)
     } finally {
       setIsResetting(false)
@@ -128,7 +152,11 @@ export function SettingsPanel() {
 
   const updateGateway = (
     method: PaymentMethod,
-    updates: Partial<{ enabled: boolean; merchantId: string; mode: 'sandbox' | 'live' }>,
+    updates: Partial<{
+      enabled: boolean
+      merchantId: string
+      mode: 'sandbox' | 'live'
+    }>,
   ) => {
     setForm((prev) => ({
       ...prev,
@@ -200,7 +228,11 @@ export function SettingsPanel() {
         <KpiCard
           label="Liquor Age Gate"
           value={form.ageGate ? 'Active (18+)' : 'Disabled'}
-          note={form.ageGate ? 'Mandatory checkout verification' : 'Warning: Not compliant'}
+          note={
+            form.ageGate
+              ? 'Mandatory checkout verification'
+              : 'Warning: Not compliant'
+          }
           icon={ShieldCheck}
           tone={form.ageGate ? 'success' : 'danger'}
         />
@@ -254,7 +286,8 @@ export function SettingsPanel() {
                 <CardHeader>
                   <CardTitle>Official Business Information</CardTitle>
                   <CardDescription>
-                    Used in Nepal IRD tax invoices, legal order receipts, and customer confirmation emails.
+                    Used in Nepal IRD tax invoices, legal order receipts, and
+                    customer confirmation emails.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -264,29 +297,39 @@ export function SettingsPanel() {
                       <Input
                         id="store-name"
                         value={form.storeName}
-                        onChange={(e) => setForm({ ...form, storeName: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, storeName: e.target.value })
+                        }
                         placeholder="e.g. Mezmani"
                         required
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="legal-name">Registered Corporate Entity</Label>
+                      <Label htmlFor="legal-name">
+                        Registered Corporate Entity
+                      </Label>
                       <Input
                         id="legal-name"
                         value={form.legalName}
-                        onChange={(e) => setForm({ ...form, legalName: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, legalName: e.target.value })
+                        }
                         placeholder="e.g. Mezmani Retail Pvt. Ltd."
                         required
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="pan-num">Nepal PAN Registration Number</Label>
+                      <Label htmlFor="pan-num">
+                        Nepal PAN Registration Number
+                      </Label>
                       <Input
                         id="pan-num"
                         value={form.pan}
-                        onChange={(e) => setForm({ ...form, pan: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, pan: e.target.value })
+                        }
                         placeholder="9-digit PAN number"
                         required
                       />
@@ -297,7 +340,9 @@ export function SettingsPanel() {
                       <Input
                         id="vat-id"
                         value={form.vat}
-                        onChange={(e) => setForm({ ...form, vat: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, vat: e.target.value })
+                        }
                         placeholder="e.g. NP-VAT-001"
                         required
                       />
@@ -310,7 +355,9 @@ export function SettingsPanel() {
                         <Input
                           id="store-phone"
                           value={form.phone}
-                          onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                          onChange={(e) =>
+                            setForm({ ...form, phone: e.target.value })
+                          }
                           className="pl-9"
                           placeholder="+977-98XXXXXXXX"
                           required
@@ -319,14 +366,18 @@ export function SettingsPanel() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="store-email">Operational Support Email</Label>
+                      <Label htmlFor="store-email">
+                        Operational Support Email
+                      </Label>
                       <div className="relative">
                         <Mail className="absolute top-1/2 -translate-y-1/2 left-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="store-email"
                           type="email"
                           value={form.email}
-                          onChange={(e) => setForm({ ...form, email: e.target.value })}
+                          onChange={(e) =>
+                            setForm({ ...form, email: e.target.value })
+                          }
                           className="pl-9"
                           placeholder="ops@mezmani.com.np"
                           required
@@ -335,13 +386,17 @@ export function SettingsPanel() {
                     </div>
 
                     <div className="sm:col-span-2 space-y-1.5">
-                      <Label htmlFor="store-addr">Registered Physical Address</Label>
+                      <Label htmlFor="store-addr">
+                        Registered Physical Address
+                      </Label>
                       <div className="relative">
                         <MapPin className="absolute top-1/2 -translate-y-1/2 left-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="store-addr"
                           value={form.address}
-                          onChange={(e) => setForm({ ...form, address: e.target.value })}
+                          onChange={(e) =>
+                            setForm({ ...form, address: e.target.value })
+                          }
                           className="pl-9"
                           placeholder="Street address, Ward, Location"
                           required
@@ -354,7 +409,9 @@ export function SettingsPanel() {
                       <Input
                         id="store-city"
                         value={form.city}
-                        onChange={(e) => setForm({ ...form, city: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, city: e.target.value })
+                        }
                         placeholder="Kathmandu"
                         required
                       />
@@ -378,7 +435,9 @@ export function SettingsPanel() {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">Invoice Header Preview</CardTitle>
+                  <CardTitle className="text-sm">
+                    Invoice Header Preview
+                  </CardTitle>
                   <CardDescription>
                     Official receipt header format:
                   </CardDescription>
@@ -388,7 +447,9 @@ export function SettingsPanel() {
                     <h4 className="text-sm font-bold uppercase tracking-tight text-foreground">
                       {form.storeName || 'Mezmani'}
                     </h4>
-                    <p className="text-xs text-muted-foreground font-medium">{form.legalName}</p>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      {form.legalName}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {form.address}, {form.city}
                     </p>
@@ -411,12 +472,18 @@ export function SettingsPanel() {
                       <ShieldCheck className="h-5 w-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-semibold text-foreground">Nepal IRD Compliance</h4>
-                      <p className="text-xs text-muted-foreground">Inland Revenue Department rules</p>
+                      <h4 className="text-sm font-semibold text-foreground">
+                        Nepal IRD Compliance
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        Inland Revenue Department rules
+                      </p>
                     </div>
                   </div>
                   <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                    According to Nepal IRD Value Added Tax Act 2052, all retail liquor transactions must maintain sequentially numbered tax invoices and report VAT Annex 13 registers monthly.
+                    According to Nepal IRD Value Added Tax Act 2052, all retail
+                    liquor transactions must maintain sequentially numbered tax
+                    invoices and report VAT Annex 13 registers monthly.
                   </p>
                 </CardContent>
               </Card>
@@ -432,13 +499,16 @@ export function SettingsPanel() {
                 <CardHeader>
                   <CardTitle>Nepal Tax & Invoicing Parameters</CardTitle>
                   <CardDescription>
-                    Control the standard VAT rate, sequential bill numbering prefixes, and inventory triggers.
+                    Control the standard VAT rate, sequential bill numbering
+                    prefixes, and inventory triggers.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor="tax-rate">Standard Nepal VAT Rate (%)</Label>
+                      <Label htmlFor="tax-rate">
+                        Standard Nepal VAT Rate (%)
+                      </Label>
                       <div className="relative">
                         <Input
                           id="tax-rate"
@@ -448,7 +518,10 @@ export function SettingsPanel() {
                           step="0.5"
                           value={form.taxRate}
                           onChange={(e) =>
-                            setForm({ ...form, taxRate: parseFloat(e.target.value) || 0 })
+                            setForm({
+                              ...form,
+                              taxRate: parseFloat(e.target.value) || 0,
+                            })
                           }
                           required
                         />
@@ -462,12 +535,17 @@ export function SettingsPanel() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="prefix-input">Invoice Number Prefix</Label>
+                      <Label htmlFor="prefix-input">
+                        Invoice Number Prefix
+                      </Label>
                       <Input
                         id="prefix-input"
                         value={form.invoicePrefix}
                         onChange={(e) =>
-                          setForm({ ...form, invoicePrefix: e.target.value.toUpperCase() })
+                          setForm({
+                            ...form,
+                            invoicePrefix: e.target.value.toUpperCase(),
+                          })
                         }
                         placeholder="e.g. MZ or DARU"
                         required
@@ -481,7 +559,9 @@ export function SettingsPanel() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="stock-thresh">Low Stock Alert Threshold</Label>
+                      <Label htmlFor="stock-thresh">
+                        Low Stock Alert Threshold
+                      </Label>
                       <div className="relative">
                         <Input
                           id="stock-thresh"
@@ -492,7 +572,8 @@ export function SettingsPanel() {
                           onChange={(e) =>
                             setForm({
                               ...form,
-                              lowStockThreshold: parseInt(e.target.value, 10) || 10,
+                              lowStockThreshold:
+                                parseInt(e.target.value, 10) || 10,
                             })
                           }
                           required
@@ -502,7 +583,8 @@ export function SettingsPanel() {
                         </span>
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        Items with inventory below this quantity trigger alerts on dashboard.
+                        Items with inventory below this quantity trigger alerts
+                        on dashboard.
                       </p>
                     </div>
                   </div>
@@ -524,24 +606,30 @@ export function SettingsPanel() {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">Tax Calculation Logic</CardTitle>
-                  <CardDescription>
-                    Mezmani tax breakdown flow:
-                  </CardDescription>
+                  <CardTitle className="text-sm">
+                    Tax Calculation Logic
+                  </CardTitle>
+                  <CardDescription>Mezmani tax breakdown flow:</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-xs">
                     <div className="flex items-center justify-between border-b border-border pb-1.5 text-muted-foreground">
                       <span>Gross Product Subtotal</span>
-                      <span className="font-semibold text-foreground">100.00%</span>
+                      <span className="font-semibold text-foreground">
+                        100.00%
+                      </span>
                     </div>
                     <div className="flex items-center justify-between border-b border-border pb-1.5 text-muted-foreground">
                       <span>VAT ({form.taxRate}%)</span>
-                      <span className="font-semibold text-primary">+{form.taxRate}.00%</span>
+                      <span className="font-semibold text-primary">
+                        +{form.taxRate}.00%
+                      </span>
                     </div>
                     <div className="flex items-center justify-between border-b border-border pb-1.5 text-muted-foreground">
                       <span>Delivery Fee</span>
-                      <span className="font-semibold text-foreground">Per Zone</span>
+                      <span className="font-semibold text-foreground">
+                        Per Zone
+                      </span>
                     </div>
                     <div className="flex items-center justify-between font-semibold text-foreground pt-1">
                       <span>Net Payable Total</span>
@@ -564,7 +652,8 @@ export function SettingsPanel() {
                     <div>
                       <CardTitle>Liquor Sale Age Verification (18+)</CardTitle>
                       <CardDescription>
-                        Nepal law strictly prohibits the sale and delivery of alcoholic beverages to minors under 18 years of age.
+                        Nepal law strictly prohibits the sale and delivery of
+                        alcoholic beverages to minors under 18 years of age.
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-3">
@@ -573,7 +662,9 @@ export function SettingsPanel() {
                       </span>
                       <Switch
                         checked={form.ageGate}
-                        onCheckedChange={(checked) => setForm({ ...form, ageGate: checked })}
+                        onCheckedChange={(checked) =>
+                          setForm({ ...form, ageGate: checked })
+                        }
                       />
                     </div>
                   </div>
@@ -587,10 +678,13 @@ export function SettingsPanel() {
                           When age gate enforcement is ON:
                         </p>
                         <p>
-                          1. All guest checkout flows prompt for user birth-date and explicit declaration of majority (18+).
+                          1. All guest checkout flows prompt for user birth-date
+                          and explicit declaration of majority (18+).
                         </p>
                         <p>
-                          2. Delivery riders are mandated by dispatch policy to check national identity card upon handing over liquor parcels.
+                          2. Delivery riders are mandated by dispatch policy to
+                          check national identity card upon handing over liquor
+                          parcels.
                         </p>
                       </div>
                     </div>
@@ -613,9 +707,12 @@ export function SettingsPanel() {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">Kathmandu Valley Liquor License</CardTitle>
+                  <CardTitle className="text-sm">
+                    Kathmandu Valley Liquor License
+                  </CardTitle>
                   <CardDescription>
-                    Registered under Department of Commerce, Supplies and Consumer Protection.
+                    Registered under Department of Commerce, Supplies and
+                    Consumer Protection.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -625,7 +722,8 @@ export function SettingsPanel() {
                       Excise License Valid
                     </div>
                     <p className="mt-1 text-[11px] text-success">
-                      Compliant with Nepal Excise Act and Tobacco & Alcohol Control Regulations.
+                      Compliant with Nepal Excise Act and Tobacco & Alcohol
+                      Control Regulations.
                     </p>
                   </div>
                 </CardContent>
@@ -640,9 +738,12 @@ export function SettingsPanel() {
             <div className="space-y-6 lg:col-span-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>Automated Alerts & Dispatch Notifications</CardTitle>
+                  <CardTitle>
+                    Automated Alerts & Dispatch Notifications
+                  </CardTitle>
                   <CardDescription>
-                    Configure channels for order status changes, courier alerts, and system notices.
+                    Configure channels for order status changes, courier alerts,
+                    and system notices.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -652,12 +753,15 @@ export function SettingsPanel() {
                         Email Notifications
                       </h4>
                       <p className="text-xs text-muted-foreground">
-                        Send transactional email to customers when an order is confirmed, packed, or delivered.
+                        Send transactional email to customers when an order is
+                        confirmed, packed, or delivered.
                       </p>
                     </div>
                     <Switch
                       checked={form.notifyEmail}
-                      onCheckedChange={(checked) => setForm({ ...form, notifyEmail: checked })}
+                      onCheckedChange={(checked) =>
+                        setForm({ ...form, notifyEmail: checked })
+                      }
                     />
                   </div>
 
@@ -667,12 +771,15 @@ export function SettingsPanel() {
                         SMS / WhatsApp Dispatch Alerts
                       </h4>
                       <p className="text-xs text-muted-foreground">
-                        Send SMS / WhatsApp notifications to delivery riders upon new order assignments via Sparrow SMS / NTC.
+                        Send SMS / WhatsApp notifications to delivery riders
+                        upon new order assignments via Sparrow SMS / NTC.
                       </p>
                     </div>
                     <Switch
                       checked={form.notifySms}
-                      onCheckedChange={(checked) => setForm({ ...form, notifySms: checked })}
+                      onCheckedChange={(checked) =>
+                        setForm({ ...form, notifySms: checked })
+                      }
                     />
                   </div>
 
@@ -703,7 +810,9 @@ export function SettingsPanel() {
                     variant="outline"
                     className="w-full gap-2"
                     onClick={() => {
-                      toast.success('Test alert broadcast queued: sent to ' + form.email)
+                      toast.success(
+                        'Test alert broadcast queued: sent to ' + form.email,
+                      )
                     }}
                   >
                     <Bell className="h-4 w-4" />
@@ -722,7 +831,8 @@ export function SettingsPanel() {
               <div>
                 <CardTitle>Nepal Payment Gateway Integrations</CardTitle>
                 <CardDescription>
-                  Configure merchant identification keys and switch between Sandbox (Test) and Live production mode.
+                  Configure merchant identification keys and switch between
+                  Sandbox (Test) and Live production mode.
                 </CardDescription>
               </div>
               <Button
@@ -736,7 +846,13 @@ export function SettingsPanel() {
             </CardHeader>
             <CardContent className="space-y-3">
               {(
-                ['esewa', 'khalti', 'fonepay', 'connectips', 'cod'] as PaymentMethod[]
+                [
+                  'esewa',
+                  'khalti',
+                  'fonepay',
+                  'connectips',
+                  'cod',
+                ] as PaymentMethod[]
               ).map((method) => {
                 const info = GATEWAY_NAMES[method]
                 const gw = form.gateways[method] || {
@@ -762,20 +878,29 @@ export function SettingsPanel() {
                           {gw.mode}
                         </Badge>
                       </div>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{info.subtitle}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {info.subtitle}
+                      </p>
                     </div>
 
                     <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
                       <div className="flex-1 space-y-1">
-                        <Label htmlFor={`gw-${method}-id`} className="text-[11px] text-muted-foreground">
-                          {method === 'cod' ? 'Float Account ID' : 'Merchant ID / Secret Key'}
+                        <Label
+                          htmlFor={`gw-${method}-id`}
+                          className="text-[11px] text-muted-foreground"
+                        >
+                          {method === 'cod'
+                            ? 'Float Account ID'
+                            : 'Merchant ID / Secret Key'}
                         </Label>
                         <Input
                           id={`gw-${method}-id`}
                           type="text"
                           value={gw.merchantId}
                           onChange={(e) =>
-                            updateGateway(method, { merchantId: e.target.value })
+                            updateGateway(method, {
+                              merchantId: e.target.value,
+                            })
                           }
                           className="h-8 font-mono text-xs"
                           placeholder={
@@ -787,7 +912,10 @@ export function SettingsPanel() {
                       </div>
 
                       <div className="w-28 space-y-1">
-                        <Label htmlFor={`gw-${method}-mode`} className="text-[11px] text-muted-foreground">
+                        <Label
+                          htmlFor={`gw-${method}-mode`}
+                          className="text-[11px] text-muted-foreground"
+                        >
                           Environment
                         </Label>
                         <NativeSelect
@@ -808,7 +936,9 @@ export function SettingsPanel() {
                       <div className="flex items-center gap-2 pt-2 sm:pt-4">
                         <Switch
                           checked={gw.enabled}
-                          onCheckedChange={(checked) => updateGateway(method, { enabled: checked })}
+                          onCheckedChange={(checked) =>
+                            updateGateway(method, { enabled: checked })
+                          }
                         />
                         <span className="text-xs text-muted-foreground w-12 font-medium">
                           {gw.enabled ? 'Enabled' : 'Off'}
@@ -833,7 +963,9 @@ export function SettingsPanel() {
                   </div>
                   <div>
                     <CardTitle>Neon PostgreSQL Infrastructure</CardTitle>
-                    <CardDescription>Serverless AWS Cloud Database</CardDescription>
+                    <CardDescription>
+                      Serverless AWS Cloud Database
+                    </CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -845,15 +977,25 @@ export function SettingsPanel() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between rounded-lg border border-border p-2.5">
-                  <span className="text-muted-foreground">Operational Table</span>
-                  <span className="font-mono font-medium text-foreground">ops_kv</span>
+                  <span className="text-muted-foreground">
+                    Operational Storage
+                  </span>
+                  <span className="font-mono font-medium text-foreground">
+                    PostgreSQL Relational Tables
+                  </span>
                 </div>
                 <div className="flex items-center justify-between rounded-lg border border-border p-2.5">
-                  <span className="text-muted-foreground">State Snapshot Key</span>
-                  <span className="font-mono font-medium text-foreground">mezmani-ops-v1</span>
+                  <span className="text-muted-foreground">
+                    Cache Architecture
+                  </span>
+                  <span className="font-mono font-medium text-foreground">
+                    TanStack Query + IndexedDB
+                  </span>
                 </div>
                 <div className="flex items-center justify-between rounded-lg border border-border p-2.5">
-                  <span className="text-muted-foreground">Connection Status</span>
+                  <span className="text-muted-foreground">
+                    Connection Status
+                  </span>
                   <span className="inline-flex items-center gap-1.5 font-medium text-success">
                     <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
                     Live & Healthy (Auto-Sync)
@@ -870,7 +1012,9 @@ export function SettingsPanel() {
                   </div>
                   <div>
                     <CardTitle>Cloud Storage Metrics</CardTitle>
-                    <CardDescription>Current live operational records</CardDescription>
+                    <CardDescription>
+                      Current live operational records
+                    </CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -878,19 +1022,33 @@ export function SettingsPanel() {
                 <div className="grid grid-cols-2 gap-3 text-center">
                   <div className="rounded-lg border border-border bg-muted/20 p-3">
                     <p className="text-xs text-muted-foreground">Live Orders</p>
-                    <p className="mt-1 text-xl font-bold text-foreground font-mono">{ops.orders.length}</p>
+                    <p className="mt-1 text-xl font-bold text-foreground font-mono">
+                      {ops.orders.length}
+                    </p>
                   </div>
                   <div className="rounded-lg border border-border bg-muted/20 p-3">
-                    <p className="text-xs text-muted-foreground">Fleet Couriers</p>
-                    <p className="mt-1 text-xl font-bold text-foreground font-mono">{ops.riders.length}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Fleet Couriers
+                    </p>
+                    <p className="mt-1 text-xl font-bold text-foreground font-mono">
+                      {ops.riders.length}
+                    </p>
                   </div>
                   <div className="rounded-lg border border-border bg-muted/20 p-3">
-                    <p className="text-xs text-muted-foreground">Ledger Vouchers</p>
-                    <p className="mt-1 text-xl font-bold text-foreground font-mono">{ops.ledger.length}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Ledger Vouchers
+                    </p>
+                    <p className="mt-1 text-xl font-bold text-foreground font-mono">
+                      {ops.ledger.length}
+                    </p>
                   </div>
                   <div className="rounded-lg border border-border bg-muted/20 p-3">
-                    <p className="text-xs text-muted-foreground">Catalog SKUs</p>
-                    <p className="mt-1 text-xl font-bold text-foreground font-mono">{totalCatalogItems}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Catalog SKUs
+                    </p>
+                    <p className="mt-1 text-xl font-bold text-foreground font-mono">
+                      {totalCatalogItems}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -909,7 +1067,9 @@ export function SettingsPanel() {
                     </h3>
                   </div>
                   <p className="mt-1 max-w-xl text-xs text-muted-foreground">
-                    Re-populates the Neon database with default orders, Kathmandu Valley dispatch riders, initial general ledger transactions, and marketing vouchers from the catalog.
+                    Re-populates the Neon database with default orders,
+                    Kathmandu Valley dispatch riders, initial general ledger
+                    transactions, and marketing vouchers from the catalog.
                   </p>
                 </div>
                 <Button
@@ -936,14 +1096,18 @@ export function SettingsPanel() {
               Confirm Sandbox Reset
             </DialogTitle>
             <DialogDescription>
-              This action replaces live test state in Neon DB with fresh seed data.
+              This action replaces live test state in Neon DB with fresh seed
+              data.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-2 text-xs">
             <p className="text-muted-foreground">
               To prevent accidental reset, please type{' '}
-              <span className="font-mono font-bold text-destructive">RESET</span> below to confirm:
+              <span className="font-mono font-bold text-destructive">
+                RESET
+              </span>{' '}
+              below to confirm:
             </p>
             <Input
               type="text"
@@ -967,7 +1131,10 @@ export function SettingsPanel() {
             <Button
               variant="destructive"
               onClick={handleResetSandbox}
-              disabled={isResetting || resetConfirmationText.trim().toLowerCase() !== 'reset'}
+              disabled={
+                isResetting ||
+                resetConfirmationText.trim().toLowerCase() !== 'reset'
+              }
             >
               {isResetting ? 'Resetting...' : 'Confirm Factory Reset'}
             </Button>

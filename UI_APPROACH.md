@@ -44,22 +44,22 @@ no glows, and no emoji.
 
 ### Surface & Border Tokens
 
-| Token | Light Value | Dark Value | Purpose |
-| --- | --- | --- | --- |
-| `--background` | `#ffffff` | `#000000` | Main content canvas |
-| `--foreground` | `#171717` | `#ededed` | Primary text and headings |
-| `--card` | `#ffffff` | `#0a0a0a` | Elevated surfaces, cards, modals |
-| `--card-foreground` | `#171717` | `#ededed` | Text on cards |
-| `--sidebar` | `#fafafa` | `#0a0a0a` | Admin sidebar, shell canvas |
-| `--sidebar-border` | `#eaeaea` | `#262626` | Hairline sidebar separation |
-| `--border` | `#eaeaea` | `#262626` | Standard 1px dividers and card borders |
-| `--input` | `#e5e5e5` | `#333333` | Input, select, and checkbox borders |
-| `--muted` | `#f5f5f5` | `#171717` | Subtle pill backgrounds, table headers |
-| `--muted-foreground` | `#666666` | `#a1a1a1` | Secondary copy, captions, timestamps |
-| `--accent` | `#f5f5f5` | `#171717` | Hover states, active tabs |
-| `--primary` | `#171717` | `#ededed` | Solid primary buttons and badges |
-| `--primary-foreground`| `#ffffff` | `#000000` | Text on primary elements |
-| `--ring` | `rgba(163,163,163,0.4)` | `rgba(82,82,82,0.5)` | Focus-visible ring |
+| Token                  | Light Value             | Dark Value           | Purpose                                |
+| ---------------------- | ----------------------- | -------------------- | -------------------------------------- |
+| `--background`         | `#ffffff`               | `#000000`            | Main content canvas                    |
+| `--foreground`         | `#171717`               | `#ededed`            | Primary text and headings              |
+| `--card`               | `#ffffff`               | `#0a0a0a`            | Elevated surfaces, cards, modals       |
+| `--card-foreground`    | `#171717`               | `#ededed`            | Text on cards                          |
+| `--sidebar`            | `#fafafa`               | `#0a0a0a`            | Admin sidebar, shell canvas            |
+| `--sidebar-border`     | `#eaeaea`               | `#262626`            | Hairline sidebar separation            |
+| `--border`             | `#eaeaea`               | `#262626`            | Standard 1px dividers and card borders |
+| `--input`              | `#e5e5e5`               | `#333333`            | Input, select, and checkbox borders    |
+| `--muted`              | `#f5f5f5`               | `#171717`            | Subtle pill backgrounds, table headers |
+| `--muted-foreground`   | `#666666`               | `#a1a1a1`            | Secondary copy, captions, timestamps   |
+| `--accent`             | `#f5f5f5`               | `#171717`            | Hover states, active tabs              |
+| `--primary`            | `#171717`               | `#ededed`            | Solid primary buttons and badges       |
+| `--primary-foreground` | `#ffffff`               | `#000000`            | Text on primary elements               |
+| `--ring`               | `rgba(163,163,163,0.4)` | `rgba(82,82,82,0.5)` | Focus-visible ring                     |
 
 ### Semantic Tokens (Status Only — Never Giant Colored Surfaces)
 
@@ -89,17 +89,17 @@ No purple, lime, indigo, cyan, or sky anywhere.
 
 ## 4. Typography Scale & Formatting
 
-| Role | Tailwind Classes | Example Usage |
-| --- | --- | --- |
-| Page title | `text-2xl font-semibold tracking-tight` | Admin dashboard header, listing title |
-| Storefront hero H1 | `text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight` | Homepage hero headline |
-| Section title | `text-lg font-semibold tracking-tight` | Card section titles, settings groups |
-| Body / base text | `text-sm text-foreground` (admin) / `text-base` (store) | Main paragraph copy, table contents |
-| Secondary copy | `text-xs sm:text-sm text-muted-foreground` | Subtitles, field descriptions |
-| Field label | `text-sm font-medium text-foreground` | Form field labels |
-| Caption / Meta | `text-xs text-muted-foreground` | Timestamps, table captions |
-| Code / Identifiers | `font-mono text-xs text-muted-foreground` | Order IDs, SKUs, tracking codes |
-| Numbers / Prices | `tabular-nums` | Table amounts, metrics, stock numbers |
+| Role               | Tailwind Classes                                                | Example Usage                         |
+| ------------------ | --------------------------------------------------------------- | ------------------------------------- |
+| Page title         | `text-2xl font-semibold tracking-tight`                         | Admin dashboard header, listing title |
+| Storefront hero H1 | `text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight` | Homepage hero headline                |
+| Section title      | `text-lg font-semibold tracking-tight`                          | Card section titles, settings groups  |
+| Body / base text   | `text-sm text-foreground` (admin) / `text-base` (store)         | Main paragraph copy, table contents   |
+| Secondary copy     | `text-xs sm:text-sm text-muted-foreground`                      | Subtitles, field descriptions         |
+| Field label        | `text-sm font-medium text-foreground`                           | Form field labels                     |
+| Caption / Meta     | `text-xs text-muted-foreground`                                 | Timestamps, table captions            |
+| Code / Identifiers | `font-mono text-xs text-muted-foreground`                       | Order IDs, SKUs, tracking codes       |
+| Numbers / Prices   | `tabular-nums`                                                  | Table amounts, metrics, stock numbers |
 
 **Sentence case rule:** Write "Shop by category", "Add to order", "Recent deliveries", not "SHOP BY CATEGORY" or "ADD TO ORDER".
 
@@ -109,31 +109,33 @@ No purple, lime, indigo, cyan, or sky anywhere.
 
 Always use shadcn primitives directly or compose thin wrappers in `src/components/shared/`:
 
-| Element | Primitive / Recipe | Classes & Styling |
-| --- | --- | --- |
-| Primary action | `Button variant="default"` | `h-9 rounded-md bg-primary text-primary-foreground hover:bg-primary/90` |
-| Secondary action | `Button variant="outline"` | `h-9 rounded-md border border-border bg-background hover:bg-accent` |
-| Tertiary action | `Button variant="ghost"` | `h-9 rounded-md hover:bg-accent hover:text-accent-foreground` |
-| Inputs & Selects | `Input`, `Select` | `h-9 rounded-md border border-input bg-transparent px-3 text-sm focus-visible:ring-[3px]` |
-| Status Badge | `StatusBadge` (shared) | `Badge variant="outline"` with a 6px status dot + sentence-case label |
-| KPI Metric Card | `KpiCard` (shared) | `Card` with muted small label + `text-2xl font-semibold tabular-nums` |
-| Data Table | `DataTable` (shared) | `@tanstack/react-table` + shadcn `Table`, search input, filter selects, pagination |
-| Confirmation | `AlertDialog` | Restrained modal with cancel button and destructive/primary submit |
-| Modal Form | `Dialog` | Centered `max-w-lg rounded-lg border bg-card p-6 shadow-md` |
-| Filter Drawer | `Sheet side="right"` | Mobile filters panel using identical filter components as desktop |
-| Navigation Tabs | `Tabs` | `TabsList` with clean understated triggers (`hover:text-foreground`) |
-| Theme Switcher | `ThemeToggle` (shared) | DropdownMenu with Light, Dark, System options |
+| Element          | Primitive / Recipe         | Classes & Styling                                                                         |
+| ---------------- | -------------------------- | ----------------------------------------------------------------------------------------- |
+| Primary action   | `Button variant="default"` | `h-9 rounded-md bg-primary text-primary-foreground hover:bg-primary/90`                   |
+| Secondary action | `Button variant="outline"` | `h-9 rounded-md border border-border bg-background hover:bg-accent`                       |
+| Tertiary action  | `Button variant="ghost"`   | `h-9 rounded-md hover:bg-accent hover:text-accent-foreground`                             |
+| Inputs & Selects | `Input`, `Select`          | `h-9 rounded-md border border-input bg-transparent px-3 text-sm focus-visible:ring-[3px]` |
+| Status Badge     | `StatusBadge` (shared)     | `Badge variant="outline"` with a 6px status dot + sentence-case label                     |
+| KPI Metric Card  | `KpiCard` (shared)         | `Card` with muted small label + `text-2xl font-semibold tabular-nums`                     |
+| Data Table       | `DataTable` (shared)       | `@tanstack/react-table` + shadcn `Table`, search input, filter selects, pagination        |
+| Confirmation     | `AlertDialog`              | Restrained modal with cancel button and destructive/primary submit                        |
+| Modal Form       | `Dialog`                   | Centered `max-w-lg rounded-lg border bg-card p-6 shadow-md`                               |
+| Filter Drawer    | `Sheet side="right"`       | Mobile filters panel using identical filter components as desktop                         |
+| Navigation Tabs  | `Tabs`                     | `TabsList` with clean understated triggers (`hover:text-foreground`)                      |
+| Theme Switcher   | `ThemeToggle` (shared)     | DropdownMenu with Light, Dark, System options                                             |
 
 ---
 
 ## 6. Page Patterns
 
 ### Admin Shell (`/admin/*`)
+
 - Sidebar: shadcn `Sidebar` (`#fafafa` light / `#0a0a0a` dark, 1px hairline border). Active item = `bg-accent text-foreground font-medium`; inactive = `text-muted-foreground hover:bg-accent/50`.
 - Top bar: `h-14 border-b border-border bg-background px-4 flex items-center justify-between`. Contains `SidebarTrigger`, `Breadcrumb`, global search Command palette (`Cmd+K`), notifications Popover, `ThemeToggle`, and user profile DropdownMenu.
 - Page layout: `max-w-7xl mx-auto p-6 space-y-6`. PageHeader → Toolbar → DataTable / KPI Grid.
 
 ### Storefront Header & Home (`/`)
+
 - Header: Sticky `h-14 sm:h-16 border-b border-border bg-background/80 backdrop-blur-sm`. Clean sentence-case logo, search input/command, ThemeToggle, cart outline button with rounded-full pill.
 - Hero: Minimal, impactful sentence-case headline, muted description, compact search input, clean category cards with subtle `scale-[1.02]` hover.
 - Product listings (`/drinks`, `/grocery`): Breadcrumb → Toolbar with sort Select and product count → Sidebar filters (collapsible checkbox groups) → ProductCard grid (Aspect ratio images on subtle muted tile) → shadcn `Pagination`.
@@ -157,15 +159,15 @@ Always use shadcn primitives directly or compose thin wrappers in `src/component
 
 ## 8. Status
 
-| Area | Status | Notes |
-| --- | --- | --- |
-| Design Tokens & `styles.css` | ✅ Completed | Vercel tokens, Geist fonts, `--radius: 0.5rem`, semantic tokens |
-| Theme Provider & Toggle | ✅ Completed | `next-themes` wired in `__root.tsx`, `ThemeToggle` in headers |
-| `src/components/ui/*` Bug Fix | ✅ Completed | All primitives import from `#/lib/utils`; `cn` package removed |
-| shadcn Primitive Installation | ✅ Completed | Installed all primitives: table, select, checkbox, switch, textarea, etc. |
-| Shared Compositions (`src/components/shared/*`) | ✅ Completed | `PageHeader`, `KpiCard`, `StatusBadge`, `ConfirmDialog`, `DataTable`, `EmptyState`, `ThemeToggle`, `Pagination` |
-| Admin Shell (`/admin/route.tsx`) | ✅ Completed | shadcn `Sidebar`, `Breadcrumb`, `CommandDialog` (Cmd+K), `Popover`, `DropdownMenu` |
-| Admin Pages (All 16 pages) | ✅ Completed | All pages migrated: index, users, reports, inventory, customers, staff, taxonomy, shipping, payments, riders, accounts, grocery, liquor, marketing, orders, settings |
-| Auth Pages (`/login`, `/signup`) | ✅ Completed | Centered clean card layout with shadcn Input, Label, Checkbox, Button |
-| Storefront (`Header`, `Footer`, `/`, `/drinks`, `/grocery`) | ✅ Completed | Vercel style + shadcn primitives, real shadcn Pagination component wired |
-| CartSheet, AgeGate, ProductCard | ✅ Completed | Logic preserved, updated to shadcn Sheet, Progress, Button, Badge |
+| Area                                                        | Status       | Notes                                                                                                                                                                |
+| ----------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Design Tokens & `styles.css`                                | ✅ Completed | Vercel tokens, Geist fonts, `--radius: 0.5rem`, semantic tokens                                                                                                      |
+| Theme Provider & Toggle                                     | ✅ Completed | `next-themes` wired in `__root.tsx`, `ThemeToggle` in headers                                                                                                        |
+| `src/components/ui/*` Bug Fix                               | ✅ Completed | All primitives import from `#/lib/utils`; `cn` package removed                                                                                                       |
+| shadcn Primitive Installation                               | ✅ Completed | Installed all primitives: table, select, checkbox, switch, textarea, etc.                                                                                            |
+| Shared Compositions (`src/components/shared/*`)             | ✅ Completed | `PageHeader`, `KpiCard`, `StatusBadge`, `ConfirmDialog`, `DataTable`, `EmptyState`, `ThemeToggle`, `Pagination`                                                      |
+| Admin Shell (`/admin/route.tsx`)                            | ✅ Completed | shadcn `Sidebar`, `Breadcrumb`, `CommandDialog` (Cmd+K), `Popover`, `DropdownMenu`                                                                                   |
+| Admin Pages (All 16 pages)                                  | ✅ Completed | All pages migrated: index, users, reports, inventory, customers, staff, taxonomy, shipping, payments, riders, accounts, grocery, liquor, marketing, orders, settings |
+| Auth Pages (`/login`, `/signup`)                            | ✅ Completed | Centered clean card layout with shadcn Input, Label, Checkbox, Button                                                                                                |
+| Storefront (`Header`, `Footer`, `/`, `/drinks`, `/grocery`) | ✅ Completed | Vercel style + shadcn primitives, real shadcn Pagination component wired                                                                                             |
+| CartSheet, AgeGate, ProductCard                             | ✅ Completed | Logic preserved, updated to shadcn Sheet, Progress, Button, Badge                                                                                                    |

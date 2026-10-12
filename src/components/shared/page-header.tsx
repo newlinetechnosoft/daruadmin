@@ -31,7 +31,10 @@ export function PageHeader({
               {title}
             </h1>
             {count !== undefined && (
-              <Badge variant="outline" className="font-mono text-xs tabular-nums">
+              <Badge
+                variant="outline"
+                className="font-mono text-xs tabular-nums"
+              >
                 {count}
               </Badge>
             )}

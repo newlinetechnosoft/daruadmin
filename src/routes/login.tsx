@@ -10,8 +10,22 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Checkbox } from '#/components/ui/checkbox'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card'
-import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck, Zap } from 'lucide-react'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '#/components/ui/card'
+import {
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  ArrowRight,
+  ShieldCheck,
+  Zap,
+} from 'lucide-react'
 
 const loginSearchSchema = z.object({
   redirect: z.string().optional(),
@@ -78,7 +92,8 @@ function LoginPage() {
                 Sign in
               </CardTitle>
               <CardDescription className="text-xs">
-                Access your orders, saved addresses, and 40-minute express delivery.
+                Access your orders, saved addresses, and 40-minute express
+                delivery.
               </CardDescription>
             </CardHeader>
 
@@ -141,7 +156,9 @@ function LoginPage() {
                       size="icon"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-label={
+                        showPassword ? 'Hide password' : 'Show password'
+                      }
                     >
                       {showPassword ? (
                         <EyeOff className="h-3.5 w-3.5" />
@@ -157,9 +174,14 @@ function LoginPage() {
                   <Checkbox
                     id="remember"
                     checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(Boolean(checked))}
+                    onCheckedChange={(checked) =>
+                      setRememberMe(Boolean(checked))
+                    }
                   />
-                  <Label htmlFor="remember" className="text-xs font-normal text-muted-foreground cursor-pointer">
+                  <Label
+                    htmlFor="remember"
+                    className="text-xs font-normal text-muted-foreground cursor-pointer"
+                  >
                     Remember this device
                   </Label>
                 </div>

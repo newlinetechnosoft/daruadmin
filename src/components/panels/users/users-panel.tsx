@@ -1,8 +1,6 @@
 import { useState, useMemo } from 'react'
-import { getRouteApi,   useRouter  } from '@tanstack/react-router'
-import {
-  updateUserRoleFn,
-} from '#/server/catalog/catalog.functions'
+import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { updateUserRoleFn } from '#/server/catalog/catalog.functions'
 import {
   Search,
   Shield,
@@ -21,10 +19,7 @@ import { Input } from '#/components/ui/input'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { Avatar, AvatarFallback } from '#/components/ui/avatar'
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from '#/components/ui/native-select'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import {
   Table,
   TableBody,
@@ -34,7 +29,6 @@ import {
   TableRow,
 } from '#/components/ui/table'
 import { EmptyState } from '#/components/shared/empty-state'
-
 
 const ROLES = [
   { value: 'admin', label: 'Admin (Full Access)' },
@@ -128,7 +122,10 @@ export function UsersPanel() {
         )
       default:
         return (
-          <Badge variant="outline" className="gap-1 text-xs font-normal text-muted-foreground">
+          <Badge
+            variant="outline"
+            className="gap-1 text-xs font-normal text-muted-foreground"
+          >
             <UserCheck className="h-3 w-3" /> Customer
           </Badge>
         )
@@ -210,7 +207,9 @@ export function UsersPanel() {
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-medium text-foreground">{u.name}</div>
+                          <div className="font-medium text-foreground">
+                            {u.name}
+                          </div>
                           <div className="font-mono text-[11px] text-muted-foreground">
                             {u.id.slice(0, 10)}...
                           </div>
@@ -277,7 +276,8 @@ export function UsersPanel() {
                       >
                         {isActive ? (
                           <>
-                            <CheckCircle2 className="h-3 w-3 text-success" /> Active
+                            <CheckCircle2 className="h-3 w-3 text-success" />{' '}
+                            Active
                           </>
                         ) : (
                           <>

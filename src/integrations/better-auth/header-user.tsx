@@ -1,12 +1,11 @@
 import { authClient } from '#/lib/auth-client'
+import { clearAllLocalData } from '#/lib/idb'
 
 export default function BetterAuthHeader() {
   const { data: session, isPending } = authClient.useSession()
 
   if (isPending) {
-    return (
-      <div className="h-8 w-8 bg-muted animate-pulse rounded" />
-    )
+    return <div className="h-8 w-8 bg-muted animate-pulse rounded" />
   }
 
   if (session?.user) {
@@ -22,8 +21,9 @@ export default function BetterAuthHeader() {
           </div>
         )}
         <button
-          onClick={() => {
-            void authClient.signOut()
+          onClick={async () => {
+            await authClient.signOut()
+            await clearAllLocalData()
           }}
           className="flex-1 h-9 px-4 text-sm font-medium bg-card text-foreground border border-border hover:bg-accent hover:text-accent-foreground transition-colors rounded"
         >

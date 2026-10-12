@@ -20,15 +20,16 @@ export function KpiCard({
   className?: string
 }) {
   return (
-    <Card className={cn('rounded-lg border border-border bg-card p-4 sm:p-5 shadow-none', className)}>
+    <Card
+      className={cn(
+        'rounded-lg border border-border bg-card p-4 sm:p-5 shadow-none',
+        className,
+      )}
+    >
       <CardContent className="p-0">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-medium text-muted-foreground">
-            {label}
-          </p>
-          {Icon && (
-            <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-          )}
+          <p className="text-xs font-medium text-muted-foreground">{label}</p>
+          {Icon && <Icon className="h-4 w-4 text-muted-foreground shrink-0" />}
         </div>
         <div className="mt-2 text-2xl font-semibold tracking-tight tabular-nums text-foreground">
           {value}

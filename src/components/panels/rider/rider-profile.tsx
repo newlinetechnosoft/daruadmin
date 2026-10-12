@@ -6,6 +6,7 @@ import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
 import { authClient } from '#/lib/auth-client'
+import { clearAllLocalData } from '#/lib/idb'
 import {
   Bike,
   ShieldCheck,
@@ -32,7 +33,9 @@ export function RiderProfile({ rider }: RiderProfileProps) {
       setIsTogglingAvail(true)
       const nextStatus = !rider.available
       await toggleRiderAvailabilityFn({ data: { available: nextStatus } })
-      toast.success(nextStatus ? 'Status updated: ONLINE' : 'Status updated: OFFLINE')
+      toast.success(
+        nextStatus ? 'Status updated: ONLINE' : 'Status updated: OFFLINE',
+      )
       await router.invalidate()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to update status')
@@ -45,6 +48,7 @@ export function RiderProfile({ rider }: RiderProfileProps) {
     try {
       setIsLoggingOut(true)
       await authClient.signOut()
+      await clearAllLocalData()
       window.location.href = '/login'
     } catch (err: any) {
       toast.error(err?.message || 'Failed to sign out')
@@ -55,7 +59,9 @@ export function RiderProfile({ rider }: RiderProfileProps) {
   return (
     <div className="space-y-6 pb-12 max-w-2xl mx-auto">
       <div>
-        <h2 className="text-base font-semibold text-foreground">Rider Profile</h2>
+        <h2 className="text-base font-semibold text-foreground">
+          Rider Profile
+        </h2>
         <p className="text-xs text-muted-foreground">
           View your driver credentials, vehicle details, and active status
         </p>
@@ -71,9 +77,14 @@ export function RiderProfile({ rider }: RiderProfileProps) {
 
             <div className="space-y-1 flex-1">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <h3 className="text-base font-semibold text-foreground">{rider.name}</h3>
+                <h3 className="text-base font-semibold text-foreground">
+                  {rider.name}
+                </h3>
                 <div className="flex items-center justify-center sm:justify-start gap-1.5">
-                  <Badge variant={rider.available ? 'success' : 'secondary'} className="text-[10px]">
+                  <Badge
+                    variant={rider.available ? 'success' : 'secondary'}
+                    className="text-[10px]"
+                  >
                     {rider.status.toUpperCase()}
                   </Badge>
                   {rider.verified && (
@@ -109,11 +120,15 @@ export function RiderProfile({ rider }: RiderProfileProps) {
         <CardContent className="p-4 divide-y divide-border text-xs">
           <div className="py-2.5 flex justify-between items-center">
             <span className="text-muted-foreground">Vehicle Type</span>
-            <span className="font-medium text-foreground capitalize">{rider.vehicle}</span>
+            <span className="font-medium text-foreground capitalize">
+              {rider.vehicle}
+            </span>
           </div>
           <div className="py-2.5 flex justify-between items-center">
             <span className="text-muted-foreground">License Plate No.</span>
-            <span className="font-mono font-medium text-foreground">{rider.licenseNo}</span>
+            <span className="font-mono font-medium text-foreground">
+              {rider.licenseNo}
+            </span>
           </div>
           <div className="py-2.5 flex justify-between items-center">
             <span className="text-muted-foreground">Assigned Zone</span>
@@ -131,7 +146,9 @@ export function RiderProfile({ rider }: RiderProfileProps) {
           </div>
           <div className="py-2.5 flex justify-between items-center">
             <span className="text-muted-foreground">Lifetime Deliveries</span>
-            <span className="font-medium text-foreground">{rider.deliveries} trips completed</span>
+            <span className="font-medium text-foreground">
+              {rider.deliveries} trips completed
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -146,7 +163,9 @@ export function RiderProfile({ rider }: RiderProfileProps) {
             className="w-full h-10 text-xs gap-2"
           >
             <Power className="h-4 w-4" />
-            {rider.available ? 'Turn Offline (End Shift)' : 'Turn Online (Start Shift)'}
+            {rider.available
+              ? 'Turn Offline (End Shift)'
+              : 'Turn Online (Start Shift)'}
           </Button>
 
           <Button

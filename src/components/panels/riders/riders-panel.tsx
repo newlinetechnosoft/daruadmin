@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { getRouteApi,   useRouter  } from '@tanstack/react-router'
+import { getRouteApi, useRouter } from '@tanstack/react-router'
 import {
   upsertRiderFn,
   updateRiderLiveFn,
@@ -26,10 +26,7 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Badge } from '#/components/ui/badge'
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from '#/components/ui/native-select'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import {
   Table,
   TableBody,
@@ -48,7 +45,6 @@ import {
 } from '#/components/ui/dialog'
 import { Card, CardTitle } from '#/components/ui/card'
 import { EmptyState } from '#/components/shared/empty-state'
-
 
 const routeApi = getRouteApi('/admin/riders')
 
@@ -89,9 +85,14 @@ export function RidersPanel() {
 
   // KPIs
   const totalRidersCount = ops.riders.length
-  const activeAvailableCount = ops.riders.filter((r) => r.available || r.status === 'available').length
+  const activeAvailableCount = ops.riders.filter(
+    (r) => r.available || r.status === 'available',
+  ).length
   const totalCodFloat = ops.riders.reduce((sum, r) => sum + r.cashOnHand, 0)
-  const totalCompletedDeliveries = ops.riders.reduce((sum, r) => sum + r.deliveries, 0)
+  const totalCompletedDeliveries = ops.riders.reduce(
+    (sum, r) => sum + r.deliveries,
+    0,
+  )
 
   const handleToggleKyc = async (rider: Rider) => {
     try {
@@ -111,7 +112,7 @@ export function RidersPanel() {
         },
       })
       toast.success(
-        `Rider ${rider.name} marked as ${!rider.verified ? 'KYC Verified' : 'Pending Verification'}`
+        `Rider ${rider.name} marked as ${!rider.verified ? 'KYC Verified' : 'Pending Verification'}`,
       )
       await router.invalidate()
     } catch {
@@ -146,7 +147,7 @@ export function RidersPanel() {
       })
 
       toast.success(
-        `Settled ${formatNPR(amount)} from ${rider.name}! Credited to bank in ledger.`
+        `Settled ${formatNPR(amount)} from ${rider.name}! Credited to bank in ledger.`,
       )
       await router.invalidate()
     } catch {
@@ -168,7 +169,9 @@ export function RidersPanel() {
       await upsertRiderFn({
         data: {
           name: riderForm.name,
-          email: riderForm.email || `${riderForm.name.toLowerCase().replace(/\s+/g, '')}@courier.np`,
+          email:
+            riderForm.email ||
+            `${riderForm.name.toLowerCase().replace(/\s+/g, '')}@courier.np`,
           phone: riderForm.phone,
           vehicle: riderForm.vehicle,
           licenseNo: riderForm.licenseNo || 'BA-2-PA-1234',
@@ -198,11 +201,12 @@ export function RidersPanel() {
   }
 
   const handleExportCSV = () => {
-    const headers = 'ID,Name,Phone,Zone,Vehicle,Verified,Available,Deliveries,Rating,CashOnHandNPR,EarningsNPR\n'
+    const headers =
+      'ID,Name,Phone,Zone,Vehicle,Verified,Available,Deliveries,Rating,CashOnHandNPR,EarningsNPR\n'
     const rows = filteredRiders
       .map(
         (r) =>
-          `"${r.id}","${r.name}","${r.phone}","${r.zone}","${r.vehicle}",${r.verified},${r.available},${r.deliveries},${r.rating},${r.cashOnHand},${r.earnings}`
+          `"${r.id}","${r.name}","${r.phone}","${r.zone}","${r.vehicle}",${r.verified},${r.available},${r.deliveries},${r.rating},${r.cashOnHand},${r.earnings}`,
       )
       .join('\n')
     const blob = new Blob([headers + rows], { type: 'text/csv' })
@@ -222,11 +226,20 @@ export function RidersPanel() {
         description="Live Kathmandu Valley delivery radar, courier telemetry, and COD cash remittance settlement."
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-8 gap-1.5 text-xs">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+              className="h-8 gap-1.5 text-xs"
+            >
               <Download className="h-3.5 w-3.5" />
               Export roster
             </Button>
-            <Button size="sm" onClick={() => setIsAddRiderOpen(true)} className="h-8 gap-1.5 text-xs">
+            <Button
+              size="sm"
+              onClick={() => setIsAddRiderOpen(true)}
+              className="h-8 gap-1.5 text-xs"
+            >
               <Plus className="h-3.5 w-3.5" />
               Onboard rider
             </Button>
@@ -310,7 +323,11 @@ export function RidersPanel() {
                 key={r.id}
                 style={{ top: `${topPos}%`, left: `${leftPos}%` }}
                 className="absolute -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
-                onClick={() => toast.info(`Courier: ${r.name} (${r.zone}) · Status: ${r.status}`)}
+                onClick={() =>
+                  toast.info(
+                    `Courier: ${r.name} (${r.zone}) · Status: ${r.status}`,
+                  )
+                }
               >
                 <div className="relative flex items-center justify-center">
                   <div className="absolute w-5 h-5 rounded-full bg-primary/20 animate-ping"></div>
@@ -346,10 +363,18 @@ export function RidersPanel() {
           size="sm"
           className="h-8 text-xs"
         >
-          <NativeSelectOption value="all">All delivery zones</NativeSelectOption>
-          <NativeSelectOption value="Kathmandu Central">Kathmandu Central</NativeSelectOption>
-          <NativeSelectOption value="Patan / Lalitpur">Patan / Lalitpur</NativeSelectOption>
-          <NativeSelectOption value="Bhaktapur Core">Bhaktapur Core</NativeSelectOption>
+          <NativeSelectOption value="all">
+            All delivery zones
+          </NativeSelectOption>
+          <NativeSelectOption value="Kathmandu Central">
+            Kathmandu Central
+          </NativeSelectOption>
+          <NativeSelectOption value="Patan / Lalitpur">
+            Patan / Lalitpur
+          </NativeSelectOption>
+          <NativeSelectOption value="Bhaktapur Core">
+            Bhaktapur Core
+          </NativeSelectOption>
         </NativeSelect>
       </div>
 
@@ -381,12 +406,18 @@ export function RidersPanel() {
               filteredRiders.map((rider) => (
                 <TableRow key={rider.id}>
                   <TableCell>
-                    <div className="font-medium text-xs text-foreground">{rider.name}</div>
-                    <div className="text-[11px] text-muted-foreground font-mono">{rider.phone}</div>
+                    <div className="font-medium text-xs text-foreground">
+                      {rider.name}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground font-mono">
+                      {rider.phone}
+                    </div>
                   </TableCell>
 
                   <TableCell>
-                    <div className="text-xs font-medium text-foreground">{rider.zone}</div>
+                    <div className="text-xs font-medium text-foreground">
+                      {rider.zone}
+                    </div>
                     <span className="text-[11px] text-muted-foreground capitalize">
                       {rider.vehicle} · Plate: {rider.licenseNo || 'BA-2-PA'}
                     </span>
@@ -401,12 +432,18 @@ export function RidersPanel() {
                       className="h-6 p-0 hover:bg-transparent"
                     >
                       {rider.verified ? (
-                        <Badge variant="success" className="gap-1 text-[10px] font-normal">
+                        <Badge
+                          variant="success"
+                          className="gap-1 text-[10px] font-normal"
+                        >
                           <ShieldCheck className="h-3 w-3" />
                           Verified
                         </Badge>
                       ) : (
-                        <Badge variant="warning" className="text-[10px] font-normal">
+                        <Badge
+                          variant="warning"
+                          className="text-[10px] font-normal"
+                        >
                           Pending
                         </Badge>
                       )}
@@ -415,7 +452,9 @@ export function RidersPanel() {
 
                   <TableCell>
                     <Badge
-                      variant={rider.status === 'available' ? 'success' : 'secondary'}
+                      variant={
+                        rider.status === 'available' ? 'success' : 'secondary'
+                      }
                       className="text-[10px] font-normal capitalize"
                     >
                       {rider.status}
@@ -435,7 +474,9 @@ export function RidersPanel() {
                   <TableCell>
                     <span
                       className={`font-mono text-xs font-medium block tabular-nums ${
-                        rider.cashOnHand > 0 ? 'text-warning' : 'text-foreground'
+                        rider.cashOnHand > 0
+                          ? 'text-warning'
+                          : 'text-foreground'
                       }`}
                     >
                       {formatNPR(rider.cashOnHand)}
@@ -470,8 +511,12 @@ export function RidersPanel() {
       <Dialog open={isAddRiderOpen} onOpenChange={setIsAddRiderOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-sm font-semibold">Onboard fleet courier</DialogTitle>
-            <DialogDescription className="text-xs">Register new delivery personnel</DialogDescription>
+            <DialogTitle className="text-sm font-semibold">
+              Onboard fleet courier
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Register new delivery personnel
+            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateRider} className="space-y-4 pt-2">
@@ -480,7 +525,9 @@ export function RidersPanel() {
               <Input
                 required
                 value={riderForm.name}
-                onChange={(e) => setRiderForm({ ...riderForm, name: e.target.value })}
+                onChange={(e) =>
+                  setRiderForm({ ...riderForm, name: e.target.value })
+                }
                 placeholder="e.g. Ramesh Shrestha"
                 className="h-8 text-xs"
               />
@@ -492,7 +539,9 @@ export function RidersPanel() {
                 <Input
                   required
                   value={riderForm.phone}
-                  onChange={(e) => setRiderForm({ ...riderForm, phone: e.target.value })}
+                  onChange={(e) =>
+                    setRiderForm({ ...riderForm, phone: e.target.value })
+                  }
                   placeholder="+977 98..."
                   className="h-8 font-mono text-xs"
                 />
@@ -502,14 +551,23 @@ export function RidersPanel() {
                 <NativeSelect
                   value={riderForm.vehicle}
                   onChange={(e) =>
-                    setRiderForm({ ...riderForm, vehicle: e.target.value as any })
+                    setRiderForm({
+                      ...riderForm,
+                      vehicle: e.target.value as any,
+                    })
                   }
                   size="sm"
                   className="w-full text-xs"
                 >
-                  <NativeSelectOption value="bike">Motorcycle</NativeSelectOption>
-                  <NativeSelectOption value="scooter">Scooter</NativeSelectOption>
-                  <NativeSelectOption value="car">Delivery van / car</NativeSelectOption>
+                  <NativeSelectOption value="bike">
+                    Motorcycle
+                  </NativeSelectOption>
+                  <NativeSelectOption value="scooter">
+                    Scooter
+                  </NativeSelectOption>
+                  <NativeSelectOption value="car">
+                    Delivery van / car
+                  </NativeSelectOption>
                 </NativeSelect>
               </div>
             </div>
@@ -519,7 +577,9 @@ export function RidersPanel() {
                 <Label className="text-xs">Vehicle plate no.</Label>
                 <Input
                   value={riderForm.licenseNo}
-                  onChange={(e) => setRiderForm({ ...riderForm, licenseNo: e.target.value })}
+                  onChange={(e) =>
+                    setRiderForm({ ...riderForm, licenseNo: e.target.value })
+                  }
                   placeholder="BA-2-PA-8899"
                   className="h-8 font-mono text-xs"
                 />
@@ -528,24 +588,39 @@ export function RidersPanel() {
                 <Label className="text-xs">Delivery zone</Label>
                 <NativeSelect
                   value={riderForm.zone}
-                  onChange={(e) => setRiderForm({ ...riderForm, zone: e.target.value })}
+                  onChange={(e) =>
+                    setRiderForm({ ...riderForm, zone: e.target.value })
+                  }
                   size="sm"
                   className="w-full text-xs"
                 >
-                  <NativeSelectOption value="Kathmandu Central">Kathmandu Central</NativeSelectOption>
-                  <NativeSelectOption value="Patan / Lalitpur">Patan / Lalitpur</NativeSelectOption>
-                  <NativeSelectOption value="Bhaktapur Core">Bhaktapur Core</NativeSelectOption>
+                  <NativeSelectOption value="Kathmandu Central">
+                    Kathmandu Central
+                  </NativeSelectOption>
+                  <NativeSelectOption value="Patan / Lalitpur">
+                    Patan / Lalitpur
+                  </NativeSelectOption>
+                  <NativeSelectOption value="Bhaktapur Core">
+                    Bhaktapur Core
+                  </NativeSelectOption>
                 </NativeSelect>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">Per-delivery commission rate (NPR)</Label>
+              <Label className="text-xs">
+                Per-delivery commission rate (NPR)
+              </Label>
               <Input
                 type="number"
                 min="0"
                 value={riderForm.commissionRate}
-                onChange={(e) => setRiderForm({ ...riderForm, commissionRate: Number(e.target.value) })}
+                onChange={(e) =>
+                  setRiderForm({
+                    ...riderForm,
+                    commissionRate: Number(e.target.value),
+                  })
+                }
                 className="h-8 font-mono text-xs"
               />
             </div>
@@ -560,7 +635,12 @@ export function RidersPanel() {
               >
                 Cancel
               </Button>
-              <Button type="submit" size="sm" disabled={isSubmitting} className="h-8 text-xs">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting}
+                className="h-8 text-xs"
+              >
                 {isSubmitting ? 'Onboarding...' : 'Register courier'}
               </Button>
             </DialogFooter>

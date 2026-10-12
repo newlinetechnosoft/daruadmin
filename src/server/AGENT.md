@@ -51,9 +51,18 @@ export const assignRider = createServerFn({ method: 'POST' })
 
 ## middleware/ (status)
 
-| File                 | Purpose                                                                    | Status |
-| -------------------- | -------------------------------------------------------------------------- | ------ |
-| `middleware/auth.ts` | `authMiddleware` — loads session, rejects missing/deactivated/banned users | ⬜     |
-| `middleware/role.ts` | `requireRole(...roles)` — wraps auth, 403 on mismatch                      | ⬜     |
+| File                  | Purpose                                                                    | Status |
+| --------------------- | -------------------------------------------------------------------------- | ------ |
+| `middleware/auth.ts`  | `authMiddleware` — loads session, rejects missing/deactivated/banned users | ✅     |
+| `auth/permissions.ts` | `requireRole(...roles)` & `requirePermission(...)` — RBAC + audit logging  | ✅     |
+| `auth/guards.ts`      | `guardModule(module, action)` — router beforeLoad guards                   | ✅     |
+
+## Query Options Layer (`src/queries/`)
+
+Client and route loaders consume server functions through cached query options:
+
+- `src/queries/admin.ts`: admin panel data queries with 30s-5m stale times.
+- `src/queries/rider.ts`: rider portal fleet and order queries with 15s stale time.
+- `src/queries/storefront.ts`: catalog categories, brands, products with 3-10m stale times.
 
 _Update this file's conventions or middleware table when they change; domain specifics go in the domain's AGENT.md._

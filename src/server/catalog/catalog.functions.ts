@@ -92,7 +92,9 @@ export const getFrontpageDataFn = createServerFn({ method: 'GET' }).handler(
 )
 
 export const getProductsByIdsFn = createServerFn({ method: 'GET' })
-  .validator((d: unknown) => z.object({ ids: z.array(z.string()) }).parse(d ?? { ids: [] }))
+  .validator((d: unknown) =>
+    z.object({ ids: z.array(z.string()) }).parse(d ?? { ids: [] }),
+  )
   .handler(async ({ data }) => {
     return getProductsByIdsQuery(data.ids)
   })
@@ -260,7 +262,9 @@ export const updateUserRoleFn = createServerFn({ method: 'POST' })
         (u) => u.role === 'admin' && u.isActive !== false,
       )
       if (activeAdmins.length <= 1) {
-        throw new Error('Forbidden: Cannot demote or suspend the last remaining admin')
+        throw new Error(
+          'Forbidden: Cannot demote or suspend the last remaining admin',
+        )
       }
     }
 

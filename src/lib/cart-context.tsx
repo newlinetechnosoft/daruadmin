@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { authClient } from '#/lib/auth-client'
+import { idbGet, idbSet } from '#/lib/idb'
 
 export interface CartItem {
   id: string // unique identifier: variantId
@@ -22,7 +23,11 @@ interface CartContextType {
   items: CartItem[]
   addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => boolean
   removeItem: (variantId: string) => void
-  updateQuantity: (variantId: string, quantity: number, maxStock?: number) => boolean
+  updateQuantity: (
+    variantId: string,
+    quantity: number,
+    maxStock?: number,
+  ) => boolean
   getItemQuantity: (variantId: string) => number
   clearCart: () => void
   totalPaisa: number
@@ -67,28 +72,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const { data: session } = authClient.useSession()
   const navigate = useNavigate()
 
-  // Load from localStorage on client mount
+  // Load from IndexedDB (with localStorage fallback) on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(CART_STORAGE_KEY)
-      if (stored) {
-        setItems(JSON.parse(stored))
+    idbGet<CartItem[]>(CART_STORAGE_KEY, []).then((stored) => {
+      if (stored.length > 0) {
+        setItems(stored)
       }
-    } catch (e) {
-      console.error('Failed to load cart from localStorage', e)
-    } finally {
       setIsLoaded(true)
-    }
+    })
   }, [])
 
-  // Save to localStorage whenever items change
+  // Save to IndexedDB whenever items change
   useEffect(() => {
     if (!isLoaded) return
-    try {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
-    } catch (e) {
-      console.error('Failed to save cart to localStorage', e)
-    }
+    idbSet(CART_STORAGE_KEY, items).catch((e) => {
+      console.error('Failed to save cart to IDB', e)
+    })
   }, [items, isLoaded])
 
   // Map for fast O(1) quantity lookup
@@ -126,7 +125,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return false
     }
 
-    let isFirstAdd = false
+    const isFirstAdd = !items.some((i) => i.variantId === item.variantId)
     setItems((prev) => {
       const existing = prev.find((i) => i.variantId === item.variantId)
       if (existing) {
@@ -136,7 +135,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
             : i,
         )
       }
-      isFirstAdd = true
       return [...prev, { ...item, quantity }]
     })
 

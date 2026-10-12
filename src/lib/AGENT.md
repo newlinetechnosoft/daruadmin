@@ -5,18 +5,16 @@
 
 ## Files
 
-| File              | Purpose                                                   | Status                                      |
-| ----------------- | --------------------------------------------------------- | ------------------------------------------- |
-| `utils.ts`        | `cn()` and generic helpers                                | ✅                                          |
-| `auth.ts`         | better-auth server instance (**server-only**)             | ✅ Drizzle adapter + admin plugin + cookies |
-| `auth-client.ts`  | better-auth client                                        | ✅ adminClient plugin                       |
-| `permissions.ts`  | access-control statements + role map                      | ⬜                                          |
-| `money.ts`        | `toPaisa`, `fromPaisa`, `formatNPR`, rounding rules       | ✅                                          |
-| `tax.ts`          | VAT inclusive/exclusive calc (default 13%)                | ⬜                                          |
-| `order-status.ts` | state machine: transitions, allowed roles, `transition()` | ⬜                                          |
-| `geo.ts`          | haversine distance, sort-by-nearest                       | ⬜                                          |
-| `storage.ts`      | Object-storage adapter (S3-compatible) — server-only      | ⬜                                          |
-| `crypto.ts`       | AES-GCM encrypt/decrypt for gateway secrets — server-only | ⬜                                          |
+| File               | Purpose                                                    | Status                                      |
+| ------------------ | ---------------------------------------------------------- | ------------------------------------------- |
+| `utils.ts`         | `cn()` and generic helpers                                 | ✅                                          |
+| `auth.ts`          | better-auth server instance (**server-only**)              | ✅ Drizzle adapter + admin plugin + cookies |
+| `auth-client.ts`   | better-auth client                                         | ✅ adminClient plugin                       |
+| `idb/index.ts`     | IndexedDB wrapper, TanStack Query persister, drafts, logs  | ✅                                          |
+| `idb/outbox.ts`    | Local-first offline sync outbox for riders                 | ✅                                          |
+| `favorites.ts`     | Local-only IndexedDB favorites store with legacy migration | ✅                                          |
+| `cart-context.tsx` | Client shopping cart state persisted to IndexedDB          | ✅                                          |
+| `money.ts`         | `toPaisa`, `fromPaisa`, `formatNPR`, rounding rules        | ✅                                          |
 
 ## Auth (better-auth) — target
 

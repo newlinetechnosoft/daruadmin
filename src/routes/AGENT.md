@@ -23,37 +23,25 @@
 
 ## Route map
 
-| URL                                                                          | File                              | Role              | Purpose                                                                          | Status |
-| ---------------------------------------------------------------------------- | --------------------------------- | ----------------- | -------------------------------------------------------------------------------- | ------ |
-| —                                                                            | `__root.tsx`                      | public            | Storefront root: AgeGate, CartSheet, Toaster, SEO                                | ✅     |
-| `/`                                                                          | `index.tsx`                       | public            | Home (Kathmandu express storefront similar to Mezmani)                         | ✅     |
-| `/drinks`                                                                    | `drinks.tsx`                      | public            | Drinks/Alcohol listing (filters: category, brand, query) + variant picker        | ✅     |
-| `/grocery`                                                                   | `grocery.tsx`                     | public            | Food & Munchies listing (filters: category, query)                               | ✅     |
-| `/cart`, `/checkout`                                                         | `_store/`                         | public / customer | Cart review / checkout                                                           | ⬜     |
-| `/sign-in`, `/sign-up`                                                       | `sign-in.tsx`, `sign-up.tsx`      | public            | Auth                                                                             | ⬜     |
-| `/account`, `/account/orders`, `/account/orders/$orderNo`                    | `account/`                        | customer          | Profile, addresses, history, tracking                                            | ⬜     |
-| `/admin`                                                                     | `admin/route.tsx`, `index.tsx`    | admin             | Layout + dashboard                                                               | ⬜     |
-| `/admin/liquor/products[/$id]`, `/admin/grocery/products[/$id]`              | `admin/liquor/`, `admin/grocery/` | admin             | Product + variant CRUD, images, availability                                     | ⬜     |
-| `/admin/liquor/categories`, `…/brands`, `/admin/grocery/categories`          |                                   | admin             | Taxonomy                                                                         | ⬜     |
-| `/admin/orders[/$orderNo]`                                                   |                                   | admin             | All orders                                                                       | ⬜     |
-| `/admin/dealers[/$id]`                                                       |                                   | admin             | Dealer CRUD, stock, settlement history                                           | ⬜     |
-| `/admin/users` (tabs: customers / managers / riders)                         |                                   | admin             | List, create staff, activate/deactivate, role                                    | ⬜     |
-| `/admin/stock`                                                               |                                   | admin             | Stock overview + movements                                                       | ⬜     |
-| `/admin/ledger`, `/accounts`, `/journal`                                     |                                   | admin             | Chart of accounts, statements, manual journal                                    | ⬜     |
-| `/admin/invoices`                                                            |                                   | admin             | Invoice list / print                                                             | ⬜     |
-| `/admin/reports/*`                                                           |                                   | admin             | sales, vat, profit, dealer-settlement, rider-cash, stock                         | ⬜     |
-| `/admin/settings` (tabs: general, tax & fees, **payment gateway**, age gate) |                                   | admin             | Site settings                                                                    | ⬜     |
-| `/admin/audit-log`                                                           |                                   | admin             | Audit trail                                                                      | ⬜     |
-| `/manager`                                                                   | `manager/route.tsx`, `index.tsx`  | manager (+admin)  | Layout + live order queue                                                        | ⬜     |
-| `/manager/orders[/$orderNo]`                                                 |                                   | manager           | Confirm, **assign dealer** (nearest list), **assign rider**, cancel              | ⬜     |
-| `/manager/dealers`, `/manager/riders`                                        |                                   | manager           | View dealers / riders                                                            | ⬜     |
-| `/manager/settlements`, `/manager/cash`                                      |                                   | manager           | Dealer settlements / rider cash handover                                         | ⬜     |
-| `/manager/stock`, `/manager/reports`                                         |                                   | manager           | Stock adjust + availability / operational reports                                | ⬜     |
-| `/rider`                                                                     | `rider/route.tsx`, `index.tsx`    | rider             | Mobile layout + my assigned orders                                               | ⬜     |
-| `/rider/orders/$orderNo`                                                     |                                   | rider             | Pickup (dealer) + delivery address, call/map links, status buttons, collect cash | ⬜     |
-| `/rider/history`, `/rider/cash`                                              |                                   | rider             | Completed deliveries / cash held vs handed over                                  | ⬜     |
-| `/api/auth/$`                                                                | `api/auth/$.ts`                   | –                 | better-auth handler                                                              | ✅     |
-| `/api/webhooks/esewa`                                                        | `api/webhooks/esewa.ts`           | –                 | eSewa callback (Phase 6)                                                         | ⬜     |
+| URL                                                      | File                             | Role              | Purpose                                                                   | Status |
+| -------------------------------------------------------- | -------------------------------- | ----------------- | ------------------------------------------------------------------------- | ------ |
+| —                                                        | `__root.tsx`                     | public            | Storefront root: AgeGate, CartSheet, Toaster, SEO                         | ✅     |
+| `/`                                                      | `index.tsx`                      | public            | Home (Kathmandu express storefront similar to Mezmani)                    | ✅     |
+| `/drinks`                                                | `drinks.tsx`                     | public            | Drinks/Alcohol listing (filters: category, brand, query) + variant picker | ✅     |
+| `/grocery`                                               | `grocery.tsx`                    | public            | Food & Munchies listing (filters: category, query)                        | ✅     |
+| `/checkout`                                              | `checkout.tsx`                   | customer          | Order checkout with map pin, live total, COD / eSewa                      | ✅     |
+| `/login`, `/signup`                                      | `login.tsx`, `signup.tsx`        | public            | Better-auth sign-in & sign-up forms                                       | ✅     |
+| `/favorites`                                             | `favorites.tsx`                  | public / customer | Local IndexedDB favorites panel with optimistic toggle                    | ✅     |
+| `/admin`                                                 | `admin/route.tsx`, `index.tsx`   | admin / staff     | Soft two-part rail layout + KPI metrics dashboard                         | ✅     |
+| `/admin/orders`                                          | `admin/orders.tsx`               | admin / staff     | Paginated orders list, detail modal, status transitions                   | ✅     |
+| `/admin/inventory`                                       | `admin/inventory.tsx`            | admin / staff     | Stock levels, movements, low stock alerts                                 | ✅     |
+| `/admin/accounts`, `/admin/payments`                     | `admin/accounts.tsx`, `payments` | admin / staff     | Append-only double-entry ledger & payment transactions                    | ✅     |
+| `/admin/riders`                                          | `admin/riders.tsx`               | admin / staff     | Rider fleet directory, cash-on-hand, availability                         | ✅     |
+| `/admin/settings`                                        | `admin/settings.tsx`             | admin             | Store settings (VAT, operational parameters, gateways)                    | ✅     |
+| `/admin/users`                                           | `admin/users.tsx`                | admin             | Staff roles, active status, customer management                           | ✅     |
+| `/rider`                                                 | `rider/route.tsx`, `index.tsx`   | rider             | Mobile-first rider layout + active delivery cockpit                       | ✅     |
+| `/rider/deliveries`, `/rider/earnings`, `/rider/profile` | `rider/*.tsx`                    | rider             | Outbox offline-first delivery flow, cash handover, earnings               | ✅     |
+| `/api/auth/$`                                            | `api/auth/$.ts`                  | –                 | better-auth server handler                                                | ✅     |
 
 ## Assumptions to confirm
 

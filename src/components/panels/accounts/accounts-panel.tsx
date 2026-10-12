@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { getRouteApi,   useRouter  } from '@tanstack/react-router'
+import { getRouteApi, useRouter } from '@tanstack/react-router'
 import {
   addLedgerFn,
   approveSettlementFn,
@@ -25,15 +25,8 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Badge } from '#/components/ui/badge'
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from '#/components/ui/tabs'
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from '#/components/ui/native-select'
+import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import {
   Table,
   TableBody,
@@ -58,14 +51,15 @@ import {
 } from '#/components/ui/dialog'
 import { EmptyState } from '#/components/shared/empty-state'
 
-
 const routeApi = getRouteApi('/admin/accounts')
 
 export function AccountsPanel() {
   const { ops } = routeApi.useLoaderData()
   const router = useRouter()
 
-  const [activeTab, setActiveTab] = useState<'ledger' | 'statements' | 'settlements'>('ledger')
+  const [activeTab, setActiveTab] = useState<
+    'ledger' | 'statements' | 'settlements'
+  >('ledger')
   const [searchQuery, setSearchQuery] = useState('')
   const [accountFilter, setAccountFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -84,8 +78,10 @@ export function AccountsPanel() {
 
   const filteredLedger = useMemo(() => {
     return ops.ledger.filter((item) => {
-      if (accountFilter !== 'all' && item.account !== accountFilter) return false
-      if (categoryFilter !== 'all' && item.category !== categoryFilter) return false
+      if (accountFilter !== 'all' && item.account !== accountFilter)
+        return false
+      if (categoryFilter !== 'all' && item.category !== categoryFilter)
+        return false
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase()
         return (
@@ -162,7 +158,10 @@ export function AccountsPanel() {
     }
   }
 
-  const handleApproveSettlement = async (id: string, status: 'approved' | 'paid') => {
+  const handleApproveSettlement = async (
+    id: string,
+    status: 'approved' | 'paid',
+  ) => {
     try {
       setIsSubmitting(true)
       await approveSettlementFn({ data: { id, status } })
@@ -176,11 +175,12 @@ export function AccountsPanel() {
   }
 
   const handleExportCSV = () => {
-    const headers = 'ID,Date,Type,Category,Account,AmountNPR,Memo,RefType,RefID\n'
+    const headers =
+      'ID,Date,Type,Category,Account,AmountNPR,Memo,RefType,RefID\n'
     const rows = filteredLedger
       .map(
         (l) =>
-          `"${l.id}","${l.date}","${l.type}","${l.category}","${l.account}",${l.amount},"${l.memo.replace(/"/g, '""')}","${l.refType}","${l.refId || ''}"`
+          `"${l.id}","${l.date}","${l.type}","${l.category}","${l.account}",${l.amount},"${l.memo.replace(/"/g, '""')}","${l.refType}","${l.refId || ''}"`,
       )
       .join('\n')
     const blob = new Blob([headers + rows], { type: 'text/csv' })
@@ -200,11 +200,20 @@ export function AccountsPanel() {
         description="Centralized double-entry accounting, P&L reporting, and courier remittance settlement."
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-8 gap-1.5 text-xs">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+              className="h-8 gap-1.5 text-xs"
+            >
               <Download className="h-3.5 w-3.5" />
               Export CSV
             </Button>
-            <Button size="sm" onClick={() => setIsAddVoucherOpen(true)} className="h-8 gap-1.5 text-xs">
+            <Button
+              size="sm"
+              onClick={() => setIsAddVoucherOpen(true)}
+              className="h-8 gap-1.5 text-xs"
+            >
               <Plus className="h-3.5 w-3.5" />
               Record voucher
             </Button>
@@ -282,11 +291,21 @@ export function AccountsPanel() {
                 size="sm"
                 className="h-8 text-xs"
               >
-                <NativeSelectOption value="all">All accounts</NativeSelectOption>
-                <NativeSelectOption value="bank">Bank account</NativeSelectOption>
-                <NativeSelectOption value="cash">Cash in hand</NativeSelectOption>
-                <NativeSelectOption value="esewa">eSewa wallet</NativeSelectOption>
-                <NativeSelectOption value="khalti">Khalti wallet</NativeSelectOption>
+                <NativeSelectOption value="all">
+                  All accounts
+                </NativeSelectOption>
+                <NativeSelectOption value="bank">
+                  Bank account
+                </NativeSelectOption>
+                <NativeSelectOption value="cash">
+                  Cash in hand
+                </NativeSelectOption>
+                <NativeSelectOption value="esewa">
+                  eSewa wallet
+                </NativeSelectOption>
+                <NativeSelectOption value="khalti">
+                  Khalti wallet
+                </NativeSelectOption>
               </NativeSelect>
 
               <NativeSelect
@@ -295,12 +314,24 @@ export function AccountsPanel() {
                 size="sm"
                 className="h-8 text-xs"
               >
-                <NativeSelectOption value="all">All categories</NativeSelectOption>
-                <NativeSelectOption value="sales">Sales income</NativeSelectOption>
-                <NativeSelectOption value="purchase">Inventory purchases</NativeSelectOption>
-                <NativeSelectOption value="expense">Operating expense</NativeSelectOption>
-                <NativeSelectOption value="cod">COD remittance</NativeSelectOption>
-                <NativeSelectOption value="refund">Refund payout</NativeSelectOption>
+                <NativeSelectOption value="all">
+                  All categories
+                </NativeSelectOption>
+                <NativeSelectOption value="sales">
+                  Sales income
+                </NativeSelectOption>
+                <NativeSelectOption value="purchase">
+                  Inventory purchases
+                </NativeSelectOption>
+                <NativeSelectOption value="expense">
+                  Operating expense
+                </NativeSelectOption>
+                <NativeSelectOption value="cod">
+                  COD remittance
+                </NativeSelectOption>
+                <NativeSelectOption value="refund">
+                  Refund payout
+                </NativeSelectOption>
               </NativeSelect>
             </div>
           </div>
@@ -310,11 +341,17 @@ export function AccountsPanel() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-xs">Date and ID</TableHead>
-                  <TableHead className="text-xs">Description and memo</TableHead>
+                  <TableHead className="text-xs">
+                    Description and memo
+                  </TableHead>
                   <TableHead className="text-xs">Category</TableHead>
                   <TableHead className="text-xs">Account</TableHead>
-                  <TableHead className="text-right text-xs">Debit out (-)</TableHead>
-                  <TableHead className="text-right text-xs">Credit in (+)</TableHead>
+                  <TableHead className="text-right text-xs">
+                    Debit out (-)
+                  </TableHead>
+                  <TableHead className="text-right text-xs">
+                    Credit in (+)
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -331,19 +368,30 @@ export function AccountsPanel() {
                   filteredLedger.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>
-                        <span className="font-mono text-xs text-foreground block">{item.id}</span>
-                        <span className="text-[11px] text-muted-foreground">{item.date}</span>
+                        <span className="font-mono text-xs text-foreground block">
+                          {item.id}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {item.date}
+                        </span>
                       </TableCell>
 
                       <TableCell>
-                        <div className="font-medium text-xs text-foreground">{item.memo}</div>
+                        <div className="font-medium text-xs text-foreground">
+                          {item.memo}
+                        </div>
                         {item.refId && (
-                          <span className="text-[11px] text-muted-foreground font-mono">Ref: {item.refId}</span>
+                          <span className="text-[11px] text-muted-foreground font-mono">
+                            Ref: {item.refId}
+                          </span>
                         )}
                       </TableCell>
 
                       <TableCell>
-                        <Badge variant="secondary" className="text-[10px] font-normal capitalize">
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] font-normal capitalize"
+                        >
                           {item.category}
                         </Badge>
                       </TableCell>
@@ -398,19 +446,29 @@ export function AccountsPanel() {
             {/* Profit & Loss */}
             <Card className="p-4 space-y-3">
               <CardHeader className="p-0 pb-3 border-b border-border">
-                <CardTitle className="text-xs font-semibold">Statement of profit and loss</CardTitle>
-                <CardDescription className="text-[11px]">Operating performance summary</CardDescription>
+                <CardTitle className="text-xs font-semibold">
+                  Statement of profit and loss
+                </CardTitle>
+                <CardDescription className="text-[11px]">
+                  Operating performance summary
+                </CardDescription>
               </CardHeader>
 
               <div className="space-y-2 text-xs">
-                <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Revenue</div>
+                <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                  Revenue
+                </div>
                 <div className="flex justify-between pl-2 text-muted-foreground">
                   <span>Gross merchandise sales:</span>
-                  <span className="font-mono text-foreground font-medium">+{formatNPR(grossSales)}</span>
+                  <span className="font-mono text-foreground font-medium">
+                    +{formatNPR(grossSales)}
+                  </span>
                 </div>
                 <div className="flex justify-between pl-2 text-muted-foreground">
                   <span>COD remittances realized:</span>
-                  <span className="font-mono text-foreground font-medium">+{formatNPR(codCollected)}</span>
+                  <span className="font-mono text-foreground font-medium">
+                    +{formatNPR(codCollected)}
+                  </span>
                 </div>
 
                 <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider pt-2">
@@ -418,11 +476,15 @@ export function AccountsPanel() {
                 </div>
                 <div className="flex justify-between pl-2 text-muted-foreground">
                   <span>Inventory restock purchases:</span>
-                  <span className="font-mono text-destructive">-{formatNPR(cogsPurchases)}</span>
+                  <span className="font-mono text-destructive">
+                    -{formatNPR(cogsPurchases)}
+                  </span>
                 </div>
                 <div className="flex justify-between font-medium text-foreground border-t border-border/50 pt-1.5 pl-2">
                   <span>Gross operating margin:</span>
-                  <span className="font-mono font-semibold">{formatNPR(grossProfit)}</span>
+                  <span className="font-mono font-semibold">
+                    {formatNPR(grossProfit)}
+                  </span>
                 </div>
 
                 <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider pt-2">
@@ -430,16 +492,24 @@ export function AccountsPanel() {
                 </div>
                 <div className="flex justify-between pl-2 text-muted-foreground">
                   <span>Utilities and fulfillment overhead:</span>
-                  <span className="font-mono text-destructive">-{formatNPR(operatingExpenses)}</span>
+                  <span className="font-mono text-destructive">
+                    -{formatNPR(operatingExpenses)}
+                  </span>
                 </div>
                 <div className="flex justify-between pl-2 text-muted-foreground">
                   <span>Customer refund disbursals:</span>
-                  <span className="font-mono text-destructive">-{formatNPR(refundsIssued)}</span>
+                  <span className="font-mono text-destructive">
+                    -{formatNPR(refundsIssued)}
+                  </span>
                 </div>
 
                 <div className="flex justify-between items-center border-t border-border pt-3 bg-muted/30 p-2.5 rounded-md mt-2">
-                  <span className="text-xs font-medium text-foreground">Estimated net operating profit:</span>
-                  <span className={`font-mono text-sm font-bold ${netEstimatedProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  <span className="text-xs font-medium text-foreground">
+                    Estimated net operating profit:
+                  </span>
+                  <span
+                    className={`font-mono text-sm font-bold ${netEstimatedProfit >= 0 ? 'text-success' : 'text-destructive'}`}
+                  >
                     {formatNPR(netEstimatedProfit)}
                   </span>
                 </div>
@@ -449,27 +519,41 @@ export function AccountsPanel() {
             {/* Balance Sheet Overview */}
             <Card className="p-4 space-y-3">
               <CardHeader className="p-0 pb-3 border-b border-border">
-                <CardTitle className="text-xs font-semibold">Solvency and balance sheet</CardTitle>
-                <CardDescription className="text-[11px]">Liquid reserves and current liabilities</CardDescription>
+                <CardTitle className="text-xs font-semibold">
+                  Solvency and balance sheet
+                </CardTitle>
+                <CardDescription className="text-[11px]">
+                  Liquid reserves and current liabilities
+                </CardDescription>
               </CardHeader>
 
               <div className="space-y-2 text-xs">
-                <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Current liquid assets</div>
+                <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                  Current liquid assets
+                </div>
                 <div className="flex justify-between pl-2 text-muted-foreground">
                   <span>Corporate bank operating account:</span>
-                  <span className="font-mono text-foreground font-medium">{formatNPR(1850000)}</span>
+                  <span className="font-mono text-foreground font-medium">
+                    {formatNPR(1850000)}
+                  </span>
                 </div>
                 <div className="flex justify-between pl-2 text-muted-foreground">
                   <span>eSewa merchant settlement reserve:</span>
-                  <span className="font-mono text-foreground font-medium">{formatNPR(420000)}</span>
+                  <span className="font-mono text-foreground font-medium">
+                    {formatNPR(420000)}
+                  </span>
                 </div>
                 <div className="flex justify-between pl-2 text-muted-foreground">
                   <span>Khalti merchant settlement reserve:</span>
-                  <span className="font-mono text-foreground font-medium">{formatNPR(310000)}</span>
+                  <span className="font-mono text-foreground font-medium">
+                    {formatNPR(310000)}
+                  </span>
                 </div>
                 <div className="flex justify-between font-medium text-foreground border-t border-border/50 pt-1.5 pl-2">
                   <span>Total liquid reserves:</span>
-                  <span className="font-mono font-semibold">{formatNPR(2580000)}</span>
+                  <span className="font-mono font-semibold">
+                    {formatNPR(2580000)}
+                  </span>
                 </div>
 
                 <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider pt-2">
@@ -477,7 +561,9 @@ export function AccountsPanel() {
                 </div>
                 <div className="flex justify-between pl-2 text-muted-foreground">
                   <span>Vendor inventory payables:</span>
-                  <span className="font-mono text-destructive font-medium">{formatNPR(180000)}</span>
+                  <span className="font-mono text-destructive font-medium">
+                    {formatNPR(180000)}
+                  </span>
                 </div>
                 <div className="flex justify-between pl-2 text-muted-foreground">
                   <span>Government 13% VAT payable:</span>
@@ -487,9 +573,13 @@ export function AccountsPanel() {
                 </div>
 
                 <div className="flex justify-between items-center border-t border-border pt-3 bg-muted/30 p-2.5 rounded-md mt-2">
-                  <span className="text-xs font-medium text-foreground">Net working capital:</span>
+                  <span className="text-xs font-medium text-foreground">
+                    Net working capital:
+                  </span>
                   <span className="font-mono text-sm font-bold text-foreground">
-                    {formatNPR(2580000 - 180000 - Math.round(grossSales * 0.13))}
+                    {formatNPR(
+                      2580000 - 180000 - Math.round(grossSales * 0.13),
+                    )}
                   </span>
                 </div>
               </div>
@@ -526,11 +616,15 @@ export function AccountsPanel() {
                 ops.settlements.map((set) => (
                   <TableRow key={set.id}>
                     <TableCell>
-                      <span className="font-mono text-xs font-semibold text-foreground">{set.id}</span>
+                      <span className="font-mono text-xs font-semibold text-foreground">
+                        {set.id}
+                      </span>
                     </TableCell>
 
                     <TableCell>
-                      <div className="font-medium text-xs text-foreground">{set.riderName}</div>
+                      <div className="font-medium text-xs text-foreground">
+                        {set.riderName}
+                      </div>
                     </TableCell>
 
                     <TableCell>
@@ -540,7 +634,9 @@ export function AccountsPanel() {
                     </TableCell>
 
                     <TableCell>
-                      <span className="font-mono text-xs text-foreground">{set.deliveries}</span>
+                      <span className="font-mono text-xs text-foreground">
+                        {set.deliveries}
+                      </span>
                     </TableCell>
 
                     <TableCell>
@@ -557,7 +653,9 @@ export function AccountsPanel() {
 
                     <TableCell>
                       <Badge
-                        variant={set.status === 'paid' ? 'success' : 'secondary'}
+                        variant={
+                          set.status === 'paid' ? 'success' : 'secondary'
+                        }
                         className="text-[10px] font-normal uppercase"
                       >
                         {set.status}
@@ -568,7 +666,9 @@ export function AccountsPanel() {
                       {set.status !== 'paid' && (
                         <Button
                           size="sm"
-                          onClick={() => handleApproveSettlement(set.id, 'paid')}
+                          onClick={() =>
+                            handleApproveSettlement(set.id, 'paid')
+                          }
                           disabled={isSubmitting}
                           className="h-7 px-2 text-xs"
                         >
@@ -588,8 +688,12 @@ export function AccountsPanel() {
       <Dialog open={isAddVoucherOpen} onOpenChange={setIsAddVoucherOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-sm font-semibold">Post journal voucher</DialogTitle>
-            <DialogDescription className="text-xs">Direct general ledger entry</DialogDescription>
+            <DialogTitle className="text-sm font-semibold">
+              Post journal voucher
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Direct general ledger entry
+            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handlePostVoucher} className="space-y-4 pt-2">
@@ -598,7 +702,9 @@ export function AccountsPanel() {
               <Input
                 required
                 value={voucherForm.memo}
-                onChange={(e) => setVoucherForm({ ...voucherForm, memo: e.target.value })}
+                onChange={(e) =>
+                  setVoucherForm({ ...voucherForm, memo: e.target.value })
+                }
                 placeholder="e.g. Warehouse electricity utility payment"
                 className="h-8 text-xs"
               />
@@ -610,16 +716,29 @@ export function AccountsPanel() {
                 <NativeSelect
                   value={voucherForm.category}
                   onChange={(e) =>
-                    setVoucherForm({ ...voucherForm, category: e.target.value as any })
+                    setVoucherForm({
+                      ...voucherForm,
+                      category: e.target.value as any,
+                    })
                   }
                   size="sm"
                   className="w-full text-xs"
                 >
-                  <NativeSelectOption value="expense">Operating expense</NativeSelectOption>
-                  <NativeSelectOption value="purchase">Inventory purchase (COGS)</NativeSelectOption>
-                  <NativeSelectOption value="sales">Direct sales income</NativeSelectOption>
-                  <NativeSelectOption value="cod">COD remittance</NativeSelectOption>
-                  <NativeSelectOption value="refund">Refund payout</NativeSelectOption>
+                  <NativeSelectOption value="expense">
+                    Operating expense
+                  </NativeSelectOption>
+                  <NativeSelectOption value="purchase">
+                    Inventory purchase (COGS)
+                  </NativeSelectOption>
+                  <NativeSelectOption value="sales">
+                    Direct sales income
+                  </NativeSelectOption>
+                  <NativeSelectOption value="cod">
+                    COD remittance
+                  </NativeSelectOption>
+                  <NativeSelectOption value="refund">
+                    Refund payout
+                  </NativeSelectOption>
                 </NativeSelect>
               </div>
 
@@ -627,14 +746,24 @@ export function AccountsPanel() {
                 <Label className="text-xs">Target account</Label>
                 <NativeSelect
                   value={voucherForm.account}
-                  onChange={(e) => setVoucherForm({ ...voucherForm, account: e.target.value })}
+                  onChange={(e) =>
+                    setVoucherForm({ ...voucherForm, account: e.target.value })
+                  }
                   size="sm"
                   className="w-full text-xs"
                 >
-                  <NativeSelectOption value="bank">Bank corporate</NativeSelectOption>
-                  <NativeSelectOption value="cash">Cash on hand</NativeSelectOption>
-                  <NativeSelectOption value="esewa">eSewa merchant</NativeSelectOption>
-                  <NativeSelectOption value="khalti">Khalti merchant</NativeSelectOption>
+                  <NativeSelectOption value="bank">
+                    Bank corporate
+                  </NativeSelectOption>
+                  <NativeSelectOption value="cash">
+                    Cash on hand
+                  </NativeSelectOption>
+                  <NativeSelectOption value="esewa">
+                    eSewa merchant
+                  </NativeSelectOption>
+                  <NativeSelectOption value="khalti">
+                    Khalti merchant
+                  </NativeSelectOption>
                 </NativeSelect>
               </div>
             </div>
@@ -645,13 +774,20 @@ export function AccountsPanel() {
                 <NativeSelect
                   value={voucherForm.type}
                   onChange={(e) =>
-                    setVoucherForm({ ...voucherForm, type: e.target.value as any })
+                    setVoucherForm({
+                      ...voucherForm,
+                      type: e.target.value as any,
+                    })
                   }
                   size="sm"
                   className="w-full text-xs"
                 >
-                  <NativeSelectOption value="debit">Debit outflow (-)</NativeSelectOption>
-                  <NativeSelectOption value="credit">Credit inflow (+)</NativeSelectOption>
+                  <NativeSelectOption value="debit">
+                    Debit outflow (-)
+                  </NativeSelectOption>
+                  <NativeSelectOption value="credit">
+                    Credit inflow (+)
+                  </NativeSelectOption>
                 </NativeSelect>
               </div>
 
@@ -662,7 +798,12 @@ export function AccountsPanel() {
                   min="1"
                   required
                   value={voucherForm.amount}
-                  onChange={(e) => setVoucherForm({ ...voucherForm, amount: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setVoucherForm({
+                      ...voucherForm,
+                      amount: Number(e.target.value),
+                    })
+                  }
                   className="h-8 font-mono text-xs"
                 />
               </div>
@@ -678,7 +819,12 @@ export function AccountsPanel() {
               >
                 Cancel
               </Button>
-              <Button type="submit" size="sm" disabled={isSubmitting} className="h-8 text-xs">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting}
+                className="h-8 text-xs"
+              >
                 {isSubmitting ? 'Posting...' : 'Post entry'}
               </Button>
             </DialogFooter>
@@ -687,7 +833,10 @@ export function AccountsPanel() {
       </Dialog>
 
       {/* Official Financial Statement Preview Dialog */}
-      <Dialog open={isStatementModalOpen} onOpenChange={setIsStatementModalOpen}>
+      <Dialog
+        open={isStatementModalOpen}
+        onOpenChange={setIsStatementModalOpen}
+      >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
           <DialogHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
             <DialogTitle className="text-sm font-semibold">
@@ -707,10 +856,15 @@ export function AccountsPanel() {
             <div className="flex items-start justify-between border-b border-border/50 pb-3">
               <div>
                 <h2 className="text-xs font-bold text-foreground uppercase">
-                  {ops.settings.legalName || 'MEZMANI LIQUOR & GROCERY PVT. LTD.'}
+                  {ops.settings.legalName ||
+                    'MEZMANI LIQUOR & GROCERY PVT. LTD.'}
                 </h2>
-                <p className="text-muted-foreground">{ops.settings.address || 'Kathmandu, Nepal'}</p>
-                <p className="text-muted-foreground font-mono">PAN/VAT: {ops.settings.pan || '609823415'}</p>
+                <p className="text-muted-foreground">
+                  {ops.settings.address || 'Kathmandu, Nepal'}
+                </p>
+                <p className="text-muted-foreground font-mono">
+                  PAN/VAT: {ops.settings.pan || '609823415'}
+                </p>
               </div>
               <div className="text-right">
                 <span className="text-xs font-semibold text-foreground uppercase block">
@@ -723,14 +877,20 @@ export function AccountsPanel() {
             </div>
 
             <div className="space-y-2">
-              <h4 className="font-semibold text-foreground border-b border-border/40 pb-1 text-xs">Operating income</h4>
+              <h4 className="font-semibold text-foreground border-b border-border/40 pb-1 text-xs">
+                Operating income
+              </h4>
               <div className="flex justify-between py-1 text-muted-foreground">
                 <span>Gross sales income:</span>
-                <span className="font-mono text-foreground font-medium">{formatNPR(grossSales)}</span>
+                <span className="font-mono text-foreground font-medium">
+                  {formatNPR(grossSales)}
+                </span>
               </div>
               <div className="flex justify-between py-1 text-muted-foreground">
                 <span>Cost of inventory purchases (COGS):</span>
-                <span className="font-mono text-destructive">-{formatNPR(cogsPurchases)}</span>
+                <span className="font-mono text-destructive">
+                  -{formatNPR(cogsPurchases)}
+                </span>
               </div>
               <div className="flex justify-between py-1 font-semibold text-foreground bg-muted/40 px-2 rounded">
                 <span>Gross operating margin:</span>
@@ -742,15 +902,21 @@ export function AccountsPanel() {
               </h4>
               <div className="flex justify-between py-1 text-muted-foreground">
                 <span>Warehouse utilities and supplies:</span>
-                <span className="font-mono text-destructive">-{formatNPR(operatingExpenses)}</span>
+                <span className="font-mono text-destructive">
+                  -{formatNPR(operatingExpenses)}
+                </span>
               </div>
               <div className="flex justify-between py-1 text-muted-foreground">
                 <span>Customer refund payouts:</span>
-                <span className="font-mono text-destructive">-{formatNPR(refundsIssued)}</span>
+                <span className="font-mono text-destructive">
+                  -{formatNPR(refundsIssued)}
+                </span>
               </div>
 
               <div className="flex justify-between items-center p-3 rounded-md bg-muted/30 border border-border mt-3">
-                <span className="text-xs font-medium text-foreground">Net realized profit:</span>
+                <span className="text-xs font-medium text-foreground">
+                  Net realized profit:
+                </span>
                 <span className="text-sm font-bold text-foreground font-mono">
                   {formatNPR(netEstimatedProfit)}
                 </span>

@@ -31,7 +31,8 @@ function EsewaFailurePage() {
               Payment Not Completed
             </h2>
             <p className="text-xs text-muted-foreground">
-              Your eSewa transaction was cancelled or could not be processed. No funds were debited.
+              Your eSewa transaction was cancelled or could not be processed. No
+              funds were debited.
             </p>
 
             <div className="pt-4 flex flex-col sm:flex-row gap-2 justify-center">
@@ -43,10 +44,7 @@ function EsewaFailurePage() {
               </Button>
               {orderId && (
                 <Button asChild variant="outline" size="sm" className="text-xs">
-                  <Link
-                    to="/order-confirmation/$orderId"
-                    params={{ orderId }}
-                  >
+                  <Link to="/order-confirmation/$orderId" params={{ orderId }}>
                     View Order
                   </Link>
                 </Button>

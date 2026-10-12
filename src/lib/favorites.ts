@@ -3,10 +3,10 @@ import { createStore, set, del, keys } from 'idb-keyval'
 
 /**
  * FAVORITES STORAGE
- * 
+ *
  * Local-only storage in IndexedDB (Database: "mezmani", Store: "favorites").
  * Key = productId (string), Value = { id: string, addedAt: number }.
- * 
+ *
  * NOTE: This is client-side only and intentionally DOES NOT sync with the server.
  * Full product data and prices are never stored here so that data never goes stale.
  * Private browsing mode / blocked storage will safely fall back to in-memory state.
@@ -36,7 +36,10 @@ function getStore() {
     try {
       idbStore = createStore('mezmani', 'favorites')
     } catch (err) {
-      console.warn('[Favorites] Failed to create IndexedDB store, falling back to memory-only:', err)
+      console.warn(
+        '[Favorites] Failed to create IndexedDB store, falling back to memory-only:',
+        err,
+      )
       idbStore = null
     }
   }
@@ -59,6 +62,29 @@ if (typeof window !== 'undefined') {
             memoryFavorites.add(k)
           }
         })
+
+        // One-time migration of existing localStorage values
+        try {
+          const legacy =
+            localStorage.getItem('mezmani_favorites') ||
+            localStorage.getItem('favorites') ||
+            localStorage.getItem('mezmani_favs')
+          if (legacy) {
+            const parsed = JSON.parse(legacy)
+            if (Array.isArray(parsed)) {
+              for (const id of parsed) {
+                if (typeof id === 'string' && !memoryFavorites.has(id)) {
+                  memoryFavorites.add(id)
+                  set(id, { id, addedAt: Date.now() }, store).catch(() => {})
+                }
+              }
+            }
+            localStorage.removeItem('mezmani_favorites')
+            localStorage.removeItem('favorites')
+            localStorage.removeItem('mezmani_favs')
+          }
+        } catch {}
+
         isHydrated = true
         updateSnapshotAndNotify()
       })
@@ -109,7 +135,7 @@ export function toggleFavorite(productId: string): boolean {
  * Clean up a list of invalid or deleted product IDs from favorites storage.
  */
 export function cleanupFavorites(invalidIds: string[]) {
-  if (!invalidIds || invalidIds.length === 0) return
+  if (invalidIds.length === 0) return
   let changed = false
   const store = getStore()
   for (const id of invalidIds) {
@@ -180,15 +206,16 @@ export function useIsFavorite(productId: string): boolean {
  * Hook to access all favorites and actions.
  */
 export function useFavorites() {
-  const favoriteIds = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
-
-  const isFavorite = useCallback(
-    (productId: string) => {
-      if (!isHydrated) return false
-      return memoryFavorites.has(productId)
-    },
-    [],
+  const favoriteIds = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
   )
+
+  const isFavorite = useCallback((productId: string) => {
+    if (!isHydrated) return false
+    return memoryFavorites.has(productId)
+  }, [])
 
   return {
     favoriteIds,

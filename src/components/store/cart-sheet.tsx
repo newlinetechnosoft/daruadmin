@@ -109,7 +109,8 @@ export function CartSheet() {
                 Your cart is empty
               </h3>
               <p className="mt-1 max-w-xs text-xs text-muted-foreground">
-                Discover our selection of spirits, cold beers, wines, and late-night snacks.
+                Discover our selection of spirits, cold beers, wines, and
+                late-night snacks.
               </p>
               <Button
                 type="button"

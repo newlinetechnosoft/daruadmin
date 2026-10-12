@@ -1,18 +1,17 @@
+import { db } from '#/db'
+import { userPermissions } from '#/db/schema'
+import { eq } from 'drizzle-orm'
 import { getServerSession } from '#/server/middleware/auth'
-import { loadOps, mutateOps, nid } from '#/server/operations/store'
 import { MODULES, ACTIONS } from '#/server/operations/types'
 import type { ModuleKey, ActionKey } from '#/server/operations/types'
-import {
-  DEFAULT_GRANTS_BY_ROLE,
-  can,
-  type SessionUser,
-  type UserGrants,
-} from './permissions-shared'
+import { DEFAULT_GRANTS_BY_ROLE, can } from './permissions-shared'
+import type { SessionUser, UserGrants } from './permissions-shared'
+import { insertAuditLogQuery } from '#/server/platform/platform.queries'
 
 export * from './permissions-shared'
 
 /**
- * Log an event to the operational audit log.
+ * Log an event to the operational audit log in Postgres.
  */
 export async function logAudit(
   actor: string,
@@ -21,19 +20,11 @@ export async function logAudit(
   detail: string,
 ) {
   try {
-    await mutateOps((state) => {
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: actor || 'system',
-        module,
-        action,
-        detail,
-      })
-      if (state.audit.length > 500) {
-        state.audit.length = 500
-      }
-      return state
+    await insertAuditLogQuery({
+      actor: actor || 'system',
+      module,
+      action,
+      detail,
     })
   } catch (err) {
     console.warn('[AuditLog] Failed to record audit log:', err)
@@ -77,23 +68,32 @@ export async function getSessionUser(): Promise<SessionUser> {
 /**
  * Calculates effective grants for a user.
  * - Admin role always bypasses with all MODULES x ACTIONS.
- * - Stored user permissions from opsKv are checked next.
+ * - Stored user permissions from user_permissions table are checked next.
  * - Falls back to DEFAULT_GRANTS_BY_ROLE for their role (manager, rider, etc.).
  */
 export async function getUserGrants(user: SessionUser): Promise<UserGrants> {
   if (user.role === 'admin') {
-    return Object.fromEntries(
-      MODULES.map((m) => [m, [...ACTIONS]]),
-    ) as UserGrants
+    return Object.fromEntries(MODULES.map((m) => [m, [...ACTIONS]]))
   }
 
-  const ops = await loadOps()
-  const custom = ops.permissions[user.id] as UserGrants | undefined
-  if (custom && Object.keys(custom).length > 0) {
-    return custom
+  try {
+    const rows = await db
+      .select()
+      .from(userPermissions)
+      .where(eq(userPermissions.userId, user.id))
+
+    if (rows.length > 0) {
+      const custom: UserGrants = {}
+      for (const r of rows) {
+        custom[r.module as ModuleKey] = r.actions as ActionKey[]
+      }
+      return custom
+    }
+  } catch (err) {
+    console.warn('[Permissions] Failed to read user permissions from DB:', err)
   }
 
-  return DEFAULT_GRANTS_BY_ROLE[user.role] || {}
+  return DEFAULT_GRANTS_BY_ROLE[user.role]
 }
 
 /**

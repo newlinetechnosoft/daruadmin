@@ -1,6 +1,7 @@
 import { redirect } from '@tanstack/react-router'
 import type { ModuleKey, ActionKey } from '#/server/operations/types'
-import { can, type UserGrants, type SessionUser } from './permissions-shared'
+import { can } from './permissions-shared'
+import type { UserGrants, SessionUser } from './permissions-shared'
 
 export interface AdminRouteContext {
   user?: SessionUser
@@ -15,7 +16,7 @@ export interface AdminRouteContext {
  */
 export function guardModule(module: ModuleKey, action: ActionKey = 'view') {
   return ({ context }: { context: AdminRouteContext }) => {
-    if (!context?.grants || !can(context.grants, module, action)) {
+    if (!context.grants || !can(context.grants, module, action)) {
       throw redirect({ to: '/admin/forbidden' })
     }
   }

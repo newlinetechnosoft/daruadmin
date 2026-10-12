@@ -31,7 +31,11 @@ export function Pagination({
                 e.preventDefault()
                 if (page > 1) onPage(page - 1)
               }}
-              className={page <= 1 ? 'pointer-events-none opacity-40 cursor-not-allowed' : 'cursor-pointer'}
+              className={
+                page <= 1
+                  ? 'pointer-events-none opacity-40 cursor-not-allowed'
+                  : 'cursor-pointer'
+              }
             />
           </PaginationItem>
           <PaginationItem>
@@ -41,7 +45,11 @@ export function Pagination({
                 e.preventDefault()
                 if (page < pages) onPage(page + 1)
               }}
-              className={page >= pages ? 'pointer-events-none opacity-40 cursor-not-allowed' : 'cursor-pointer'}
+              className={
+                page >= pages
+                  ? 'pointer-events-none opacity-40 cursor-not-allowed'
+                  : 'cursor-pointer'
+              }
             />
           </PaginationItem>
         </PaginationContent>

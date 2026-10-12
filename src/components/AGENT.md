@@ -12,12 +12,12 @@ Workflow: need a UI piece → check `src/components/ui/` → if missing: `bunx -
 
 ## Folders
 
-| Folder                         | Contents                                                                                                                                      | Status                |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| `ui/`                          | shadcn-generated only (see `ui/AGENT.md`)                                                                                                     | ✅ All primitives installed & cn imports fixed |
-| `shared/`                      | cross-panel compositions: `DataTable`, `PageHeader`, `ConfirmDialog`, `StatusBadge`, `MoneyText`, `EmptyState`, `ThemeToggle`, `Pagination`, `Loading` | ✅ Completed |
-| `store/`                       | storefront: `ProductCard`, `CartSheet`, `Header`, `Footer`                                                                                     | ✅ Completed |
-| `admin/`, `manager/`, `rider/` | panel-specific compositions (sidebar config, order cards, dashboards, charts)                                                                   | ✅ Completed |
+| Folder                         | Contents                                                                                                                                               | Status                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| `ui/`                          | shadcn-generated only (see `ui/AGENT.md`)                                                                                                              | ✅ All primitives installed & cn imports fixed |
+| `shared/`                      | cross-panel compositions: `DataTable`, `PageHeader`, `ConfirmDialog`, `StatusBadge`, `MoneyText`, `EmptyState`, `ThemeToggle`, `Pagination`, `Loading` | ✅ Completed                                   |
+| `store/`                       | storefront: `ProductCard`, `CartSheet`, `Header`, `Footer`                                                                                             | ✅ Completed                                   |
+| `admin/`, `manager/`, `rider/` | panel-specific compositions (sidebar config, order cards, dashboards, charts)                                                                          | ✅ Completed                                   |
 
 ## Patterns
 

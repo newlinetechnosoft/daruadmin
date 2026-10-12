@@ -1,10 +1,17 @@
 import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { depositRiderCashFn } from '#/server/operations/operations.functions'
+import { queueOutboxAction } from '#/lib/idb/outbox'
 import type { Rider, Order } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
 import { Button } from '#/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '#/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -16,12 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#/components/ui/dialog'
-import {
-  Wallet,
-  Coins,
-  ArrowUpRight,
-  History,
-} from 'lucide-react'
+import { Wallet, Coins, ArrowUpRight, History } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface RiderEarningsProps {
@@ -52,6 +54,19 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
 
     try {
       setIsSubmitting(true)
+
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await queueOutboxAction('cash_handover', {
+          amount: amountVal,
+          note: depositNote || undefined,
+        })
+        toast.info('Saved offline! Cash handover queued for sync.')
+        setDepositOpen(false)
+        setDepositAmount('')
+        setDepositNote('')
+        return
+      }
+
       await depositRiderCashFn({
         data: {
           amount: amountVal,
@@ -64,7 +79,22 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
       setDepositNote('')
       await router.invalidate()
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to submit deposit')
+      if (
+        !navigator.onLine ||
+        err?.message?.includes('fetch') ||
+        err?.message?.includes('Network')
+      ) {
+        await queueOutboxAction('cash_handover', {
+          amount: amountVal,
+          note: depositNote || undefined,
+        })
+        toast.info('Network failed. Saved offline to outbox.')
+        setDepositOpen(false)
+        setDepositAmount('')
+        setDepositNote('')
+      } else {
+        toast.error(err?.message || 'Failed to submit deposit')
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -73,9 +103,12 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
   return (
     <div className="space-y-6 pb-12">
       <div>
-        <h2 className="text-base font-semibold text-foreground">Earnings & Cash in Hand</h2>
+        <h2 className="text-base font-semibold text-foreground">
+          Earnings & Cash in Hand
+        </h2>
         <p className="text-xs text-muted-foreground">
-          Track your delivery commissions and manage cash collected from COD orders
+          Track your delivery commissions and manage cash collected from COD
+          orders
         </p>
       </div>
 
@@ -94,7 +127,8 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
               {formatNPR(rider.cashOnHand)}
             </div>
             <CardDescription className="text-xs mt-1">
-              Total cash collected from COD customers that must be deposited with store accounts.
+              Total cash collected from COD customers that must be deposited
+              with store accounts.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-2">
@@ -126,12 +160,15 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
               {formatNPR(rider.earnings)}
             </div>
             <CardDescription className="text-xs mt-1">
-              Earned based on {rider.commissionRate}% delivery fee share over {rider.deliveries} total trips.
+              Earned based on {rider.commissionRate}% delivery fee share over{' '}
+              {rider.deliveries} total trips.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-2">
             <div className="p-2.5 rounded-md bg-muted/40 border border-border text-xs flex justify-between items-center">
-              <span className="text-muted-foreground">Your Commission Rate:</span>
+              <span className="text-muted-foreground">
+                Your Commission Rate:
+              </span>
               <Badge variant="outline" className="font-mono text-xs">
                 {rider.commissionRate}% of delivery fee
               </Badge>
@@ -145,13 +182,16 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
         <CardHeader className="p-4 pb-3 border-b border-border">
           <div className="flex items-center gap-2">
             <History className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-semibold">Delivery Earnings Breakdown</CardTitle>
+            <CardTitle className="text-sm font-semibold">
+              Delivery Earnings Breakdown
+            </CardTitle>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           {completedOrders.length === 0 ? (
             <div className="p-8 text-center text-xs text-muted-foreground">
-              No completed deliveries yet. Complete orders to build your earnings record.
+              No completed deliveries yet. Complete orders to build your
+              earnings record.
             </div>
           ) : (
             <div className="divide-y divide-border">
@@ -181,7 +221,8 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
                         )}
                       </div>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Customer: {order.customerName} • {new Date(order.updatedAt).toLocaleDateString()}
+                        Customer: {order.customerName} •{' '}
+                        {new Date(order.updatedAt).toLocaleDateString()}
                       </p>
                     </div>
 
@@ -206,9 +247,12 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
         <DialogContent className="sm:max-w-md">
           <form onSubmit={handleDepositSubmit}>
             <DialogHeader>
-              <DialogTitle className="text-sm">Deposit Cash to Admin</DialogTitle>
+              <DialogTitle className="text-sm">
+                Deposit Cash to Admin
+              </DialogTitle>
               <DialogDescription className="text-xs">
-                Record physical cash handover of collected COD floats to Mezmani finance accounts.
+                Record physical cash handover of collected COD floats to Mezmani
+                finance accounts.
               </DialogDescription>
             </DialogHeader>
 

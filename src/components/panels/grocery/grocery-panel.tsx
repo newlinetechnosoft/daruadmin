@@ -24,10 +24,7 @@ import { Label } from '#/components/ui/label'
 import { Textarea } from '#/components/ui/textarea'
 import { Badge } from '#/components/ui/badge'
 import { Checkbox } from '#/components/ui/checkbox'
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from '#/components/ui/native-select'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import {
   Table,
   TableBody,
@@ -46,7 +43,6 @@ import {
 } from '#/components/ui/dialog'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { EmptyState } from '#/components/shared/empty-state'
-
 
 interface GroceryVariantItem {
   id?: string
@@ -73,7 +69,10 @@ export function GroceryPanel() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string
+    name: string
+  } | null>(null)
 
   // Form State
   const [formName, setFormName] = useState('')
@@ -299,7 +298,11 @@ export function GroceryPanel() {
             <Badge variant="secondary" className="font-mono text-xs">
               {products.length} SKUs
             </Badge>
-            <Button size="sm" onClick={openAddModal} className="h-8 gap-1.5 text-xs">
+            <Button
+              size="sm"
+              onClick={openAddModal}
+              className="h-8 gap-1.5 text-xs"
+            >
               <Plus className="h-3.5 w-3.5" />
               Add grocery SKU
             </Button>
@@ -343,7 +346,9 @@ export function GroceryPanel() {
             <TableRow>
               <TableHead className="text-xs">Item</TableHead>
               <TableHead className="text-xs">Category</TableHead>
-              <TableHead className="text-xs">Variants and pricing (NPR)</TableHead>
+              <TableHead className="text-xs">
+                Variants and pricing (NPR)
+              </TableHead>
               <TableHead className="text-center text-xs">Status</TableHead>
               <TableHead className="text-right text-xs">Actions</TableHead>
             </TableRow>
@@ -375,7 +380,10 @@ export function GroceryPanel() {
                         <div className="flex items-center gap-1.5 font-medium text-xs text-foreground">
                           <span>{p.name}</span>
                           {p.isFeatured && (
-                            <Badge variant="secondary" className="gap-1 text-[9px] px-1 py-0 font-normal">
+                            <Badge
+                              variant="secondary"
+                              className="gap-1 text-[9px] px-1 py-0 font-normal"
+                            >
                               <Sparkles className="h-2.5 w-2.5" /> Featured
                             </Badge>
                           )}
@@ -402,7 +410,9 @@ export function GroceryPanel() {
                               : 'border-border bg-muted/30 text-foreground'
                           }`}
                         >
-                          <span className="font-medium text-[11px]">{v.name}</span>
+                          <span className="font-medium text-[11px]">
+                            {v.name}
+                          </span>
                           <span className="font-mono font-semibold text-[11px] tabular-nums">
                             {formatNPR(v.price)}
                           </span>
@@ -425,11 +435,13 @@ export function GroceryPanel() {
                     >
                       {p.isActive ? (
                         <>
-                          <CheckCircle2 className="h-3 w-3 text-success" /> Active
+                          <CheckCircle2 className="h-3 w-3 text-success" />{' '}
+                          Active
                         </>
                       ) : (
                         <>
-                          <XCircle className="h-3 w-3 text-muted-foreground" /> Draft
+                          <XCircle className="h-3 w-3 text-muted-foreground" />{' '}
+                          Draft
                         </>
                       )}
                     </Button>
@@ -449,7 +461,9 @@ export function GroceryPanel() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setDeleteTarget({ id: p.id, name: p.name })}
+                        onClick={() =>
+                          setDeleteTarget({ id: p.id, name: p.name })
+                        }
                         className="h-7 w-7 text-muted-foreground hover:text-destructive"
                         aria-label={`Delete ${p.name}`}
                       >
@@ -559,9 +573,14 @@ export function GroceryPanel() {
                 <Checkbox
                   id="form-is-active"
                   checked={formIsActive}
-                  onCheckedChange={(checked) => setFormIsActive(Boolean(checked))}
+                  onCheckedChange={(checked) =>
+                    setFormIsActive(Boolean(checked))
+                  }
                 />
-                <Label htmlFor="form-is-active" className="text-xs cursor-pointer font-normal">
+                <Label
+                  htmlFor="form-is-active"
+                  className="text-xs cursor-pointer font-normal"
+                >
                   Active on storefront
                 </Label>
               </div>
@@ -570,9 +589,14 @@ export function GroceryPanel() {
                 <Checkbox
                   id="form-is-featured"
                   checked={formIsFeatured}
-                  onCheckedChange={(checked) => setFormIsFeatured(Boolean(checked))}
+                  onCheckedChange={(checked) =>
+                    setFormIsFeatured(Boolean(checked))
+                  }
                 />
-                <Label htmlFor="form-is-featured" className="text-xs cursor-pointer font-normal flex items-center gap-1">
+                <Label
+                  htmlFor="form-is-featured"
+                  className="text-xs cursor-pointer font-normal flex items-center gap-1"
+                >
                   <Sparkles className="h-3 w-3" />
                   Featured item
                 </Label>
@@ -674,8 +698,17 @@ export function GroceryPanel() {
               >
                 Cancel
               </Button>
-              <Button type="submit" size="sm" disabled={isSubmitting} className="h-8 text-xs">
-                {isSubmitting ? 'Saving...' : editingId ? 'Update item' : 'Create item'}
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting}
+                className="h-8 text-xs"
+              >
+                {isSubmitting
+                  ? 'Saving...'
+                  : editingId
+                    ? 'Update item'
+                    : 'Create item'}
               </Button>
             </DialogFooter>
           </form>

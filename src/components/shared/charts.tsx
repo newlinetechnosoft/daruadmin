@@ -15,8 +15,8 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  type ChartConfig,
 } from '#/components/ui/chart'
+import type { ChartConfig } from '#/components/ui/chart'
 
 const CHART_COLORS = [
   'var(--chart-2)',
@@ -51,15 +51,26 @@ export function LineChart({
   } satisfies ChartConfig
 
   return (
-    <ChartContainer config={chartConfig} className="h-[220px] w-full aspect-auto">
-      <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+    <ChartContainer
+      config={chartConfig}
+      className="h-[220px] w-full aspect-auto"
+    >
+      <AreaChart
+        data={data}
+        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+      >
         <defs>
           <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.25} />
             <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0.0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.6} />
+        <CartesianGrid
+          strokeDasharray="3 3"
+          vertical={false}
+          stroke="var(--border)"
+          opacity={0.6}
+        />
         <XAxis
           dataKey="date"
           tickLine={false}
@@ -74,7 +85,9 @@ export function LineChart({
           tickMargin={8}
           fontSize={11}
           stroke="var(--muted-foreground)"
-          tickFormatter={(v) => (money ? `Rs ${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}` : `${v}`)}
+          tickFormatter={(v) =>
+            money ? `Rs ${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}` : `${v}`
+          }
         />
         <ChartTooltip
           cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
@@ -127,9 +140,20 @@ export function BarChart({
   }))
 
   return (
-    <ChartContainer config={chartConfig} className="h-[220px] w-full aspect-auto">
-      <RechartsBarChart data={formattedData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.6} />
+    <ChartContainer
+      config={chartConfig}
+      className="h-[220px] w-full aspect-auto"
+    >
+      <RechartsBarChart
+        data={formattedData}
+        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+      >
+        <CartesianGrid
+          strokeDasharray="3 3"
+          vertical={false}
+          stroke="var(--border)"
+          opacity={0.6}
+        />
         <XAxis
           dataKey="displayName"
           tickLine={false}
@@ -180,16 +204,17 @@ export function DoughnutChart({
         label: d.label.replaceAll('_', ' '),
         color: CHART_COLORS[i % CHART_COLORS.length],
       },
-    ])
+    ]),
   ) satisfies ChartConfig
 
   return (
     <div className="flex flex-col items-center gap-4 sm:flex-row">
-      <ChartContainer config={chartConfig} className="h-[180px] w-[180px] shrink-0 aspect-square">
+      <ChartContainer
+        config={chartConfig}
+        className="h-[180px] w-[180px] shrink-0 aspect-square"
+      >
         <RechartsPieChart>
-          <ChartTooltip
-            content={<ChartTooltipContent hideLabel />}
-          />
+          <ChartTooltip content={<ChartTooltipContent hideLabel />} />
           <Pie
             data={data}
             dataKey="value"
@@ -211,7 +236,10 @@ export function DoughnutChart({
       </ChartContainer>
       <ul className="m-0 flex-1 list-none space-y-1.5 p-0">
         {data.map((d, i) => (
-          <li key={d.label} className="flex items-center justify-between gap-3 text-xs">
+          <li
+            key={d.label}
+            className="flex items-center justify-between gap-3 text-xs"
+          >
             <span className="flex items-center gap-2 capitalize text-muted-foreground">
               <span
                 className="h-2 w-2 rounded-full"
@@ -219,7 +247,9 @@ export function DoughnutChart({
               />
               {d.label.replaceAll('_', ' ')}
             </span>
-            <span className="font-mono font-medium tabular-nums text-foreground">{d.value}</span>
+            <span className="font-mono font-medium tabular-nums text-foreground">
+              {d.value}
+            </span>
           </li>
         ))}
       </ul>

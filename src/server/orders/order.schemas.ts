@@ -48,7 +48,10 @@ export const checkoutFormSchema = z.object({
     .max(180, 'Longitude must be between -180 and 180'),
   address: z
     .string()
-    .min(3, 'Detailed delivery address / landmark is required for rider dispatch'),
+    .min(
+      3,
+      'Detailed delivery address / landmark is required for rider dispatch',
+    ),
   city: z.string().min(2),
 
   // d) Contact phone number
@@ -56,7 +59,8 @@ export const checkoutFormSchema = z.object({
     .string()
     .min(10, 'Valid 10-digit mobile number is required')
     .refine((val) => normalizeNepaliPhone(val) !== null, {
-      message: 'Must be a valid 10-digit Nepali mobile number (starts with 98 or 97)',
+      message:
+        'Must be a valid 10-digit Nepali mobile number (starts with 98 or 97)',
     }),
   savePhoneAsDefault: z.boolean(),
 

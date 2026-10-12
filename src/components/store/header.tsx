@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useCart } from '#/lib/cart-context'
 import { authClient } from '#/lib/auth-client'
+import { clearAllLocalData } from '#/lib/idb'
 import { toast } from 'sonner'
 import {
   Menu,
@@ -57,6 +58,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   const handleSignOut = async () => {
     try {
       await authClient.signOut()
+      await clearAllLocalData()
       setMobileMenuOpen(false)
       toast.success('Signed out successfully')
       navigate({ to: '/' })
@@ -93,13 +95,20 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
             >
               Food
             </Link>
-            <a href="/#reviews" className="hover:text-foreground transition-colors">
+            <a
+              href="/#reviews"
+              className="hover:text-foreground transition-colors"
+            >
               Reviews
             </a>
-            <a href="/#about" className="hover:text-foreground transition-colors">
+            <a
+              href="/#about"
+              className="hover:text-foreground transition-colors"
+            >
               About
             </a>
-            {(session?.user?.role === 'admin' || session?.user?.role === 'manager') && (
+            {(session?.user?.role === 'admin' ||
+              session?.user?.role === 'manager') && (
               <Link
                 to="/admin"
                 className="hover:text-foreground transition-colors text-primary font-semibold"
@@ -172,13 +181,17 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                     {session.user.email}
                   </p>
                   {session.user.role && (
-                    <Badge variant="secondary" className="mt-1 text-[10px] capitalize">
+                    <Badge
+                      variant="secondary"
+                      className="mt-1 text-[10px] capitalize"
+                    >
                       {session.user.role}
                     </Badge>
                   )}
                 </div>
                 <DropdownMenuSeparator />
-                {(session.user.role === 'admin' || session.user.role === 'manager') && (
+                {(session.user.role === 'admin' ||
+                  session.user.role === 'manager') && (
                   <>
                     <DropdownMenuItem asChild>
                       <Link to="/admin" className="cursor-pointer">
@@ -210,7 +223,12 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button asChild variant="ghost" size="sm" className="h-8 gap-1.5 text-xs">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+            >
               <Link to="/login">
                 <User className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Sign in</span>
@@ -257,10 +275,15 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                 <Menu className="h-4 w-4" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-72 p-6 flex flex-col justify-between">
+            <SheetContent
+              side="right"
+              className="w-72 p-6 flex flex-col justify-between"
+            >
               <div className="space-y-6">
                 <SheetHeader className="text-left">
-                  <SheetTitle className="text-sm font-semibold">MEZMANI</SheetTitle>
+                  <SheetTitle className="text-sm font-semibold">
+                    MEZMANI
+                  </SheetTitle>
                 </SheetHeader>
 
                 <form onSubmit={handleSearchSubmit} className="relative w-full">
@@ -303,14 +326,17 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                   >
                     About Us
                   </a>
-                  {(session?.user.role === 'admin' || session?.user.role === 'manager') && (
+                  {(session?.user.role === 'admin' ||
+                    session?.user.role === 'manager') && (
                     <Link
                       to="/admin"
                       onClick={() => setMobileMenuOpen(false)}
                       className="text-primary font-semibold transition-colors py-1 flex items-center justify-between"
                     >
                       <span>Admin Portal</span>
-                      <Badge variant="outline" className="text-[10px]">OPS</Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        OPS
+                      </Badge>
                     </Link>
                   )}
                   {session?.user.role === 'rider' && (
@@ -323,7 +349,9 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                         <Bike className="h-3.5 w-3.5" />
                         Rider Portal
                       </span>
-                      <Badge variant="outline" className="text-[10px]">FLEET</Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        FLEET
+                      </Badge>
                     </Link>
                   )}
                 </nav>
@@ -346,13 +374,24 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <Button asChild variant="outline" size="sm" className="w-full text-xs">
-                      <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs"
+                    >
+                      <Link
+                        to="/login"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
                         Sign in
                       </Link>
                     </Button>
                     <Button asChild size="sm" className="w-full text-xs">
-                      <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
+                      <Link
+                        to="/signup"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
                         Sign up
                       </Link>
                     </Button>
@@ -360,7 +399,10 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                 )}
 
                 <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-2">
-                  <a href="tel:+9779802088800" className="flex items-center gap-1 hover:text-foreground">
+                  <a
+                    href="tel:+9779802088800"
+                    className="flex items-center gap-1 hover:text-foreground"
+                  >
                     <PhoneCall className="h-3 w-3" />
                     <span>+977-9802088800</span>
                   </a>

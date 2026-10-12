@@ -55,7 +55,10 @@ export function FavoritesPanel() {
         }
       })
       .catch((err) => {
-        console.warn('[FavoritesPanel] Failed to fetch favorited products:', err)
+        console.warn(
+          '[FavoritesPanel] Failed to fetch favorited products:',
+          err,
+        )
       })
       .finally(() => {
         if (isMounted) setIsLoading(false)
@@ -87,7 +90,8 @@ export function FavoritesPanel() {
                 </h1>
               </div>
               <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-                Your saved drinks and late-night essentials stored on this device.
+                Your saved drinks and late-night essentials stored on this
+                device.
               </p>
             </div>
 

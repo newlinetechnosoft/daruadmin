@@ -1,12 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getAllTaxonomyFn } from '#/server/catalog/catalog.functions'
 import { guardModule } from '#/server/auth/guards'
 import { TaxonomyPanel } from '#/components/panels/taxonomy'
+import { adminQueries } from '#/queries/admin'
 
 export const Route = createFileRoute('/admin/taxonomy')({
   beforeLoad: guardModule('products'),
-  loader: async () => {
-    const taxonomy = await getAllTaxonomyFn()
+  loader: async ({ context }) => {
+    const taxonomy = await context.queryClient.ensureQueryData(
+      adminQueries.taxonomy(),
+    )
     return { taxonomy }
   },
   component: TaxonomyPanel,

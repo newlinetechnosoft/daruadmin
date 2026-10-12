@@ -1,8 +1,6 @@
 import { useState, useMemo } from 'react'
-import { getRouteApi,   useRouter  } from '@tanstack/react-router'
-import {
-  addLedgerFn,
-} from '#/server/operations/operations.functions'
+import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { addLedgerFn } from '#/server/operations/operations.functions'
 import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
@@ -22,10 +20,7 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Badge } from '#/components/ui/badge'
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from '#/components/ui/native-select'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import {
   Table,
   TableBody,
@@ -44,7 +39,6 @@ import {
 } from '#/components/ui/dialog'
 import { EmptyState } from '#/components/shared/empty-state'
 
-
 const routeApi = getRouteApi('/admin/inventory')
 
 export function InventoryPanel() {
@@ -52,7 +46,9 @@ export function InventoryPanel() {
   const router = useRouter()
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [catalogFilter, setCatalogFilter] = useState<'all' | 'liquor' | 'grocery'>('all')
+  const [catalogFilter, setCatalogFilter] = useState<
+    'all' | 'liquor' | 'grocery'
+  >('all')
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
   const [restockItem, setRestockItem] = useState<{
     id: string
@@ -125,7 +121,8 @@ export function InventoryPanel() {
   const filteredItems = useMemo(() => {
     return inventoryItems.filter((item) => {
       if (catalogFilter !== 'all' && item.type !== catalogFilter) return false
-      if (stockFilter === 'low' && item.stock > item.lowStockThreshold) return false
+      if (stockFilter === 'low' && item.stock > item.lowStockThreshold)
+        return false
       if (stockFilter === 'out' && item.stock > 0) return false
 
       if (searchQuery.trim()) {
@@ -143,8 +140,13 @@ export function InventoryPanel() {
 
   // KPIs
   const totalUnitsOnHand = inventoryItems.reduce((sum, i) => sum + i.stock, 0)
-  const totalInventoryValuation = inventoryItems.reduce((sum, i) => sum + i.stock * Math.round(i.price * 0.65), 0)
-  const lowStockCount = inventoryItems.filter((i) => i.stock <= i.lowStockThreshold).length
+  const totalInventoryValuation = inventoryItems.reduce(
+    (sum, i) => sum + i.stock * Math.round(i.price * 0.65),
+    0,
+  )
+  const lowStockCount = inventoryItems.filter(
+    (i) => i.stock <= i.lowStockThreshold,
+  ).length
 
   const handleQuickRestock = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -165,7 +167,7 @@ export function InventoryPanel() {
       })
 
       toast.success(
-        `Restocked ${restockQty} units. COGS bill of ${formatNPR(totalExpense)} logged to Ledger.`
+        `Restocked ${restockQty} units. COGS bill of ${formatNPR(totalExpense)} logged to Ledger.`,
       )
       setRestockItem(null)
       await router.invalidate()
@@ -177,11 +179,12 @@ export function InventoryPanel() {
   }
 
   const handleExportCSV = () => {
-    const headers = 'SKU,ProductName,CatalogType,Brand,Category,Variant,StockOnHand,RetailPriceNPR\n'
+    const headers =
+      'SKU,ProductName,CatalogType,Brand,Category,Variant,StockOnHand,RetailPriceNPR\n'
     const rows = filteredItems
       .map(
         (i) =>
-          `"${i.sku}","${i.name}","${i.type}","${i.brand}","${i.category}","${i.variantName}",${i.stock},${i.price}`
+          `"${i.sku}","${i.name}","${i.type}","${i.brand}","${i.category}","${i.variantName}",${i.stock},${i.price}`,
       )
       .join('\n')
     const blob = new Blob([headers + rows], { type: 'text/csv' })
@@ -200,7 +203,12 @@ export function InventoryPanel() {
         title="Inventory and stock tracking"
         description="Unified warehouse stock management across Liquor and Grocery catalogs with automated COGS ledger sync."
         actions={
-          <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-8 gap-1.5 text-xs">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+            className="h-8 gap-1.5 text-xs"
+          >
             <Download className="h-3.5 w-3.5" />
             Export stock CSV
           </Button>
@@ -258,7 +266,9 @@ export function InventoryPanel() {
           >
             <NativeSelectOption value="all">All catalogs</NativeSelectOption>
             <NativeSelectOption value="liquor">Liquor only</NativeSelectOption>
-            <NativeSelectOption value="grocery">Grocery only</NativeSelectOption>
+            <NativeSelectOption value="grocery">
+              Grocery only
+            </NativeSelectOption>
           </NativeSelect>
 
           <NativeSelect
@@ -267,9 +277,15 @@ export function InventoryPanel() {
             size="sm"
             className="h-8 text-xs"
           >
-            <NativeSelectOption value="all">All stock statuses</NativeSelectOption>
-            <NativeSelectOption value="low">Low stock alerts (≤20)</NativeSelectOption>
-            <NativeSelectOption value="out">Out of stock (0)</NativeSelectOption>
+            <NativeSelectOption value="all">
+              All stock statuses
+            </NativeSelectOption>
+            <NativeSelectOption value="low">
+              Low stock alerts (≤20)
+            </NativeSelectOption>
+            <NativeSelectOption value="out">
+              Out of stock (0)
+            </NativeSelectOption>
           </NativeSelect>
         </div>
       </div>
@@ -304,17 +320,28 @@ export function InventoryPanel() {
                 return (
                   <TableRow key={item.id}>
                     <TableCell>
-                      <span className="font-mono text-xs font-semibold text-foreground block">{item.sku}</span>
-                      <span className="text-[11px] text-muted-foreground">{item.variantName}</span>
+                      <span className="font-mono text-xs font-semibold text-foreground block">
+                        {item.sku}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {item.variantName}
+                      </span>
                     </TableCell>
 
                     <TableCell>
-                      <div className="font-medium text-xs text-foreground">{item.name}</div>
-                      <div className="text-[11px] text-muted-foreground">{item.brand} · {item.category}</div>
+                      <div className="font-medium text-xs text-foreground">
+                        {item.name}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {item.brand} · {item.category}
+                      </div>
                     </TableCell>
 
                     <TableCell>
-                      <Badge variant="secondary" className="gap-1 text-[11px] font-normal capitalize">
+                      <Badge
+                        variant="secondary"
+                        className="gap-1 text-[11px] font-normal capitalize"
+                      >
                         {item.type === 'liquor' ? (
                           <Wine className="h-3 w-3 text-muted-foreground" />
                         ) : (
@@ -331,18 +358,26 @@ export function InventoryPanel() {
                     </TableCell>
 
                     <TableCell>
-                      <span className={`font-mono text-xs font-medium tabular-nums ${isLow ? 'text-destructive font-semibold' : 'text-foreground'}`}>
+                      <span
+                        className={`font-mono text-xs font-medium tabular-nums ${isLow ? 'text-destructive font-semibold' : 'text-foreground'}`}
+                      >
                         {item.stock} units
                       </span>
                     </TableCell>
 
                     <TableCell>
                       {isLow ? (
-                        <Badge variant="destructive" className="gap-1 text-[10px] font-normal">
+                        <Badge
+                          variant="destructive"
+                          className="gap-1 text-[10px] font-normal"
+                        >
                           <AlertTriangle className="h-3 w-3" /> Low stock
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-normal text-muted-foreground"
+                        >
                           Adequate
                         </Badge>
                       )}
@@ -371,11 +406,16 @@ export function InventoryPanel() {
       </div>
 
       {/* Quick Restock Dialog */}
-      <Dialog open={Boolean(restockItem)} onOpenChange={(open) => !open && setRestockItem(null)}>
+      <Dialog
+        open={Boolean(restockItem)}
+        onOpenChange={(open) => !open && setRestockItem(null)}
+      >
         {restockItem && (
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-sm font-semibold">Restock inventory</DialogTitle>
+              <DialogTitle className="text-sm font-semibold">
+                Restock inventory
+              </DialogTitle>
               <DialogDescription className="text-xs">
                 {restockItem.name} ({restockItem.variantName})
               </DialogDescription>
@@ -395,7 +435,9 @@ export function InventoryPanel() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs">Vendor purchase cost per unit (NPR) *</Label>
+                <Label className="text-xs">
+                  Vendor purchase cost per unit (NPR) *
+                </Label>
                 <Input
                   type="number"
                   min="1"
@@ -405,12 +447,15 @@ export function InventoryPanel() {
                   className="h-8 text-xs font-mono"
                 />
                 <span className="text-[11px] text-muted-foreground">
-                  Automatically logged as COGS purchase bill in the general ledger
+                  Automatically logged as COGS purchase bill in the general
+                  ledger
                 </span>
               </div>
 
               <div className="flex items-center justify-between rounded-md bg-muted/40 p-3 text-xs">
-                <span className="text-muted-foreground">Total purchase expenditure:</span>
+                <span className="text-muted-foreground">
+                  Total purchase expenditure:
+                </span>
                 <span className="font-mono text-sm font-bold text-foreground">
                   {formatNPR(restockQty * costPerUnit)}
                 </span>
@@ -426,7 +471,12 @@ export function InventoryPanel() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" disabled={isSubmitting} className="h-8 text-xs">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isSubmitting}
+                  className="h-8 text-xs"
+                >
                   {isSubmitting ? 'Posting...' : 'Confirm restock and log COGS'}
                 </Button>
               </DialogFooter>

@@ -11,7 +11,18 @@ import {
   groceryImages,
   user,
 } from '#/db/schema'
-import { and, eq, ilike, or, asc, desc, count, inArray } from 'drizzle-orm'
+import {
+  and,
+  eq,
+  ilike,
+  or,
+  asc,
+  desc,
+  count,
+  inArray,
+  sum,
+  lte,
+} from 'drizzle-orm'
 import type {
   ListLiquorInput,
   ListGroceryInput,
@@ -123,16 +134,24 @@ export async function getLiquorProductsQuery(input: ListLiquorInput) {
 
   const productIds = productsList.map((p) => p.id)
 
-  const variants = await db
-    .select()
-    .from(liquorVariants)
-    .where(and(eq(liquorVariants.isActive, true)))
-
-  const images = await db.select().from(liquorImages)
+  const [variants, images] = await Promise.all([
+    db
+      .select()
+      .from(liquorVariants)
+      .where(
+        and(
+          eq(liquorVariants.isActive, true),
+          inArray(liquorVariants.productId, productIds),
+        ),
+      ),
+    db
+      .select()
+      .from(liquorImages)
+      .where(inArray(liquorImages.productId, productIds)),
+  ])
 
   const variantsMap = new Map<string, typeof variants>()
   for (const v of variants) {
-    if (!productIds.includes(v.productId)) continue
     const current = variantsMap.get(v.productId) ?? []
     current.push(v)
     variantsMap.set(v.productId, current)
@@ -140,7 +159,6 @@ export async function getLiquorProductsQuery(input: ListLiquorInput) {
 
   const imagesMap = new Map<string, string>()
   for (const img of images) {
-    if (!productIds.includes(img.productId)) continue
     if (img.isPrimary || !imagesMap.has(img.productId)) {
       imagesMap.set(img.productId, img.url)
     }
@@ -219,16 +237,24 @@ export async function getGroceryProductsQuery(input: ListGroceryInput) {
 
   const productIds = productsList.map((p) => p.id)
 
-  const variants = await db
-    .select()
-    .from(groceryVariants)
-    .where(and(eq(groceryVariants.isActive, true)))
-
-  const images = await db.select().from(groceryImages)
+  const [variants, images] = await Promise.all([
+    db
+      .select()
+      .from(groceryVariants)
+      .where(
+        and(
+          eq(groceryVariants.isActive, true),
+          inArray(groceryVariants.productId, productIds),
+        ),
+      ),
+    db
+      .select()
+      .from(groceryImages)
+      .where(inArray(groceryImages.productId, productIds)),
+  ])
 
   const variantsMap = new Map<string, typeof variants>()
   for (const v of variants) {
-    if (!productIds.includes(v.productId)) continue
     const current = variantsMap.get(v.productId) ?? []
     current.push(v)
     variantsMap.set(v.productId, current)
@@ -236,7 +262,6 @@ export async function getGroceryProductsQuery(input: ListGroceryInput) {
 
   const imagesMap = new Map<string, string>()
   for (const img of images) {
-    if (!productIds.includes(img.productId)) continue
     if (img.isPrimary || !imagesMap.has(img.productId)) {
       imagesMap.set(img.productId, img.url)
     }
@@ -262,8 +287,10 @@ export async function getAdminStatsQuery() {
     liquorCatRes,
     groceryCatRes,
     userRes,
-    allLiquorVariants,
-    allGroceryVariants,
+    liqStockRes,
+    grocStockRes,
+    liqLowRes,
+    grocLowRes,
   ] = await Promise.all([
     db.select({ total: count() }).from(liquorProducts),
     db.select({ total: count() }).from(groceryProducts),
@@ -271,21 +298,22 @@ export async function getAdminStatsQuery() {
     db.select({ total: count() }).from(liquorCategories),
     db.select({ total: count() }).from(groceryCategories),
     db.select({ total: count() }).from(user),
-    db.select().from(liquorVariants),
-    db.select().from(groceryVariants),
+    db.select({ totalStock: sum(liquorVariants.stock) }).from(liquorVariants),
+    db.select({ totalStock: sum(groceryVariants.stock) }).from(groceryVariants),
+    db
+      .select({ lowStock: count() })
+      .from(liquorVariants)
+      .where(lte(liquorVariants.stock, 20)),
+    db
+      .select({ lowStock: count() })
+      .from(groceryVariants)
+      .where(lte(groceryVariants.stock, 20)),
   ])
 
-  const totalStockLiquor = allLiquorVariants.reduce(
-    (acc, v) => acc + v.stock,
-    0,
-  )
-  const totalStockGrocery = allGroceryVariants.reduce(
-    (acc, v) => acc + v.stock,
-    0,
-  )
+  const totalStockLiquor = Number(liqStockRes[0]?.totalStock ?? 0)
+  const totalStockGrocery = Number(grocStockRes[0]?.totalStock ?? 0)
   const lowStockCount =
-    allLiquorVariants.filter((v) => v.stock <= 20).length +
-    allGroceryVariants.filter((v) => v.stock <= 20).length
+    (liqLowRes[0]?.lowStock ?? 0) + (grocLowRes[0]?.lowStock ?? 0)
 
   return {
     totalLiquorProducts: liquorRes[0]?.total ?? 0,
@@ -327,12 +355,19 @@ export async function getAdminLiquorProductsQuery() {
   if (productsList.length === 0) return []
 
   const productIds = productsList.map((p) => p.id)
-  const variants = await db.select().from(liquorVariants)
-  const images = await db.select().from(liquorImages)
+  const [variants, images] = await Promise.all([
+    db
+      .select()
+      .from(liquorVariants)
+      .where(inArray(liquorVariants.productId, productIds)),
+    db
+      .select()
+      .from(liquorImages)
+      .where(inArray(liquorImages.productId, productIds)),
+  ])
 
   const variantsMap = new Map<string, typeof variants>()
   for (const v of variants) {
-    if (!productIds.includes(v.productId)) continue
     const current = variantsMap.get(v.productId) ?? []
     current.push(v)
     variantsMap.set(v.productId, current)
@@ -340,7 +375,6 @@ export async function getAdminLiquorProductsQuery() {
 
   const imagesMap = new Map<string, string>()
   for (const img of images) {
-    if (!productIds.includes(img.productId)) continue
     if (img.isPrimary || !imagesMap.has(img.productId)) {
       imagesMap.set(img.productId, img.url)
     }
@@ -378,12 +412,19 @@ export async function getAdminGroceryProductsQuery() {
   if (productsList.length === 0) return []
 
   const productIds = productsList.map((p) => p.id)
-  const variants = await db.select().from(groceryVariants)
-  const images = await db.select().from(groceryImages)
+  const [variants, images] = await Promise.all([
+    db
+      .select()
+      .from(groceryVariants)
+      .where(inArray(groceryVariants.productId, productIds)),
+    db
+      .select()
+      .from(groceryImages)
+      .where(inArray(groceryImages.productId, productIds)),
+  ])
 
   const variantsMap = new Map<string, typeof variants>()
   for (const v of variants) {
-    if (!productIds.includes(v.productId)) continue
     const current = variantsMap.get(v.productId) ?? []
     current.push(v)
     variantsMap.set(v.productId, current)
@@ -391,7 +432,6 @@ export async function getAdminGroceryProductsQuery() {
 
   const imagesMap = new Map<string, string>()
   for (const img of images) {
-    if (!productIds.includes(img.productId)) continue
     if (img.isPrimary || !imagesMap.has(img.productId)) {
       imagesMap.set(img.productId, img.url)
     }
@@ -759,7 +799,7 @@ export async function updateUserRoleQuery(input: {
 }
 
 export async function getProductsByIdsQuery(ids: string[]) {
-  if (!ids || ids.length === 0) return []
+  if (ids.length === 0) return []
 
   const [liquorRows, groceryRows] = await Promise.all([
     db
@@ -780,7 +820,9 @@ export async function getProductsByIdsQuery(ids: string[]) {
         eq(liquorProducts.categoryId, liquorCategories.id),
       )
       .leftJoin(liquorBrands, eq(liquorProducts.brandId, liquorBrands.id))
-      .where(and(eq(liquorProducts.isActive, true), inArray(liquorProducts.id, ids))),
+      .where(
+        and(eq(liquorProducts.isActive, true), inArray(liquorProducts.id, ids)),
+      ),
 
     db
       .select({
@@ -797,7 +839,12 @@ export async function getProductsByIdsQuery(ids: string[]) {
         groceryCategories,
         eq(groceryProducts.categoryId, groceryCategories.id),
       )
-      .where(and(eq(groceryProducts.isActive, true), inArray(groceryProducts.id, ids))),
+      .where(
+        and(
+          eq(groceryProducts.isActive, true),
+          inArray(groceryProducts.id, ids),
+        ),
+      ),
   ])
 
   const liquorIds = liquorRows.map((p) => p.id)
@@ -808,7 +855,12 @@ export async function getProductsByIdsQuery(ids: string[]) {
       ? db
           .select()
           .from(liquorVariants)
-          .where(and(eq(liquorVariants.isActive, true), inArray(liquorVariants.productId, liquorIds)))
+          .where(
+            and(
+              eq(liquorVariants.isActive, true),
+              inArray(liquorVariants.productId, liquorIds),
+            ),
+          )
       : [],
     liquorIds.length > 0
       ? db
@@ -820,7 +872,12 @@ export async function getProductsByIdsQuery(ids: string[]) {
       ? db
           .select()
           .from(groceryVariants)
-          .where(and(eq(groceryVariants.isActive, true), inArray(groceryVariants.productId, groceryIds)))
+          .where(
+            and(
+              eq(groceryVariants.isActive, true),
+              inArray(groceryVariants.productId, groceryIds),
+            ),
+          )
       : [],
     groceryIds.length > 0
       ? db
@@ -863,7 +920,9 @@ export async function getProductsByIdsQuery(ids: string[]) {
       ...p,
       catalogType: 'liquor' as const,
       primaryImage: liquorImagesMap.get(p.id) ?? null,
-      variants: (liquorVariantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
+      variants: (liquorVariantsMap.get(p.id) ?? []).sort(
+        (a, b) => a.price - b.price,
+      ),
     })),
     ...groceryRows.map((p) => ({
       ...p,
@@ -871,11 +930,12 @@ export async function getProductsByIdsQuery(ids: string[]) {
       brandSlug: null,
       catalogType: 'grocery' as const,
       primaryImage: groceryImagesMap.get(p.id) ?? null,
-      variants: (groceryVariantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
+      variants: (groceryVariantsMap.get(p.id) ?? []).sort(
+        (a, b) => a.price - b.price,
+      ),
     })),
   ]
 
   // Filter out any products that have no active variants
   return result.filter((p) => p.variants.length > 0)
 }
-

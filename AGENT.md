@@ -24,21 +24,21 @@ Full permission matrix: `src/lib/AGENT.md`.
 
 ## 2. Task router — read ONLY what applies
 
-| If your task involves…                                                                                                                         | Read                                                       |
-| ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| **Anything visual** — creating/restyling a page, component, form, table, dialog, layout; colors, typography, spacing, look & feel, responsive | **`UI_APPROACH.md` first**, then `src/components/AGENT.md` |
-| Pages, URLs, layouts, route guards, loaders, search params, storefront behavior (age gate, cart)                                               | `src/routes/AGENT.md`                                      |
-| **Any UI** — component structure, forms, tables, dialogs, sidebar, toasts, loading/empty states, Tailwind, mobile layout                       | `src/components/AGENT.md` (+ `UI_APPROACH.md` for the look) |
-| Adding/updating a shadcn component                                                                                                             | `src/components/ui/AGENT.md` (+ `src/components/AGENT.md`) |
-| How to write a server function, middleware, errors, transactions                                                                               | `src/server/AGENT.md`                                      |
-| Products, categories, brands, variants, product images                                                                                         | `src/server/catalog/AGENT.md`                              |
-| Cart→order, checkout, order status, assign dealer/rider, rider delivery actions                                                                | `src/server/orders/AGENT.md`                               |
-| Dealers, dealer stock, stock movements, low-stock                                                                                              | `src/server/inventory/AGENT.md`                            |
-| Ledger, VAT, invoices, dealer settlement, rider cash, payments/eSewa, reports                                                                  | `src/server/finance/AGENT.md`                              |
-| Activate/deactivate users, staff accounts, site settings, gateway config, notifications, audit log                                             | `src/server/platform/AGENT.md`                             |
-| Tables, columns, migrations, DB drivers                                                                                                        | `src/db/AGENT.md`                                          |
-| Auth config, roles/permissions, money/VAT helpers, order-status machine, storage adapter, utils                                                | `src/lib/AGENT.md`                                         |
-| **Committing** — writing a commit message or being asked to commit                                                                             | `commit_rule.md`                                           |
+| If your task involves…                                                                                                                        | Read                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Anything visual** — creating/restyling a page, component, form, table, dialog, layout; colors, typography, spacing, look & feel, responsive | **`UI_APPROACH.md` first**, then `src/components/AGENT.md`  |
+| Pages, URLs, layouts, route guards, loaders, search params, storefront behavior (age gate, cart)                                              | `src/routes/AGENT.md`                                       |
+| **Any UI** — component structure, forms, tables, dialogs, sidebar, toasts, loading/empty states, Tailwind, mobile layout                      | `src/components/AGENT.md` (+ `UI_APPROACH.md` for the look) |
+| Adding/updating a shadcn component                                                                                                            | `src/components/ui/AGENT.md` (+ `src/components/AGENT.md`)  |
+| How to write a server function, middleware, errors, transactions                                                                              | `src/server/AGENT.md`                                       |
+| Products, categories, brands, variants, product images                                                                                        | `src/server/catalog/AGENT.md`                               |
+| Cart→order, checkout, order status, assign dealer/rider, rider delivery actions                                                               | `src/server/orders/AGENT.md`                                |
+| Dealers, dealer stock, stock movements, low-stock                                                                                             | `src/server/inventory/AGENT.md`                             |
+| Ledger, VAT, invoices, dealer settlement, rider cash, payments/eSewa, reports                                                                 | `src/server/finance/AGENT.md`                               |
+| Activate/deactivate users, staff accounts, site settings, gateway config, notifications, audit log                                            | `src/server/platform/AGENT.md`                              |
+| Tables, columns, migrations, DB drivers                                                                                                       | `src/db/AGENT.md`                                           |
+| Auth config, roles/permissions, money/VAT helpers, order-status machine, storage adapter, utils                                               | `src/lib/AGENT.md`                                          |
+| **Committing** — writing a commit message or being asked to commit                                                                            | `commit_rule.md`                                            |
 
 A task that spans areas (e.g. "new admin page for dealers") → read each relevant file (`UI_APPROACH` + `routes` + `components` + `server/inventory`), nothing else.
 
@@ -99,8 +99,8 @@ Legend: ⬜ not started · 🟨 in progress · ✅ done · 🗑 remove
 
 ## 8. Changelog
 
-| Date       | Change                                                                                  |
-| ---------- | --------------------------------------------------------------------------------------- |
-| _YYYY-MM-DD_ | Initial docs created from scaffold                                                    |
-| 2026-10-07 | Added `UI_APPROACH.md` (visual design system); router row, rule 1/10 and §7 updated     |
-| 2026-10-07 | Added `commit_rule.md`; router row and rule 11 (no self-commits)                        |
+| Date         | Change                                                                              |
+| ------------ | ----------------------------------------------------------------------------------- |
+| _YYYY-MM-DD_ | Initial docs created from scaffold                                                  |
+| 2026-10-07   | Added `UI_APPROACH.md` (visual design system); router row, rule 1/10 and §7 updated |
+| 2026-10-07   | Added `commit_rule.md`; router row and rule 11 (no self-commits)                    |

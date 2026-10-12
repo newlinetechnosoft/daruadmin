@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { getFrontpageDataFn } from '#/server/catalog/catalog.functions'
+import { storefrontQueries } from '#/queries/storefront'
 import { Header } from '#/components/store/header'
 import { toast } from 'sonner'
 import { Sparkles, ArrowRight, ShieldCheck, Clock, Award } from 'lucide-react'
 
 export const Route = createFileRoute('/')({
-  loader: async () => {
-    return await getFrontpageDataFn()
+  loader: async ({ context }) => {
+    return context.queryClient.ensureQueryData(storefrontQueries.frontpage())
   },
   component: HomePage,
 })
@@ -610,7 +610,9 @@ export function HomePage() {
                       {r.name.charAt(0)}
                     </div>
                     <div className="leading-tight">
-                      <strong className="block text-sm text-foreground">{r.name}</strong>
+                      <strong className="block text-sm text-foreground">
+                        {r.name}
+                      </strong>
                       <small className="text-xs text-muted-foreground">
                         Verified customer
                       </small>
@@ -624,7 +626,10 @@ export function HomePage() {
       </main>
 
       {/* FOOTER */}
-      <footer className="scroll-mt-24 bg-sidebar text-sidebar-foreground border-t border-sidebar-border" id="about">
+      <footer
+        className="scroll-mt-24 bg-sidebar text-sidebar-foreground border-t border-sidebar-border"
+        id="about"
+      >
         <div className={`${wrap} py-16 sm:py-20`}>
           <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
             <div>
@@ -650,16 +655,28 @@ export function HomePage() {
               <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/50">
                 Extras
               </h4>
-              <Link to="/drinks" className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
+              <Link
+                to="/drinks"
+                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
+              >
                 Cocktail Recipes
               </Link>
-              <Link to="/drinks" className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
+              <Link
+                to="/drinks"
+                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
+              >
                 Give a Gift
               </Link>
-              <a href="#reviews" className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
+              <a
+                href="#reviews"
+                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
+              >
                 Reviews
               </a>
-              <Link to="/drinks" className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
+              <Link
+                to="/drinks"
+                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
+              >
                 Share &amp; Save 20%
               </Link>
             </div>
@@ -668,10 +685,16 @@ export function HomePage() {
               <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/50">
                 About
               </h4>
-              <a href="#about" className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
+              <a
+                href="#about"
+                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
+              >
                 About Us
               </a>
-              <a href="#about" className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
+              <a
+                href="#about"
+                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
+              >
                 Find Us
               </a>
               <a
@@ -680,7 +703,10 @@ export function HomePage() {
               >
                 Contact (+977-9802088800)
               </a>
-              <a href="#about" className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors">
+              <a
+                href="#about"
+                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
+              >
                 Help &amp; Support
               </a>
             </div>

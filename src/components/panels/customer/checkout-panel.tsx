@@ -8,8 +8,8 @@ import { formatNPR } from '#/lib/money'
 import {
   checkoutFormSchema,
   normalizeNepaliPhone,
-  type CheckoutFormData,
 } from '#/server/orders/order.schemas'
+import type { CheckoutFormData } from '#/server/orders/order.schemas'
 import {
   validatePromoFn,
   createCustomerOrderFn,
@@ -21,7 +21,13 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Checkbox } from '#/components/ui/checkbox'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '#/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '#/components/ui/card'
 import { RadioGroup, RadioGroupItem } from '#/components/ui/radio-group'
 import { Separator } from '#/components/ui/separator'
 import { Badge } from '#/components/ui/badge'
@@ -49,7 +55,8 @@ export function CheckoutPanel() {
   const navigate = useNavigate()
 
   // Profile phone check
-  const rawProfilePhone = (session?.user as { phone?: string | null })?.phone || ''
+  const rawProfilePhone =
+    (session?.user as { phone?: string | null })?.phone || ''
   const normalizedProfilePhone = normalizeNepaliPhone(rawProfilePhone)
   const hasProfilePhone = Boolean(normalizedProfilePhone)
 
@@ -124,13 +131,17 @@ export function CheckoutPanel() {
       }
 
       setAppliedPromo({
-        code: res.code!,
-        discountPaisa: res.discountPaisa!,
+        code: res.code,
+        discountPaisa: res.discountPaisa,
       })
-      setValue('promoCode', res.code!)
-      toast.success(`Coupon ${res.code} applied! Saved ${formatNPR(res.discountPaisa!)}`)
+      setValue('promoCode', res.code)
+      toast.success(
+        `Coupon ${res.code} applied! Saved ${formatNPR(res.discountPaisa)}`,
+      )
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to validate promo code')
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to validate promo code',
+      )
     } finally {
       setIsValidatingPromo(false)
     }
@@ -203,7 +214,9 @@ export function CheckoutPanel() {
         form.submit()
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Order submission failed')
+      toast.error(
+        err instanceof Error ? err.message : 'Order submission failed',
+      )
       setIsSubmitting(false)
     }
   }
@@ -217,9 +230,12 @@ export function CheckoutPanel() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted/60 text-muted-foreground mb-4">
               <ShoppingBag className="h-7 w-7" />
             </div>
-            <h2 className="text-xl font-bold text-foreground">Your cart is empty</h2>
+            <h2 className="text-xl font-bold text-foreground">
+              Your cart is empty
+            </h2>
             <p className="mt-2 text-xs text-muted-foreground">
-              Add spirits, cold beer, or snacks to your cart before proceeding to checkout.
+              Add spirits, cold beer, or snacks to your cart before proceeding
+              to checkout.
             </p>
             <Button asChild className="mt-6 text-xs gap-2" size="sm">
               <Link to="/drinks">
@@ -243,7 +259,10 @@ export function CheckoutPanel() {
           {/* Checkout Header */}
           <div className="border-b border-border pb-6 mb-8">
             <div className="flex items-center gap-2">
-              <Badge variant="default" className="text-[10px] uppercase tracking-wider">
+              <Badge
+                variant="default"
+                className="text-[10px] uppercase tracking-wider"
+              >
                 Express 40-Min Dispatch
               </Badge>
             </div>
@@ -251,7 +270,8 @@ export function CheckoutPanel() {
               Fast Checkout
             </h1>
             <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-              Pin your location, confirm payment method, and dispatch your order.
+              Pin your location, confirm payment method, and dispatch your
+              order.
             </p>
           </div>
 
@@ -268,7 +288,8 @@ export function CheckoutPanel() {
                       1. Delivery Location
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Drop a precise pin on OpenStreetMap for Kathmandu express rider routing.
+                      Drop a precise pin on OpenStreetMap for Kathmandu express
+                      rider routing.
                     </CardDescription>
                   </div>
                 </div>
@@ -298,7 +319,10 @@ export function CheckoutPanel() {
 
                 {/* Free-text Landmark / Address Field */}
                 <div className="space-y-1.5 pt-2">
-                  <Label htmlFor="address-input" className="text-xs font-semibold">
+                  <Label
+                    htmlFor="address-input"
+                    className="text-xs font-semibold"
+                  >
                     Address / Landmark (Required)
                   </Label>
                   <Input
@@ -315,7 +339,8 @@ export function CheckoutPanel() {
                     </p>
                   )}
                   <p className="text-[11px] text-muted-foreground">
-                    Nepali delivery drivers rely heavily on landmarks and notable gates or shops.
+                    Nepali delivery drivers rely heavily on landmarks and
+                    notable gates or shops.
                   </p>
                 </div>
               </CardContent>
@@ -365,7 +390,10 @@ export function CheckoutPanel() {
                   <div className="space-y-3">
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <Label htmlFor="phone-input" className="text-xs font-semibold">
+                        <Label
+                          htmlFor="phone-input"
+                          className="text-xs font-semibold"
+                        >
                           Mobile Phone (10 digits starting with 98 or 97)
                         </Label>
                         {hasProfilePhone && (
@@ -440,7 +468,8 @@ export function CheckoutPanel() {
                       3. Payment Method
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Choose between instant cash at your doorstep or eSewa wallet.
+                      Choose between instant cash at your doorstep or eSewa
+                      wallet.
                     </CardDescription>
                   </div>
                 </div>
@@ -472,7 +501,8 @@ export function CheckoutPanel() {
                           <RadioGroupItem value="cod" id="pay-cod" />
                         </div>
                         <p className="mt-2 text-xs text-muted-foreground">
-                          Pay the rider in cash when your order arrives at your door.
+                          Pay the rider in cash when your order arrives at your
+                          door.
                         </p>
                       </Label>
 
@@ -522,7 +552,8 @@ export function CheckoutPanel() {
                           {appliedPromo.code}
                         </span>
                         <p className="text-[11px] text-muted-foreground">
-                          Discount applied: -{formatNPR(appliedPromo.discountPaisa)}
+                          Discount applied: -
+                          {formatNPR(appliedPromo.discountPaisa)}
                         </p>
                       </div>
                     </div>
@@ -541,7 +572,9 @@ export function CheckoutPanel() {
                     <Input
                       type="text"
                       value={promoCodeInput}
-                      onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
+                      onChange={(e) =>
+                        setPromoCodeInput(e.target.value.toUpperCase())
+                      }
                       placeholder="e.g. WELCOME10, DASHAIN250"
                       className="h-9 text-xs font-mono uppercase"
                       disabled={isSubmitting || isValidatingPromo}
@@ -551,7 +584,11 @@ export function CheckoutPanel() {
                       variant="secondary"
                       size="sm"
                       onClick={handleApplyPromo}
-                      disabled={!promoCodeInput.trim() || isValidatingPromo || isSubmitting}
+                      disabled={
+                        !promoCodeInput.trim() ||
+                        isValidatingPromo ||
+                        isSubmitting
+                      }
                       className="h-9 px-4 text-xs font-semibold cursor-pointer"
                     >
                       {isValidatingPromo ? (
@@ -668,8 +705,13 @@ export function CheckoutPanel() {
                     <span className="text-[10px] text-muted-foreground block">
                       Payment
                     </span>
-                    <Badge variant="secondary" className="font-semibold text-xs">
-                      {selectedPaymentMethod === 'cod' ? 'Cash on Delivery' : 'eSewa'}
+                    <Badge
+                      variant="secondary"
+                      className="font-semibold text-xs"
+                    >
+                      {selectedPaymentMethod === 'cod'
+                        ? 'Cash on Delivery'
+                        : 'eSewa'}
                     </Badge>
                   </div>
                 </div>
@@ -680,15 +722,26 @@ export function CheckoutPanel() {
                   <div>
                     {selectedPaymentMethod === 'cod' ? (
                       <p>
-                        <strong className="text-foreground">Payment on delivery:</strong> Pay the rider in cash when your order arrives.
+                        <strong className="text-foreground">
+                          Payment on delivery:
+                        </strong>{' '}
+                        Pay the rider in cash when your order arrives.
                       </p>
                     ) : (
                       <p>
-                        <strong className="text-foreground">Digital payment:</strong> You will be routed to eSewa to authorize payment securely.
+                        <strong className="text-foreground">
+                          Digital payment:
+                        </strong>{' '}
+                        You will be routed to eSewa to authorize payment
+                        securely.
                       </p>
                     )}
                     <p className="mt-1 text-[11px]">
-                      Destination: <span className="text-foreground">{watchedAddress || 'Landmark specified above'}</span> (+977 {watchedPhone || '—'})
+                      Destination:{' '}
+                      <span className="text-foreground">
+                        {watchedAddress || 'Landmark specified above'}
+                      </span>{' '}
+                      (+977 {watchedPhone || '—'})
                     </p>
                   </div>
                 </div>

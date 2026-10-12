@@ -10,7 +10,13 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Checkbox } from '#/components/ui/checkbox'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '#/components/ui/card'
 import {
   User,
   Phone,
@@ -113,7 +119,8 @@ function SignUpPage() {
                 Join Mezmani
               </CardTitle>
               <CardDescription className="text-xs">
-                Order genuine liquor, cold beers, and groceries with 40-minute express delivery.
+                Order genuine liquor, cold beers, and groceries with 40-minute
+                express delivery.
               </CardDescription>
             </CardHeader>
 
@@ -201,7 +208,9 @@ function SignUpPage() {
                       size="icon"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-label={
+                        showPassword ? 'Hide password' : 'Show password'
+                      }
                     >
                       {showPassword ? (
                         <EyeOff className="h-3.5 w-3.5" />
@@ -218,14 +227,20 @@ function SignUpPage() {
                     <Checkbox
                       id="age-confirm"
                       checked={isAgeConfirmed}
-                      onCheckedChange={(checked) => setIsAgeConfirmed(Boolean(checked))}
+                      onCheckedChange={(checked) =>
+                        setIsAgeConfirmed(Boolean(checked))
+                      }
                       className="mt-0.5"
                     />
                     <Label
                       htmlFor="age-confirm"
                       className="text-[11px] leading-relaxed text-muted-foreground font-normal cursor-pointer"
                     >
-                      I certify that I am <strong className="text-foreground">18 years of age</strong> or older in accordance with Nepal Liquor Regulations.
+                      I certify that I am{' '}
+                      <strong className="text-foreground">
+                        18 years of age
+                      </strong>{' '}
+                      or older in accordance with Nepal Liquor Regulations.
                     </Label>
                   </div>
                 </div>

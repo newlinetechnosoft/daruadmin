@@ -1,17 +1,21 @@
 import { Outlet, Link, useRouterState } from '@tanstack/react-router'
 import { ThemeToggle } from '#/components/shared/theme-toggle'
 import { Badge } from '#/components/ui/badge'
+import { useRiderOutbox } from '#/lib/idb/outbox'
 import {
   Bike,
   Package,
   Wallet,
   User,
   LayoutDashboard,
+  CloudOff,
+  RefreshCw,
 } from 'lucide-react'
 
 export function RiderLayout() {
   const routerState = useRouterState()
   const pathname = routerState.location.pathname
+  const { pendingCount, isOnline, flushOutbox } = useRiderOutbox()
 
   const navItems = [
     {
@@ -50,10 +54,35 @@ export function RiderLayout() {
               <Bike className="h-4 w-4" />
             </div>
             <div>
-              <span className="font-semibold text-sm tracking-tight">Mezmani</span>
-              <Badge variant="outline" className="ml-1.5 text-[10px] py-0 px-1 font-mono">
+              <span className="font-semibold text-sm tracking-tight">
+                Mezmani
+              </span>
+              <Badge
+                variant="outline"
+                className="ml-1.5 text-[10px] py-0 px-1 font-mono"
+              >
                 RIDER
               </Badge>
+              {!isOnline && (
+                <Badge
+                  variant="destructive"
+                  className="ml-1.5 text-[10px] py-0 px-1 gap-1"
+                >
+                  <CloudOff className="h-2.5 w-2.5" />
+                  Offline
+                </Badge>
+              )}
+              {pendingCount > 0 && (
+                <Badge
+                  variant="secondary"
+                  className="ml-1.5 text-[10px] py-0 px-1 cursor-pointer gap-1"
+                  onClick={() => flushOutbox()}
+                  title="Click to sync now"
+                >
+                  <RefreshCw className="h-2.5 w-2.5 animate-spin" />
+                  {pendingCount} queued
+                </Badge>
+              )}
             </div>
           </div>
 

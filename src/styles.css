@@ -157,8 +157,12 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist Variable', 'Geist', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans:
+    'Geist Variable', 'Geist', 'Inter', ui-sans-serif, system-ui, -apple-system,
+    sans-serif;
+  --font-mono:
+    'Geist Mono Variable', 'Geist Mono', ui-monospace, SFMono-Regular, Menlo,
+    Monaco, Consolas, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -238,11 +242,11 @@
   }
 
   /* Subtle, professional depth instead of neon glow */
-  [data-slot="card"] {
+  [data-slot='card'] {
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   }
 
-  .dark [data-slot="card"] {
+  .dark [data-slot='card'] {
     box-shadow: none;
   }
 

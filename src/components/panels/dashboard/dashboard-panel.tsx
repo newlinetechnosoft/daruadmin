@@ -132,7 +132,9 @@ export function DashboardPanel() {
         <Card className="p-4 xl:col-span-2">
           <CardHeader className="p-0 pb-3 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-medium">Sales trend</CardTitle>
-            <span className="text-xs text-muted-foreground font-mono">NPR · {range}</span>
+            <span className="text-xs text-muted-foreground font-mono">
+              NPR · {range}
+            </span>
           </CardHeader>
           <CardContent className="p-0">
             <LineChart data={data.salesTrend} money />
@@ -152,7 +154,9 @@ export function DashboardPanel() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card className="p-4">
           <CardHeader className="p-0 pb-3">
-            <CardTitle className="text-sm font-medium">Orders by status</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Orders by status
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <BarChart data={data.orderStatus} />
@@ -162,16 +166,24 @@ export function DashboardPanel() {
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 px-4 py-3 space-y-0">
             <CardTitle className="text-sm font-medium">Top products</CardTitle>
-            <Link to="/admin/liquor" className="text-xs text-muted-foreground hover:text-foreground">
+            <Link
+              to="/admin/liquor"
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
               Catalog
             </Link>
           </CardHeader>
           <ul className="m-0 divide-y divide-border/40 p-0">
             {data.topProducts.map((p) => (
-              <li key={p.name} className="flex items-center justify-between gap-3 px-4 py-2.5 text-xs">
+              <li
+                key={p.name}
+                className="flex items-center justify-between gap-3 px-4 py-2.5 text-xs"
+              >
                 <div>
                   <div className="font-medium text-foreground">{p.name}</div>
-                  <div className="text-[11px] text-muted-foreground">{p.qty} sold</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {p.qty} sold
+                  </div>
                 </div>
                 <div className="font-mono font-medium tabular-nums text-foreground">
                   {formatNPR(p.revenue)}
@@ -186,7 +198,10 @@ export function DashboardPanel() {
         <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 px-4 py-3 space-y-0">
             <CardTitle className="text-sm font-medium">Recent orders</CardTitle>
-            <Link to="/admin/orders" className="text-xs text-muted-foreground hover:text-foreground">
+            <Link
+              to="/admin/orders"
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
               View all
             </Link>
           </CardHeader>
@@ -210,7 +225,9 @@ export function DashboardPanel() {
                       {o.number}
                     </a>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{o.customerName}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {o.customerName}
+                  </TableCell>
                   <TableCell>
                     <StatusBadge value={o.status} />
                   </TableCell>
@@ -225,7 +242,9 @@ export function DashboardPanel() {
 
         <Card className="p-4">
           <CardHeader className="p-0 pb-3">
-            <CardTitle className="text-sm font-medium">Recent activity</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Recent activity
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <ul className="m-0 space-y-3 p-0">
@@ -233,9 +252,12 @@ export function DashboardPanel() {
                 <li key={a.id} className="flex gap-2.5 text-xs">
                   <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/60" />
                   <div>
-                    <div className="font-medium text-foreground">{a.detail}</div>
+                    <div className="font-medium text-foreground">
+                      {a.detail}
+                    </div>
                     <div className="text-[11px] text-muted-foreground">
-                      {a.actor} · {a.module} · {new Date(a.at).toLocaleDateString()}
+                      {a.actor} · {a.module} ·{' '}
+                      {new Date(a.at).toLocaleDateString()}
                     </div>
                   </div>
                 </li>

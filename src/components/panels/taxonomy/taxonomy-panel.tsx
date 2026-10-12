@@ -1,19 +1,12 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { getRouteApi,   useRouter  } from '@tanstack/react-router'
+import { getRouteApi, useRouter } from '@tanstack/react-router'
 import {
   upsertCategoryFn,
   upsertBrandFn,
   deleteItemFn,
 } from '#/server/catalog/catalog.functions'
-import {
-  Wine,
-  ShoppingBag,
-  Award,
-  Plus,
-  Edit2,
-  Trash2,
-} from 'lucide-react'
+import { Wine, ShoppingBag, Award, Plus, Edit2, Trash2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '#/components/shared/page-header'
@@ -23,11 +16,7 @@ import { Label } from '#/components/ui/label'
 import { Textarea } from '#/components/ui/textarea'
 import { Badge } from '#/components/ui/badge'
 import { Card, CardContent, CardFooter } from '#/components/ui/card'
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from '#/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import {
   Dialog,
   DialogContent,
@@ -36,7 +25,6 @@ import {
   DialogTitle,
 } from '#/components/ui/dialog'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
-
 
 type ActiveTab = 'liquor-cat' | 'grocery-cat' | 'brands'
 
@@ -71,7 +59,10 @@ export function TaxonomyPanel() {
   const [formSortOrder, setFormSortOrder] = useState(0)
 
   // Delete State
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string
+    name: string
+  } | null>(null)
 
   const openAddModal = () => {
     setEditingId(null)
@@ -181,7 +172,12 @@ export function TaxonomyPanel() {
     }
   }
 
-  const tabs: { id: ActiveTab; label: string; count: number; icon: LucideIcon }[] = [
+  const tabs: {
+    id: ActiveTab
+    label: string
+    count: number
+    icon: LucideIcon
+  }[] = [
     {
       id: 'liquor-cat',
       label: 'Liquor categories',
@@ -277,7 +273,11 @@ export function TaxonomyPanel() {
         title="Taxonomy and categories"
         description="Organize catalog categories, brand origins, and visual portals."
         actions={
-          <Button size="sm" onClick={openAddModal} className="h-8 gap-1.5 text-xs">
+          <Button
+            size="sm"
+            onClick={openAddModal}
+            className="h-8 gap-1.5 text-xs"
+          >
             <Plus className="h-3.5 w-3.5" />
             {addLabel}
           </Button>
@@ -285,15 +285,23 @@ export function TaxonomyPanel() {
       />
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as ActiveTab)}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(val) => setActiveTab(val as ActiveTab)}
+      >
         <TabsList className="h-9">
           {tabs.map((tab) => {
             const Icon = tab.icon
             return (
-              <TabsTrigger key={tab.id} value={tab.id} className="gap-2 text-xs">
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className="gap-2 text-xs"
+              >
                 <Icon className="h-3.5 w-3.5" />
                 <span>
-                  {tab.label} <span className="tabular-nums opacity-60">({tab.count})</span>
+                  {tab.label}{' '}
+                  <span className="tabular-nums opacity-60">({tab.count})</span>
                 </span>
               </TabsTrigger>
             )
@@ -318,7 +326,10 @@ export function TaxonomyPanel() {
                     {brand.name}
                   </div>
                   {brand.origin && (
-                    <Badge variant="outline" className="text-[10px] font-normal">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-normal"
+                    >
                       {brand.origin}
                     </Badge>
                   )}
@@ -346,7 +357,9 @@ export function TaxonomyPanel() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setDeleteTarget({ id: brand.id, name: brand.name })}
+                    onClick={() =>
+                      setDeleteTarget({ id: brand.id, name: brand.name })
+                    }
                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -361,7 +374,9 @@ export function TaxonomyPanel() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-sm font-semibold capitalize">{modalTitle}</DialogTitle>
+            <DialogTitle className="text-sm font-semibold capitalize">
+              {modalTitle}
+            </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
@@ -460,7 +475,12 @@ export function TaxonomyPanel() {
               >
                 Cancel
               </Button>
-              <Button type="submit" size="sm" disabled={isSubmitting} className="h-8 text-xs">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting}
+                className="h-8 text-xs"
+              >
                 {isSubmitting ? 'Saving...' : 'Save changes'}
               </Button>
             </DialogFooter>

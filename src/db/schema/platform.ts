@@ -1,0 +1,228 @@
+import { relations } from 'drizzle-orm'
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core'
+import { user } from './auth'
+import { orders } from './orders'
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: text('id').primaryKey(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    type: text('type').notNull(), // 'order' | 'stock' | 'rider' | 'finance' | 'system'
+    read: boolean('read').notNull().default(false),
+    href: text('href').notNull().default(''),
+    userId: text('user_id'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('notifications_read_idx').on(table.read),
+    index('notifications_type_idx').on(table.type),
+    index('notifications_created_at_idx').on(table.createdAt),
+    index('notifications_user_id_idx').on(table.userId),
+  ],
+)
+
+export const auditLogs = pgTable(
+  'audit_logs',
+  {
+    id: text('id').primaryKey(),
+    actor: text('actor').notNull(),
+    module: text('module').notNull(),
+    action: text('action').notNull(),
+    detail: text('detail').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('audit_logs_module_idx').on(table.module),
+    index('audit_logs_action_idx').on(table.action),
+    index('audit_logs_created_at_idx').on(table.createdAt),
+  ],
+)
+
+export const siteSettings = pgTable('site_settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+})
+
+export const userPermissions = pgTable(
+  'user_permissions',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    module: text('module').notNull(),
+    actions: text('actions').array().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('user_permissions_user_id_idx').on(table.userId),
+    uniqueIndex('user_permissions_user_module_idx').on(
+      table.userId,
+      table.module,
+    ),
+  ],
+)
+
+export const coupons = pgTable(
+  'coupons',
+  {
+    id: text('id').primaryKey(),
+    code: text('code').notNull().unique(),
+    type: text('type').notNull(), // 'percent' | 'fixed'
+    value: integer('value').notNull(), // percentage or paisa
+    minOrder: integer('min_order').notNull().default(0), // paisa
+    usageLimit: integer('usage_limit').notNull().default(100),
+    used: integer('used').notNull().default(0),
+    active: boolean('active').notNull().default(true),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('coupons_code_idx').on(table.code),
+    index('coupons_active_idx').on(table.active),
+  ],
+)
+
+export const complaints = pgTable(
+  'complaints',
+  {
+    id: text('id').primaryKey(),
+    customerId: text('customer_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    customerName: text('customer_name').notNull(),
+    orderId: text('order_id').references(() => orders.id, {
+      onDelete: 'set null',
+    }),
+    subject: text('subject').notNull(),
+    body: text('body').notNull(),
+    status: text('status').notNull().default('open'), // 'open' | 'in_progress' | 'resolved'
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('complaints_customer_id_idx').on(table.customerId),
+    index('complaints_status_idx').on(table.status),
+  ],
+)
+
+export const banners = pgTable(
+  'banners',
+  {
+    id: text('id').primaryKey(),
+    title: text('title').notNull(),
+    imageUrl: text('image_url').notNull(),
+    href: text('href').notNull(),
+    placement: text('placement').notNull().default('home'), // 'home' | 'drinks' | 'grocery'
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('banners_placement_idx').on(table.placement),
+    index('banners_active_idx').on(table.active),
+  ],
+)
+
+export const campaigns = pgTable(
+  'campaigns',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    channel: text('channel').notNull(), // 'sms' | 'email' | 'push' | 'in-app'
+    status: text('status').notNull().default('draft'), // 'draft' | 'scheduled' | 'sent'
+    audience: text('audience').notNull(),
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('campaigns_status_idx').on(table.status),
+    index('campaigns_scheduled_at_idx').on(table.scheduledAt),
+  ],
+)
+
+export const reviews = pgTable(
+  'reviews',
+  {
+    id: text('id').primaryKey(),
+    productName: text('product_name').notNull(),
+    customerName: text('customer_name').notNull(),
+    rating: integer('rating').notNull(),
+    body: text('body').notNull(),
+    status: text('status').notNull().default('pending'), // 'pending' | 'published' | 'hidden'
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('reviews_status_idx').on(table.status),
+    index('reviews_rating_idx').on(table.rating),
+  ],
+)
+
+export const shippingZones = pgTable(
+  'shipping_zones',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    areas: text('areas').notNull(),
+    deliveryCharge: integer('delivery_charge').notNull(), // paisa
+    etaMinutes: integer('eta_minutes').notNull().default(45),
+    active: boolean('active').notNull().default(true),
+    courier: text('courier').notNull().default('in-house'), // 'in-house' | 'ncm' | 'pathao' | 'none'
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index('shipping_zones_active_idx').on(table.active)],
+)
+
+export const userPermissionsRelations = relations(
+  userPermissions,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [userPermissions.userId],
+      references: [user.id],
+    }),
+  }),
+)
+
+export const complaintsRelations = relations(complaints, ({ one }) => ({
+  customer: one(user, {
+    fields: [complaints.customerId],
+    references: [user.id],
+  }),
+  order: one(orders, {
+    fields: [complaints.orderId],
+    references: [orders.id],
+  }),
+}))

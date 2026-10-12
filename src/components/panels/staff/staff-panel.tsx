@@ -1,8 +1,6 @@
 import { useState, useMemo } from 'react'
-import { getRouteApi,   useRouter  } from '@tanstack/react-router'
-import {
-  savePermissionsFn,
-} from '#/server/operations/operations.functions'
+import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { savePermissionsFn } from '#/server/operations/operations.functions'
 import { updateUserRoleFn } from '#/server/catalog/catalog.functions'
 import { MODULES, ACTIONS } from '#/server/operations/types'
 import type { ModuleKey, ActionKey } from '#/server/operations/types'
@@ -23,15 +21,8 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Badge } from '#/components/ui/badge'
 import { Checkbox } from '#/components/ui/checkbox'
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from '#/components/ui/tabs'
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from '#/components/ui/native-select'
+import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import {
   Table,
   TableBody,
@@ -43,28 +34,37 @@ import {
 import { Card } from '#/components/ui/card'
 import { EmptyState } from '#/components/shared/empty-state'
 
-
 const routeApi = getRouteApi('/admin/staff')
 
 export function StaffPanel() {
   const { ops, users } = routeApi.useLoaderData()
   const router = useRouter()
 
-  const [activeTab, setActiveTab] = useState<'users' | 'matrix' | 'audit'>('users')
+  const [activeTab, setActiveTab] = useState<'users' | 'matrix' | 'audit'>(
+    'users',
+  )
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedStaffId, setSelectedStaffId] = useState<string>(users[0]?.id || '')
+  const [selectedStaffId, setSelectedStaffId] = useState<string>(
+    users[0]?.id || '',
+  )
   const [isUpdating, setIsUpdating] = useState(false)
 
   // Filter staff users (admin, manager, or rider)
   const staffUsers = useMemo(() => {
-    return users.filter((u) => u.role === 'admin' || u.role === 'manager' || u.role === 'rider')
+    return users.filter(
+      (u) => u.role === 'admin' || u.role === 'manager' || u.role === 'rider',
+    )
   }, [users])
 
   const filteredStaff = useMemo(() => {
     return staffUsers.filter((u) => {
       if (!searchQuery.trim()) return true
       const q = searchQuery.toLowerCase()
-      return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.role || '').includes(q)
+      return (
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        (u.role || '').includes(q)
+      )
     })
   }, [staffUsers, searchQuery])
 
@@ -90,12 +90,13 @@ export function StaffPanel() {
     }
     const stored = ops.permissions[selectedStaff.id]
     if (stored && Object.keys(stored).length > 0) {
-      return stored as Record<string, string[]>
+      return stored
     }
-    return (DEFAULT_GRANTS_BY_ROLE[selectedStaff.role || 'manager'] || {}) as Record<string, string[]>
+    return DEFAULT_GRANTS_BY_ROLE[selectedStaff.role || 'manager'] || {}
   }, [selectedStaff, ops.permissions])
 
-  const [localGrants, setLocalGrants] = useState<Record<string, string[]>>(currentGrants)
+  const [localGrants, setLocalGrants] =
+    useState<Record<string, string[]>>(currentGrants)
 
   const handleSelectStaffForMatrix = (userId: string) => {
     setSelectedStaffId(userId)
@@ -105,11 +106,9 @@ export function StaffPanel() {
     } else {
       const stored = ops.permissions[userId]
       if (stored && Object.keys(stored).length > 0) {
-        setLocalGrants(stored as Record<string, string[]>)
+        setLocalGrants(stored)
       } else {
-        setLocalGrants(
-          (DEFAULT_GRANTS_BY_ROLE[st?.role || 'manager'] || {}) as Record<string, string[]>
-        )
+        setLocalGrants(DEFAULT_GRANTS_BY_ROLE[st?.role || 'manager'] || {})
       }
     }
   }
@@ -163,7 +162,7 @@ export function StaffPanel() {
     const rows = filteredAudit
       .map(
         (a) =>
-          `"${a.at}","${a.actor}","${a.module}","${a.action}","${a.detail.replace(/"/g, '""')}"`
+          `"${a.at}","${a.actor}","${a.module}","${a.action}","${a.detail.replace(/"/g, '""')}"`,
       )
       .join('\n')
     const blob = new Blob([headers + rows], { type: 'text/csv' })
@@ -253,7 +252,9 @@ export function StaffPanel() {
                 <TableHead className="text-xs">Email address</TableHead>
                 <TableHead className="text-xs">Current role</TableHead>
                 <TableHead className="text-xs">Access rights</TableHead>
-                <TableHead className="text-right text-xs">Change role</TableHead>
+                <TableHead className="text-right text-xs">
+                  Change role
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -270,17 +271,25 @@ export function StaffPanel() {
                 filteredStaff.map((staff) => (
                   <TableRow key={staff.id}>
                     <TableCell>
-                      <div className="font-medium text-xs text-foreground">{staff.name}</div>
-                      <span className="font-mono text-[11px] text-muted-foreground">ID: {staff.id.slice(0, 10)}...</span>
+                      <div className="font-medium text-xs text-foreground">
+                        {staff.name}
+                      </div>
+                      <span className="font-mono text-[11px] text-muted-foreground">
+                        ID: {staff.id.slice(0, 10)}...
+                      </span>
                     </TableCell>
 
                     <TableCell>
-                      <span className="font-mono text-xs text-muted-foreground">{staff.email}</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {staff.email}
+                      </span>
                     </TableCell>
 
                     <TableCell>
                       <Badge
-                        variant={staff.role === 'admin' ? 'default' : 'secondary'}
+                        variant={
+                          staff.role === 'admin' ? 'default' : 'secondary'
+                        }
                         className="text-[11px] font-normal capitalize"
                       >
                         {staff.role}
@@ -304,15 +313,25 @@ export function StaffPanel() {
                     <TableCell className="text-right">
                       <NativeSelect
                         value={staff.role || 'customer'}
-                        onChange={(e) => handleRoleChange(staff.id, e.target.value)}
+                        onChange={(e) =>
+                          handleRoleChange(staff.id, e.target.value)
+                        }
                         disabled={isUpdating}
                         size="sm"
                         className="h-7 text-xs"
                       >
-                        <NativeSelectOption value="admin">Admin</NativeSelectOption>
-                        <NativeSelectOption value="manager">Manager</NativeSelectOption>
-                        <NativeSelectOption value="rider">Rider</NativeSelectOption>
-                        <NativeSelectOption value="customer">Demote to customer</NativeSelectOption>
+                        <NativeSelectOption value="admin">
+                          Admin
+                        </NativeSelectOption>
+                        <NativeSelectOption value="manager">
+                          Manager
+                        </NativeSelectOption>
+                        <NativeSelectOption value="rider">
+                          Rider
+                        </NativeSelectOption>
+                        <NativeSelectOption value="customer">
+                          Demote to customer
+                        </NativeSelectOption>
                       </NativeSelect>
                     </TableCell>
                   </TableRow>
@@ -327,11 +346,13 @@ export function StaffPanel() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-border">
             <div>
               <h3 className="text-xs font-semibold text-foreground">
-                Grant matrix for: <span className="text-primary">{selectedStaff?.name}</span> (
+                Grant matrix for:{' '}
+                <span className="text-primary">{selectedStaff?.name}</span> (
                 {selectedStaff?.role})
               </h3>
               <p className="text-[11px] text-muted-foreground">
-                Toggle privileges per module. Changes persist to the operational store.
+                Toggle privileges per module. Changes persist to the operational
+                store.
               </p>
             </div>
 
@@ -365,7 +386,9 @@ export function StaffPanel() {
             <div className="p-3 bg-muted/40 rounded-md border border-border text-xs flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-foreground shrink-0" />
               <span className="text-muted-foreground">
-                <strong className="text-foreground">Super admin notice:</strong> Full unrestricted access is automatically granted across all modules and actions.
+                <strong className="text-foreground">Super admin notice:</strong>{' '}
+                Full unrestricted access is automatically granted across all
+                modules and actions.
               </span>
             </div>
           )}
@@ -376,7 +399,10 @@ export function StaffPanel() {
                 <TableRow>
                   <TableHead className="text-xs">System module</TableHead>
                   {ACTIONS.map((act) => (
-                    <TableHead key={act} className="text-center text-xs capitalize">
+                    <TableHead
+                      key={act}
+                      className="text-center text-xs capitalize"
+                    >
                       {act}
                     </TableHead>
                   ))}
@@ -396,8 +422,12 @@ export function StaffPanel() {
                           <TableCell key={act} className="text-center">
                             <Checkbox
                               checked={hasGrant}
-                              disabled={selectedStaff?.role === 'admin' || isUpdating}
-                              onCheckedChange={() => handleTogglePermission(mod, act)}
+                              disabled={
+                                selectedStaff?.role === 'admin' || isUpdating
+                              }
+                              onCheckedChange={() =>
+                                handleTogglePermission(mod, act)
+                              }
                               aria-label={`${act} on ${mod}`}
                             />
                           </TableCell>
@@ -414,7 +444,12 @@ export function StaffPanel() {
         /* Audit Trail Table */
         <div className="space-y-3">
           <div className="flex justify-end">
-            <Button variant="outline" size="sm" onClick={handleExportAuditCSV} className="h-8 gap-1.5 text-xs">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportAuditCSV}
+              className="h-8 gap-1.5 text-xs"
+            >
               <Download className="h-3.5 w-3.5" />
               Export audit CSV
             </Button>
@@ -448,17 +483,26 @@ export function StaffPanel() {
                         {new Date(log.at).toLocaleString()}
                       </TableCell>
 
-                      <TableCell className="font-medium text-foreground">{log.actor}</TableCell>
+                      <TableCell className="font-medium text-foreground">
+                        {log.actor}
+                      </TableCell>
 
-                      <TableCell className="capitalize text-foreground">{log.module}</TableCell>
+                      <TableCell className="capitalize text-foreground">
+                        {log.module}
+                      </TableCell>
 
                       <TableCell>
-                        <Badge variant="outline" className="text-[10px] font-mono uppercase">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-mono uppercase"
+                        >
                           {log.action}
                         </Badge>
                       </TableCell>
 
-                      <TableCell className="text-muted-foreground">{log.detail}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {log.detail}
+                      </TableCell>
                     </TableRow>
                   ))
                 )}

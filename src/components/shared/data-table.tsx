@@ -60,8 +60,11 @@ export function DataTable<TData, TValue>({
   className,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  )
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({})
 
   const table = useReactTable({
     data,
@@ -92,13 +95,17 @@ export function DataTable<TData, TValue>({
                   value={
                     onSearchChange
                       ? (searchValue ?? '')
-                      : ((table.getColumn(searchKey ?? '')?.getFilterValue() as string) ?? '')
+                      : ((table
+                          .getColumn(searchKey ?? '')
+                          ?.getFilterValue() as string) ?? '')
                   }
                   onChange={(event) => {
                     if (onSearchChange) {
                       onSearchChange(event.target.value)
                     } else if (searchKey) {
-                      table.getColumn(searchKey)?.setFilterValue(event.target.value)
+                      table
+                        .getColumn(searchKey)
+                        ?.setFilterValue(event.target.value)
                     }
                   }}
                   className="h-9 pl-8 text-xs"
@@ -107,7 +114,9 @@ export function DataTable<TData, TValue>({
             )}
             {filterSlot}
           </div>
-          {actionSlot && <div className="flex items-center gap-2 shrink-0">{actionSlot}</div>}
+          {actionSlot && (
+            <div className="flex items-center gap-2 shrink-0">{actionSlot}</div>
+          )}
         </div>
       )}
 
@@ -115,7 +124,10 @@ export function DataTable<TData, TValue>({
         <Table>
           <TableHeader className="bg-muted/40 border-b border-border">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="hover:bg-transparent border-border">
+              <TableRow
+                key={headerGroup.id}
+                className="hover:bg-transparent border-border"
+              >
                 {headerGroup.headers.map((header) => {
                   return (
                     <TableHead
@@ -124,7 +136,10 @@ export function DataTable<TData, TValue>({
                     >
                       {header.isPlaceholder
                         ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
                     </TableHead>
                   )
                 })}
@@ -151,7 +166,10 @@ export function DataTable<TData, TValue>({
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="px-4 py-3 text-sm">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>

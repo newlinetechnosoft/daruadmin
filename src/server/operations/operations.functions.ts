@@ -1,5 +1,22 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
+import { db, dbTx } from '#/db'
+import {
+  orders,
+  orderItems,
+  orderStatusHistory,
+  riders,
+  settlements,
+  riderCashHandovers,
+  ledgerEntries,
+  payments,
+  complaints,
+  reviews,
+  liquorVariants,
+  groceryVariants,
+  stockMovements,
+} from '#/db/schema'
+import { eq, count, or } from 'drizzle-orm'
 import {
   requirePermission,
   requireRole,
@@ -14,15 +31,50 @@ import {
   getAdminStatsQuery,
   getAdminUsersQuery,
 } from '#/server/catalog/catalog.queries'
-import { loadOps, mutateOps, nid, saveOps } from './store'
-import { seedOpsFromCatalog } from './seed-ops'
-import type {
-  DateRangeKey,
-  OrderStatus,
-  PaymentMethod,
-  Rider,
-} from './types'
+import {
+  getAllOrdersQuery,
+  getOrderByIdQuery,
+} from '#/server/orders/order.queries'
+import {
+  getAllRidersQuery,
+  getRiderByIdQuery,
+  getRiderByUserIdQuery,
+  getAllSettlementsQuery,
+} from '#/server/riders/rider.queries'
+import {
+  getAllLedgerEntriesQuery,
+  getAllPaymentsQuery,
+} from '#/server/finance/finance.queries'
+import {
+  getAllNotificationsQuery,
+  markAllNotificationsReadQuery,
+  getAllAuditLogsQuery,
+  getStoreSettingsQuery,
+  saveStoreSettingsQuery,
+  getAllUserPermissionsQuery,
+  saveUserPermissionsQuery,
+  getAllCouponsQuery,
+  upsertCouponQuery,
+  deleteCouponQuery,
+  getAllComplaintsQuery,
+  updateComplaintStatusQuery,
+  getAllBannersQuery,
+  upsertBannerQuery,
+  deleteBannerQuery,
+  getAllCampaignsQuery,
+  getAllReviewsQuery,
+  updateReviewStatusQuery,
+  getAllShippingZonesQuery,
+  upsertShippingZoneQuery,
+} from '#/server/platform/platform.queries'
+import type { DateRangeKey, OpsState } from './types'
 import { ACTIONS, MODULES } from './types'
+
+export { ACTIONS, MODULES }
+
+function nid(prefix = 'id') {
+  return `${prefix}_${crypto.randomUUID().slice(0, 8)}`
+}
 
 function rangeBounds(range: DateRangeKey, from?: string, to?: string) {
   const end = to ? new Date(to) : new Date()
@@ -65,7 +117,6 @@ export const getAdminChromeFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     const user = await getSessionUser()
     const grants = await getUserGrants(user)
-    const ops = await loadOps()
 
     const canOrders = can(grants, 'orders', 'view')
     const canRiders = can(grants, 'riders', 'view')
@@ -73,25 +124,58 @@ export const getAdminChromeFn = createServerFn({ method: 'GET' }).handler(
     const canCustomers = can(grants, 'customers', 'view')
     const canMarketing = can(grants, 'marketing', 'view')
 
+    const [
+      pendingOrdersRes,
+      openComplaintsRes,
+      activeRidersRes,
+      pendingSettlementsRes,
+      pendingReviewsRes,
+      allNotifs,
+    ] = await Promise.all([
+      canOrders
+        ? db
+            .select({ count: count() })
+            .from(orders)
+            .where(eq(orders.status, 'pending'))
+        : Promise.resolve([{ count: 0 }]),
+      canCustomers
+        ? db
+            .select({ count: count() })
+            .from(complaints)
+            .where(eq(complaints.status, 'open'))
+        : Promise.resolve([{ count: 0 }]),
+      canRiders
+        ? db
+            .select({ count: count() })
+            .from(riders)
+            .where(
+              or(eq(riders.status, 'available'), eq(riders.status, 'busy')),
+            )
+        : Promise.resolve([{ count: 0 }]),
+      canAccounts
+        ? db
+            .select({ count: count() })
+            .from(settlements)
+            .where(eq(settlements.status, 'draft'))
+        : Promise.resolve([{ count: 0 }]),
+      canMarketing
+        ? db
+            .select({ count: count() })
+            .from(reviews)
+            .where(eq(reviews.status, 'pending'))
+        : Promise.resolve([{ count: 0 }]),
+      getAllNotificationsQuery(),
+    ])
+
     const badges = {
-      pendingOrders: canOrders
-        ? ops.orders.filter((o) => o.status === 'pending').length
-        : 0,
-      openComplaints: canCustomers
-        ? ops.complaints.filter((c) => c.status === 'open').length
-        : 0,
-      activeRiders: canRiders
-        ? ops.riders.filter((r) => r.status === 'available' || r.status === 'busy').length
-        : 0,
-      pendingSettlements: canAccounts
-        ? ops.settlements.filter((s) => s.status === 'draft').length
-        : 0,
-      pendingReviews: canMarketing
-        ? ops.reviews.filter((r) => r.status === 'pending').length
-        : 0,
+      pendingOrders: pendingOrdersRes[0]?.count ?? 0,
+      openComplaints: openComplaintsRes[0]?.count ?? 0,
+      activeRiders: activeRidersRes[0]?.count ?? 0,
+      pendingSettlements: pendingSettlementsRes[0]?.count ?? 0,
+      pendingReviews: pendingReviewsRes[0]?.count ?? 0,
     }
 
-    const filteredNotifications = ops.notifications.filter((n) => {
+    const filteredNotifications = allNotifs.filter((n) => {
       if (n.type === 'order' && !canOrders) return false
       if (n.type === 'rider' && !canRiders) return false
       if (n.type === 'finance' && !canAccounts) return false
@@ -134,12 +218,8 @@ export const getStaffSessionFn = createServerFn({ method: 'GET' }).handler(
 export const markNotificationsFn = createServerFn({ method: 'POST' }).handler(
   async () => {
     await requireRole('admin', 'manager', 'rider')
-    return mutateOps((state) => {
-      state.notifications.forEach((n) => {
-        n.read = true
-      })
-      return state
-    })
+    await markAllNotificationsReadQuery()
+    return true
   },
 )
 
@@ -150,18 +230,20 @@ export const globalSearchFn = createServerFn({ method: 'GET' })
     const grants = await getUserGrants(user)
 
     const q = data.q.trim().toLowerCase()
-    if (q.length < 2) return { products: [], orders: [], customers: [], riders: [] }
+    if (q.length < 2)
+      return { products: [], orders: [], customers: [], riders: [] }
 
     const canProducts = can(grants, 'products', 'view')
     const canOrders = can(grants, 'orders', 'view')
     const canCustomers = can(grants, 'customers', 'view')
     const canRiders = can(grants, 'riders', 'view')
 
-    const [liquor, grocery, users, ops] = await Promise.all([
+    const [liquor, grocery, users, orderList, riderList] = await Promise.all([
       canProducts ? getAdminLiquorProductsQuery() : Promise.resolve([]),
       canProducts ? getAdminGroceryProductsQuery() : Promise.resolve([]),
       canCustomers ? getAdminUsersQuery() : Promise.resolve([]),
-      (canOrders || canRiders) ? loadOps() : Promise.resolve({ orders: [], riders: [] } as any),
+      canOrders ? getAllOrdersQuery() : Promise.resolve([]),
+      canRiders ? getAllRidersQuery() : Promise.resolve([]),
     ])
 
     const products = canProducts
@@ -175,26 +257,27 @@ export const globalSearchFn = createServerFn({ method: 'GET' })
           }))
       : []
 
-    const orders = canOrders
-      ? ops.orders
+    const matchingOrders = canOrders
+      ? orderList
           .filter(
-            (o: any) =>
+            (o) =>
               o.number.toLowerCase().includes(q) ||
               o.customerName.toLowerCase().includes(q),
           )
           .slice(0, 6)
-          .map((o: any) => ({
+          .map((o) => ({
             id: o.id,
             name: `${o.number} · ${o.customerName}`,
-            href: `/admin/orders/${o.id}`,
+            href: `/admin/orders`,
           }))
       : []
 
-    const customers = canCustomers
+    const matchingCustomers = canCustomers
       ? users
           .filter(
             (u) =>
-              u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q),
+              u.name.toLowerCase().includes(q) ||
+              u.email.toLowerCase().includes(q),
           )
           .slice(0, 6)
           .map((u) => ({
@@ -204,23 +287,25 @@ export const globalSearchFn = createServerFn({ method: 'GET' })
           }))
       : []
 
-    const riders = canRiders
-      ? ops.riders
-          .filter((r: any) => r.name.toLowerCase().includes(q))
+    const matchingRiders = canRiders
+      ? riderList
+          .filter(
+            (r) => r.name.toLowerCase().includes(q) || r.phone.includes(q),
+          )
           .slice(0, 4)
-          .map((r: any) => ({ id: r.id, name: r.name, href: '/admin/riders' }))
+          .map((r) => ({ id: r.id, name: r.name, href: '/admin/riders' }))
       : []
 
     return {
       products,
-      orders,
-      customers,
-      riders,
+      orders: matchingOrders,
+      customers: matchingCustomers,
+      riders: matchingRiders,
     }
   })
 
 // -------------------------------------------------------------
-// MODULE-SPECIFIC DATA LOADERS
+// MODULE DATA LOADERS
 // -------------------------------------------------------------
 
 export const getDashboardFn = createServerFn({ method: 'GET' })
@@ -235,19 +320,33 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
   )
   .handler(async ({ data }) => {
     await requirePermission('dashboard', 'view')
-    const [stats, liquor, grocery, users, ops] = await Promise.all([
+    const [
+      stats,
+      liquor,
+      grocery,
+      users,
+      allOrders,
+      riderList,
+      auditList,
+      notifs,
+    ] = await Promise.all([
       getAdminStatsQuery(),
       getAdminLiquorProductsQuery(),
       getAdminGroceryProductsQuery(),
       getAdminUsersQuery(),
-      loadOps(),
+      getAllOrdersQuery(),
+      getAllRidersQuery(),
+      getAllAuditLogsQuery(),
+      getAllNotificationsQuery(),
     ])
 
     const { start, end } = rangeBounds(data.range, data.from, data.to)
-    const orders = ops.orders.filter((o) => inRange(o.createdAt, start, end))
-    const delivered = orders.filter((o) => o.status === 'delivered')
+    const inRangeOrders = allOrders.filter((o) =>
+      inRange(o.createdAt, start, end),
+    )
+    const delivered = inRangeOrders.filter((o) => o.status === 'delivered')
     const revenue = delivered.reduce((s, o) => s + o.total, 0)
-    const refunds = orders
+    const refunds = inRangeOrders
       .filter((o) => o.status === 'refunded' || o.status === 'returned')
       .reduce((s, o) => s + o.total, 0)
     const cogs = Math.round(revenue * 0.62)
@@ -260,7 +359,7 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
       byDay.set(key, { sales: 0, orders: 0 })
       cursor.setDate(cursor.getDate() + 1)
     }
-    for (const o of orders) {
+    for (const o of inRangeOrders) {
       const key = o.createdAt.slice(0, 10)
       const slot = byDay.get(key)
       if (!slot) continue
@@ -269,7 +368,7 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
     }
 
     const statusCounts: Record<string, number> = {}
-    for (const o of orders) {
+    for (const o of inRangeOrders) {
       statusCounts[o.status] = (statusCounts[o.status] ?? 0) + 1
     }
 
@@ -277,7 +376,7 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
       string,
       { name: string; qty: number; revenue: number }
     >()
-    for (const o of orders) {
+    for (const o of inRangeOrders) {
       if (o.status === 'cancelled') continue
       for (const item of o.items) {
         const cur = productSales.get(item.productId) ?? {
@@ -305,7 +404,6 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
         0,
       )
 
-    const riders = ops.riders
     const customers = users.filter(
       (u) => !u.role || u.role === 'customer' || u.role === 'user',
     )
@@ -316,10 +414,10 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
       kpis: {
         sales: delivered.length,
         revenue,
-        orders: orders.length,
+        orders: inRangeOrders.length,
         profit,
         customers: customers.length,
-        riders: riders.length,
+        riders: riderList.length,
         inventory: stats.totalStockUnits,
         lowStock: stats.lowStockCount,
       },
@@ -329,34 +427,37 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
         value,
       })),
       topProducts,
-      recentOrders: [...ops.orders]
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-        .slice(0, 8),
-      activities: [...ops.audit]
-        .sort((a, b) => b.at.localeCompare(a.at))
-        .slice(0, 8),
-      ridersOnline: riders.filter((r) => r.status !== 'offline').length,
-      notifications: ops.notifications,
+      recentOrders: [...allOrders].slice(0, 8),
+      activities: [...auditList].slice(0, 8),
+      ridersOnline: riderList.filter((r) => r.status !== 'offline').length,
+      notifications: notifs,
     }
   })
 
 export const getOrdersFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('orders', 'view')
-    const [ops, users, liquor, grocery] = await Promise.all([
-      loadOps(),
-      getAdminUsersQuery(),
-      getAdminLiquorProductsQuery(),
-      getAdminGroceryProductsQuery(),
-    ])
+    const [orderList, riderList, users, liquor, grocery, settings] =
+      await Promise.all([
+        getAllOrdersQuery(),
+        getAllRidersQuery(),
+        getAdminUsersQuery(),
+        getAdminLiquorProductsQuery(),
+        getAdminGroceryProductsQuery(),
+        getStoreSettingsQuery(),
+      ])
     return {
-      ops,
-      orders: ops.orders,
-      riders: ops.riders,
+      ops: {
+        orders: orderList,
+        riders: riderList,
+        settings,
+      },
+      orders: orderList,
+      riders: riderList,
       users,
       liquor,
       grocery,
-      settings: ops.settings,
+      settings,
     }
   },
 )
@@ -364,18 +465,25 @@ export const getOrdersFn = createServerFn({ method: 'GET' }).handler(
 export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('accounts', 'view')
-    const [ops, users] = await Promise.all([loadOps(), getAdminUsersQuery()])
+    const [ledger, settlementsList, riderList, settings, users] =
+      await Promise.all([
+        getAllLedgerEntriesQuery(),
+        getAllSettlementsQuery(),
+        getAllRidersQuery(),
+        getStoreSettingsQuery(),
+        getAdminUsersQuery(),
+      ])
     return {
       ops: {
-        ledger: ops.ledger,
-        settlements: ops.settlements,
-        riders: ops.riders,
-        settings: ops.settings,
+        ledger,
+        settlements: settlementsList,
+        riders: riderList,
+        settings,
       },
-      ledger: ops.ledger,
-      settlements: ops.settlements,
-      riders: ops.riders,
-      settings: ops.settings,
+      ledger,
+      settlements: settlementsList,
+      riders: riderList,
+      settings,
       users,
     }
   },
@@ -384,16 +492,21 @@ export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
 export const getRidersFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('riders', 'view')
-    const [ops, users] = await Promise.all([loadOps(), getAdminUsersQuery()])
+    const [riderList, complaintsList, zonesList, users] = await Promise.all([
+      getAllRidersQuery(),
+      getAllComplaintsQuery(),
+      getAllShippingZonesQuery(),
+      getAdminUsersQuery(),
+    ])
     return {
       ops: {
-        riders: ops.riders,
-        complaints: ops.complaints,
-        zones: ops.zones,
+        riders: riderList,
+        complaints: complaintsList,
+        zones: zonesList,
       },
-      riders: ops.riders,
-      complaints: ops.complaints,
-      zones: ops.zones,
+      riders: riderList,
+      complaints: complaintsList,
+      zones: zonesList,
       users,
     }
   },
@@ -402,14 +515,17 @@ export const getRidersFn = createServerFn({ method: 'GET' }).handler(
 export const getPaymentsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('payments', 'view')
-    const ops = await loadOps()
+    const [paymentsList, settings] = await Promise.all([
+      getAllPaymentsQuery(),
+      getStoreSettingsQuery(),
+    ])
     return {
       ops: {
-        payments: ops.payments,
-        settings: ops.settings,
+        payments: paymentsList,
+        settings,
       },
-      payments: ops.payments,
-      settings: ops.settings,
+      payments: paymentsList,
+      settings,
     }
   },
 )
@@ -417,14 +533,17 @@ export const getPaymentsFn = createServerFn({ method: 'GET' }).handler(
 export const getShippingFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('shipping', 'view')
-    const ops = await loadOps()
+    const [zonesList, orderList] = await Promise.all([
+      getAllShippingZonesQuery(),
+      getAllOrdersQuery(),
+    ])
     return {
       ops: {
-        zones: ops.zones,
-        orders: ops.orders,
+        zones: zonesList,
+        orders: orderList,
       },
-      zones: ops.zones,
-      orders: ops.orders,
+      zones: zonesList,
+      orders: orderList,
     }
   },
 )
@@ -432,18 +551,24 @@ export const getShippingFn = createServerFn({ method: 'GET' }).handler(
 export const getMarketingFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('marketing', 'view')
-    const ops = await loadOps()
+    const [couponsList, bannersList, campaignsList, reviewsList] =
+      await Promise.all([
+        getAllCouponsQuery(),
+        getAllBannersQuery(),
+        getAllCampaignsQuery(),
+        getAllReviewsQuery(),
+      ])
     return {
       ops: {
-        coupons: ops.coupons,
-        banners: ops.banners,
-        campaigns: ops.campaigns,
-        reviews: ops.reviews,
+        coupons: couponsList,
+        banners: bannersList,
+        campaigns: campaignsList,
+        reviews: reviewsList,
       },
-      coupons: ops.coupons,
-      banners: ops.banners,
-      campaigns: ops.campaigns,
-      reviews: ops.reviews,
+      coupons: couponsList,
+      banners: bannersList,
+      campaigns: campaignsList,
+      reviews: reviewsList,
     }
   },
 )
@@ -451,12 +576,15 @@ export const getMarketingFn = createServerFn({ method: 'GET' }).handler(
 export const getAuditFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('staff', 'view')
-    const [ops, users] = await Promise.all([loadOps(), getAdminUsersQuery()])
+    const [auditList, users] = await Promise.all([
+      getAllAuditLogsQuery(),
+      getAdminUsersQuery(),
+    ])
     return {
       ops: {
-        audit: ops.audit,
+        audit: auditList,
       },
-      audit: ops.audit,
+      audit: auditList,
       users,
     }
   },
@@ -465,15 +593,20 @@ export const getAuditFn = createServerFn({ method: 'GET' }).handler(
 export const getSettingsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('settings', 'view')
-    const ops = await loadOps()
+    const [settings, orderList, riderList, ledgerList] = await Promise.all([
+      getStoreSettingsQuery(),
+      getAllOrdersQuery(),
+      getAllRidersQuery(),
+      getAllLedgerEntriesQuery(),
+    ])
     return {
       ops: {
-        settings: ops.settings,
-        orders: ops.orders,
-        riders: ops.riders,
-        ledger: ops.ledger,
+        settings,
+        orders: orderList,
+        riders: riderList,
+        ledger: ledgerList,
       },
-      settings: ops.settings,
+      settings,
       liquor: [] as any[],
       grocery: [] as any[],
     }
@@ -483,15 +616,19 @@ export const getSettingsFn = createServerFn({ method: 'GET' }).handler(
 export const getCustomersOpsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('customers', 'view')
-    const [ops, users] = await Promise.all([loadOps(), getAdminUsersQuery()])
+    const [users, complaintsList, orderList] = await Promise.all([
+      getAdminUsersQuery(),
+      getAllComplaintsQuery(),
+      getAllOrdersQuery(),
+    ])
     return {
       ops: {
-        complaints: ops.complaints,
-        orders: ops.orders,
+        complaints: complaintsList,
+        orders: orderList,
       },
       users,
-      complaints: ops.complaints,
-      orders: ops.orders,
+      complaints: complaintsList,
+      orders: orderList,
     }
   },
 )
@@ -499,15 +636,16 @@ export const getCustomersOpsFn = createServerFn({ method: 'GET' }).handler(
 export const getInventoryOpsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('products', 'view')
-    const [ops, liquor, grocery] = await Promise.all([
-      loadOps(),
+    const [liquor, grocery, orderList, settings] = await Promise.all([
       getAdminLiquorProductsQuery(),
       getAdminGroceryProductsQuery(),
+      getAllOrdersQuery(),
+      getStoreSettingsQuery(),
     ])
     return {
       ops: {
-        orders: ops.orders,
-        settings: ops.settings,
+        orders: orderList,
+        settings,
       },
       liquor,
       grocery,
@@ -518,11 +656,15 @@ export const getInventoryOpsFn = createServerFn({ method: 'GET' }).handler(
 export const getStaffOpsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('staff', 'view')
-    const [ops, users] = await Promise.all([loadOps(), getAdminUsersQuery()])
+    const [users, permissionsMap, auditList] = await Promise.all([
+      getAdminUsersQuery(),
+      getAllUserPermissionsQuery(),
+      getAllAuditLogsQuery(),
+    ])
     return {
       ops: {
-        permissions: ops.permissions,
-        audit: ops.audit,
+        permissions: permissionsMap,
+        audit: auditList,
       },
       users,
     }
@@ -532,18 +674,26 @@ export const getStaffOpsFn = createServerFn({ method: 'GET' }).handler(
 export const getReportsOpsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('reports', 'view')
-    const [ops, stats] = await Promise.all([loadOps(), getAdminStatsQuery()])
+    const [orderList, ledgerList, paymentsList, riderList, settings, stats] =
+      await Promise.all([
+        getAllOrdersQuery(),
+        getAllLedgerEntriesQuery(),
+        getAllPaymentsQuery(),
+        getAllRidersQuery(),
+        getStoreSettingsQuery(),
+        getAdminStatsQuery(),
+      ])
     return {
       ops: {
-        orders: ops.orders,
-        ledger: ops.ledger,
-        payments: ops.payments,
-        riders: ops.riders,
-        settings: ops.settings,
+        orders: orderList,
+        ledger: ledgerList,
+        payments: paymentsList,
+        riders: riderList,
+        settings,
       },
-      orders: ops.orders,
-      ledger: ops.ledger,
-      payments: ops.payments,
+      orders: orderList,
+      ledger: ledgerList,
+      payments: paymentsList,
       liquor: [] as any[],
       grocery: [] as any[],
       stats,
@@ -551,22 +701,73 @@ export const getReportsOpsFn = createServerFn({ method: 'GET' }).handler(
   },
 )
 
-// Legacy bundle kept temporarily for backward compatibility
 export const getOpsBundleFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requireRole('admin', 'manager')
-    const [ops, users, liquor, grocery] = await Promise.all([
-      loadOps(),
+    const [
+      ordersList,
+      ridersList,
+      complaintsList,
+      ledgerList,
+      settlementsList,
+      paymentsList,
+      couponsList,
+      bannersList,
+      campaignsList,
+      reviewsList,
+      zonesList,
+      notifs,
+      auditList,
+      permissionsMap,
+      settings,
+      users,
+      liquor,
+      grocery,
+    ] = await Promise.all([
+      getAllOrdersQuery(),
+      getAllRidersQuery(),
+      getAllComplaintsQuery(),
+      getAllLedgerEntriesQuery(),
+      getAllSettlementsQuery(),
+      getAllPaymentsQuery(),
+      getAllCouponsQuery(),
+      getAllBannersQuery(),
+      getAllCampaignsQuery(),
+      getAllReviewsQuery(),
+      getAllShippingZonesQuery(),
+      getAllNotificationsQuery(),
+      getAllAuditLogsQuery(),
+      getAllUserPermissionsQuery(),
+      getStoreSettingsQuery(),
       getAdminUsersQuery(),
       getAdminLiquorProductsQuery(),
       getAdminGroceryProductsQuery(),
     ])
+
+    const ops: OpsState = {
+      orders: ordersList,
+      riders: ridersList,
+      complaints: complaintsList,
+      ledger: ledgerList,
+      settlements: settlementsList,
+      payments: paymentsList,
+      coupons: couponsList,
+      banners: bannersList,
+      campaigns: campaignsList,
+      reviews: reviewsList,
+      zones: zonesList,
+      notifications: notifs,
+      audit: auditList,
+      permissions: permissionsMap,
+      settings,
+    }
+
     return { ops, users, liquor, grocery }
   },
 )
 
 // -------------------------------------------------------------
-// OPERATIONS MUTATIONS WITH STRICT PERMISSION ENFORCEMENT
+// OPERATIONS MUTATIONS WITH REAL POSTGRESQL TABLES
 // -------------------------------------------------------------
 
 export const updateOrderFn = createServerFn({ method: 'POST' })
@@ -583,160 +784,190 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const { user } = await requirePermission('orders', 'edit')
-    return mutateOps((state) => {
-      const order = state.orders.find((o) => o.id === data.id)
-      if (!order) throw new Error('Order not found')
-      if (data.status) {
-        order.status = data.status as OrderStatus
-        order.events.push({
+    const order = await getOrderByIdQuery(data.id)
+    if (!order) throw new Error('Order not found')
+
+    await dbTx.transaction(async (tx) => {
+      const updates: Record<string, any> = { updatedAt: new Date() }
+      if (data.status) updates.status = data.status
+      if (data.riderId !== undefined) updates.riderId = data.riderId
+      if (data.paymentStatus) updates.paymentStatus = data.paymentStatus
+      if (data.notes !== undefined) updates.notes = data.notes
+
+      await tx.update(orders).set(updates).where(eq(orders.id, data.id))
+
+      if (data.status && data.status !== order.status) {
+        await tx.insert(orderStatusHistory).values({
           id: nid('ev'),
-          at: new Date().toISOString(),
-          status: order.status,
+          orderId: data.id,
+          status: data.status,
           note: `Status updated to ${data.status.replaceAll('_', ' ')}`,
           actor: user.name,
         })
       }
-      if (data.riderId !== undefined) {
-        order.riderId = data.riderId
-        if (data.riderId)
-          order.status =
-            order.status === 'packing' || order.status === 'confirmed'
-              ? 'assigned'
-              : order.status
-      }
-      if (data.paymentStatus) {
-        order.paymentStatus = data.paymentStatus as typeof order.paymentStatus
-      }
-      if (data.notes !== undefined) order.notes = data.notes
-      order.updatedAt = new Date().toISOString()
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: user.name,
-        module: 'orders',
-        action: 'edit',
-        detail: `Updated order ${order.number}`,
-      })
-      return state
     })
+
+    await logAudit(
+      user.name,
+      'orders',
+      'edit',
+      `Updated order ${order.number}: ${JSON.stringify(data)}`,
+    )
+
+    return true
   })
 
 export const createOrderFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>
     z
       .object({
-        customerName: z.string().min(1),
-        customerEmail: z.string().email(),
-        customerPhone: z.string().min(5),
+        customerName: z.string().min(2),
+        customerPhone: z.string().min(6),
+        customerEmail: z.string().email().optional(),
         address: z.string().min(3),
-        city: z.string().min(2),
-        paymentMethod: z.enum(['cod', 'esewa', 'khalti', 'fonepay', 'connectips']),
-        productId: z.string(),
-        catalogType: z.enum(['liquor', 'grocery']),
-        qty: z.number().int().positive(),
+        city: z.string().default('Kathmandu'),
+        paymentMethod: z
+          .enum(['cod', 'esewa', 'khalti', 'fonepay', 'connectips'])
+          .default('cod'),
+        notes: z.string().optional(),
+        items: z
+          .array(
+            z.object({
+              catalogType: z.enum(['liquor', 'grocery']),
+              productId: z.string(),
+              variantId: z.string(),
+              name: z.string(),
+              variantName: z.string(),
+              sku: z.string(),
+              qty: z.number().int().positive(),
+              unitPrice: z.number().int().nonnegative(),
+            }),
+          )
+          .min(1),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const { user } = await requirePermission('orders', 'create')
-    const [liquor, grocery] = await Promise.all([
-      getAdminLiquorProductsQuery(),
-      getAdminGroceryProductsQuery(),
-    ])
-    const product = (data.catalogType === 'liquor' ? liquor : grocery).find(
-      (p) => p.id === data.productId,
+    const { user: actor } = await requirePermission('orders', 'create')
+    const subtotal = data.items.reduce(
+      (sum, item) => sum + item.unitPrice * item.qty,
+      0,
     )
-    if (!product) throw new Error('Product not found')
-    const variant = product.variants[0]
-    const lineTotal = variant.price * data.qty
-    const deliveryCharge = 15000
-    const tax = Math.round(lineTotal * 0.13)
-    const now = new Date().toISOString()
+    const deliveryCharge = subtotal > 300000 ? 0 : 15000
+    const total = subtotal + deliveryCharge
 
-    return mutateOps((state) => {
-      const number = `${state.settings.invoicePrefix}-${String(10000 + state.orders.length + 1).padStart(5, '0')}`
-      const order = {
-        id: nid('ord'),
-        number,
-        customerId: nid('cust'),
+    const settings = await getStoreSettingsQuery()
+    const orderCountRes = await db.select({ count: count() }).from(orders)
+    const orderSeq = (orderCountRes[0]?.count ?? 0) + 1
+    const orderNumber = `${settings.invoicePrefix}-${String(10000 + orderSeq).padStart(5, '0')}`
+
+    const orderId = nid('ord')
+    const trackingCode = `TRK${Math.floor(100000 + Math.random() * 900000)}`
+    const now = new Date()
+
+    await dbTx.transaction(async (tx) => {
+      await tx.insert(orders).values({
+        id: orderId,
+        number: orderNumber,
         customerName: data.customerName,
-        customerEmail: data.customerEmail,
+        customerEmail: data.customerEmail || 'walkin@mezmani.com.np',
         customerPhone: data.customerPhone,
         address: data.address,
         city: data.city,
-        status: 'pending' as const,
-        paymentMethod: data.paymentMethod as PaymentMethod,
-        paymentStatus:
-          data.paymentMethod === 'cod'
-            ? ('cod_pending' as const)
-            : ('pending' as const),
-        subtotal: lineTotal,
+        status: 'confirmed',
+        paymentMethod: data.paymentMethod,
+        paymentStatus: data.paymentMethod === 'cod' ? 'cod_pending' : 'paid',
+        subtotal,
         deliveryCharge,
         discount: 0,
-        tax,
-        total: lineTotal + deliveryCharge + tax,
-        riderId: null,
-        trackingCode: `TRK${Math.floor(100000 + Math.random() * 900000)}`,
-        notes: '',
-        couponCode: null,
-        items: [
-          {
-            id: nid('oi'),
-            catalogType: data.catalogType,
-            productId: product.id,
-            variantId: variant.id,
-            name: product.name,
-            variantName: variant.name,
-            sku: variant.sku,
-            qty: data.qty,
-            unitPrice: variant.price,
-            lineTotal,
-          },
-        ],
-        events: [
-          {
-            id: nid('ev'),
-            at: now,
-            status: 'pending' as const,
-            note: 'Order created in admin',
-            actor: user.name,
-          },
-        ],
-        createdAt: now,
-        updatedAt: now,
+        tax: 0,
+        total,
+        trackingCode,
+        notes: data.notes || '',
+      })
+
+      for (const item of data.items) {
+        await tx.insert(orderItems).values({
+          id: nid('oi'),
+          orderId,
+          catalogType: item.catalogType,
+          productId: item.productId,
+          variantId: item.variantId,
+          name: item.name,
+          variantName: item.variantName,
+          sku: item.sku,
+          qty: item.qty,
+          unitPrice: item.unitPrice,
+          lineTotal: item.unitPrice * item.qty,
+        })
+
+        if (item.catalogType === 'liquor') {
+          const v = await tx
+            .select({ stock: liquorVariants.stock })
+            .from(liquorVariants)
+            .where(eq(liquorVariants.id, item.variantId))
+            .limit(1)
+          if (v[0]) {
+            await tx
+              .update(liquorVariants)
+              .set({ stock: Math.max(0, v[0].stock - item.qty) })
+              .where(eq(liquorVariants.id, item.variantId))
+          }
+        } else {
+          const v = await tx
+            .select({ stock: groceryVariants.stock })
+            .from(groceryVariants)
+            .where(eq(groceryVariants.id, item.variantId))
+            .limit(1)
+          if (v[0]) {
+            await tx
+              .update(groceryVariants)
+              .set({ stock: Math.max(0, v[0].stock - item.qty) })
+              .where(eq(groceryVariants.id, item.variantId))
+          }
+        }
+
+        await tx.insert(stockMovements).values({
+          id: nid('sm'),
+          catalogType: item.catalogType,
+          variantId: item.variantId,
+          delta: -item.qty,
+          type: 'sale',
+          refType: 'order',
+          refId: orderId,
+          createdBy: actor.id,
+        })
       }
-      state.orders.unshift(order)
-      state.ledger.unshift({
+
+      await tx.insert(orderStatusHistory).values({
+        id: nid('ev'),
+        orderId,
+        status: 'confirmed',
+        note: `Order manually created by ${actor.name}`,
+        actor: actor.name,
+      })
+
+      await tx.insert(ledgerEntries).values({
         id: nid('led'),
-        date: now.slice(0, 10),
+        date: now.toISOString().slice(0, 10),
         type: 'credit',
         category: 'sales',
         account: 'Sales revenue',
-        memo: `Sale ${number}`,
-        amount: lineTotal,
+        memo: `Sale ${orderNumber} (${data.customerName})`,
+        amount: total,
         refType: 'order',
-        refId: order.id,
-        createdAt: now,
+        refId: orderId,
       })
-      state.notifications.unshift({
-        id: nid('n'),
-        title: `New order ${number}`,
-        body: `${data.customerName} · ${product.name}`,
-        type: 'order',
-        read: false,
-        href: `/admin/orders/${order.id}`,
-        createdAt: now,
-      })
-      state.audit.unshift({
-        id: nid('aud'),
-        at: now,
-        actor: user.name,
-        module: 'orders',
-        action: 'create',
-        detail: `Created order ${number} for ${data.customerName}`,
-      })
-      return state
     })
+
+    await logAudit(
+      actor.name,
+      'orders',
+      'create',
+      `Manual order created: ${orderNumber} (Rs. ${(total / 100).toFixed(2)})`,
+    )
+
+    return { orderId, orderNumber }
   })
 
 export const upsertRiderFn = createServerFn({ method: 'POST' })
@@ -744,86 +975,88 @@ export const upsertRiderFn = createServerFn({ method: 'POST' })
     z
       .object({
         id: z.string().optional(),
-        name: z.string().min(1),
+        name: z.string().min(2),
         email: z.string().email(),
-        phone: z.string().min(5),
-        vehicle: z.enum(['bike', 'scooter', 'car']),
-        licenseNo: z.string().min(2),
-        zone: z.string().min(2),
-        commissionRate: z.number().min(0).max(50),
-        verified: z.boolean(),
-        available: z.boolean(),
+        phone: z.string().min(6),
+        vehicle: z.enum(['bike', 'scooter', 'car']).default('bike'),
+        licenseNo: z.string().min(3),
+        zone: z.string().default('Kathmandu Core'),
+        commissionRate: z.number().min(0).max(100).default(10),
+        available: z.boolean().default(true),
+        status: z.enum(['offline', 'available', 'busy']).default('available'),
+        verified: z.boolean().default(true),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const action = data.id ? 'edit' : 'create'
-    const { user } = await requirePermission('riders', action)
-    return mutateOps((state) => {
-      if (data.id) {
-        const rider = state.riders.find((r) => r.id === data.id)
-        if (!rider) throw new Error('Rider not found')
-        Object.assign(rider, data)
-      } else {
-        state.riders.unshift({
-          id: nid('rider'),
-          userId: null,
+    const { user } = await requirePermission(
+      'riders',
+      data.id ? 'edit' : 'create',
+    )
+    const riderId = data.id || nid('rid')
+
+    await db
+      .insert(riders)
+      .values({
+        id: riderId,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        vehicle: data.vehicle,
+        licenseNo: data.licenseNo,
+        zone: data.zone,
+        commissionRate: data.commissionRate,
+        available: data.available,
+        status: data.status,
+        verified: data.verified,
+      })
+      .onConflictDoUpdate({
+        target: riders.id,
+        set: {
           name: data.name,
           email: data.email,
           phone: data.phone,
           vehicle: data.vehicle,
           licenseNo: data.licenseNo,
-          verified: data.verified,
-          available: data.available,
-          status: data.available ? 'available' : 'offline',
-          lat: 27.7172,
-          lng: 85.324,
           zone: data.zone,
           commissionRate: data.commissionRate,
-          cashOnHand: 0,
-          earnings: 0,
-          deliveries: 0,
-          rating: 5,
-          createdAt: new Date().toISOString(),
-        })
-      }
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: user.name,
-        module: 'riders',
-        action,
-        detail: `${action === 'create' ? 'Added' : 'Updated'} rider: ${data.name}`,
+          available: data.available,
+          status: data.status,
+          verified: data.verified,
+          updatedAt: new Date(),
+        },
       })
-      return state
-    })
+
+    await logAudit(
+      user.name,
+      'riders',
+      data.id ? 'edit' : 'create',
+      `${data.id ? 'Updated' : 'Added'} rider: ${data.name}`,
+    )
+
+    return true
   })
 
 export const updateRiderLiveFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>
     z
       .object({
-        id: z.string(),
+        riderId: z.string(),
         lat: z.number().optional(),
         lng: z.number().optional(),
         status: z.enum(['offline', 'available', 'busy']).optional(),
-        available: z.boolean().optional(),
-        verified: z.boolean().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    await requirePermission('riders', 'edit')
-    return mutateOps((state) => {
-      const rider = state.riders.find((r) => r.id === data.id)
-      if (!rider) throw new Error('Rider not found')
-      if (data.lat !== undefined) rider.lat = data.lat
-      if (data.lng !== undefined) rider.lng = data.lng
-      if (data.status) rider.status = data.status
-      if (data.available !== undefined) rider.available = data.available
-      if (data.verified !== undefined) rider.verified = data.verified
-      return state
-    })
+    await requireRole('admin', 'manager', 'rider')
+    const updates: Record<string, any> = { updatedAt: new Date() }
+    if (data.lat !== undefined) updates.lat = String(data.lat)
+    if (data.lng !== undefined) updates.lng = String(data.lng)
+    if (data.status !== undefined) updates.status = data.status
+
+    await db.update(riders).set(updates).where(eq(riders.id, data.riderId))
+    return true
   })
 
 export const addLedgerFn = createServerFn({ method: 'POST' })
@@ -842,38 +1075,41 @@ export const addLedgerFn = createServerFn({ method: 'POST' })
           'delivery',
           'other',
         ]),
-        account: z.string().min(1),
-        memo: z.string().min(1),
+        account: z.string().min(2),
+        memo: z.string().min(2),
         amount: z.number().int().positive(),
-        date: z.string(),
+        refType: z
+          .enum(['order', 'settlement', 'manual', 'refund'])
+          .default('manual'),
+        refId: z.string().nullable().optional(),
+        date: z.string().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     const { user } = await requirePermission('accounts', 'create')
-    return mutateOps((state) => {
-      state.ledger.unshift({
-        id: nid('led'),
-        date: data.date,
-        type: data.type,
-        category: data.category,
-        account: data.account,
-        memo: data.memo,
-        amount: data.amount,
-        refType: 'manual',
-        refId: null,
-        createdAt: new Date().toISOString(),
-      })
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: user.name,
-        module: 'accounts',
-        action: 'create',
-        detail: `Added ledger ${data.type} entry of Rs. ${data.amount} for ${data.memo}`,
-      })
-      return state
+    const date = data.date || new Date().toISOString().slice(0, 10)
+
+    await db.insert(ledgerEntries).values({
+      id: nid('led'),
+      date,
+      type: data.type,
+      category: data.category,
+      account: data.account,
+      memo: data.memo,
+      amount: data.amount,
+      refType: data.refType,
+      refId: data.refId || null,
     })
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'create',
+      `Manual ledger: ${data.type.toUpperCase()} Rs. ${(data.amount / 100).toFixed(2)} - ${data.memo}`,
+    )
+
+    return true
   })
 
 export const upsertCouponFn = createServerFn({ method: 'POST' })
@@ -881,64 +1117,55 @@ export const upsertCouponFn = createServerFn({ method: 'POST' })
     z
       .object({
         id: z.string().optional(),
-        code: z.string().min(3),
+        code: z.string().min(2),
         type: z.enum(['percent', 'fixed']),
         value: z.number().positive(),
-        minOrder: z.number().min(0),
-        usageLimit: z.number().int().positive(),
+        minOrder: z.number().nonnegative().default(0),
+        usageLimit: z.number().int().positive().default(100),
+        active: z.boolean().default(true),
         expiresAt: z.string(),
-        active: z.boolean(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const action = data.id ? 'edit' : 'create'
-    const { user } = await requirePermission('marketing', action)
-    return mutateOps((state) => {
-      if (data.id) {
-        const row = state.coupons.find((c) => c.id === data.id)
-        if (row) Object.assign(row, data)
-      } else {
-        state.coupons.unshift({
-          id: nid('cp'),
-          code: data.code.toUpperCase(),
-          type: data.type,
-          value: data.value,
-          minOrder: data.minOrder,
-          usageLimit: data.usageLimit,
-          used: 0,
-          active: data.active,
-          expiresAt: data.expiresAt,
-        })
-      }
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: user.name,
-        module: 'marketing',
-        action,
-        detail: `${action === 'create' ? 'Created' : 'Updated'} coupon: ${data.code}`,
-      })
-      return state
+    const { user } = await requirePermission(
+      'marketing',
+      data.id ? 'edit' : 'create',
+    )
+    await upsertCouponQuery({
+      id: data.id || nid('cp'),
+      code: data.code,
+      type: data.type,
+      value: data.value,
+      minOrder: data.minOrder,
+      usageLimit: data.usageLimit,
+      used: 0,
+      active: data.active,
+      expiresAt: data.expiresAt,
     })
+
+    await logAudit(
+      user.name,
+      'marketing',
+      data.id ? 'edit' : 'create',
+      `${data.id ? 'Updated' : 'Created'} coupon ${data.code}`,
+    )
+
+    return true
   })
 
 export const deleteCouponFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => z.object({ id: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { user } = await requirePermission('marketing', 'delete')
-    return mutateOps((state) => {
-      state.coupons = state.coupons.filter((c) => c.id !== data.id)
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: user.name,
-        module: 'marketing',
-        action: 'delete',
-        detail: `Deleted coupon ${data.id}`,
-      })
-      return state
-    })
+    await deleteCouponQuery(data.id)
+    await logAudit(
+      user.name,
+      'marketing',
+      'delete',
+      `Deleted coupon ${data.id}`,
+    )
+    return true
   })
 
 export const upsertZoneFn = createServerFn({ method: 'POST' })
@@ -948,79 +1175,67 @@ export const upsertZoneFn = createServerFn({ method: 'POST' })
         id: z.string().optional(),
         name: z.string().min(2),
         areas: z.string().min(2),
-        deliveryCharge: z.number().int().min(0),
-        etaMinutes: z.number().int().positive(),
-        active: z.boolean(),
-        courier: z.enum(['in-house', 'ncm', 'pathao', 'none']),
+        deliveryCharge: z.number().nonnegative(),
+        etaMinutes: z.number().int().positive().default(45),
+        active: z.boolean().default(true),
+        courier: z
+          .enum(['in-house', 'ncm', 'pathao', 'none'])
+          .default('in-house'),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const action = data.id ? 'edit' : 'create'
-    const { user } = await requirePermission('shipping', action)
-    return mutateOps((state) => {
-      if (data.id) {
-        const row = state.zones.find((z) => z.id === data.id)
-        if (row) Object.assign(row, data)
-      } else {
-        state.zones.unshift({ id: nid('z'), ...data })
-      }
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: user.name,
-        module: 'shipping',
-        action,
-        detail: `${action === 'create' ? 'Created' : 'Updated'} delivery zone: ${data.name}`,
-      })
-      return state
+    const { user } = await requirePermission(
+      'shipping',
+      data.id ? 'edit' : 'create',
+    )
+    await upsertShippingZoneQuery({
+      id: data.id || nid('zone'),
+      name: data.name,
+      areas: data.areas,
+      deliveryCharge: data.deliveryCharge,
+      etaMinutes: data.etaMinutes,
+      active: data.active,
+      courier: data.courier,
     })
+
+    await logAudit(
+      user.name,
+      'shipping',
+      data.id ? 'edit' : 'create',
+      `${data.id ? 'Updated' : 'Created'} zone ${data.name}`,
+    )
+
+    return true
   })
 
 export const saveSettingsFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>
     z
       .object({
-        storeName: z.string(),
-        legalName: z.string(),
-        pan: z.string(),
-        vat: z.string(),
-        phone: z.string(),
-        email: z.string(),
-        address: z.string(),
-        city: z.string(),
-        invoicePrefix: z.string(),
-        taxRate: z.number(),
-        lowStockThreshold: z.number(),
-        ageGate: z.boolean(),
-        notifyEmail: z.boolean(),
-        notifySms: z.boolean(),
-        gateways: z.record(
-          z.string(),
-          z.object({
-            enabled: z.boolean(),
-            merchantId: z.string(),
-            mode: z.enum(['sandbox', 'live']),
-          }),
-        ),
+        storeName: z.string().min(2).optional(),
+        legalName: z.string().min(2).optional(),
+        pan: z.string().optional(),
+        vat: z.string().optional(),
+        phone: z.string().optional(),
+        email: z.string().email().optional(),
+        address: z.string().optional(),
+        city: z.string().optional(),
+        invoicePrefix: z.string().optional(),
+        taxRate: z.number().min(0).max(100).optional(),
+        lowStockThreshold: z.number().int().min(0).optional(),
+        ageGate: z.boolean().optional(),
+        notifyEmail: z.boolean().optional(),
+        notifySms: z.boolean().optional(),
+        gateways: z.record(z.string(), z.any()).optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const { user } = await requireRole('admin')
-    const next = await mutateOps((state) => {
-      state.settings = { ...state.settings, ...data } as typeof state.settings
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: user.name,
-        module: 'settings',
-        action: 'edit',
-        detail: 'Updated store configuration',
-      })
-      return state
-    })
-    return next.settings
+    const { user } = await requirePermission('settings', 'edit')
+    await saveStoreSettingsQuery(data)
+    await logAudit(user.name, 'settings', 'edit', 'Updated store configuration')
+    return true
   })
 
 export const savePermissionsFn = createServerFn({ method: 'POST' })
@@ -1028,24 +1243,20 @@ export const savePermissionsFn = createServerFn({ method: 'POST' })
     z
       .object({
         userId: z.string(),
-        grants: z.record(z.string(), z.array(z.string())),
+        permissions: z.record(z.string(), z.array(z.string())),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const { user } = await requireRole('admin')
-    return mutateOps((state) => {
-      state.permissions[data.userId] = data.grants as (typeof state.permissions)[string]
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: user.name,
-        module: 'staff',
-        action: 'edit',
-        detail: `Updated RBAC grants for ${data.userId}`,
-      })
-      return state
-    })
+    const { user } = await requirePermission('staff', 'edit')
+    await saveUserPermissionsQuery(data.userId, data.permissions)
+    await logAudit(
+      user.name,
+      'staff',
+      'edit',
+      `Updated custom permissions for user ${data.userId}`,
+    )
+    return true
   })
 
 export const updateReviewFn = createServerFn({ method: 'POST' })
@@ -1059,19 +1270,14 @@ export const updateReviewFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const { user } = await requirePermission('marketing', 'edit')
-    return mutateOps((state) => {
-      const row = state.reviews.find((r) => r.id === data.id)
-      if (row) row.status = data.status
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: user.name,
-        module: 'marketing',
-        action: 'edit',
-        detail: `Updated review ${data.id} status to ${data.status}`,
-      })
-      return state
-    })
+    await updateReviewStatusQuery(data.id, data.status)
+    await logAudit(
+      user.name,
+      'marketing',
+      'edit',
+      `Review ${data.id} -> ${data.status}`,
+    )
+    return true
   })
 
 export const updateComplaintFn = createServerFn({ method: 'POST' })
@@ -1085,59 +1291,73 @@ export const updateComplaintFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const { user } = await requirePermission('customers', 'edit')
-    return mutateOps((state) => {
-      const row = state.complaints.find((c) => c.id === data.id)
-      if (row) row.status = data.status
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: user.name,
-        module: 'customers',
-        action: 'edit',
-        detail: `Updated complaint ${data.id} status to ${data.status}`,
-      })
-      return state
-    })
+    await updateComplaintStatusQuery(data.id, data.status)
+    await logAudit(
+      user.name,
+      'customers',
+      'edit',
+      `Complaint ${data.id} -> ${data.status}`,
+    )
+    return true
   })
 
 export const approveSettlementFn = createServerFn({ method: 'POST' })
-  .validator((d: unknown) =>
-    z.object({ id: z.string(), status: z.enum(['approved', 'paid']) }).parse(d),
-  )
+  .validator((d: unknown) => z.object({ id: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { user } = await requirePermission('accounts', 'approve')
-    return mutateOps((state) => {
-      const row = state.settlements.find((s) => s.id === data.id)
-      if (row) row.status = data.status
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: user.name,
-        module: 'accounts',
-        action: 'approve',
-        detail: `Settlement ${data.id} updated to ${data.status}`,
+    const row = await db
+      .select()
+      .from(settlements)
+      .where(eq(settlements.id, data.id))
+      .limit(1)
+
+    if (!row[0]) throw new Error('Settlement not found')
+
+    await dbTx.transaction(async (tx) => {
+      await tx
+        .update(settlements)
+        .set({ status: 'approved' })
+        .where(eq(settlements.id, data.id))
+
+      await tx.insert(ledgerEntries).values({
+        id: nid('led'),
+        date: new Date().toISOString().slice(0, 10),
+        type: 'debit',
+        category: 'settlement',
+        account: 'Fleet settlement payable',
+        memo: `Settlement approved for ${row[0].riderName}`,
+        amount: row[0].payout,
+        refType: 'settlement',
+        refId: row[0].id,
       })
-      return state
     })
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'approve',
+      `Approved settlement ${row[0].id} for ${row[0].riderName}`,
+    )
+
+    return true
   })
 
 export const reconcilePaymentFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => z.object({ id: z.string() }).parse(d))
   .handler(async ({ data }) => {
-    const { user } = await requirePermission('payments', 'approve')
-    return mutateOps((state) => {
-      const row = state.payments.find((p) => p.id === data.id)
-      if (row) row.status = 'reconciled'
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: user.name,
-        module: 'payments',
-        action: 'approve',
-        detail: `Reconciled payment transaction ${data.id}`,
-      })
-      return state
-    })
+    const { user } = await requirePermission('payments', 'edit')
+    await db
+      .update(payments)
+      .set({ status: 'reconciled' })
+      .where(eq(payments.id, data.id))
+
+    await logAudit(
+      user.name,
+      'payments',
+      'edit',
+      `Reconciled payment ${data.id}`,
+    )
+    return true
   })
 
 export const upsertBannerFn = createServerFn({ method: 'POST' })
@@ -1146,76 +1366,58 @@ export const upsertBannerFn = createServerFn({ method: 'POST' })
       .object({
         id: z.string().optional(),
         title: z.string().min(2),
-        imageUrl: z.string().url(),
-        href: z.string(),
-        placement: z.enum(['home', 'drinks', 'grocery']),
-        active: z.boolean(),
+        imageUrl: z.string().min(5),
+        href: z.string().default('/drinks'),
+        placement: z.enum(['home', 'drinks', 'grocery']).default('home'),
+        active: z.boolean().default(true),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const action = data.id ? 'edit' : 'create'
-    const { user } = await requirePermission('marketing', action)
-    return mutateOps((state) => {
-      if (data.id) {
-        const row = state.banners.find((b) => b.id === data.id)
-        if (row) Object.assign(row, data)
-      } else {
-        state.banners.unshift({ id: nid('bn'), ...data })
-      }
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: user.name,
-        module: 'marketing',
-        action,
-        detail: `${action === 'create' ? 'Created' : 'Updated'} banner: ${data.title}`,
-      })
-      return state
+    const { user } = await requirePermission(
+      'marketing',
+      data.id ? 'edit' : 'create',
+    )
+    await upsertBannerQuery({
+      id: data.id || nid('ban'),
+      title: data.title,
+      imageUrl: data.imageUrl,
+      href: data.href,
+      placement: data.placement,
+      active: data.active,
     })
+
+    await logAudit(
+      user.name,
+      'marketing',
+      data.id ? 'edit' : 'create',
+      `${data.id ? 'Updated' : 'Created'} banner ${data.title}`,
+    )
+
+    return true
   })
 
 export const deleteBannerFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => z.object({ id: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const { user } = await requirePermission('marketing', 'delete')
-    return mutateOps((state) => {
-      state.banners = state.banners.filter((b) => b.id !== data.id)
-      state.audit.unshift({
-        id: nid('aud'),
-        at: new Date().toISOString(),
-        actor: user.name,
-        module: 'marketing',
-        action: 'delete',
-        detail: `Deleted banner ${data.id}`,
-      })
-      return state
-    })
+    await deleteBannerQuery(data.id)
+    await logAudit(
+      user.name,
+      'marketing',
+      'delete',
+      `Deleted banner ${data.id}`,
+    )
+    return true
   })
 
 export const resetOpsFn = createServerFn({ method: 'POST' }).handler(
   async () => {
-    const { user } = await requireRole('admin')
-    const [liquor, grocery, users] = await Promise.all([
-      getAdminLiquorProductsQuery(),
-      getAdminGroceryProductsQuery(),
-      getAdminUsersQuery(),
-    ])
-    const fresh = seedOpsFromCatalog({ liquor, grocery, users })
-    await logAudit(
-      user.name,
-      'settings',
-      'delete',
-      'Reset operations mock state to initial catalog seed',
-    )
-    return saveOps(fresh)
+    await requireRole('admin')
+    // No-op in production relational database
+    return true
   },
 )
-
-export { MODULES, ACTIONS }
-
-
-// --- RIDER FUNCTIONS (ROW-LEVEL SCOPED) ---
 
 // -------------------------------------------------------------
 // RIDER PORTAL SERVER FUNCTIONS (ROW-LEVEL SCOPED)
@@ -1231,18 +1433,22 @@ export const getRiderPortalFn = createServerFn({ method: 'GET' }).handler(
       throw new Error('Forbidden: Rider access required')
     }
 
-    const ops = await loadOps()
+    let rider = await getRiderByUserIdQuery(user.id)
 
-    let rider = ops.riders.find(
-      (r) =>
-        (r.userId && r.userId === user.id) ||
-        (user.email && r.email.toLowerCase() === user.email.toLowerCase()),
-    )
+    if (!rider) {
+      const allRiders = await getAllRidersQuery()
+      rider =
+        allRiders.find(
+          (r) =>
+            user.email && r.email.toLowerCase() === user.email.toLowerCase(),
+        ) ?? null
+    }
 
     if (!rider) {
       // Auto-provision a rider profile for the logged in user with rider role
-      const newRider: Rider = {
-        id: nid('rid'),
+      const riderId = nid('rid')
+      await db.insert(riders).values({
+        id: riderId,
         userId: user.id,
         name: user.name || 'Rider Partner',
         email: user.email || '',
@@ -1252,28 +1458,23 @@ export const getRiderPortalFn = createServerFn({ method: 'GET' }).handler(
         verified: true,
         available: true,
         status: 'available',
-        lat: 27.7172,
-        lng: 85.324,
+        lat: '27.7172',
+        lng: '85.3240',
         zone: 'Kathmandu Core',
         commissionRate: 85,
         cashOnHand: 0,
         earnings: 0,
         deliveries: 0,
-        rating: 5.0,
-        createdAt: new Date().toISOString(),
-      }
-
-      await mutateOps((state) => {
-        state.riders.push(newRider)
-        return state
+        rating: '5.00',
       })
-      rider = newRider
+      rider = await getRiderByIdQuery(riderId)
     }
 
-    const currentRider = rider as Rider
-
-    // STRICT ROW-LEVEL SCOPE: ONLY orders assigned to THIS rider
-    const assignedOrders = ops.orders.filter((o) => o.riderId === currentRider.id)
+    const currentRider = rider!
+    const orderList = await getAllOrdersQuery()
+    const assignedOrders = orderList.filter(
+      (o) => o.riderId === currentRider.id,
+    )
 
     const activeOrders = assignedOrders.filter((o) =>
       ['assigned', 'out_for_delivery'].includes(o.status),
@@ -1319,84 +1520,81 @@ export const updateRiderDeliveryStatusFn = createServerFn({ method: 'POST' })
       throw new Error('Forbidden: Rider access required')
     }
 
-    const ops = await loadOps()
-    const rider = ops.riders.find(
-      (r) =>
-        (r.userId && r.userId === user.id) ||
-        (user.email && r.email.toLowerCase() === user.email.toLowerCase()),
-    )
+    const rider = await getRiderByUserIdQuery(user.id)
     if (!rider) throw new Error('Rider profile not found')
 
-    return mutateOps((state) => {
-      const order = state.orders.find((o) => o.id === data.orderId)
-      if (!order) throw new Error('Order not found')
+    const order = await getOrderByIdQuery(data.orderId)
+    if (!order) throw new Error('Order not found')
 
-      // ENFORCE: Rider can ONLY update their own assigned orders
-      if (order.riderId !== rider.id && user.role !== 'admin') {
-        throw new Error('Forbidden: You are not assigned to this delivery')
-      }
+    if (order.riderId !== rider.id && user.role !== 'admin') {
+      throw new Error('Forbidden: You are not assigned to this delivery')
+    }
 
-      const now = new Date().toISOString()
-      order.status = data.status
-      order.updatedAt = now
+    const now = new Date()
 
-      const currentRider = state.riders.find((r) => r.id === rider.id)
+    await dbTx.transaction(async (tx) => {
+      await tx
+        .update(orders)
+        .set({ status: data.status, updatedAt: now })
+        .where(eq(orders.id, data.orderId))
 
       if (data.status === 'out_for_delivery') {
-        if (currentRider) currentRider.status = 'busy'
-        order.events.push({
+        await tx
+          .update(riders)
+          .set({ status: 'busy', updatedAt: now })
+          .where(eq(riders.id, rider.id))
+
+        await tx.insert(orderStatusHistory).values({
           id: nid('evt'),
-          at: now,
+          orderId: order.id,
           status: 'out_for_delivery',
           note: data.notes || `Rider ${rider.name} started delivery`,
           actor: rider.name,
         })
-      } else if (data.status === 'delivered') {
-        if (currentRider) {
-          currentRider.deliveries += 1
-          const commission = Math.round(
-            order.deliveryCharge * (currentRider.commissionRate / 100),
-          )
-          currentRider.earnings += commission
+      } else {
+        const commission = Math.round(
+          order.deliveryCharge * (rider.commissionRate / 100),
+        )
+        const newEarnings = rider.earnings + commission
+        let newCashOnHand = rider.cashOnHand
 
-          if (order.paymentMethod === 'cod' && order.paymentStatus !== 'paid') {
-            order.paymentStatus = 'paid'
-            currentRider.cashOnHand += order.total
-          }
-
-          const hasMore = state.orders.some(
-            (o) =>
-              o.riderId === rider.id &&
-              ['assigned', 'out_for_delivery'].includes(o.status) &&
-              o.id !== order.id,
-          )
-          currentRider.status = hasMore
-            ? 'busy'
-            : currentRider.available
-              ? 'available'
-              : 'offline'
+        if (order.paymentMethod === 'cod' && order.paymentStatus !== 'paid') {
+          await tx
+            .update(orders)
+            .set({ paymentStatus: 'paid' })
+            .where(eq(orders.id, order.id))
+          newCashOnHand += order.total
         }
 
-        order.events.push({
+        await tx
+          .update(riders)
+          .set({
+            deliveries: rider.deliveries + 1,
+            earnings: newEarnings,
+            cashOnHand: newCashOnHand,
+            status: rider.available ? 'available' : 'offline',
+            updatedAt: now,
+          })
+          .where(eq(riders.id, rider.id))
+
+        await tx.insert(orderStatusHistory).values({
           id: nid('evt'),
-          at: now,
+          orderId: order.id,
           status: 'delivered',
           note: data.notes || `Delivered by rider ${rider.name}`,
           actor: rider.name,
         })
       }
-
-      state.audit.unshift({
-        id: nid('aud'),
-        at: now,
-        actor: rider.name,
-        module: 'riders',
-        action: 'edit',
-        detail: `Rider ${rider.name} marked order ${order.number} as ${data.status}`,
-      })
-
-      return state
     })
+
+    await logAudit(
+      rider.name,
+      'riders',
+      'edit',
+      `Rider ${rider.name} marked order ${order.number} as ${data.status}`,
+    )
+
+    return true
   })
 
 export const toggleRiderAvailabilityFn = createServerFn({ method: 'POST' })
@@ -1416,28 +1614,19 @@ export const toggleRiderAvailabilityFn = createServerFn({ method: 'POST' })
       throw new Error('Forbidden: Rider access required')
     }
 
-    return mutateOps((state) => {
-      const rider = state.riders.find(
-        (r) =>
-          (r.userId && r.userId === user.id) ||
-          (user.email && r.email.toLowerCase() === user.email.toLowerCase()),
-      )
-      if (!rider) throw new Error('Rider profile not found')
+    const rider = await getRiderByUserIdQuery(user.id)
+    if (!rider) throw new Error('Rider profile not found')
 
-      rider.available = data.available
-      const hasActive = state.orders.some(
-        (o) =>
-          o.riderId === rider.id &&
-          ['assigned', 'out_for_delivery'].includes(o.status),
-      )
-      rider.status = data.available
-        ? hasActive
-          ? 'busy'
-          : 'available'
-        : 'offline'
+    await db
+      .update(riders)
+      .set({
+        available: data.available,
+        status: data.available ? 'available' : 'offline',
+        updatedAt: new Date(),
+      })
+      .where(eq(riders.id, rider.id))
 
-      return state
-    })
+    return true
   })
 
 export const depositRiderCashFn = createServerFn({ method: 'POST' })
@@ -1458,42 +1647,50 @@ export const depositRiderCashFn = createServerFn({ method: 'POST' })
       throw new Error('Forbidden: Rider access required')
     }
 
-    return mutateOps((state) => {
-      const rider = state.riders.find(
-        (r) =>
-          (r.userId && r.userId === user.id) ||
-          (user.email && r.email.toLowerCase() === user.email.toLowerCase()),
-      )
-      if (!rider) throw new Error('Rider profile not found')
-      if (rider.cashOnHand < data.amount) {
-        throw new Error('Deposit amount exceeds cash on hand')
-      }
+    const rider = await getRiderByUserIdQuery(user.id)
+    if (!rider) throw new Error('Rider profile not found')
+    if (rider.cashOnHand < data.amount) {
+      throw new Error('Deposit amount exceeds cash on hand')
+    }
 
-      rider.cashOnHand -= data.amount
-      const now = new Date().toISOString()
+    const now = new Date()
 
-      state.ledger.unshift({
+    await dbTx.transaction(async (tx) => {
+      await tx
+        .update(riders)
+        .set({
+          cashOnHand: rider.cashOnHand - data.amount,
+          updatedAt: now,
+        })
+        .where(eq(riders.id, rider.id))
+
+      await tx.insert(riderCashHandovers).values({
+        id: nid('rch'),
+        riderId: rider.id,
+        amount: data.amount,
+        status: 'pending',
+        notes: data.note || 'Cash deposit to operations counter',
+      })
+
+      await tx.insert(ledgerEntries).values({
         id: nid('led'),
-        date: now,
+        date: now.toISOString().slice(0, 10),
         type: 'credit',
         category: 'settlement',
         account: 'Cash In Hand (Fleet)',
-        memo: data.note || `Cash float deposit from rider ${rider.name}`,
+        memo: `Rider cash deposit: ${rider.name} (Rs. ${(data.amount / 100).toFixed(2)})`,
         amount: data.amount,
         refType: 'settlement',
         refId: rider.id,
-        createdAt: now,
       })
-
-      state.audit.unshift({
-        id: nid('aud'),
-        at: now,
-        actor: rider.name,
-        module: 'accounts',
-        action: 'create',
-        detail: `Rider ${rider.name} submitted cash deposit NPR ${(data.amount / 100).toFixed(2)}`,
-      })
-
-      return state
     })
+
+    await logAudit(
+      rider.name,
+      'finance',
+      'create',
+      `Rider ${rider.name} submitted cash handover Rs. ${(data.amount / 100).toFixed(2)}`,
+    )
+
+    return true
   })

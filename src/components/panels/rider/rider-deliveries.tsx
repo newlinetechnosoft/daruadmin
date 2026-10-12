@@ -1,19 +1,14 @@
 import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { updateRiderDeliveryStatusFn } from '#/server/operations/operations.functions'
+import { queueOutboxAction } from '#/lib/idb/outbox'
 import type { Order } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
-import {
-  Package,
-  Phone,
-  MapPin,
-  CheckCircle2,
-  Truck,
-} from 'lucide-react'
+import { Package, Phone, MapPin, CheckCircle2, Truck } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface RiderDeliveriesProps {
@@ -43,6 +38,17 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
   ) => {
     try {
       setUpdatingOrderId(orderId)
+
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await queueOutboxAction('delivery_status', { orderId, status })
+        toast.info(
+          status === 'delivered'
+            ? 'Saved offline! Status & cash queued.'
+            : 'Saved offline!',
+        )
+        return
+      }
+
       await updateRiderDeliveryStatusFn({
         data: {
           orderId,
@@ -56,7 +62,16 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
       )
       await router.invalidate()
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to update order status')
+      if (
+        !navigator.onLine ||
+        err?.message?.includes('fetch') ||
+        err?.message?.includes('Network')
+      ) {
+        await queueOutboxAction('delivery_status', { orderId, status })
+        toast.info('Network failed. Saved offline to outbox.')
+      } else {
+        toast.error(err?.message || 'Failed to update order status')
+      }
     } finally {
       setUpdatingOrderId(null)
     }
@@ -66,7 +81,9 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
     <div className="space-y-6 pb-12">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-base font-semibold text-foreground">Delivery Orders</h2>
+          <h2 className="text-base font-semibold text-foreground">
+            Delivery Orders
+          </h2>
           <p className="text-xs text-muted-foreground">
             Manage your assigned parcels and complete customer deliveries
           </p>
@@ -95,7 +112,9 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
         <Card className="border-border border-dashed bg-card/50">
           <CardContent className="p-12 text-center space-y-2">
             <Package className="h-8 w-8 text-muted-foreground mx-auto" />
-            <h4 className="text-xs font-semibold text-foreground">No deliveries in this tab</h4>
+            <h4 className="text-xs font-semibold text-foreground">
+              No deliveries in this tab
+            </h4>
             <p className="text-xs text-muted-foreground">
               New deliveries assigned to your rider profile will show up here.
             </p>
@@ -186,7 +205,8 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
 
                   <div className="space-y-1">
                     <div className="text-[11px] text-muted-foreground font-medium">
-                      Items ({order.items.reduce((sum, it) => sum + it.qty, 0)}):
+                      Items ({order.items.reduce((sum, it) => sum + it.qty, 0)}
+                      ):
                     </div>
                     <ul className="text-xs text-foreground space-y-0.5 pl-2 border-l border-border">
                       {order.items.map((item) => (

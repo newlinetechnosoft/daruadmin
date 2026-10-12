@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getRouteApi,   useRouter  } from '@tanstack/react-router'
+import { getRouteApi, useRouter } from '@tanstack/react-router'
 import {
   upsertCouponFn,
   deleteCouponFn,
@@ -45,14 +45,15 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-
 const routeApi = getRouteApi('/admin/marketing')
 
 export function MarketingPanel() {
   const { ops } = routeApi.useLoaderData()
   const router = useRouter()
 
-  const [activeTab, setActiveTab] = useState<'coupons' | 'banners' | 'reviews'>('coupons')
+  const [activeTab, setActiveTab] = useState<'coupons' | 'banners' | 'reviews'>(
+    'coupons',
+  )
   const [isAddCouponOpen, setIsAddCouponOpen] = useState(false)
   const [isAddBannerOpen, setIsAddBannerOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -71,7 +72,8 @@ export function MarketingPanel() {
   // Banner form state
   const [bannerForm, setBannerForm] = useState({
     title: '',
-    imageUrl: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=800&auto=format&fit=crop&q=80',
+    imageUrl:
+      'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=800&auto=format&fit=crop&q=80',
     href: '/drinks',
     placement: 'home' as 'home' | 'drinks' | 'grocery',
     active: true,
@@ -156,7 +158,8 @@ export function MarketingPanel() {
       setIsAddBannerOpen(false)
       setBannerForm({
         title: '',
-        imageUrl: 'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=800&auto=format&fit=crop&q=80',
+        imageUrl:
+          'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=800&auto=format&fit=crop&q=80',
         href: '/drinks',
         placement: 'home',
         active: true,
@@ -182,7 +185,10 @@ export function MarketingPanel() {
     }
   }
 
-  const handleUpdateReview = async (id: string, status: 'published' | 'hidden') => {
+  const handleUpdateReview = async (
+    id: string,
+    status: 'published' | 'hidden',
+  ) => {
     try {
       setIsSubmitting(true)
       await updateReviewFn({ data: { id, status } })
@@ -242,7 +248,9 @@ export function MarketingPanel() {
       {/* Sub Tabs */}
       <Tabs
         value={activeTab}
-        onValueChange={(val) => setActiveTab(val as 'coupons' | 'banners' | 'reviews')}
+        onValueChange={(val) =>
+          setActiveTab(val as 'coupons' | 'banners' | 'reviews')
+        }
         className="w-full space-y-4"
       >
         <TabsList>
@@ -278,14 +286,17 @@ export function MarketingPanel() {
                 <TableBody>
                   {ops.coupons.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                      <TableCell
+                        colSpan={7}
+                        className="py-8 text-center text-muted-foreground"
+                      >
                         No coupons found.
                       </TableCell>
                     </TableRow>
                   ) : (
                     ops.coupons.map((coupon) => {
                       const usagePercent = Math.round(
-                        (coupon.used / (coupon.usageLimit || 1)) * 100
+                        (coupon.used / (coupon.usageLimit || 1)) * 100,
                       )
                       return (
                         <TableRow key={coupon.id}>
@@ -325,7 +336,9 @@ export function MarketingPanel() {
                               <div className="w-20 bg-muted h-1.5 rounded-full overflow-hidden">
                                 <div
                                   className="bg-primary h-full rounded-full"
-                                  style={{ width: `${Math.min(100, usagePercent)}%` }}
+                                  style={{
+                                    width: `${Math.min(100, usagePercent)}%`,
+                                  }}
                                 />
                               </div>
                               <span className="text-xs text-muted-foreground font-mono">
@@ -341,7 +354,9 @@ export function MarketingPanel() {
                           </TableCell>
 
                           <TableCell>
-                            <Badge variant={coupon.active ? 'success' : 'secondary'}>
+                            <Badge
+                              variant={coupon.active ? 'success' : 'secondary'}
+                            >
                               {coupon.active ? 'Active' : 'Expired'}
                             </Badge>
                           </TableCell>
@@ -375,7 +390,10 @@ export function MarketingPanel() {
               </div>
             ) : (
               ops.banners.map((banner) => (
-                <Card key={banner.id} className="overflow-hidden flex flex-col justify-between">
+                <Card
+                  key={banner.id}
+                  className="overflow-hidden flex flex-col justify-between"
+                >
                   <div className="relative h-44 bg-muted">
                     <img
                       src={banner.imageUrl}
@@ -386,8 +404,12 @@ export function MarketingPanel() {
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-primary text-primary-foreground w-fit mb-1">
                         Placement: {banner.placement}
                       </span>
-                      <h4 className="text-sm font-semibold text-foreground">{banner.title}</h4>
-                      <p className="text-xs text-muted-foreground font-mono">Link: {banner.href}</p>
+                      <h4 className="text-sm font-semibold text-foreground">
+                        {banner.title}
+                      </h4>
+                      <p className="text-xs text-muted-foreground font-mono">
+                        Link: {banner.href}
+                      </p>
                     </div>
                   </div>
 
@@ -422,26 +444,37 @@ export function MarketingPanel() {
                   </div>
                 ) : (
                   ops.reviews.map((rev) => (
-                    <div key={rev.id} className="py-3.5 first:pt-0 last:pb-0 space-y-2 text-xs">
+                    <div
+                      key={rev.id}
+                      className="py-3.5 first:pt-0 last:pb-0 space-y-2 text-xs"
+                    >
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className="font-semibold text-foreground">{rev.customerName}</span>
-                          <span className="text-muted-foreground ml-2">on {rev.productName}</span>
-                          <span className="text-muted-foreground ml-2 font-mono">{rev.createdAt}</span>
+                          <span className="font-semibold text-foreground">
+                            {rev.customerName}
+                          </span>
+                          <span className="text-muted-foreground ml-2">
+                            on {rev.productName}
+                          </span>
+                          <span className="text-muted-foreground ml-2 font-mono">
+                            {rev.createdAt}
+                          </span>
                         </div>
 
                         <div className="flex items-center gap-2">
                           <div className="flex items-center text-warning font-bold">
                             {'★'.repeat(rev.rating)}
-                            <span className="text-muted-foreground/30">{'★'.repeat(5 - rev.rating)}</span>
+                            <span className="text-muted-foreground/30">
+                              {'★'.repeat(5 - rev.rating)}
+                            </span>
                           </div>
                           <Badge
                             variant={
                               rev.status === 'published'
                                 ? 'success'
                                 : rev.status === 'hidden'
-                                ? 'destructive'
-                                : 'warning'
+                                  ? 'destructive'
+                                  : 'warning'
                             }
                           >
                             {rev.status}
@@ -449,7 +482,9 @@ export function MarketingPanel() {
                         </div>
                       </div>
 
-                      <p className="text-muted-foreground italic">&ldquo;{rev.body}&rdquo;</p>
+                      <p className="text-muted-foreground italic">
+                        &ldquo;{rev.body}&rdquo;
+                      </p>
 
                       <div className="pt-1 flex justify-end gap-2">
                         {rev.status !== 'published' && (
@@ -457,7 +492,9 @@ export function MarketingPanel() {
                             variant="outline"
                             size="sm"
                             className="h-7 text-xs gap-1"
-                            onClick={() => handleUpdateReview(rev.id, 'published')}
+                            onClick={() =>
+                              handleUpdateReview(rev.id, 'published')
+                            }
                           >
                             <Check className="h-3.5 w-3.5 text-success" />
                             Approve
@@ -489,7 +526,9 @@ export function MarketingPanel() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Create Promo Coupon</DialogTitle>
-            <DialogDescription>Configure cart discounts in Neon DB</DialogDescription>
+            <DialogDescription>
+              Configure cart discounts in Neon DB
+            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateCoupon} className="space-y-4">
@@ -499,7 +538,9 @@ export function MarketingPanel() {
                 id="coupon-code"
                 required
                 value={couponForm.code}
-                onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value })}
+                onChange={(e) =>
+                  setCouponForm({ ...couponForm, code: e.target.value })
+                }
                 placeholder="e.g. TIHAR2026, FESTIVE15"
                 className="font-mono font-semibold uppercase"
               />
@@ -530,7 +571,12 @@ export function MarketingPanel() {
                   min="1"
                   required
                   value={couponForm.value}
-                  onChange={(e) => setCouponForm({ ...couponForm, value: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setCouponForm({
+                      ...couponForm,
+                      value: Number(e.target.value),
+                    })
+                  }
                 />
               </div>
             </div>
@@ -544,7 +590,10 @@ export function MarketingPanel() {
                   min="0"
                   value={couponForm.minOrder}
                   onChange={(e) =>
-                    setCouponForm({ ...couponForm, minOrder: Number(e.target.value) })
+                    setCouponForm({
+                      ...couponForm,
+                      minOrder: Number(e.target.value),
+                    })
                   }
                 />
               </div>
@@ -556,7 +605,10 @@ export function MarketingPanel() {
                   min="1"
                   value={couponForm.usageLimit}
                   onChange={(e) =>
-                    setCouponForm({ ...couponForm, usageLimit: Number(e.target.value) })
+                    setCouponForm({
+                      ...couponForm,
+                      usageLimit: Number(e.target.value),
+                    })
                   }
                 />
               </div>
@@ -568,7 +620,9 @@ export function MarketingPanel() {
                 id="coupon-expiry"
                 type="date"
                 value={couponForm.expiresAt}
-                onChange={(e) => setCouponForm({ ...couponForm, expiresAt: e.target.value })}
+                onChange={(e) =>
+                  setCouponForm({ ...couponForm, expiresAt: e.target.value })
+                }
               />
             </div>
 
@@ -593,7 +647,9 @@ export function MarketingPanel() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add Campaign Banner</DialogTitle>
-            <DialogDescription>Publish storefront slider tile to Neon DB</DialogDescription>
+            <DialogDescription>
+              Publish storefront slider tile to Neon DB
+            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateBanner} className="space-y-4">
@@ -603,7 +659,9 @@ export function MarketingPanel() {
                 id="banner-title"
                 required
                 value={bannerForm.title}
-                onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })}
+                onChange={(e) =>
+                  setBannerForm({ ...bannerForm, title: e.target.value })
+                }
                 placeholder="e.g. Premium Single Malt Scotch Deals"
               />
             </div>
@@ -615,7 +673,9 @@ export function MarketingPanel() {
                 type="url"
                 required
                 value={bannerForm.imageUrl}
-                onChange={(e) => setBannerForm({ ...bannerForm, imageUrl: e.target.value })}
+                onChange={(e) =>
+                  setBannerForm({ ...bannerForm, imageUrl: e.target.value })
+                }
               />
             </div>
 
@@ -628,7 +688,8 @@ export function MarketingPanel() {
                   onChange={(e) =>
                     setBannerForm({
                       ...bannerForm,
-                      placement: e.target.value as 'home' | 'drinks' | 'grocery',
+                      placement: e.target.value as
+                        'home' | 'drinks' | 'grocery',
                     })
                   }
                 >
@@ -642,7 +703,9 @@ export function MarketingPanel() {
                 <Input
                   id="banner-href"
                   value={bannerForm.href}
-                  onChange={(e) => setBannerForm({ ...bannerForm, href: e.target.value })}
+                  onChange={(e) =>
+                    setBannerForm({ ...bannerForm, href: e.target.value })
+                  }
                 />
               </div>
             </div>

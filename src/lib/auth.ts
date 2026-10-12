@@ -65,7 +65,9 @@ export const auth = betterAuth({
     }
     if (process.env.BETTER_AUTH_TRUSTED_ORIGINS) {
       origins.push(
-        ...process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(',').map((s) => s.trim())
+        ...process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(',').map((s) =>
+          s.trim(),
+        ),
       )
     }
 

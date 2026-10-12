@@ -1,12 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getStaffOpsFn } from '#/server/operations/operations.functions'
 import { guardModule } from '#/server/auth/guards'
 import { StaffPanel } from '#/components/panels/staff'
+import { adminQueries } from '#/queries/admin'
 
 export const Route = createFileRoute('/admin/staff')({
   beforeLoad: guardModule('staff'),
-  loader: async () => {
-    return getStaffOpsFn()
+  loader: async ({ context }) => {
+    return context.queryClient.ensureQueryData(adminQueries.staff())
   },
   component: StaffPanel,
 })

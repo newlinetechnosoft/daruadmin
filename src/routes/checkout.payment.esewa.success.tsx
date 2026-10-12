@@ -38,18 +38,18 @@ function EsewaSuccessPage() {
         encodedResponse: data,
       },
     })
-      .then((res) => {
+      .then(() => {
         if (!isMounted) return
-        if (res.success) {
-          navigate({
-            to: '/order-confirmation/$orderId',
-            params: { orderId },
-          })
-        }
+        navigate({
+          to: '/order-confirmation/$orderId',
+          params: { orderId },
+        })
       })
       .catch((err) => {
         if (!isMounted) return
-        setError(err instanceof Error ? err.message : 'Payment verification failed')
+        setError(
+          err instanceof Error ? err.message : 'Payment verification failed',
+        )
       })
       .finally(() => {
         if (isMounted) setIsVerifying(false)
@@ -75,7 +75,8 @@ function EsewaSuccessPage() {
                   Verifying eSewa Payment
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  Please hold on while our server confirms your transaction with eSewa...
+                  Please hold on while our server confirms your transaction with
+                  eSewa...
                 </p>
               </>
             ) : error ? (

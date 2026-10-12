@@ -13,7 +13,7 @@ export interface SessionUser {
 }
 
 export const DEFAULT_GRANTS_BY_ROLE: Record<string, UserGrants> = {
-  admin: Object.fromEntries(MODULES.map((m) => [m, [...ACTIONS]])) as UserGrants,
+  admin: Object.fromEntries(MODULES.map((m) => [m, [...ACTIONS]])),
   manager: {
     dashboard: ['view'],
     products: ['view', 'create', 'edit'],

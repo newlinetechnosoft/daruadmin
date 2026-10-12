@@ -19,8 +19,9 @@ function ForbiddenPage() {
             Access Restricted
           </h2>
           <p className="mt-2 text-xs text-muted-foreground leading-relaxed max-w-sm">
-            You do not possess the necessary role or permissions to view this module.
-            Please reach out to an administrator if you believe this is an error.
+            You do not possess the necessary role or permissions to view this
+            module. Please reach out to an administrator if you believe this is
+            an error.
           </p>
           <div className="mt-6 flex items-center gap-3">
             <Button asChild size="sm" variant="default" className="text-xs">

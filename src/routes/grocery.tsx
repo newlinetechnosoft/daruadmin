@@ -1,10 +1,7 @@
 import { useState, useMemo } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import {
-  getGroceryCategoriesFn,
-  getGroceryProductsFn,
-} from '#/server/catalog/catalog.functions'
+import { storefrontQueries } from '#/queries/storefront'
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { ProductCard } from '#/components/store/product-card'
@@ -49,17 +46,19 @@ export const Route = createFileRoute('/grocery')({
     category: search.category,
     query: search.query,
   }),
-  loader: async ({ deps }) => {
+  loader: async ({ deps, context }) => {
     const [categories, products] = await Promise.all([
-      getGroceryCategoriesFn(),
-      getGroceryProductsFn({
-        data: {
+      context.queryClient.ensureQueryData(
+        storefrontQueries.groceryCategories(),
+      ),
+      context.queryClient.ensureQueryData(
+        storefrontQueries.groceryProducts({
           categorySlug: deps.category,
           query: deps.query,
           limit: 50,
           offset: 0,
-        },
-      }),
+        }),
+      ),
     ])
 
     return {
@@ -218,7 +217,9 @@ function GroceryPage() {
                 size="sm"
                 onClick={() => handleCategorySelect(cat.slug)}
                 className={`w-full justify-between h-8 px-2.5 text-xs font-normal ${
-                  active ? 'font-medium text-foreground' : 'text-muted-foreground'
+                  active
+                    ? 'font-medium text-foreground'
+                    : 'text-muted-foreground'
                 }`}
               >
                 <span>{cat.name}</span>
@@ -440,14 +441,17 @@ function GroceryPage() {
 
       {/* Mobile Filter Sheet */}
       <Sheet open={mobileFilterOpen} onOpenChange={setMobileFilterOpen}>
-        <SheetContent side="left" className="w-80 p-6 flex flex-col justify-between">
+        <SheetContent
+          side="left"
+          className="w-80 p-6 flex flex-col justify-between"
+        >
           <SheetHeader className="text-left border-b border-border pb-4">
-            <SheetTitle className="text-sm font-semibold">Filter groceries</SheetTitle>
+            <SheetTitle className="text-sm font-semibold">
+              Filter groceries
+            </SheetTitle>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto py-6">
-            {filterPanel}
-          </div>
+          <div className="flex-1 overflow-y-auto py-6">{filterPanel}</div>
 
           <div className="grid grid-cols-2 gap-3 border-t border-border pt-4">
             <Button

@@ -5,7 +5,13 @@ import type { Order } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '#/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '#/components/ui/card'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { Separator } from '#/components/ui/separator'
@@ -32,11 +38,13 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
     getOrderDetailsFn({ data: { orderId } })
       .then((data) => {
         if (!isMounted) return
-        setOrder(data as Order)
+        setOrder(data)
       })
       .catch((err) => {
         if (!isMounted) return
-        setError(err instanceof Error ? err.message : 'Unable to load order details')
+        setError(
+          err instanceof Error ? err.message : 'Unable to load order details',
+        )
       })
       .finally(() => {
         if (isMounted) setIsLoading(false)
@@ -73,7 +81,9 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive mb-3">
               <AlertCircle className="h-6 w-6" />
             </div>
-            <h2 className="text-lg font-bold text-foreground">Order Not Found</h2>
+            <h2 className="text-lg font-bold text-foreground">
+              Order Not Found
+            </h2>
             <p className="mt-1 text-xs text-muted-foreground">
               {error || 'We could not retrieve this order record.'}
             </p>
@@ -102,7 +112,8 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
               Order Confirmed!
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Thank you for ordering with Mezmani. Your express dispatch is in progress.
+              Thank you for ordering with Mezmani. Your express dispatch is in
+              progress.
             </p>
           </div>
 
@@ -117,16 +128,27 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
                     {order.number}
                   </CardTitle>
                   <CardDescription className="text-xs mt-0.5">
-                    Tracking Code: <span className="font-mono text-foreground font-semibold">{order.trackingCode}</span>
+                    Tracking Code:{' '}
+                    <span className="font-mono text-foreground font-semibold">
+                      {order.trackingCode}
+                    </span>
                   </CardDescription>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="default" className="text-xs font-semibold capitalize">
+                  <Badge
+                    variant="default"
+                    className="text-xs font-semibold capitalize"
+                  >
                     Status: {order.status}
                   </Badge>
-                  <Badge variant="secondary" className="text-xs font-mono font-semibold">
-                    {order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'eSewa'}
+                  <Badge
+                    variant="secondary"
+                    className="text-xs font-mono font-semibold"
+                  >
+                    {order.paymentMethod === 'cod'
+                      ? 'Cash on Delivery'
+                      : 'eSewa'}
                   </Badge>
                 </div>
               </div>
@@ -143,7 +165,8 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
                     Estimated Delivery: Within 40–45 Minutes
                   </h4>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Our nearest dispatch hub has received your order. A rider will be assigned shortly and will call you upon departure.
+                    Our nearest dispatch hub has received your order. A rider
+                    will be assigned shortly and will call you upon departure.
                   </p>
                 </div>
               </div>
@@ -160,7 +183,8 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
                   </p>
                   {order.lat && order.lng && (
                     <p className="text-[11px] font-mono text-muted-foreground">
-                      Coordinates: {order.lat.toFixed(6)}° N, {order.lng.toFixed(6)}° E
+                      Coordinates: {order.lat.toFixed(6)}° N,{' '}
+                      {order.lng.toFixed(6)}° E
                     </p>
                   )}
                 </div>
@@ -224,7 +248,9 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
 
                 {order.discount > 0 && (
                   <div className="flex justify-between text-success">
-                    <span>Discount {order.couponCode ? `(${order.couponCode})` : ''}</span>
+                    <span>
+                      Discount {order.couponCode ? `(${order.couponCode})` : ''}
+                    </span>
                     <span className="font-mono font-medium">
                       -{formatNPR(order.discount)}
                     </span>
@@ -258,7 +284,8 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
                         Cash on Delivery Reminder
                       </h5>
                       <p className="text-muted-foreground mt-0.5">
-                        Please keep <strong>{formatNPR(order.total)}</strong> in cash ready when the rider arrives at your doorstep.
+                        Please keep <strong>{formatNPR(order.total)}</strong> in
+                        cash ready when the rider arrives at your doorstep.
                       </p>
                     </>
                   ) : (
@@ -267,7 +294,8 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
                         eSewa Digital Payment
                       </h5>
                       <p className="text-muted-foreground mt-0.5">
-                        Payment status: <strong>{order.paymentStatus}</strong>. Your transaction reference is recorded on your invoice.
+                        Payment status: <strong>{order.paymentStatus}</strong>.
+                        Your transaction reference is recorded on your invoice.
                       </p>
                     </>
                   )}
@@ -282,7 +310,12 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
-                <Button asChild variant="outline" className="flex-1 text-xs" size="lg">
+                <Button
+                  asChild
+                  variant="outline"
+                  className="flex-1 text-xs"
+                  size="lg"
+                >
                   <Link to="/">Back to Home</Link>
                 </Button>
               </div>

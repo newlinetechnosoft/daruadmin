@@ -4,6 +4,7 @@ import {
   updateRiderDeliveryStatusFn,
   toggleRiderAvailabilityFn,
 } from '#/server/operations/operations.functions'
+import { queueOutboxAction } from '#/lib/idb/outbox'
 import type { Rider, Order } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
 import { Button } from '#/components/ui/button'
@@ -67,6 +68,17 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
   ) => {
     try {
       setUpdatingOrderId(orderId)
+
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await queueOutboxAction('delivery_status', { orderId, status })
+        toast.info(
+          status === 'delivered'
+            ? 'Saved offline! Delivery & cash queued.'
+            : 'Saved offline!',
+        )
+        return
+      }
+
       await updateRiderDeliveryStatusFn({
         data: {
           orderId,
@@ -80,7 +92,16 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
       )
       await router.invalidate()
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to update order')
+      if (
+        !navigator.onLine ||
+        err?.message?.includes('fetch') ||
+        err?.message?.includes('Network')
+      ) {
+        await queueOutboxAction('delivery_status', { orderId, status })
+        toast.info('Network failed. Saved offline to outbox.')
+      } else {
+        toast.error(err?.message || 'Failed to update order')
+      }
     } finally {
       setUpdatingOrderId(null)
     }
@@ -97,7 +118,9 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-semibold text-foreground">{rider.name}</h2>
+                <h2 className="text-base font-semibold text-foreground">
+                  {rider.name}
+                </h2>
                 <Badge
                   variant={rider.available ? 'default' : 'secondary'}
                   className="text-[11px]"
@@ -106,8 +129,15 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                Zone: <span className="text-foreground font-medium">{rider.zone}</span> • Vehicle:{' '}
-                <span className="text-foreground font-medium capitalize">{rider.vehicle}</span> ({rider.licenseNo})
+                Zone:{' '}
+                <span className="text-foreground font-medium">
+                  {rider.zone}
+                </span>{' '}
+                • Vehicle:{' '}
+                <span className="text-foreground font-medium capitalize">
+                  {rider.vehicle}
+                </span>{' '}
+                ({rider.licenseNo})
               </p>
             </div>
           </div>
@@ -130,52 +160,68 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
         <Card className="border-border bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Active Deliveries</span>
+              <span className="text-xs text-muted-foreground">
+                Active Deliveries
+              </span>
               <Truck className="h-4 w-4 text-info" />
             </div>
             <div className="mt-2 text-2xl font-bold tracking-tight text-foreground">
               {stats.activeCount}
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">Pending delivery</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Pending delivery
+            </p>
           </CardContent>
         </Card>
 
         <Card className="border-border bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Completed Today</span>
+              <span className="text-xs text-muted-foreground">
+                Completed Today
+              </span>
               <CheckCircle2 className="h-4 w-4 text-success" />
             </div>
             <div className="mt-2 text-2xl font-bold tracking-tight text-foreground">
               {stats.completedCount}
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">Total deliveries</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Total deliveries
+            </p>
           </CardContent>
         </Card>
 
         <Card className="border-border bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Cash in Hand (COD)</span>
+              <span className="text-xs text-muted-foreground">
+                Cash in Hand (COD)
+              </span>
               <Wallet className="h-4 w-4 text-warning" />
             </div>
             <div className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono">
               {formatNPR(stats.cashOnHand)}
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">Pending handover</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Pending handover
+            </p>
           </CardContent>
         </Card>
 
         <Card className="border-border bg-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Earned Commission</span>
+              <span className="text-xs text-muted-foreground">
+                Earned Commission
+              </span>
               <Coins className="h-4 w-4 text-success" />
             </div>
             <div className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono">
               {formatNPR(stats.earnings)}
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">{rider.commissionRate}% rate</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {rider.commissionRate}% rate
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -184,8 +230,12 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Assigned Deliveries</h3>
-            <p className="text-xs text-muted-foreground">Orders ready for pickup or on route</p>
+            <h3 className="text-sm font-semibold text-foreground">
+              Assigned Deliveries
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Orders ready for pickup or on route
+            </p>
           </div>
           <Link
             to="/rider/deliveries"
@@ -199,7 +249,9 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
           <Card className="border-border border-dashed bg-card/50">
             <CardContent className="p-8 text-center space-y-2">
               <Package className="h-8 w-8 text-muted-foreground mx-auto" />
-              <h4 className="text-xs font-semibold text-foreground">No active deliveries right now</h4>
+              <h4 className="text-xs font-semibold text-foreground">
+                No active deliveries right now
+              </h4>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
                 {rider.available
                   ? 'Keep app open and wait for dispatch to assign orders in your zone.'
@@ -215,7 +267,10 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
               const isUpdating = updatingOrderId === order.id
 
               return (
-                <Card key={order.id} className="border-border bg-card flex flex-col justify-between">
+                <Card
+                  key={order.id}
+                  className="border-border bg-card flex flex-col justify-between"
+                >
                   <CardHeader className="p-4 pb-2">
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -241,9 +296,13 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
                         </span>
                         <div className="text-[10px] text-muted-foreground">
                           {isCOD ? (
-                            <span className="text-warning font-semibold">Collect COD</span>
+                            <span className="text-warning font-semibold">
+                              Collect COD
+                            </span>
                           ) : (
-                            <span className="text-success font-medium">Prepaid ({order.paymentMethod})</span>
+                            <span className="text-success font-medium">
+                              Prepaid ({order.paymentMethod})
+                            </span>
                           )}
                         </div>
                       </div>
@@ -271,11 +330,15 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
 
                     <div className="space-y-1">
                       <div className="text-[11px] text-muted-foreground font-medium">
-                        Items ({order.items.reduce((sum, it) => sum + it.qty, 0)}):
+                        Items (
+                        {order.items.reduce((sum, it) => sum + it.qty, 0)}):
                       </div>
                       <ul className="text-xs text-foreground space-y-0.5 pl-2 border-l border-border">
                         {order.items.map((item) => (
-                          <li key={item.id} className="flex justify-between text-[11px]">
+                          <li
+                            key={item.id}
+                            className="flex justify-between text-[11px]"
+                          >
                             <span>
                               {item.qty}x {item.name}
                             </span>
@@ -319,7 +382,9 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
                       {!isOut ? (
                         <Button
                           size="sm"
-                          onClick={() => handleUpdateStatus(order.id, 'out_for_delivery')}
+                          onClick={() =>
+                            handleUpdateStatus(order.id, 'out_for_delivery')
+                          }
                           disabled={isUpdating}
                           className="h-8 text-xs flex-1 bg-info hover:bg-info/90 text-info-foreground"
                         >
@@ -329,12 +394,18 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
                       ) : (
                         <Button
                           size="sm"
-                          onClick={() => handleUpdateStatus(order.id, 'delivered')}
+                          onClick={() =>
+                            handleUpdateStatus(order.id, 'delivered')
+                          }
                           disabled={isUpdating}
                           className="h-8 text-xs flex-1 bg-success hover:bg-success/90 text-success-foreground"
                         >
                           <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                          {isUpdating ? 'Saving...' : isCOD ? 'Delivered & Collect' : 'Mark Delivered'}
+                          {isUpdating
+                            ? 'Saving...'
+                            : isCOD
+                              ? 'Delivered & Collect'
+                              : 'Mark Delivered'}
                         </Button>
                       )}
                     </div>

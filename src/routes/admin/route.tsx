@@ -8,14 +8,14 @@ import {
   useNavigate,
 } from '@tanstack/react-router'
 import {
-  getAdminChromeFn,
-  getMyAccessFn,
   globalSearchFn,
   markNotificationsFn,
 } from '#/server/operations/operations.functions'
+import { adminQueries } from '#/queries/admin'
 import { can } from '#/server/auth/permissions-shared'
 import type { ModuleKey } from '#/server/operations/types'
 import { authClient } from '#/lib/auth-client'
+import { clearAllLocalData } from '#/lib/idb'
 import {
   LayoutDashboard,
   Wine,
@@ -93,9 +93,11 @@ import { Kbd } from '#/components/ui/kbd'
 import { ThemeToggle } from '#/components/shared/theme-toggle'
 
 export const Route = createFileRoute('/admin')({
-  beforeLoad: async ({ location }) => {
-    const access = await getMyAccessFn()
-    if (!access.authenticated || !access.user) {
+  beforeLoad: async ({ location, context }) => {
+    const access = await context.queryClient.ensureQueryData(
+      adminQueries.access(),
+    )
+    if (!access.authenticated) {
       throw redirect({
         to: '/login',
         search: { redirect: location.pathname },
@@ -119,8 +121,8 @@ export const Route = createFileRoute('/admin')({
       adminUser: access.user,
     }
   },
-  loader: async () => {
-    return getAdminChromeFn()
+  loader: async ({ context }) => {
+    return context.queryClient.ensureQueryData(adminQueries.chrome())
   },
   component: AdminLayout,
 })
@@ -136,22 +138,55 @@ type NavItem = {
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Overview',
-    items: [{ label: 'Dashboard', to: '/admin', exact: true, icon: LayoutDashboard, module: 'dashboard' }],
+    items: [
+      {
+        label: 'Dashboard',
+        to: '/admin',
+        exact: true,
+        icon: LayoutDashboard,
+        module: 'dashboard',
+      },
+    ],
   },
   {
     label: 'Catalog',
     items: [
       { label: 'Liquor', to: '/admin/liquor', icon: Wine, module: 'products' },
-      { label: 'Grocery', to: '/admin/grocery', icon: ShoppingBag, module: 'products' },
-      { label: 'Categories', to: '/admin/taxonomy', icon: Tags, module: 'products' },
+      {
+        label: 'Grocery',
+        to: '/admin/grocery',
+        icon: ShoppingBag,
+        module: 'products',
+      },
+      {
+        label: 'Categories',
+        to: '/admin/taxonomy',
+        icon: Tags,
+        module: 'products',
+      },
     ],
   },
   {
     label: 'Commerce',
     items: [
-      { label: 'Orders', to: '/admin/orders', icon: ClipboardList, module: 'orders' },
-      { label: 'Customers', to: '/admin/customers', icon: Users, module: 'customers' },
-      { label: 'Inventory', to: '/admin/inventory', icon: Package, module: 'products' },
+      {
+        label: 'Orders',
+        to: '/admin/orders',
+        icon: ClipboardList,
+        module: 'orders',
+      },
+      {
+        label: 'Customers',
+        to: '/admin/customers',
+        icon: Users,
+        module: 'customers',
+      },
+      {
+        label: 'Inventory',
+        to: '/admin/inventory',
+        icon: Package,
+        module: 'products',
+      },
     ],
   },
   {
@@ -159,26 +194,58 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { label: 'Riders', to: '/admin/riders', icon: Bike, module: 'riders' },
       { label: 'Staff', to: '/admin/staff', icon: Shield, module: 'staff' },
-      { label: 'Shipping', to: '/admin/shipping', icon: Truck, module: 'shipping' },
+      {
+        label: 'Shipping',
+        to: '/admin/shipping',
+        icon: Truck,
+        module: 'shipping',
+      },
     ],
   },
   {
     label: 'Finance',
     items: [
-      { label: 'Accounts', to: '/admin/accounts', icon: Wallet, module: 'accounts' },
-      { label: 'Payments', to: '/admin/payments', icon: CreditCard, module: 'payments' },
+      {
+        label: 'Accounts',
+        to: '/admin/accounts',
+        icon: Wallet,
+        module: 'accounts',
+      },
+      {
+        label: 'Payments',
+        to: '/admin/payments',
+        icon: CreditCard,
+        module: 'payments',
+      },
     ],
   },
   {
     label: 'Growth',
     items: [
-      { label: 'Marketing', to: '/admin/marketing', icon: Megaphone, module: 'marketing' },
-      { label: 'Reports', to: '/admin/reports', icon: BarChart3, module: 'reports' },
+      {
+        label: 'Marketing',
+        to: '/admin/marketing',
+        icon: Megaphone,
+        module: 'marketing',
+      },
+      {
+        label: 'Reports',
+        to: '/admin/reports',
+        icon: BarChart3,
+        module: 'reports',
+      },
     ],
   },
   {
     label: 'System',
-    items: [{ label: 'Settings', to: '/admin/settings', icon: Settings, module: 'settings' }],
+    items: [
+      {
+        label: 'Settings',
+        to: '/admin/settings',
+        icon: Settings,
+        module: 'settings',
+      },
+    ],
   },
 ]
 
@@ -244,6 +311,7 @@ function AdminLayout() {
     setIsLoggingOut(true)
     try {
       await authClient.signOut()
+      await clearAllLocalData()
       toast.success('Signed out successfully')
       navigate({ to: '/login' })
     } catch {
@@ -275,15 +343,15 @@ function AdminLayout() {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background text-foreground antialiased">
-        <Sidebar collapsible="icon" className="border-r border-border bg-sidebar">
+        <Sidebar
+          collapsible="icon"
+          className="border-r border-border bg-sidebar"
+        >
           <SidebarHeader className="border-b border-border/40">
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton size="lg" asChild>
-                  <Link
-                    to="/admin"
-                    className="flex items-center gap-2.5"
-                  >
+                  <Link to="/admin" className="flex items-center gap-2.5">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary font-bold text-xs text-primary-foreground">
                       M
                     </div>
@@ -338,7 +406,11 @@ function AdminLayout() {
           <SidebarFooter className="border-t border-border/40 p-2">
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Storefront" className="text-xs text-muted-foreground">
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Storefront"
+                  className="text-xs text-muted-foreground"
+                >
                   <Link to="/" target="_blank" rel="noreferrer">
                     <ExternalLink className="h-4 w-4" />
                     <span>Storefront</span>
@@ -392,7 +464,11 @@ function AdminLayout() {
 
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative h-8 w-8">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative h-8 w-8"
+                  >
                     <Bell className="h-4 w-4" />
                     {unreadCount > 0 && (
                       <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
@@ -426,8 +502,12 @@ function AdminLayout() {
                           href={n.href}
                           className="flex flex-col gap-0.5 px-3 py-2.5 text-xs transition-colors hover:bg-muted/50"
                         >
-                          <span className="font-medium text-foreground">{n.title}</span>
-                          <span className="text-[11px] text-muted-foreground">{n.body}</span>
+                          <span className="font-medium text-foreground">
+                            {n.title}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {n.body}
+                          </span>
                         </a>
                       ))
                     )}
@@ -437,7 +517,10 @@ function AdminLayout() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 gap-2 rounded-full p-1 pl-1 pr-2 hover:bg-accent">
+                  <Button
+                    variant="ghost"
+                    className="relative h-8 gap-2 rounded-full p-1 pl-1 pr-2 hover:bg-accent"
+                  >
                     <Avatar className="h-6 w-6">
                       <AvatarFallback className="bg-primary text-[10px] text-primary-foreground font-semibold">
                         {adminUser.name.charAt(0).toUpperCase()}
@@ -451,10 +534,17 @@ function AdminLayout() {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-xs font-semibold leading-none">{adminUser.name}</p>
-                      <p className="text-[11px] leading-none text-muted-foreground">{adminUser.email}</p>
+                      <p className="text-xs font-semibold leading-none">
+                        {adminUser.name}
+                      </p>
+                      <p className="text-[11px] leading-none text-muted-foreground">
+                        {adminUser.email}
+                      </p>
                       <div className="pt-1">
-                        <Badge variant="outline" className="text-[10px] font-normal capitalize">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-normal capitalize"
+                        >
                           {adminUser.role}
                         </Badge>
                       </div>
@@ -501,73 +591,81 @@ function AdminLayout() {
                 : 'No results found.'}
             </CommandEmpty>
 
-            {can(grants, 'products', 'view') && results?.products && results.products.length > 0 && (
-              <CommandGroup heading="Products">
-                {results.products.map((p) => (
-                  <CommandItem
-                    key={p.id}
-                    onSelect={() => {
-                      setSearchOpen(false)
-                      window.location.href = p.href
-                    }}
-                  >
-                    <Wine className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span>{p.name}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
+            {can(grants, 'products', 'view') &&
+              results?.products &&
+              results.products.length > 0 && (
+                <CommandGroup heading="Products">
+                  {results.products.map((p) => (
+                    <CommandItem
+                      key={p.id}
+                      onSelect={() => {
+                        setSearchOpen(false)
+                        window.location.href = p.href
+                      }}
+                    >
+                      <Wine className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <span>{p.name}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
 
-            {can(grants, 'orders', 'view') && results?.orders && results.orders.length > 0 && (
-              <CommandGroup heading="Orders">
-                {results.orders.map((o) => (
-                  <CommandItem
-                    key={o.id}
-                    onSelect={() => {
-                      setSearchOpen(false)
-                      window.location.href = o.href
-                    }}
-                  >
-                    <ClipboardList className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span>{o.name}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
+            {can(grants, 'orders', 'view') &&
+              results?.orders &&
+              results.orders.length > 0 && (
+                <CommandGroup heading="Orders">
+                  {results.orders.map((o) => (
+                    <CommandItem
+                      key={o.id}
+                      onSelect={() => {
+                        setSearchOpen(false)
+                        window.location.href = o.href
+                      }}
+                    >
+                      <ClipboardList className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <span>{o.name}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
 
-            {can(grants, 'customers', 'view') && results?.customers && results.customers.length > 0 && (
-              <CommandGroup heading="Customers">
-                {results.customers.map((c) => (
-                  <CommandItem
-                    key={c.id}
-                    onSelect={() => {
-                      setSearchOpen(false)
-                      window.location.href = c.href
-                    }}
-                  >
-                    <Users className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span>{c.name}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
+            {can(grants, 'customers', 'view') &&
+              results?.customers &&
+              results.customers.length > 0 && (
+                <CommandGroup heading="Customers">
+                  {results.customers.map((c) => (
+                    <CommandItem
+                      key={c.id}
+                      onSelect={() => {
+                        setSearchOpen(false)
+                        window.location.href = c.href
+                      }}
+                    >
+                      <Users className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <span>{c.name}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
 
-            {can(grants, 'riders', 'view') && results?.riders && results.riders.length > 0 && (
-              <CommandGroup heading="Riders">
-                {results.riders.map((r) => (
-                  <CommandItem
-                    key={r.id}
-                    onSelect={() => {
-                      setSearchOpen(false)
-                      window.location.href = r.href
-                    }}
-                  >
-                    <Bike className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span>{r.name}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
+            {can(grants, 'riders', 'view') &&
+              results?.riders &&
+              results.riders.length > 0 && (
+                <CommandGroup heading="Riders">
+                  {results.riders.map((r) => (
+                    <CommandItem
+                      key={r.id}
+                      onSelect={() => {
+                        setSearchOpen(false)
+                        window.location.href = r.href
+                      }}
+                    >
+                      <Bike className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <span>{r.name}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
           </CommandList>
         </CommandDialog>
       </div>

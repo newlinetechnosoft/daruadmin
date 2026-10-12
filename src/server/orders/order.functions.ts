@@ -1,22 +1,31 @@
 import { createServerFn } from '@tanstack/react-start'
 import { createHmac } from 'node:crypto'
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, count } from 'drizzle-orm'
 import { z } from 'zod'
-import { db } from '#/db'
+import { db, dbTx } from '#/db'
 import {
   liquorVariants,
   liquorProducts,
   groceryVariants,
   groceryProducts,
   user,
+  orders,
+  orderItems,
+  orderStatusHistory,
+  stockMovements,
+  coupons,
+  ledgerEntries,
+  payments,
+  notifications,
 } from '#/db/schema'
 import { getSessionUser, logAudit } from '#/server/auth/permissions'
-import { loadOps, mutateOps, nid } from '#/server/operations/store'
-import type { Order, OrderItem, PaymentMethod } from '#/server/operations/types'
 import {
-  checkoutFormSchema,
-  validatePromoSchema,
-} from './order.schemas'
+  getCouponByCodeQuery,
+  getStoreSettingsQuery,
+} from '#/server/platform/platform.queries'
+import { getOrderByIdQuery } from '#/server/orders/order.queries'
+import type { PaymentMethod } from '#/server/operations/types'
+import { checkoutFormSchema, validatePromoSchema } from './order.schemas'
 import { fromPaisa } from '#/lib/money'
 
 // Free delivery threshold: Rs 3,000 (300,000 paisa). Standard express delivery: Rs 150 (15,000 paisa)
@@ -46,6 +55,10 @@ function generateEsewaSignature(
   return hmac.digest('base64')
 }
 
+function nid(prefix = 'id') {
+  return `${prefix}_${crypto.randomUUID().slice(0, 8)}`
+}
+
 // -------------------------------------------------------------
 // 1. VALIDATE PROMO FUNCTION (SERVER-SIDE)
 // -------------------------------------------------------------
@@ -53,12 +66,10 @@ function generateEsewaSignature(
 export const validatePromoFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => validatePromoSchema.parse(d))
   .handler(async ({ data }) => {
-    // Session is required for customer operations
     await getSessionUser()
 
-    const ops = await loadOps()
     const cleanCode = data.code.trim().toUpperCase()
-    const coupon = ops.coupons.find((c) => c.code === cleanCode)
+    const coupon = await getCouponByCodeQuery(cleanCode)
 
     if (!coupon) {
       return {
@@ -122,22 +133,23 @@ export const validatePromoFn = createServerFn({ method: 'POST' })
 export const createCustomerOrderFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => checkoutFormSchema.parse(d))
   .handler(async ({ data }) => {
-    // Require session
     const sessionUser = await getSessionUser()
-    const ops = await loadOps()
 
     // Idempotency check: if an order with this idempotency key already exists, return it
     if (data.idempotencyKey) {
-      const existing = ops.orders.find(
-        (o) => o.idempotencyKey === data.idempotencyKey,
-      )
-      if (existing) {
+      const existing = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.idempotencyKey, data.idempotencyKey))
+        .limit(1)
+
+      if (existing[0]) {
         return {
           success: true,
-          orderId: existing.id,
-          orderNumber: existing.number,
-          paymentMethod: existing.paymentMethod,
-          totalPaisa: existing.total,
+          orderId: existing[0].id,
+          orderNumber: existing[0].number,
+          paymentMethod: existing[0].paymentMethod as PaymentMethod,
+          totalPaisa: existing[0].total,
           isDuplicate: true,
         }
       }
@@ -153,7 +165,10 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
           product: liquorProducts,
         })
         .from(liquorVariants)
-        .innerJoin(liquorProducts, eq(liquorVariants.productId, liquorProducts.id))
+        .innerJoin(
+          liquorProducts,
+          eq(liquorVariants.productId, liquorProducts.id),
+        )
         .where(
           and(
             eq(liquorVariants.isActive, true),
@@ -221,7 +236,18 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
     }
 
     // Verify all requested items are active and have sufficient stock
-    const verifiedOrderItems: OrderItem[] = []
+    const verifiedOrderItems: {
+      id: string
+      catalogType: 'liquor' | 'grocery'
+      productId: string
+      variantId: string
+      name: string
+      variantName: string
+      sku: string
+      qty: number
+      unitPrice: number
+      lineTotal: number
+    }[] = []
     let calculatedSubtotal = 0
 
     for (const reqItem of data.items) {
@@ -255,13 +281,13 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
       })
     }
 
-    // Server-side promo calculation (never trust client discount)
+    // Server-side promo calculation
     let discountPaisa = 0
     let appliedCouponCode: string | null = null
 
     if (data.promoCode && data.promoCode.trim()) {
       const cleanCode = data.promoCode.trim().toUpperCase()
-      const coupon = ops.coupons.find((c) => c.code === cleanCode)
+      const coupon = await getCouponByCodeQuery(cleanCode)
       if (
         coupon &&
         coupon.active &&
@@ -278,9 +304,10 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
       }
     }
 
-    // Delivery calculation
     const deliveryCharge =
-      calculatedSubtotal >= FREE_DELIVERY_THRESHOLD ? 0 : STANDARD_DELIVERY_CHARGE
+      calculatedSubtotal >= FREE_DELIVERY_THRESHOLD
+        ? 0
+        : STANDARD_DELIVERY_CHARGE
 
     const finalTotal = Math.max(
       0,
@@ -294,12 +321,25 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         .set({ phone: data.phone })
         .where(eq(user.id, sessionUser.id))
         .catch((err) => {
-          console.warn('[Checkout] Failed to update default phone on profile:', err)
+          console.warn(
+            '[Checkout] Failed to update default phone on profile:',
+            err,
+          )
         })
     }
 
-    // Decrement stock in Postgres DB inside transaction
-    await db.transaction(async (tx) => {
+    const settings = await getStoreSettingsQuery()
+    const orderCountRes = await db.select({ count: count() }).from(orders)
+    const orderSeq = (orderCountRes[0]?.count ?? 0) + 1
+    const orderNumber = `${settings.invoicePrefix}-${String(10000 + orderSeq).padStart(5, '0')}`
+
+    const orderId = nid('ord')
+    const trackingCode = `TRK${Math.floor(100000 + Math.random() * 900000)}`
+    const now = new Date()
+
+    // Execute atomic creation in transaction with dbTx
+    await dbTx.transaction(async (tx) => {
+      // 1. Decrement stock and record stock movements
       for (const item of verifiedOrderItems) {
         if (item.catalogType === 'liquor') {
           const current = await tx
@@ -326,25 +366,37 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
               .where(eq(groceryVariants.id, item.variantId))
           }
         }
+
+        await tx.insert(stockMovements).values({
+          id: nid('sm'),
+          catalogType: item.catalogType,
+          variantId: item.variantId,
+          delta: -item.qty,
+          type: 'sale',
+          refType: 'order',
+          refId: orderId,
+          notes: `Sold in order ${orderNumber}`,
+          createdBy: sessionUser.id,
+        })
       }
-    })
 
-    const now = new Date().toISOString()
-    const orderId = nid('ord')
-    const trackingCode = `TRK${Math.floor(100000 + Math.random() * 900000)}`
-
-    // Create order in operational state
-    const createdOrder = await mutateOps((state) => {
-      const orderNumber = `${state.settings.invoicePrefix}-${String(
-        10000 + state.orders.length + 1,
-      ).padStart(5, '0')}`
-
+      // 2. Increment coupon used count if coupon used
       if (appliedCouponCode) {
-        const cp = state.coupons.find((c) => c.code === appliedCouponCode)
-        if (cp) cp.used += 1
+        const cpRow = await tx
+          .select({ used: coupons.used })
+          .from(coupons)
+          .where(eq(coupons.code, appliedCouponCode))
+          .limit(1)
+        if (cpRow[0]) {
+          await tx
+            .update(coupons)
+            .set({ used: cpRow[0].used + 1 })
+            .where(eq(coupons.code, appliedCouponCode))
+        }
       }
 
-      const order: Order = {
+      // 3. Insert order
+      await tx.insert(orders).values({
         id: orderId,
         number: orderNumber,
         customerId: sessionUser.id,
@@ -354,10 +406,10 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         address: data.address,
         city: data.city,
         landmark: data.address,
-        lat: data.lat,
-        lng: data.lng,
+        lat: String(data.lat),
+        lng: String(data.lng),
         status: 'pending',
-        paymentMethod: data.paymentMethod as PaymentMethod,
+        paymentMethod: data.paymentMethod,
         paymentStatus: data.paymentMethod === 'cod' ? 'cod_pending' : 'pending',
         subtotal: calculatedSubtotal,
         deliveryCharge,
@@ -365,62 +417,82 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         tax: 0,
         total: finalTotal,
         riderId: null,
+        dealerId: null,
         trackingCode,
         notes: '',
         couponCode: appliedCouponCode,
         idempotencyKey: data.idempotencyKey || null,
-        items: verifiedOrderItems,
-        events: [
-          {
-            id: nid('ev'),
-            at: now,
-            status: 'pending',
-            note:
-              data.paymentMethod === 'cod'
-                ? 'Order placed (Cash on Delivery)'
-                : 'Order placed (Pending eSewa payment)',
-            actor: sessionUser.name,
-          },
-        ],
-        createdAt: now,
-        updatedAt: now,
+      })
+
+      // 4. Insert order items
+      for (const item of verifiedOrderItems) {
+        await tx.insert(orderItems).values({
+          id: item.id,
+          orderId,
+          catalogType: item.catalogType,
+          productId: item.productId,
+          variantId: item.variantId,
+          name: item.name,
+          variantName: item.variantName,
+          sku: item.sku,
+          qty: item.qty,
+          unitPrice: item.unitPrice,
+          lineTotal: item.lineTotal,
+        })
       }
 
-      state.orders.unshift(order)
+      // 5. Insert initial status history
+      await tx.insert(orderStatusHistory).values({
+        id: nid('ev'),
+        orderId,
+        status: 'pending',
+        note:
+          data.paymentMethod === 'cod'
+            ? 'Order placed (Cash on Delivery)'
+            : 'Order placed (Pending eSewa payment)',
+        actor: sessionUser.name,
+      })
 
-      // Add to Ledger
-      state.ledger.unshift({
+      // 6. Record in Ledger
+      await tx.insert(ledgerEntries).values({
         id: nid('led'),
-        date: now.slice(0, 10),
+        date: now.toISOString().slice(0, 10),
         type: 'credit',
         category: 'sales',
         account: 'Sales revenue',
         memo: `Sale ${orderNumber}`,
         amount: finalTotal,
         refType: 'order',
-        refId: order.id,
-        createdAt: now,
+        refId: orderId,
       })
 
-      return state
+      // 7. Insert notification for admin
+      await tx.insert(notifications).values({
+        id: nid('notif'),
+        title: `New Order: ${orderNumber}`,
+        body: `${sessionUser.name} placed order ${orderNumber} (Rs. ${fromPaisa(finalTotal)})`,
+        type: 'order',
+        read: false,
+        href: `/admin/orders`,
+      })
     })
-
-    const freshOrder = createdOrder.orders.find((o) => o.id === orderId)!
 
     await logAudit(
       sessionUser.name,
       'orders',
       'create',
-      `Placed order ${freshOrder.number} via ${freshOrder.paymentMethod} (Rs. ${fromPaisa(finalTotal)})`,
+      `Placed order ${orderNumber} via ${data.paymentMethod} (Rs. ${fromPaisa(finalTotal)})`,
     )
 
     // Prepare payment flow data
     let esewaPayload: Record<string, string> | null = null
     if (data.paymentMethod === 'esewa') {
       const totalAmountNpr = fromPaisa(finalTotal).toFixed(2)
-      const subtotalNpr = fromPaisa(calculatedSubtotal - discountPaisa).toFixed(2)
+      const subtotalNpr = fromPaisa(calculatedSubtotal - discountPaisa).toFixed(
+        2,
+      )
       const deliveryChargeNpr = fromPaisa(deliveryCharge).toFixed(2)
-      const transactionUuid = `${freshOrder.id}`
+      const transactionUuid = `${orderId}`
       const signature = generateEsewaSignature(
         totalAmountNpr,
         transactionUuid,
@@ -435,8 +507,8 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         product_code: ESEWA_PRODUCT_CODE,
         product_service_charge: '0.00',
         product_delivery_charge: deliveryChargeNpr,
-        success_url: `/checkout/payment/esewa/success?orderId=${freshOrder.id}`,
-        failure_url: `/checkout/payment/esewa/failure?orderId=${freshOrder.id}`,
+        success_url: `/checkout/payment/esewa/success?orderId=${orderId}`,
+        failure_url: `/checkout/payment/esewa/failure?orderId=${orderId}`,
         signed_field_names: 'total_amount,transaction_uuid,product_code',
         signature,
         actionUrl: ESEWA_GATEWAY_URL,
@@ -445,10 +517,10 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
 
     return {
       success: true,
-      orderId: freshOrder.id,
-      orderNumber: freshOrder.number,
-      paymentMethod: freshOrder.paymentMethod,
-      totalPaisa: freshOrder.total,
+      orderId,
+      orderNumber,
+      paymentMethod: data.paymentMethod as PaymentMethod,
+      totalPaisa: finalTotal,
       esewaPayload,
       isDuplicate: false,
     }
@@ -461,16 +533,19 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
 export const getOrderDetailsFn = createServerFn({ method: 'GET' })
   .validator((d: unknown) => z.object({ orderId: z.string() }).parse(d))
   .handler(async ({ data }) => {
-    const user = await getSessionUser()
-    const ops = await loadOps()
-    const order = ops.orders.find((o) => o.id === data.orderId)
+    const sessionUser = await getSessionUser()
+    const order = await getOrderByIdQuery(data.orderId)
 
     if (!order) {
       throw new Error('Order not found')
     }
 
     // Security: Only customer who placed it or staff can view
-    if (order.customerId !== user.id && user.role !== 'admin' && user.role !== 'manager') {
+    if (
+      order.customerId !== sessionUser.id &&
+      sessionUser.role !== 'admin' &&
+      sessionUser.role !== 'manager'
+    ) {
       throw new Error('403: Forbidden: You do not have access to this order')
     }
 
@@ -491,9 +566,8 @@ export const verifyEsewaPaymentFn = createServerFn({ method: 'POST' })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const user = await getSessionUser()
-    const ops = await loadOps()
-    const order = ops.orders.find((o) => o.id === data.orderId)
+    const sessionUser = await getSessionUser()
+    const order = await getOrderByIdQuery(data.orderId)
 
     if (!order) {
       throw new Error('Order not found')
@@ -507,7 +581,9 @@ export const verifyEsewaPaymentFn = createServerFn({ method: 'POST' })
     let esewaData: Record<string, unknown> = {}
     if (data.encodedResponse) {
       try {
-        const decoded = Buffer.from(data.encodedResponse, 'base64').toString('utf8')
+        const decoded = Buffer.from(data.encodedResponse, 'base64').toString(
+          'utf8',
+        )
         esewaData = JSON.parse(decoded)
       } catch (err) {
         console.warn('[eSewa] Failed to decode response:', err)
@@ -529,7 +605,6 @@ export const verifyEsewaPaymentFn = createServerFn({ method: 'POST' })
       }
     } catch (err) {
       console.warn('[eSewa] Status API check error:', err)
-      // If sandbox and UAT response data is COMPLETE, allow in test mode
       if (
         process.env.NODE_ENV !== 'production' &&
         (esewaData.status === 'COMPLETE' || esewaData.transaction_code)
@@ -538,7 +613,6 @@ export const verifyEsewaPaymentFn = createServerFn({ method: 'POST' })
       }
     }
 
-    // Fallback for local testing if network call to UAT fails in dev
     if (!isVerified && process.env.NODE_ENV !== 'production') {
       isVerified = true
     }
@@ -547,24 +621,33 @@ export const verifyEsewaPaymentFn = createServerFn({ method: 'POST' })
       throw new Error('eSewa transaction verification failed or pending')
     }
 
-    const now = new Date().toISOString()
-    await mutateOps((state) => {
-      const target = state.orders.find((o) => o.id === order.id)
-      if (target) {
-        target.paymentStatus = 'paid'
-        target.events.push({
-          id: nid('ev'),
-          at: now,
-          status: target.status,
-          note: 'Payment verified successfully via eSewa ePay v2',
-          actor: 'eSewa Gateway',
-        })
-      }
-      return state
+    await dbTx.transaction(async (tx) => {
+      await tx
+        .update(orders)
+        .set({ paymentStatus: 'paid' })
+        .where(eq(orders.id, order.id))
+
+      await tx.insert(orderStatusHistory).values({
+        id: nid('ev'),
+        orderId: order.id,
+        status: order.status,
+        note: 'Payment verified successfully via eSewa ePay v2',
+        actor: 'eSewa Gateway',
+      })
+
+      await tx.insert(payments).values({
+        id: nid('pay'),
+        orderId: order.id,
+        gateway: 'esewa',
+        amount: order.total,
+        status: 'success',
+        reference: String(esewaData.transaction_code || `ESEWA_${order.id}`),
+        metadata: esewaData,
+      })
     })
 
     await logAudit(
-      user.name,
+      sessionUser.name,
       'payments',
       'edit',
       `Payment verified for Order ${order.number} via eSewa`,

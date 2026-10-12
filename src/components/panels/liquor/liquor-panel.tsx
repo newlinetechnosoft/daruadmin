@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import type { FormEvent } from 'react'
-import { getRouteApi,   useRouter  } from '@tanstack/react-router'
+import { getRouteApi, useRouter } from '@tanstack/react-router'
 import {
   upsertLiquorProductFn,
   toggleProductStatusFn,
@@ -24,10 +24,7 @@ import { Label } from '#/components/ui/label'
 import { Textarea } from '#/components/ui/textarea'
 import { Badge } from '#/components/ui/badge'
 import { Checkbox } from '#/components/ui/checkbox'
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from '#/components/ui/native-select'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import {
   Table,
   TableBody,
@@ -46,7 +43,6 @@ import {
 } from '#/components/ui/dialog'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { EmptyState } from '#/components/shared/empty-state'
-
 
 interface VariantFormItem {
   id?: string
@@ -74,7 +70,10 @@ export function LiquorPanel() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string
+    name: string
+  } | null>(null)
 
   // Form state
   const [formName, setFormName] = useState('')
@@ -247,7 +246,9 @@ export function LiquorPanel() {
       })
 
       toast.success(
-        editingId ? 'Product updated successfully!' : 'Product added successfully!',
+        editingId
+          ? 'Product updated successfully!'
+          : 'Product added successfully!',
       )
       setModalOpen(false)
       await router.invalidate()
@@ -312,7 +313,11 @@ export function LiquorPanel() {
             <Badge variant="secondary" className="font-mono text-xs">
               {products.length} SKUs
             </Badge>
-            <Button size="sm" onClick={openAddModal} className="h-8 gap-1.5 text-xs">
+            <Button
+              size="sm"
+              onClick={openAddModal}
+              className="h-8 gap-1.5 text-xs"
+            >
               <Plus className="h-3.5 w-3.5" />
               Add liquor SKU
             </Button>
@@ -372,7 +377,9 @@ export function LiquorPanel() {
             <TableRow>
               <TableHead className="text-xs">Product</TableHead>
               <TableHead className="text-xs">Brand &amp; Category</TableHead>
-              <TableHead className="text-xs">Sizes, ABV &amp; pricing</TableHead>
+              <TableHead className="text-xs">
+                Sizes, ABV &amp; pricing
+              </TableHead>
               <TableHead className="text-center text-xs">Status</TableHead>
               <TableHead className="text-right text-xs">Actions</TableHead>
             </TableRow>
@@ -404,7 +411,10 @@ export function LiquorPanel() {
                         <div className="flex items-center gap-1.5 font-medium text-xs text-foreground">
                           <span>{p.name}</span>
                           {p.isFeatured && (
-                            <Badge variant="secondary" className="gap-1 text-[9px] px-1 py-0 font-normal">
+                            <Badge
+                              variant="secondary"
+                              className="gap-1 text-[9px] px-1 py-0 font-normal"
+                            >
                               <Sparkles className="h-2.5 w-2.5" /> Featured
                             </Badge>
                           )}
@@ -417,8 +427,12 @@ export function LiquorPanel() {
                   </TableCell>
 
                   <TableCell>
-                    <div className="font-medium text-xs text-foreground">{p.brandName || '—'}</div>
-                    <div className="text-[11px] text-muted-foreground">{p.categoryName}</div>
+                    <div className="font-medium text-xs text-foreground">
+                      {p.brandName || '—'}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {p.categoryName}
+                    </div>
                   </TableCell>
 
                   <TableCell>
@@ -432,7 +446,9 @@ export function LiquorPanel() {
                               : 'border-border bg-muted/30 text-foreground'
                           }`}
                         >
-                          <span className="font-medium text-[11px]">{v.name}</span>
+                          <span className="font-medium text-[11px]">
+                            {v.name}
+                          </span>
                           {v.abv && (
                             <span className="text-[10px] text-muted-foreground font-mono">
                               {v.abv}%
@@ -460,11 +476,13 @@ export function LiquorPanel() {
                     >
                       {p.isActive ? (
                         <>
-                          <CheckCircle2 className="h-3 w-3 text-success" /> Active
+                          <CheckCircle2 className="h-3 w-3 text-success" />{' '}
+                          Active
                         </>
                       ) : (
                         <>
-                          <XCircle className="h-3 w-3 text-muted-foreground" /> Draft
+                          <XCircle className="h-3 w-3 text-muted-foreground" />{' '}
+                          Draft
                         </>
                       )}
                     </Button>
@@ -484,7 +502,9 @@ export function LiquorPanel() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setDeleteTarget({ id: p.id, name: p.name })}
+                        onClick={() =>
+                          setDeleteTarget({ id: p.id, name: p.name })
+                        }
                         className="h-7 w-7 text-muted-foreground hover:text-destructive"
                         aria-label={`Delete ${p.name}`}
                       >
@@ -507,7 +527,8 @@ export function LiquorPanel() {
               {editingId ? 'Edit liquor product' : 'New liquor product'}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Manage product profile, alcohol by volume (ABV), and sizing variants.
+              Manage product profile, alcohol by volume (ABV), and sizing
+              variants.
             </DialogDescription>
           </DialogHeader>
 
@@ -558,7 +579,9 @@ export function LiquorPanel() {
                   size="sm"
                   className="w-full text-xs"
                 >
-                  <NativeSelectOption value="">No specific brand</NativeSelectOption>
+                  <NativeSelectOption value="">
+                    No specific brand
+                  </NativeSelectOption>
                   {taxonomy.liquorBrands.map((b) => (
                     <NativeSelectOption key={b.id} value={b.id}>
                       {b.name}
@@ -616,9 +639,14 @@ export function LiquorPanel() {
                 <Checkbox
                   id="liq-is-active"
                   checked={formIsActive}
-                  onCheckedChange={(checked) => setFormIsActive(Boolean(checked))}
+                  onCheckedChange={(checked) =>
+                    setFormIsActive(Boolean(checked))
+                  }
                 />
-                <Label htmlFor="liq-is-active" className="text-xs cursor-pointer font-normal">
+                <Label
+                  htmlFor="liq-is-active"
+                  className="text-xs cursor-pointer font-normal"
+                >
                   Active on storefront
                 </Label>
               </div>
@@ -627,9 +655,14 @@ export function LiquorPanel() {
                 <Checkbox
                   id="liq-is-featured"
                   checked={formIsFeatured}
-                  onCheckedChange={(checked) => setFormIsFeatured(Boolean(checked))}
+                  onCheckedChange={(checked) =>
+                    setFormIsFeatured(Boolean(checked))
+                  }
                 />
-                <Label htmlFor="liq-is-featured" className="text-xs cursor-pointer font-normal flex items-center gap-1">
+                <Label
+                  htmlFor="liq-is-featured"
+                  className="text-xs cursor-pointer font-normal flex items-center gap-1"
+                >
                   <Sparkles className="h-3 w-3" />
                   Featured top pick
                 </Label>
@@ -639,7 +672,9 @@ export function LiquorPanel() {
             {/* Variants */}
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <Label className="text-xs">Volume variants &amp; price tiers</Label>
+                <Label className="text-xs">
+                  Volume variants &amp; price tiers
+                </Label>
                 <Button
                   type="button"
                   variant="ghost"
@@ -737,8 +772,17 @@ export function LiquorPanel() {
               >
                 Cancel
               </Button>
-              <Button type="submit" size="sm" disabled={isSubmitting} className="h-8 text-xs">
-                {isSubmitting ? 'Saving...' : editingId ? 'Update product' : 'Create product'}
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting}
+                className="h-8 text-xs"
+              >
+                {isSubmitting
+                  ? 'Saving...'
+                  : editingId
+                    ? 'Update product'
+                    : 'Create product'}
               </Button>
             </DialogFooter>
           </form>

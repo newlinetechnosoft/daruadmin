@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getRouteApi,   useRouter  } from '@tanstack/react-router'
+import { getRouteApi, useRouter } from '@tanstack/react-router'
 import {
   saveSettingsFn,
   reconcilePaymentFn,
@@ -23,15 +23,8 @@ import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Badge } from '#/components/ui/badge'
 import { Checkbox } from '#/components/ui/checkbox'
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from '#/components/ui/tabs'
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from '#/components/ui/native-select'
+import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import {
   Table,
   TableBody,
@@ -40,12 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui/table'
-import {
-  Card,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '#/components/ui/card'
+import { Card, CardFooter, CardHeader, CardTitle } from '#/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -56,16 +44,35 @@ import {
 } from '#/components/ui/dialog'
 import { EmptyState } from '#/components/shared/empty-state'
 
-
 const GATEWAY_INFO: Record<
   PaymentMethod,
   { name: string; channel: string; defaultFee: string }
 > = {
-  esewa: { name: 'eSewa Mobile Wallet', channel: 'ESEWA-EPAY', defaultFee: '1.75%' },
-  khalti: { name: 'Khalti Digital Wallet', channel: 'KHALTI-EPAY', defaultFee: '1.80%' },
-  fonepay: { name: 'Fonepay Interbank QR', channel: 'FONEPAY-QR', defaultFee: '1.20%' },
-  connectips: { name: 'ConnectIPS NCHL', channel: 'NCHL-CIPS', defaultFee: '0.50%' },
-  cod: { name: 'Cash on Delivery (COD)', channel: 'MANUAL-FLOAT', defaultFee: '0.00%' },
+  esewa: {
+    name: 'eSewa Mobile Wallet',
+    channel: 'ESEWA-EPAY',
+    defaultFee: '1.75%',
+  },
+  khalti: {
+    name: 'Khalti Digital Wallet',
+    channel: 'KHALTI-EPAY',
+    defaultFee: '1.80%',
+  },
+  fonepay: {
+    name: 'Fonepay Interbank QR',
+    channel: 'FONEPAY-QR',
+    defaultFee: '1.20%',
+  },
+  connectips: {
+    name: 'ConnectIPS NCHL',
+    channel: 'NCHL-CIPS',
+    defaultFee: '0.50%',
+  },
+  cod: {
+    name: 'Cash on Delivery (COD)',
+    channel: 'MANUAL-FLOAT',
+    defaultFee: '0.00%',
+  },
 }
 
 const routeApi = getRouteApi('/admin/payments')
@@ -74,10 +81,16 @@ export function PaymentsPanel() {
   const { ops } = routeApi.useLoaderData()
   const router = useRouter()
 
-  const [activeTab, setActiveTab] = useState<'gateways' | 'reconciliation'>('gateways')
+  const [activeTab, setActiveTab] = useState<'gateways' | 'reconciliation'>(
+    'gateways',
+  )
   const [searchQuery, setSearchQuery] = useState('')
-  const [pingStatus, setPingStatus] = useState<Record<string, { loading: boolean; latency?: number }>>({})
-  const [editingGateway, setEditingGateway] = useState<PaymentMethod | null>(null)
+  const [pingStatus, setPingStatus] = useState<
+    Record<string, { loading: boolean; latency?: number }>
+  >({})
+  const [editingGateway, setEditingGateway] = useState<PaymentMethod | null>(
+    null,
+  )
   const [isUpdating, setIsUpdating] = useState(false)
 
   // Local gateway form
@@ -100,12 +113,18 @@ export function PaymentsPanel() {
     setTimeout(() => {
       const latency = Math.floor(75 + Math.random() * 80)
       setPingStatus((prev) => ({ ...prev, [gw]: { loading: false, latency } }))
-      toast.success(`${GATEWAY_INFO[gw as PaymentMethod]?.name} connection test: ${latency}ms OK`)
+      toast.success(
+        `${GATEWAY_INFO[gw as PaymentMethod]?.name} connection test: ${latency}ms OK`,
+      )
     }, 600)
   }
 
   const handleOpenEdit = (method: PaymentMethod) => {
-    const gw = gateways[method] || { enabled: true, merchantId: '', mode: 'sandbox' }
+    const gw = gateways[method] || {
+      enabled: true,
+      merchantId: '',
+      mode: 'sandbox',
+    }
     setEditingGateway(method)
     setGatewayForm({
       enabled: gw.enabled,
@@ -136,7 +155,9 @@ export function PaymentsPanel() {
         },
       })
 
-      toast.success(`Gateway configuration for ${GATEWAY_INFO[editingGateway].name} saved`)
+      toast.success(
+        `Gateway configuration for ${GATEWAY_INFO[editingGateway].name} saved`,
+      )
       setEditingGateway(null)
       await router.invalidate()
     } catch {
@@ -172,14 +193,16 @@ export function PaymentsPanel() {
   const totalReconciled = ops.payments
     .filter((p) => p.status === 'reconciled')
     .reduce((sum, p) => sum + p.amount, 0)
-  const pendingReconciliation = ops.payments.filter((p) => p.status !== 'reconciled').length
+  const pendingReconciliation = ops.payments.filter(
+    (p) => p.status !== 'reconciled',
+  ).length
 
   const handleExportCSV = () => {
     const headers = 'ID,OrderID,Gateway,AmountNPR,Reference,Status,CreatedAt\n'
     const rows = filteredPayments
       .map(
         (p) =>
-          `"${p.id}","${p.orderId}","${p.gateway}",${p.amount},"${p.reference}","${p.status}","${p.createdAt}"`
+          `"${p.id}","${p.orderId}","${p.gateway}",${p.amount},"${p.reference}","${p.status}","${p.createdAt}"`,
       )
       .join('\n')
     const blob = new Blob([headers + rows], { type: 'text/csv' })
@@ -198,7 +221,12 @@ export function PaymentsPanel() {
         title="Payments and gateway reconciliation"
         description="Nepal payment provider keys, IPN callback health pings, and transaction payout reconciliation."
         actions={
-          <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-8 gap-1.5 text-xs">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+            className="h-8 gap-1.5 text-xs"
+          >
             <Download className="h-3.5 w-3.5" />
             Export reconciliation
           </Button>
@@ -249,9 +277,12 @@ export function PaymentsPanel() {
           <div className="rounded-lg border border-border bg-muted/30 p-3.5 flex items-start gap-3 text-xs">
             <Shield className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
             <div>
-              <strong className="block font-medium text-foreground">Nepal Domestic Financial Gateway Standard</strong>
+              <strong className="block font-medium text-foreground">
+                Nepal Domestic Financial Gateway Standard
+              </strong>
               <p className="text-muted-foreground mt-0.5">
-                Configured with IPN callback endpoints, SHA256 HMAC digital signatures, and dynamic QR terminal generation.
+                Configured with IPN callback endpoints, SHA256 HMAC digital
+                signatures, and dynamic QR terminal generation.
               </p>
             </div>
           </div>
@@ -259,7 +290,11 @@ export function PaymentsPanel() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(Object.keys(GATEWAY_INFO) as PaymentMethod[]).map((method) => {
               const meta = GATEWAY_INFO[method]
-              const gw = gateways[method] || { enabled: true, merchantId: 'TEST', mode: 'sandbox' }
+              const gw = gateways[method] || {
+                enabled: true,
+                merchantId: 'TEST',
+                mode: 'sandbox',
+              }
               const ping = pingStatus[method]
 
               return (
@@ -268,8 +303,13 @@ export function PaymentsPanel() {
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-2">
-                          <CardTitle className="text-sm font-semibold">{meta.name}</CardTitle>
-                          <Badge variant="outline" className="text-[10px] font-mono capitalize">
+                          <CardTitle className="text-sm font-semibold">
+                            {meta.name}
+                          </CardTitle>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] font-mono capitalize"
+                          >
                             {gw.mode}
                           </Badge>
                         </div>
@@ -288,16 +328,28 @@ export function PaymentsPanel() {
 
                     <div className="mt-3 space-y-1.5 text-xs">
                       <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Merchant code:</span>
-                        <span className="font-mono text-foreground font-medium">{gw.merchantId}</span>
+                        <span className="text-muted-foreground">
+                          Merchant code:
+                        </span>
+                        <span className="font-mono text-foreground font-medium">
+                          {gw.merchantId}
+                        </span>
                       </div>
                       <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">Processing fee:</span>
-                        <span className="text-foreground">{meta.defaultFee}</span>
+                        <span className="text-muted-foreground">
+                          Processing fee:
+                        </span>
+                        <span className="text-foreground">
+                          {meta.defaultFee}
+                        </span>
                       </div>
                       <div className="flex justify-between py-1">
-                        <span className="text-muted-foreground">Settlement SLA:</span>
-                        <span className="text-foreground">T+1 Business Day (Nabil)</span>
+                        <span className="text-muted-foreground">
+                          Settlement SLA:
+                        </span>
+                        <span className="text-foreground">
+                          T+1 Business Day (Nabil)
+                        </span>
                       </div>
                     </div>
                   </CardHeader>
@@ -309,7 +361,9 @@ export function PaymentsPanel() {
                           {ping.latency}ms OK
                         </span>
                       ) : (
-                        <span className="text-[11px] text-muted-foreground">Ready</span>
+                        <span className="text-[11px] text-muted-foreground">
+                          Ready
+                        </span>
                       )}
                     </div>
 
@@ -321,7 +375,9 @@ export function PaymentsPanel() {
                         disabled={ping?.loading}
                         className="h-7 gap-1 px-2 text-xs"
                       >
-                        <Activity className={`h-3 w-3 ${ping?.loading ? 'animate-spin' : ''}`} />
+                        <Activity
+                          className={`h-3 w-3 ${ping?.loading ? 'animate-spin' : ''}`}
+                        />
                         {ping?.loading ? 'Pinging...' : 'Test ping'}
                       </Button>
                       <Button
@@ -381,11 +437,15 @@ export function PaymentsPanel() {
                   filteredPayments.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell>
-                        <span className="font-mono text-xs font-semibold text-foreground">{p.reference}</span>
+                        <span className="font-mono text-xs font-semibold text-foreground">
+                          {p.reference}
+                        </span>
                       </TableCell>
 
                       <TableCell>
-                        <span className="font-mono text-xs text-primary">{p.orderId}</span>
+                        <span className="font-mono text-xs text-primary">
+                          {p.orderId}
+                        </span>
                       </TableCell>
 
                       <TableCell>
@@ -402,7 +462,9 @@ export function PaymentsPanel() {
 
                       <TableCell>
                         <Badge
-                          variant={p.status === 'reconciled' ? 'outline' : 'secondary'}
+                          variant={
+                            p.status === 'reconciled' ? 'outline' : 'secondary'
+                          }
                           className="text-[10px] font-normal uppercase"
                         >
                           {p.status}
@@ -431,14 +493,19 @@ export function PaymentsPanel() {
       )}
 
       {/* Configure Gateway Dialog */}
-      <Dialog open={Boolean(editingGateway)} onOpenChange={(open) => !open && setEditingGateway(null)}>
+      <Dialog
+        open={Boolean(editingGateway)}
+        onOpenChange={(open) => !open && setEditingGateway(null)}
+      >
         {editingGateway && (
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="text-sm font-semibold">
                 Configure {GATEWAY_INFO[editingGateway].name}
               </DialogTitle>
-              <DialogDescription className="text-xs">Update merchant credentials</DialogDescription>
+              <DialogDescription className="text-xs">
+                Update merchant credentials
+              </DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleSaveGateway} className="space-y-4 pt-2">
@@ -447,7 +514,12 @@ export function PaymentsPanel() {
                 <Input
                   required
                   value={gatewayForm.merchantId}
-                  onChange={(e) => setGatewayForm({ ...gatewayForm, merchantId: e.target.value })}
+                  onChange={(e) =>
+                    setGatewayForm({
+                      ...gatewayForm,
+                      merchantId: e.target.value,
+                    })
+                  }
                   className="h-8 font-mono text-xs"
                 />
               </div>
@@ -457,13 +529,20 @@ export function PaymentsPanel() {
                 <NativeSelect
                   value={gatewayForm.mode}
                   onChange={(e) =>
-                    setGatewayForm({ ...gatewayForm, mode: e.target.value as any })
+                    setGatewayForm({
+                      ...gatewayForm,
+                      mode: e.target.value as any,
+                    })
                   }
                   size="sm"
                   className="w-full text-xs"
                 >
-                  <NativeSelectOption value="sandbox">Sandbox (Testing)</NativeSelectOption>
-                  <NativeSelectOption value="live">Live (Production)</NativeSelectOption>
+                  <NativeSelectOption value="sandbox">
+                    Sandbox (Testing)
+                  </NativeSelectOption>
+                  <NativeSelectOption value="live">
+                    Live (Production)
+                  </NativeSelectOption>
                 </NativeSelect>
               </div>
 
@@ -471,9 +550,17 @@ export function PaymentsPanel() {
                 <Checkbox
                   id="enable_gw"
                   checked={gatewayForm.enabled}
-                  onCheckedChange={(checked) => setGatewayForm({ ...gatewayForm, enabled: Boolean(checked) })}
+                  onCheckedChange={(checked) =>
+                    setGatewayForm({
+                      ...gatewayForm,
+                      enabled: Boolean(checked),
+                    })
+                  }
                 />
-                <Label htmlFor="enable_gw" className="text-xs cursor-pointer font-normal">
+                <Label
+                  htmlFor="enable_gw"
+                  className="text-xs cursor-pointer font-normal"
+                >
                   Accept customer checkouts via this channel
                 </Label>
               </div>
@@ -488,7 +575,12 @@ export function PaymentsPanel() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" disabled={isUpdating} className="h-8 text-xs">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isUpdating}
+                  className="h-8 text-xs"
+                >
                   {isUpdating ? 'Saving...' : 'Save configuration'}
                 </Button>
               </DialogFooter>

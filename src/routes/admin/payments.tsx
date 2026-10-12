@@ -1,12 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getPaymentsFn } from '#/server/operations/operations.functions'
 import { guardModule } from '#/server/auth/guards'
 import { PaymentsPanel } from '#/components/panels/payments'
+import { adminQueries } from '#/queries/admin'
 
 export const Route = createFileRoute('/admin/payments')({
   beforeLoad: guardModule('payments'),
-  loader: async () => {
-    return getPaymentsFn()
+  loader: async ({ context }) => {
+    return context.queryClient.ensureQueryData(adminQueries.payments())
   },
   component: PaymentsPanel,
 })

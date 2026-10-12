@@ -1,8 +1,6 @@
 import { useState } from 'react'
-import { getRouteApi,   useRouter  } from '@tanstack/react-router'
-import {
-  upsertZoneFn,
-} from '#/server/operations/operations.functions'
+import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { upsertZoneFn } from '#/server/operations/operations.functions'
 import type { Zone } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
@@ -22,10 +20,7 @@ import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Badge } from '#/components/ui/badge'
 import { Slider } from '#/components/ui/slider'
-import {
-  NativeSelect,
-  NativeSelectOption,
-} from '#/components/ui/native-select'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import {
   Table,
   TableBody,
@@ -42,8 +37,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#/components/ui/dialog'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '#/components/ui/card'
-
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '#/components/ui/card'
 
 const routeApi = getRouteApi('/admin/shipping')
 
@@ -69,8 +69,11 @@ export function ShippingPanel() {
     courier: 'in-house' as 'in-house' | 'ncm' | 'pathao' | 'none',
   })
 
-  const selectedCalcZone = ops.zones.find((z) => z.id === calcZoneId) || ops.zones[0]
-  const baseShippingFee = selectedCalcZone ? selectedCalcZone.deliveryCharge : 100
+  const selectedCalcZone =
+    ops.zones.find((z) => z.id === calcZoneId) || ops.zones[0]
+  const baseShippingFee = selectedCalcZone
+    ? selectedCalcZone.deliveryCharge
+    : 100
   const extraWeight = Math.max(0, calcWeight - 1)
   const calculatedWeightFee = Math.round(extraWeight * 40)
   const totalCalculatedDelivery = baseShippingFee + calculatedWeightFee
@@ -98,7 +101,7 @@ export function ShippingPanel() {
       toast.success(
         editingZone
           ? 'Delivery zone updated successfully'
-          : 'Delivery zone created'
+          : 'Delivery zone created',
       )
       setIsAddZoneOpen(false)
       setEditingZone(null)
@@ -132,11 +135,12 @@ export function ShippingPanel() {
   }
 
   const handleExportCSV = () => {
-    const headers = 'ID,ZoneName,AreasCovered,BaseFeeNPR,ETAMinutes,CourierPartner,Active\n'
+    const headers =
+      'ID,ZoneName,AreasCovered,BaseFeeNPR,ETAMinutes,CourierPartner,Active\n'
     const rows = ops.zones
       .map(
         (z) =>
-          `"${z.id}","${z.name}","${z.areas.replace(/"/g, '""')}",${z.deliveryCharge},${z.etaMinutes},"${z.courier}",${z.active}`
+          `"${z.id}","${z.name}","${z.areas.replace(/"/g, '""')}",${z.deliveryCharge},${z.etaMinutes},"${z.courier}",${z.active}`,
       )
       .join('\n')
     const blob = new Blob([headers + rows], { type: 'text/csv' })
@@ -156,7 +160,12 @@ export function ShippingPanel() {
         description="Configure Kathmandu Valley express dispatch corridors, courier SLA windows, and parcel rate calculations."
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-8 gap-1.5 text-xs">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+              className="h-8 gap-1.5 text-xs"
+            >
               <Download className="h-3.5 w-3.5" />
               Export zones
             </Button>
@@ -205,10 +214,13 @@ export function ShippingPanel() {
           <CardHeader>
             <div className="flex items-center gap-2 mb-1">
               <Calculator className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-semibold">Shipping rate sandbox</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Shipping rate sandbox
+              </CardTitle>
             </div>
             <CardDescription className="text-xs">
-              Simulate customer checkout shipping charges by weight and destination corridor.
+              Simulate customer checkout shipping charges by weight and
+              destination corridor.
             </CardDescription>
           </CardHeader>
 
@@ -232,14 +244,18 @@ export function ShippingPanel() {
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
                 <Label className="text-xs">Parcel weight (kg)</Label>
-                <span className="font-mono font-medium text-foreground">{calcWeight} kg</span>
+                <span className="font-mono font-medium text-foreground">
+                  {calcWeight} kg
+                </span>
               </div>
               <Slider
                 min={0.5}
                 max={15}
                 step={0.5}
                 value={[calcWeight]}
-                onValueChange={(vals) => vals[0] !== undefined && setCalcWeight(vals[0])}
+                onValueChange={(vals) =>
+                  vals[0] !== undefined && setCalcWeight(vals[0])
+                }
                 className="w-full"
               />
             </div>
@@ -247,11 +263,15 @@ export function ShippingPanel() {
             <div className="space-y-2 border-t border-border/50 pt-3 text-xs">
               <div className="flex justify-between text-muted-foreground">
                 <span>Base delivery (1st kg):</span>
-                <span className="font-mono text-foreground">{formatNPR(baseShippingFee)}</span>
+                <span className="font-mono text-foreground">
+                  {formatNPR(baseShippingFee)}
+                </span>
               </div>
               <div className="flex justify-between text-muted-foreground">
                 <span>Weight surcharge ({extraWeight.toFixed(1)} kg):</span>
-                <span className="font-mono text-foreground">+{formatNPR(calculatedWeightFee)}</span>
+                <span className="font-mono text-foreground">
+                  +{formatNPR(calculatedWeightFee)}
+                </span>
               </div>
               <div className="flex justify-between text-muted-foreground">
                 <span>Estimated window:</span>
@@ -260,7 +280,9 @@ export function ShippingPanel() {
                 </span>
               </div>
               <div className="flex items-center justify-between border-t border-border/50 pt-2 font-medium">
-                <span className="text-xs text-foreground">Total delivery fee:</span>
+                <span className="text-xs text-foreground">
+                  Total delivery fee:
+                </span>
                 <span className="font-mono text-base font-bold text-foreground">
                   {formatNPR(totalCalculatedDelivery)}
                 </span>
@@ -287,8 +309,12 @@ export function ShippingPanel() {
                 {ops.zones.map((zone) => (
                   <TableRow key={zone.id}>
                     <TableCell>
-                      <div className="font-medium text-xs text-foreground">{zone.name}</div>
-                      <div className="text-[11px] text-muted-foreground max-w-xs truncate">{zone.areas}</div>
+                      <div className="font-medium text-xs text-foreground">
+                        {zone.name}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground max-w-xs truncate">
+                        {zone.areas}
+                      </div>
                     </TableCell>
 
                     <TableCell>
@@ -305,7 +331,10 @@ export function ShippingPanel() {
                     </TableCell>
 
                     <TableCell>
-                      <Badge variant="secondary" className="text-[10px] font-normal capitalize">
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] font-normal capitalize"
+                      >
                         {zone.courier}
                       </Badge>
                     </TableCell>
@@ -345,7 +374,9 @@ export function ShippingPanel() {
             <DialogTitle className="text-sm font-semibold">
               {editingZone ? 'Edit delivery zone' : 'Add delivery zone'}
             </DialogTitle>
-            <DialogDescription className="text-xs">Persists rate configuration to database</DialogDescription>
+            <DialogDescription className="text-xs">
+              Persists rate configuration to database
+            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSaveZone} className="space-y-4 pt-2">
@@ -354,7 +385,9 @@ export function ShippingPanel() {
               <Input
                 required
                 value={zoneForm.name}
-                onChange={(e) => setZoneForm({ ...zoneForm, name: e.target.value })}
+                onChange={(e) =>
+                  setZoneForm({ ...zoneForm, name: e.target.value })
+                }
                 placeholder="e.g. Lalitpur Inner Ring"
                 className="h-8 text-xs"
               />
@@ -365,7 +398,9 @@ export function ShippingPanel() {
               <Input
                 required
                 value={zoneForm.areas}
-                onChange={(e) => setZoneForm({ ...zoneForm, areas: e.target.value })}
+                onChange={(e) =>
+                  setZoneForm({ ...zoneForm, areas: e.target.value })
+                }
                 placeholder="e.g. Jhamsikhel, Kupondole, Pulchowk"
                 className="h-8 text-xs"
               />
@@ -379,7 +414,12 @@ export function ShippingPanel() {
                   min="0"
                   required
                   value={zoneForm.deliveryCharge}
-                  onChange={(e) => setZoneForm({ ...zoneForm, deliveryCharge: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setZoneForm({
+                      ...zoneForm,
+                      deliveryCharge: Number(e.target.value),
+                    })
+                  }
                   className="h-8 font-mono text-xs"
                 />
               </div>
@@ -390,7 +430,12 @@ export function ShippingPanel() {
                   min="1"
                   required
                   value={zoneForm.etaMinutes}
-                  onChange={(e) => setZoneForm({ ...zoneForm, etaMinutes: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setZoneForm({
+                      ...zoneForm,
+                      etaMinutes: Number(e.target.value),
+                    })
+                  }
                   className="h-8 font-mono text-xs"
                 />
               </div>
@@ -400,14 +445,24 @@ export function ShippingPanel() {
               <Label className="text-xs">Designated courier mode</Label>
               <NativeSelect
                 value={zoneForm.courier}
-                onChange={(e) => setZoneForm({ ...zoneForm, courier: e.target.value as any })}
+                onChange={(e) =>
+                  setZoneForm({ ...zoneForm, courier: e.target.value as any })
+                }
                 size="sm"
                 className="w-full text-xs"
               >
-                <NativeSelectOption value="in-house">In-house rider fleet</NativeSelectOption>
-                <NativeSelectOption value="pathao">Pathao express delivery</NativeSelectOption>
-                <NativeSelectOption value="ncm">Nepal Can Move (NCM)</NativeSelectOption>
-                <NativeSelectOption value="none">Self pickup only</NativeSelectOption>
+                <NativeSelectOption value="in-house">
+                  In-house rider fleet
+                </NativeSelectOption>
+                <NativeSelectOption value="pathao">
+                  Pathao express delivery
+                </NativeSelectOption>
+                <NativeSelectOption value="ncm">
+                  Nepal Can Move (NCM)
+                </NativeSelectOption>
+                <NativeSelectOption value="none">
+                  Self pickup only
+                </NativeSelectOption>
               </NativeSelect>
             </div>
 
@@ -421,7 +476,12 @@ export function ShippingPanel() {
               >
                 Cancel
               </Button>
-              <Button type="submit" size="sm" disabled={isSubmitting} className="h-8 text-xs">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting}
+                className="h-8 text-xs"
+              >
                 {isSubmitting ? 'Saving...' : 'Save zone'}
               </Button>
             </DialogFooter>

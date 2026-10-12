@@ -4,7 +4,11 @@ import {
   updateOrderFn,
   createOrderFn,
 } from '#/server/operations/operations.functions'
-import type { Order, OrderStatus, PaymentMethod } from '#/server/operations/types'
+import type {
+  Order,
+  OrderStatus,
+  PaymentMethod,
+} from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
@@ -161,8 +165,12 @@ export function OrdersPanel() {
 
   // KPIs
   const totalOrdersCount = ops.orders.length
-  const pendingCount = ops.orders.filter((o) => o.status === 'pending' || o.status === 'confirmed').length
-  const outForDeliveryCount = ops.orders.filter((o) => o.status === 'out_for_delivery' || o.status === 'assigned').length
+  const pendingCount = ops.orders.filter(
+    (o) => o.status === 'pending' || o.status === 'confirmed',
+  ).length
+  const outForDeliveryCount = ops.orders.filter(
+    (o) => o.status === 'out_for_delivery' || o.status === 'assigned',
+  ).length
   const deliveredRevenue = ops.orders
     .filter((o) => o.status === 'delivered')
     .reduce((sum, o) => sum + o.total, 0)
@@ -204,19 +212,21 @@ export function OrdersPanel() {
     if (!selectedCatalogItem) return
     const [type, prodId, varId] = selectedCatalogItem.split('::')
     const item = allCatalogProducts.find(
-      (p) => p.type === type && p.id === prodId && p.variantId === varId
+      (p) => p.type === type && p.id === prodId && p.variantId === varId,
     )
     if (!item) return
 
     setOrderForm((prev) => {
-      const exists = prev.items.find((i) => i.productId === prodId && i.variantId === varId)
+      const exists = prev.items.find(
+        (i) => i.productId === prodId && i.variantId === varId,
+      )
       if (exists) {
         return {
           ...prev,
           items: prev.items.map((i) =>
             i.productId === prodId && i.variantId === varId
               ? { ...i, qty: i.qty + 1 }
-              : i
+              : i,
           ),
         }
       }
@@ -241,7 +251,11 @@ export function OrdersPanel() {
 
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!orderForm.customerName || !orderForm.address || orderForm.items.length === 0) {
+    if (
+      !orderForm.customerName ||
+      !orderForm.address ||
+      orderForm.items.length === 0
+    ) {
       toast.error('Please fill in customer details and add at least one item')
       return
     }
@@ -291,7 +305,7 @@ export function OrdersPanel() {
     const rows = filteredOrders
       .map(
         (o) =>
-          `"${o.number}","${o.customerName}","${o.customerPhone}","${o.city}","${o.status}","${o.paymentMethod}",${o.subtotal},${o.deliveryCharge},${o.tax},${o.total},"${o.createdAt}"`
+          `"${o.number}","${o.customerName}","${o.customerPhone}","${o.city}","${o.status}","${o.paymentMethod}",${o.subtotal},${o.deliveryCharge},${o.tax},${o.total},"${o.createdAt}"`,
       )
       .join('\n')
     const blob = new Blob([headers + rows], { type: 'text/csv' })
@@ -311,7 +325,11 @@ export function OrdersPanel() {
         description="Monitor lifecycle transitions, assign Kathmandu Valley fleet couriers, and generate government-compliant VAT invoices."
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleExportCSV} className="gap-2">
+            <Button
+              variant="outline"
+              onClick={handleExportCSV}
+              className="gap-2"
+            >
               <Download className="h-4 w-4" />
               Export CSV
             </Button>
@@ -403,13 +421,18 @@ export function OrdersPanel() {
             <TableBody>
               {filteredOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-12 text-center text-muted-foreground text-sm">
+                  <TableCell
+                    colSpan={8}
+                    className="py-12 text-center text-muted-foreground text-sm"
+                  >
                     No orders match your filter criteria.
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredOrders.map((order) => {
-                  const assignedRider = ops.riders.find((r) => r.id === order.riderId)
+                  const assignedRider = ops.riders.find(
+                    (r) => r.id === order.riderId,
+                  )
                   return (
                     <TableRow key={order.id}>
                       <TableCell>
@@ -422,13 +445,18 @@ export function OrdersPanel() {
                       </TableCell>
 
                       <TableCell>
-                        <div className="font-medium text-foreground">{order.customerName}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{order.customerPhone}</div>
+                        <div className="font-medium text-foreground">
+                          {order.customerName}
+                        </div>
+                        <div className="text-xs text-muted-foreground font-mono">
+                          {order.customerPhone}
+                        </div>
                       </TableCell>
 
                       <TableCell>
                         <span className="font-medium text-foreground">
-                          {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
+                          {order.items.length}{' '}
+                          {order.items.length === 1 ? 'item' : 'items'}
                         </span>
                         <div className="text-xs text-muted-foreground truncate max-w-[160px]">
                           {order.items.map((i) => i.name).join(', ')}
@@ -446,7 +474,10 @@ export function OrdersPanel() {
                       </TableCell>
 
                       <TableCell>
-                        <Badge variant="outline" className="font-mono text-[11px] uppercase">
+                        <Badge
+                          variant="outline"
+                          className="font-mono text-[11px] uppercase"
+                        >
                           {order.paymentMethod}
                         </Badge>
                       </TableCell>
@@ -458,7 +489,9 @@ export function OrdersPanel() {
                             <span>{assignedRider.name}</span>
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground italic">Unassigned</span>
+                          <span className="text-xs text-muted-foreground italic">
+                            Unassigned
+                          </span>
                         )}
                       </TableCell>
 
@@ -514,22 +547,31 @@ export function OrdersPanel() {
               {/* Status and Action Selector */}
               <div className="p-3.5 rounded-lg border border-border bg-muted/30 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground font-medium">Status:</span>
+                  <span className="text-muted-foreground font-medium">
+                    Status:
+                  </span>
                   <StatusBadge value={selectedOrder.status} />
                 </div>
 
                 <div className="flex items-center gap-2">
                   <NativeSelect
                     value={selectedOrder.status}
-                    onChange={(e) => handleUpdateStatus(selectedOrder.id, e.target.value as OrderStatus)}
+                    onChange={(e) =>
+                      handleUpdateStatus(
+                        selectedOrder.id,
+                        e.target.value as OrderStatus,
+                      )
+                    }
                     disabled={isUpdating}
                     className="text-xs font-medium"
                   >
-                    {ORDER_STATUSES.filter((s) => s.value !== 'all').map((s) => (
-                      <option key={s.value} value={s.value}>
-                        Set {s.label}
-                      </option>
-                    ))}
+                    {ORDER_STATUSES.filter((s) => s.value !== 'all').map(
+                      (s) => (
+                        <option key={s.value} value={s.value}>
+                          Set {s.label}
+                        </option>
+                      ),
+                    )}
                   </NativeSelect>
                 </div>
               </div>
@@ -541,7 +583,9 @@ export function OrdersPanel() {
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
                       Customer Details
                     </span>
-                    <div className="font-semibold text-foreground">{selectedOrder.customerName}</div>
+                    <div className="font-semibold text-foreground">
+                      {selectedOrder.customerName}
+                    </div>
                     <div className="text-muted-foreground flex items-center gap-1.5 font-mono">
                       <Phone className="h-3 w-3 text-muted-foreground" />
                       {selectedOrder.customerPhone}
@@ -563,11 +607,15 @@ export function OrdersPanel() {
                       Fleet Dispatch
                     </span>
                     <div className="space-y-1">
-                      <Label htmlFor="courier-select" className="text-xs">Assigned Courier</Label>
+                      <Label htmlFor="courier-select" className="text-xs">
+                        Assigned Courier
+                      </Label>
                       <NativeSelect
                         id="courier-select"
                         value={selectedOrder.riderId || ''}
-                        onChange={(e) => handleAssignRider(selectedOrder.id, e.target.value)}
+                        onChange={(e) =>
+                          handleAssignRider(selectedOrder.id, e.target.value)
+                        }
                         disabled={isUpdating}
                         className="text-xs"
                       >
@@ -580,7 +628,10 @@ export function OrdersPanel() {
                       </NativeSelect>
                     </div>
                     <div className="text-muted-foreground pt-1">
-                      Payment Mode: <strong className="uppercase text-foreground font-mono">{selectedOrder.paymentMethod}</strong>
+                      Payment Mode:{' '}
+                      <strong className="uppercase text-foreground font-mono">
+                        {selectedOrder.paymentMethod}
+                      </strong>
                     </div>
                   </CardContent>
                 </Card>
@@ -602,12 +653,22 @@ export function OrdersPanel() {
                     {selectedOrder.items.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell>
-                          <span className="font-medium text-foreground">{item.name}</span>
-                          <span className="block text-[11px] text-muted-foreground">{item.variantName}</span>
+                          <span className="font-medium text-foreground">
+                            {item.name}
+                          </span>
+                          <span className="block text-[11px] text-muted-foreground">
+                            {item.variantName}
+                          </span>
                         </TableCell>
-                        <TableCell className="font-mono text-muted-foreground">{item.sku}</TableCell>
-                        <TableCell className="text-center font-semibold text-foreground">{item.qty}</TableCell>
-                        <TableCell className="text-right font-mono">{formatNPR(item.unitPrice)}</TableCell>
+                        <TableCell className="font-mono text-muted-foreground">
+                          {item.sku}
+                        </TableCell>
+                        <TableCell className="text-center font-semibold text-foreground">
+                          {item.qty}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {formatNPR(item.unitPrice)}
+                        </TableCell>
                         <TableCell className="text-right font-mono font-semibold text-foreground">
                           {formatNPR(item.lineTotal)}
                         </TableCell>
@@ -621,25 +682,35 @@ export function OrdersPanel() {
               <div className="rounded-lg border border-border bg-muted/20 p-3.5 space-y-1.5 text-xs text-right max-w-xs ml-auto">
                 <div className="flex justify-between text-muted-foreground">
                   <span>Subtotal:</span>
-                  <span className="font-mono">{formatNPR(selectedOrder.subtotal)}</span>
+                  <span className="font-mono">
+                    {formatNPR(selectedOrder.subtotal)}
+                  </span>
                 </div>
                 {selectedOrder.discount > 0 && (
                   <div className="flex justify-between text-success">
                     <span>Discount:</span>
-                    <span className="font-mono">-{formatNPR(selectedOrder.discount)}</span>
+                    <span className="font-mono">
+                      -{formatNPR(selectedOrder.discount)}
+                    </span>
                   </div>
                 )}
                 <div className="flex justify-between text-muted-foreground">
                   <span>Delivery Charge:</span>
-                  <span className="font-mono">{formatNPR(selectedOrder.deliveryCharge)}</span>
+                  <span className="font-mono">
+                    {formatNPR(selectedOrder.deliveryCharge)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
                   <span>VAT ({ops.settings.taxRate}%):</span>
-                  <span className="font-mono">{formatNPR(selectedOrder.tax)}</span>
+                  <span className="font-mono">
+                    {formatNPR(selectedOrder.tax)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm font-semibold text-foreground border-t border-border pt-1.5">
                   <span>Grand Total:</span>
-                  <span className="font-mono">{formatNPR(selectedOrder.total)}</span>
+                  <span className="font-mono">
+                    {formatNPR(selectedOrder.total)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -654,10 +725,7 @@ export function OrdersPanel() {
                 <Printer className="h-4 w-4" />
                 Print Invoice
               </Button>
-              <Button
-                size="sm"
-                onClick={() => setSelectedOrder(null)}
-              >
+              <Button size="sm" onClick={() => setSelectedOrder(null)}>
                 Done
               </Button>
             </DialogFooter>
@@ -676,7 +744,9 @@ export function OrdersPanel() {
               <div className="flex items-center justify-between">
                 <div>
                   <DialogTitle>Tax Invoice Preview</DialogTitle>
-                  <DialogDescription className="font-mono">{selectedOrder.number}</DialogDescription>
+                  <DialogDescription className="font-mono">
+                    {selectedOrder.number}
+                  </DialogDescription>
                 </div>
                 <Button
                   onClick={() => window.print()}
@@ -694,22 +764,31 @@ export function OrdersPanel() {
               <div className="flex items-start justify-between border-b pb-4 border-border">
                 <div>
                   <h2 className="text-base font-bold text-foreground uppercase tracking-tight">
-                    {ops.settings.legalName || 'MEZMANI LIQUOR & GROCERY PVT. LTD.'}
+                    {ops.settings.legalName ||
+                      'MEZMANI LIQUOR & GROCERY PVT. LTD.'}
                   </h2>
-                  <p className="text-muted-foreground">{ops.settings.address || 'Kathmandu, Nepal'}</p>
-                  <p className="text-muted-foreground font-mono">
-                    PAN / VAT Reg: <strong>{ops.settings.pan || '609823415'}</strong>
+                  <p className="text-muted-foreground">
+                    {ops.settings.address || 'Kathmandu, Nepal'}
                   </p>
-                  <p className="text-muted-foreground">Contact: {ops.settings.phone || '+977-1-4229988'}</p>
+                  <p className="text-muted-foreground font-mono">
+                    PAN / VAT Reg:{' '}
+                    <strong>{ops.settings.pan || '609823415'}</strong>
+                  </p>
+                  <p className="text-muted-foreground">
+                    Contact: {ops.settings.phone || '+977-1-4229988'}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <span className="text-sm font-semibold text-primary block">TAX INVOICE</span>
+                  <span className="text-sm font-semibold text-primary block">
+                    TAX INVOICE
+                  </span>
                   <div className="font-mono font-bold text-foreground mt-1">
                     {ops.settings.invoicePrefix || 'MEZ-INV-'}
                     {selectedOrder.number.replace(/[^0-9]/g, '')}
                   </div>
                   <div className="text-muted-foreground font-mono">
-                    Date: {new Date(selectedOrder.createdAt).toLocaleDateString()}
+                    Date:{' '}
+                    {new Date(selectedOrder.createdAt).toLocaleDateString()}
                   </div>
                   <div className="text-muted-foreground uppercase font-semibold">
                     Payment: {selectedOrder.paymentMethod}
@@ -723,16 +802,26 @@ export function OrdersPanel() {
                   <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
                     Billed To Customer:
                   </span>
-                  <div className="font-semibold text-foreground">{selectedOrder.customerName}</div>
-                  <div className="text-muted-foreground font-mono">{selectedOrder.customerPhone}</div>
-                  <div className="text-muted-foreground">{selectedOrder.customerEmail}</div>
+                  <div className="font-semibold text-foreground">
+                    {selectedOrder.customerName}
+                  </div>
+                  <div className="text-muted-foreground font-mono">
+                    {selectedOrder.customerPhone}
+                  </div>
+                  <div className="text-muted-foreground">
+                    {selectedOrder.customerEmail}
+                  </div>
                 </div>
                 <div>
                   <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
                     Delivery Destination:
                   </span>
-                  <div className="font-medium text-foreground">{selectedOrder.address}</div>
-                  <div className="text-muted-foreground">{selectedOrder.city}</div>
+                  <div className="font-medium text-foreground">
+                    {selectedOrder.address}
+                  </div>
+                  <div className="text-muted-foreground">
+                    {selectedOrder.city}
+                  </div>
                 </div>
               </div>
 
@@ -752,11 +841,21 @@ export function OrdersPanel() {
                   <TableBody>
                     {selectedOrder.items.map((i, idx) => (
                       <TableRow key={i.id}>
-                        <TableCell className="text-muted-foreground font-mono">{idx + 1}</TableCell>
-                        <TableCell className="font-medium text-foreground">{i.name}</TableCell>
-                        <TableCell className="font-mono text-muted-foreground">{i.sku}</TableCell>
-                        <TableCell className="text-right font-mono">{formatNPR(i.unitPrice)}</TableCell>
-                        <TableCell className="text-center font-semibold">{i.qty}</TableCell>
+                        <TableCell className="text-muted-foreground font-mono">
+                          {idx + 1}
+                        </TableCell>
+                        <TableCell className="font-medium text-foreground">
+                          {i.name}
+                        </TableCell>
+                        <TableCell className="font-mono text-muted-foreground">
+                          {i.sku}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {formatNPR(i.unitPrice)}
+                        </TableCell>
+                        <TableCell className="text-center font-semibold">
+                          {i.qty}
+                        </TableCell>
                         <TableCell className="text-right font-mono font-semibold text-foreground">
                           {formatNPR(i.lineTotal)}
                         </TableCell>
@@ -776,25 +875,35 @@ export function OrdersPanel() {
                 <div className="w-56 space-y-1.5 text-xs text-right">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Subtotal:</span>
-                    <span className="font-mono">{formatNPR(selectedOrder.subtotal)}</span>
+                    <span className="font-mono">
+                      {formatNPR(selectedOrder.subtotal)}
+                    </span>
                   </div>
                   {selectedOrder.discount > 0 && (
                     <div className="flex justify-between text-success">
                       <span>Discount:</span>
-                      <span className="font-mono">-{formatNPR(selectedOrder.discount)}</span>
+                      <span className="font-mono">
+                        -{formatNPR(selectedOrder.discount)}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between text-muted-foreground">
                     <span>Shipping:</span>
-                    <span className="font-mono">{formatNPR(selectedOrder.deliveryCharge)}</span>
+                    <span className="font-mono">
+                      {formatNPR(selectedOrder.deliveryCharge)}
+                    </span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>VAT ({ops.settings.taxRate}%):</span>
-                    <span className="font-mono">{formatNPR(selectedOrder.tax)}</span>
+                    <span className="font-mono">
+                      {formatNPR(selectedOrder.tax)}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm font-semibold text-foreground border-t border-border pt-1.5">
                     <span>Grand Total:</span>
-                    <span className="font-mono">{formatNPR(selectedOrder.total)}</span>
+                    <span className="font-mono">
+                      {formatNPR(selectedOrder.total)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -808,7 +917,9 @@ export function OrdersPanel() {
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Customer Order</DialogTitle>
-            <DialogDescription>Manual booking with live inventory items</DialogDescription>
+            <DialogDescription>
+              Manual booking with live inventory items
+            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateOrder} className="space-y-4 text-xs">
@@ -819,7 +930,9 @@ export function OrdersPanel() {
                   id="cust-name"
                   required
                   value={orderForm.customerName}
-                  onChange={(e) => setOrderForm({ ...orderForm, customerName: e.target.value })}
+                  onChange={(e) =>
+                    setOrderForm({ ...orderForm, customerName: e.target.value })
+                  }
                   placeholder="e.g. Aayush Shrestha"
                 />
               </div>
@@ -829,7 +942,12 @@ export function OrdersPanel() {
                   id="cust-phone"
                   required
                   value={orderForm.customerPhone}
-                  onChange={(e) => setOrderForm({ ...orderForm, customerPhone: e.target.value })}
+                  onChange={(e) =>
+                    setOrderForm({
+                      ...orderForm,
+                      customerPhone: e.target.value,
+                    })
+                  }
                   placeholder="+977 98..."
                 />
               </div>
@@ -842,7 +960,9 @@ export function OrdersPanel() {
                   id="cust-addr"
                   required
                   value={orderForm.address}
-                  onChange={(e) => setOrderForm({ ...orderForm, address: e.target.value })}
+                  onChange={(e) =>
+                    setOrderForm({ ...orderForm, address: e.target.value })
+                  }
                   placeholder="e.g. Jhamsikhel, Ward 3"
                 />
               </div>
@@ -851,7 +971,9 @@ export function OrdersPanel() {
                 <Input
                   id="cust-city"
                   value={orderForm.city}
-                  onChange={(e) => setOrderForm({ ...orderForm, city: e.target.value })}
+                  onChange={(e) =>
+                    setOrderForm({ ...orderForm, city: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -863,7 +985,10 @@ export function OrdersPanel() {
                   id="pay-method"
                   value={orderForm.paymentMethod}
                   onChange={(e) =>
-                    setOrderForm({ ...orderForm, paymentMethod: e.target.value as PaymentMethod })
+                    setOrderForm({
+                      ...orderForm,
+                      paymentMethod: e.target.value as PaymentMethod,
+                    })
                   }
                 >
                   <option value="cod">Cash on Delivery (COD)</option>
@@ -879,7 +1004,12 @@ export function OrdersPanel() {
                   id="cust-email"
                   type="email"
                   value={orderForm.customerEmail}
-                  onChange={(e) => setOrderForm({ ...orderForm, customerEmail: e.target.value })}
+                  onChange={(e) =>
+                    setOrderForm({
+                      ...orderForm,
+                      customerEmail: e.target.value,
+                    })
+                  }
                   placeholder="customer@domain.np"
                 />
               </div>
@@ -901,7 +1031,8 @@ export function OrdersPanel() {
                       key={`${p.type}::${p.id}::${p.variantId}`}
                       value={`${p.type}::${p.id}::${p.variantId}`}
                     >
-                      [{p.type.toUpperCase()}] {p.name} ({p.variantName}) &bull; {formatNPR(p.price)}
+                      [{p.type.toUpperCase()}] {p.name} ({p.variantName}) &bull;{' '}
+                      {formatNPR(p.price)}
                     </option>
                   ))}
                 </NativeSelect>
@@ -932,7 +1063,9 @@ export function OrdersPanel() {
                           <TableCell className="font-medium text-foreground">
                             {it.name} ({it.variantName})
                           </TableCell>
-                          <TableCell className="text-center font-semibold">{it.qty}</TableCell>
+                          <TableCell className="text-center font-semibold">
+                            {it.qty}
+                          </TableCell>
                           <TableCell className="text-right font-mono font-semibold">
                             {formatNPR(it.unitPrice * it.qty)}
                           </TableCell>
@@ -947,7 +1080,10 @@ export function OrdersPanel() {
                                   ...prev,
                                   items: prev.items.filter(
                                     (x) =>
-                                      !(x.productId === it.productId && x.variantId === it.variantId)
+                                      !(
+                                        x.productId === it.productId &&
+                                        x.variantId === it.variantId
+                                      ),
                                   ),
                                 }))
                               }
@@ -969,7 +1105,9 @@ export function OrdersPanel() {
                 id="order-notes"
                 rows={2}
                 value={orderForm.notes}
-                onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })}
+                onChange={(e) =>
+                  setOrderForm({ ...orderForm, notes: e.target.value })
+                }
                 placeholder="Gate instructions, landmark, preferred delivery window..."
               />
             </div>

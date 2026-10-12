@@ -50,7 +50,9 @@ export function ConfirmDialog({
     >
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-base font-semibold">{title}</AlertDialogTitle>
+          <AlertDialogTitle className="text-base font-semibold">
+            {title}
+          </AlertDialogTitle>
           <AlertDialogDescription className="text-xs text-muted-foreground">
             {description}
           </AlertDialogDescription>

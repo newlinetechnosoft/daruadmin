@@ -64,15 +64,15 @@ export function Footer() {
                 MEZMANI
               </Link>
               <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">
-                Licensed food and beverage delivery platform. Genuine spirits, cold beer, wine, and groceries delivered straight to your door across Kathmandu Valley.
+                Licensed food and beverage delivery platform. Genuine spirits,
+                cold beer, wine, and groceries delivered straight to your door
+                across Kathmandu Valley.
               </p>
             </div>
 
             {/* Catalog */}
             <div className="flex flex-col gap-2.5 text-xs">
-              <h4 className="font-semibold text-foreground mb-1">
-                Catalog
-              </h4>
+              <h4 className="font-semibold text-foreground mb-1">Catalog</h4>
               <Link
                 to="/drinks"
                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -101,9 +101,7 @@ export function Footer() {
 
             {/* About */}
             <div className="flex flex-col gap-2.5 text-xs">
-              <h4 className="font-semibold text-foreground mb-1">
-                Company
-              </h4>
+              <h4 className="font-semibold text-foreground mb-1">Company</h4>
               <a
                 href="/#about"
                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -126,9 +124,7 @@ export function Footer() {
 
             {/* Connect */}
             <div className="flex flex-col gap-2.5 text-xs">
-              <h4 className="font-semibold text-foreground mb-1">
-                Connect
-              </h4>
+              <h4 className="font-semibold text-foreground mb-1">Connect</h4>
               <a
                 href="https://facebook.com"
                 target="_blank"

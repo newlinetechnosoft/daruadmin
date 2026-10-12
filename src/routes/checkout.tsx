@@ -1,11 +1,13 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { getMyAccessFn } from '#/server/operations/operations.functions'
+import { adminQueries } from '#/queries/admin'
 import { CheckoutPanel } from '#/components/panels/customer/checkout-panel'
 
 export const Route = createFileRoute('/checkout')({
-  beforeLoad: async ({ location }) => {
-    const access = await getMyAccessFn()
-    if (!access.authenticated || !access.user) {
+  beforeLoad: async ({ location, context }) => {
+    const access = await context.queryClient.ensureQueryData(
+      adminQueries.access(),
+    )
+    if (!access.authenticated) {
       throw redirect({
         to: '/login',
         search: { redirect: location.pathname },

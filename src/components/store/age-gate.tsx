@@ -9,6 +9,8 @@ import {
 import { Button } from '#/components/ui/button'
 import { ShieldAlert, Wine } from 'lucide-react'
 
+import { idbGet, idbSet } from '#/lib/idb'
+
 const AGE_VERIFIED_KEY = 'Mezmani_age_verified_18'
 
 export function AgeGate() {
@@ -16,22 +18,15 @@ export function AgeGate() {
   const [isBlocked, setIsBlocked] = useState(false)
 
   useEffect(() => {
-    try {
-      const verified = localStorage.getItem(AGE_VERIFIED_KEY)
+    idbGet<boolean>(AGE_VERIFIED_KEY, false).then((verified) => {
       if (!verified) {
         setIsOpen(true)
       }
-    } catch {
-      setIsOpen(true)
-    }
+    })
   }, [])
 
   const handleConfirm = () => {
-    try {
-      localStorage.setItem(AGE_VERIFIED_KEY, 'true')
-    } catch {
-      // ignore
-    }
+    idbSet(AGE_VERIFIED_KEY, true).catch(() => {})
     setIsOpen(false)
   }
 
@@ -71,19 +66,17 @@ export function AgeGate() {
           </DialogTitle>
           <DialogDescription className="mt-2 text-muted-foreground">
             Welcome to{' '}
-            <span className="font-semibold text-primary">Mezmani</span>. You must
-            be at least{' '}
-            <span className="font-semibold text-foreground">18 years of age</span> to
-            purchase alcohol and enter this site in Nepal.
+            <span className="font-semibold text-primary">Mezmani</span>. You
+            must be at least{' '}
+            <span className="font-semibold text-foreground">
+              18 years of age
+            </span>{' '}
+            to purchase alcohol and enter this site in Nepal.
           </DialogDescription>
         </DialogHeader>
 
         <div className="mt-6 flex flex-col gap-3">
-          <Button
-            size="lg"
-            className="w-full"
-            onClick={handleConfirm}
-          >
+          <Button size="lg" className="w-full" onClick={handleConfirm}>
             I am 18 or older
           </Button>
           <Button
