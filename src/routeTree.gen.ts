@@ -35,6 +35,7 @@ import { Route as AdminShippingRouteImport } from './routes/admin/shipping'
 import { Route as AdminStaffRouteImport } from './routes/admin/staff'
 import { Route as AdminTaxonomyRouteImport } from './routes/admin/taxonomy'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as ApiNeonHealthRouteImport } from './routes/api/neon-health'
 import { Route as OrderConfirmationOrderIdRouteImport } from './routes/order-confirmation.$orderId'
 import { Route as RiderIndexRouteImport } from './routes/rider/index'
 import { Route as RiderDeliveriesRouteImport } from './routes/rider/deliveries'
@@ -174,6 +175,11 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const ApiNeonHealthRoute = ApiNeonHealthRouteImport.update({
+  id: '/api/neon-health',
+  path: '/api/neon-health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrderConfirmationOrderIdRoute =
   OrderConfirmationOrderIdRouteImport.update({
     id: '/order-confirmation/$orderId',
@@ -244,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/admin/staff': typeof AdminStaffRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/neon-health': typeof ApiNeonHealthRoute
   '/order-confirmation/$orderId': typeof OrderConfirmationOrderIdRoute
   '/rider/deliveries': typeof RiderDeliveriesRoute
   '/rider/earnings': typeof RiderEarningsRoute
@@ -278,6 +285,7 @@ export interface FileRoutesByTo {
   '/admin/staff': typeof AdminStaffRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/neon-health': typeof ApiNeonHealthRoute
   '/order-confirmation/$orderId': typeof OrderConfirmationOrderIdRoute
   '/rider/deliveries': typeof RiderDeliveriesRoute
   '/rider/earnings': typeof RiderEarningsRoute
@@ -315,6 +323,7 @@ export interface FileRoutesById {
   '/admin/staff': typeof AdminStaffRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/neon-health': typeof ApiNeonHealthRoute
   '/order-confirmation/$orderId': typeof OrderConfirmationOrderIdRoute
   '/rider/deliveries': typeof RiderDeliveriesRoute
   '/rider/earnings': typeof RiderEarningsRoute
@@ -353,6 +362,7 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/admin/taxonomy'
     | '/admin/users'
+    | '/api/neon-health'
     | '/order-confirmation/$orderId'
     | '/rider/deliveries'
     | '/rider/earnings'
@@ -387,6 +397,7 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/admin/taxonomy'
     | '/admin/users'
+    | '/api/neon-health'
     | '/order-confirmation/$orderId'
     | '/rider/deliveries'
     | '/rider/earnings'
@@ -423,6 +434,7 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/admin/taxonomy'
     | '/admin/users'
+    | '/api/neon-health'
     | '/order-confirmation/$orderId'
     | '/rider/deliveries'
     | '/rider/earnings'
@@ -444,6 +456,7 @@ export interface RootRouteChildren {
   GroceryRoute: typeof GroceryRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  ApiNeonHealthRoute: typeof ApiNeonHealthRoute
   OrderConfirmationOrderIdRoute: typeof OrderConfirmationOrderIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -632,6 +645,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/api/neon-health': {
+      id: '/api/neon-health'
+      path: '/api/neon-health'
+      fullPath: '/api/neon-health'
+      preLoaderRoute: typeof ApiNeonHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/order-confirmation/$orderId': {
       id: '/order-confirmation/$orderId'
       path: '/order-confirmation/$orderId'
@@ -777,6 +797,7 @@ const rootRouteChildren: RootRouteChildren = {
   GroceryRoute: GroceryRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  ApiNeonHealthRoute: ApiNeonHealthRoute,
   OrderConfirmationOrderIdRoute: OrderConfirmationOrderIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }

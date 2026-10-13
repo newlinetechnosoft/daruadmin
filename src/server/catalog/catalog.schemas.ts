@@ -113,6 +113,12 @@ export const deleteItemSchema = z.object({
   id: z.string().uuid(),
 })
 
+export const createImageUploadSchema = z.object({
+  filename: z.string().min(1),
+  contentType: z.string().regex(/^image\/(jpeg|png|webp|gif|svg\+xml)$/),
+  prefix: z.enum(['products', 'categories', 'brands', 'banners']).default('products'),
+})
+
 export type ListLiquorInput = z.infer<typeof listLiquorSchema>
 export type ListGroceryInput = z.infer<typeof listGrocerySchema>
 export type SearchCatalogInput = z.infer<typeof searchCatalogSchema>
@@ -124,3 +130,5 @@ export type ToggleProductStatusInput = z.infer<typeof toggleProductStatusSchema>
 export type UpsertCategoryInput = z.infer<typeof upsertCategorySchema>
 export type UpsertBrandInput = z.infer<typeof upsertBrandSchema>
 export type DeleteItemInput = z.infer<typeof deleteItemSchema>
+export type CreateImageUploadInput = z.infer<typeof createImageUploadSchema>
+

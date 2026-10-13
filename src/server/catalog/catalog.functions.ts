@@ -9,6 +9,7 @@ import {
   upsertCategorySchema,
   upsertBrandSchema,
   deleteItemSchema,
+  createImageUploadSchema,
 } from './catalog.schemas'
 import {
   getLiquorCategoriesQuery,
@@ -300,3 +301,57 @@ export const checkAdminSessionFn = createServerFn({ method: 'GET' }).handler(
     }
   },
 )
+
+export const createImageUploadFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => createImageUploadSchema.parse(d))
+  .handler(async ({ data }) => {
+    await requireRole('admin')
+    const { presignPut, getPublicUrl } = await import('#/lib/storage')
+    const ext = data.filename.split('.').pop() || 'jpg'
+    const key = `${data.prefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const uploadUrl = await presignPut(key, data.contentType)
+    const publicUrl = getPublicUrl(key)
+    return { uploadUrl, publicUrl, key }
+  })
+
+export const verifyNeonServicesFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const { db } = await import('#/db')
+    const { liquorProducts, groceryProducts } = await import('#/db/schema')
+    const { count } = await import('drizzle-orm')
+    const { putObject, getObject, deleteObject, getPresignedUrl } = await import('#/lib/storage')
+
+    // 1. Verify Postgres query on new Singapore instance
+    const [liquorCount] = await db.select({ total: count() }).from(liquorProducts)
+    const [groceryCount] = await db.select({ total: count() }).from(groceryProducts)
+
+    // 2. Verify Object Storage in ap-southeast-1
+    const testKey = `health-check/${Date.now()}.txt`
+    await putObject(testKey, 'neon-object-storage-verified', {
+      contentType: 'text/plain',
+    })
+    const getRes = await getObject(testKey)
+    const body = await getRes.Body?.transformToString()
+    const presignedUrl = await getPresignedUrl(testKey, 60)
+    await deleteObject(testKey)
+
+    return {
+      postgres: {
+        status: 'healthy',
+        region: 'aws-ap-southeast-1',
+        counts: {
+          liquorProducts: liquorCount?.total ?? 0,
+          groceryProducts: groceryCount?.total ?? 0,
+        },
+      },
+      objectStorage: {
+        status: 'healthy',
+        region: process.env.AWS_REGION || 'ap-southeast-1',
+        bucket: process.env.STORAGE_BUCKET || 'assets',
+        roundtripVerified: body === 'neon-object-storage-verified',
+        presignedUrlWorks: Boolean(presignedUrl),
+      },
+    }
+  },
+)
+

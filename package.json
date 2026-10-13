@@ -24,9 +24,13 @@
     "analyze": "ANALYZE=true vite build"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1150.0",
+    "@aws-sdk/s3-request-presigner": "^3.1150.0",
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
     "@hookform/resolvers": "^5.9.1",
+    "@neon/config": "^1.9.1",
+    "@neon/env": "^1.6.1",
     "@neondatabase/serverless": "^1.0.2",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/intent": "^0.5.4",
