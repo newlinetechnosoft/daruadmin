@@ -374,16 +374,21 @@ export async function getAdminLiquorProductsQuery() {
   }
 
   const imagesMap = new Map<string, string>()
+  const allImagesMap = new Map<string, typeof images>()
   for (const img of images) {
     if (img.isPrimary || !imagesMap.has(img.productId)) {
       imagesMap.set(img.productId, img.url)
     }
+    const current = allImagesMap.get(img.productId) ?? []
+    current.push(img)
+    allImagesMap.set(img.productId, current)
   }
 
   return productsList.map((p) => ({
     ...p,
     catalogType: 'liquor' as const,
     primaryImage: imagesMap.get(p.id) ?? null,
+    images: (allImagesMap.get(p.id) ?? []).sort((a, b) => a.sortOrder - b.sortOrder),
     variants: (variantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
   }))
 }
@@ -431,16 +436,21 @@ export async function getAdminGroceryProductsQuery() {
   }
 
   const imagesMap = new Map<string, string>()
+  const allImagesMap = new Map<string, typeof images>()
   for (const img of images) {
     if (img.isPrimary || !imagesMap.has(img.productId)) {
       imagesMap.set(img.productId, img.url)
     }
+    const current = allImagesMap.get(img.productId) ?? []
+    current.push(img)
+    allImagesMap.set(img.productId, current)
   }
 
   return productsList.map((p) => ({
     ...p,
     catalogType: 'grocery' as const,
     primaryImage: imagesMap.get(p.id) ?? null,
+    images: (allImagesMap.get(p.id) ?? []).sort((a, b) => a.sortOrder - b.sortOrder),
     variants: (variantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
   }))
 }
@@ -481,7 +491,20 @@ export async function upsertLiquorProductQuery(
     productId = inserted.id
   }
 
-  if (input.imageUrl) {
+  if (input.images !== undefined) {
+    await db.delete(liquorImages).where(eq(liquorImages.productId, productId))
+    if (input.images.length > 0) {
+      await db.insert(liquorImages).values(
+        input.images.map((img, idx) => ({
+          productId,
+          url: img.url,
+          alt: img.alt ?? input.name,
+          sortOrder: img.sortOrder ?? idx,
+          isPrimary: img.isPrimary ?? idx === 0,
+        })),
+      )
+    }
+  } else if (input.imageUrl) {
     const existingImg = await db
       .select({ id: liquorImages.id })
       .from(liquorImages)
@@ -584,7 +607,20 @@ export async function upsertGroceryProductQuery(
     productId = inserted.id
   }
 
-  if (input.imageUrl) {
+  if (input.images !== undefined) {
+    await db.delete(groceryImages).where(eq(groceryImages.productId, productId))
+    if (input.images.length > 0) {
+      await db.insert(groceryImages).values(
+        input.images.map((img, idx) => ({
+          productId,
+          url: img.url,
+          alt: img.alt ?? input.name,
+          sortOrder: img.sortOrder ?? idx,
+          isPrimary: img.isPrimary ?? idx === 0,
+        })),
+      )
+    }
+  } else if (input.imageUrl) {
     const existingImg = await db
       .select({ id: groceryImages.id })
       .from(groceryImages)
@@ -939,3 +975,16 @@ export async function getProductsByIdsQuery(ids: string[]) {
   // Filter out any products that have no active variants
   return result.filter((p) => p.variants.length > 0)
 }
+
+export async function deleteProductImageQuery(
+  catalogType: 'liquor' | 'grocery',
+  imageId: string,
+) {
+  if (catalogType === 'liquor') {
+    await db.delete(liquorImages).where(eq(liquorImages.id, imageId))
+  } else {
+    await db.delete(groceryImages).where(eq(groceryImages.id, imageId))
+  }
+  return { success: true }
+}
+

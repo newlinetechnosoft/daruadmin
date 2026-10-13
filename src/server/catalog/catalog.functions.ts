@@ -10,6 +10,7 @@ import {
   upsertBrandSchema,
   deleteItemSchema,
   createImageUploadSchema,
+  deleteProductImageSchema,
 } from './catalog.schemas'
 import {
   getLiquorCategoriesQuery,
@@ -312,6 +313,29 @@ export const createImageUploadFn = createServerFn({ method: 'POST' })
     const uploadUrl = await presignPut(key, data.contentType)
     const publicUrl = getPublicUrl(key)
     return { uploadUrl, publicUrl, key }
+  })
+
+export const deleteProductImageFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => deleteProductImageSchema.parse(d))
+  .handler(async ({ data }) => {
+    await requireRole('admin')
+    const { deleteProductImageQuery } = await import('./catalog.queries')
+    await deleteProductImageQuery(data.catalogType, data.imageId)
+
+    if (data.imageUrl && (data.imageUrl.includes('.storage.') || data.imageUrl.includes('/assets/'))) {
+      try {
+        const { deleteObject } = await import('#/lib/storage')
+        const urlObj = new URL(data.imageUrl)
+        const parts = urlObj.pathname.split('/').filter(Boolean)
+        if (parts.length >= 2) {
+          const key = parts.slice(1).join('/')
+          await deleteObject(key)
+        }
+      } catch (err) {
+        console.warn('Failed to delete object from storage:', err)
+      }
+    }
+    return { success: true }
   })
 
 export const verifyNeonServicesFn = createServerFn({ method: 'GET' }).handler(

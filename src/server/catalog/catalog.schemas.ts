@@ -28,7 +28,18 @@ export const upsertLiquorProductSchema = z.object({
   categoryId: z.string().uuid(),
   brandId: z.string().uuid().optional().nullable(),
   description: z.string().optional().nullable(),
-  imageUrl: z.string().url().optional().nullable(),
+  imageUrl: z.string().optional().nullable(),
+  images: z
+    .array(
+      z.object({
+        id: z.string().uuid().optional(),
+        url: z.string(),
+        alt: z.string().optional().nullable(),
+        sortOrder: z.number().int().default(0),
+        isPrimary: z.boolean().default(false),
+      }),
+    )
+    .optional(),
   isFeatured: z.boolean().default(false),
   isActive: z.boolean().default(true),
   variants: z
@@ -54,7 +65,18 @@ export const upsertGroceryProductSchema = z.object({
   slug: z.string().min(2).max(200).optional(),
   categoryId: z.string().uuid(),
   description: z.string().optional().nullable(),
-  imageUrl: z.string().url().optional().nullable(),
+  imageUrl: z.string().optional().nullable(),
+  images: z
+    .array(
+      z.object({
+        id: z.string().uuid().optional(),
+        url: z.string(),
+        alt: z.string().optional().nullable(),
+        sortOrder: z.number().int().default(0),
+        isPrimary: z.boolean().default(false),
+      }),
+    )
+    .optional(),
   isFeatured: z.boolean().default(false),
   isActive: z.boolean().default(true),
   variants: z
@@ -113,10 +135,16 @@ export const deleteItemSchema = z.object({
   id: z.string().uuid(),
 })
 
+export const deleteProductImageSchema = z.object({
+  catalogType: z.enum(['liquor', 'grocery']),
+  imageId: z.string().uuid(),
+  imageUrl: z.string().optional(),
+})
+
 export const createImageUploadSchema = z.object({
   filename: z.string().min(1),
-  contentType: z.string().regex(/^image\/(jpeg|png|webp|gif|svg\+xml)$/),
-  prefix: z.enum(['products', 'categories', 'brands', 'banners']).default('products'),
+  contentType: z.string(),
+  prefix: z.string().default('products'),
 })
 
 export type ListLiquorInput = z.infer<typeof listLiquorSchema>
@@ -130,5 +158,6 @@ export type ToggleProductStatusInput = z.infer<typeof toggleProductStatusSchema>
 export type UpsertCategoryInput = z.infer<typeof upsertCategorySchema>
 export type UpsertBrandInput = z.infer<typeof upsertBrandSchema>
 export type DeleteItemInput = z.infer<typeof deleteItemSchema>
+export type DeleteProductImageInput = z.infer<typeof deleteProductImageSchema>
 export type CreateImageUploadInput = z.infer<typeof createImageUploadSchema>
 

@@ -1,11 +1,17 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import type { FormEvent } from 'react'
 import { getRouteApi, useRouter } from '@tanstack/react-router'
 import {
   upsertGroceryProductFn,
   toggleProductStatusFn,
   deleteItemFn,
+  deleteProductImageFn,
 } from '#/server/catalog/catalog.functions'
+import {
+  ImageUploader,
+  type ImageUploaderRef,
+  type ExistingImageItem,
+} from '#/components/shared/image-uploader'
 import { formatNPR, toPaisa, toRupees } from '#/lib/money'
 import {
   Search,
@@ -80,6 +86,8 @@ export function GroceryPanel() {
   const [formCategoryId, setFormCategoryId] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formImageUrl, setFormImageUrl] = useState('')
+  const imageUploaderRef = useRef<ImageUploaderRef>(null)
+  const [existingImagesList, setExistingImagesList] = useState<ExistingImageItem[]>([])
   const [formIsFeatured, setFormIsFeatured] = useState(false)
   const [formIsActive, setFormIsActive] = useState(true)
   const [formVariants, setFormVariants] = useState<GroceryVariantItem[]>([
@@ -125,6 +133,8 @@ export function GroceryPanel() {
     setFormCategoryId(taxonomy.groceryCategories[0]?.id ?? '')
     setFormDescription('')
     setFormImageUrl('')
+    setExistingImagesList([])
+    imageUploaderRef.current?.discardDrafts()
     setFormIsFeatured(false)
     setFormIsActive(true)
     setFormVariants([
@@ -151,6 +161,13 @@ export function GroceryPanel() {
     setFormImageUrl(p.primaryImage ?? '')
     setFormIsFeatured(p.isFeatured)
     setFormIsActive(p.isActive)
+    const imgs =
+      (p as any).images && (p as any).images.length > 0
+        ? (p as any).images
+        : p.primaryImage
+          ? [{ url: p.primaryImage, isPrimary: true, sortOrder: 0 }]
+          : []
+    setExistingImagesList(imgs)
     setFormVariants(
       p.variants.map((v) => ({
         id: v.id,
@@ -208,6 +225,17 @@ export function GroceryPanel() {
 
     setIsSubmitting(true)
     try {
+      // 1. Upload any staged compressed images from IndexedDB to Neon Object Storage
+      const uploadedImages = imageUploaderRef.current
+        ? await imageUploaderRef.current.uploadStagedAndGetAll()
+        : []
+
+      const primaryImg =
+        uploadedImages.find((img) => img.isPrimary)?.url ||
+        uploadedImages[0]?.url ||
+        formImageUrl.trim() ||
+        null
+
       await upsertGroceryProductFn({
         data: {
           id: editingId ?? undefined,
@@ -215,7 +243,8 @@ export function GroceryPanel() {
           slug: formSlug.trim() || undefined,
           categoryId: formCategoryId,
           description: formDescription.trim() || null,
-          imageUrl: formImageUrl.trim() || null,
+          imageUrl: primaryImg,
+          images: uploadedImages,
           isFeatured: formIsFeatured,
           isActive: formIsActive,
           variants: formVariants.map((v) => ({
@@ -540,17 +569,27 @@ export function GroceryPanel() {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="gro-img" className="text-xs">
-                Image URL
+            <div className="space-y-1.5 border-t border-border/60 pt-3">
+              <Label className="text-xs font-medium">
+                Product Images (Neon Object Storage)
               </Label>
-              <Input
-                id="gro-img"
-                type="url"
-                value={formImageUrl}
-                onChange={(e) => setFormImageUrl(e.target.value)}
-                placeholder="https://images.unsplash.com/..."
-                className="h-8 text-xs"
+              <ImageUploader
+                ref={imageUploaderRef}
+                draftKey={`grocery-${editingId || 'new'}`}
+                existingImages={existingImagesList}
+                onDeleteExisting={async (img) => {
+                  if (img.id) {
+                    await deleteProductImageFn({
+                      data: {
+                        catalogType: 'grocery',
+                        imageId: img.id,
+                        imageUrl: img.url,
+                      },
+                    })
+                    await router.invalidate()
+                  }
+                }}
+                prefix="products/grocery"
               />
             </div>
 

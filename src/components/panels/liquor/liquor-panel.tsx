@@ -1,11 +1,17 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import type { FormEvent } from 'react'
 import { getRouteApi, useRouter } from '@tanstack/react-router'
 import {
   upsertLiquorProductFn,
   toggleProductStatusFn,
   deleteItemFn,
+  deleteProductImageFn,
 } from '#/server/catalog/catalog.functions'
+import {
+  ImageUploader,
+  type ImageUploaderRef,
+  type ExistingImageItem,
+} from '#/components/shared/image-uploader'
 import { formatNPR, toPaisa, toRupees } from '#/lib/money'
 import {
   Search,
@@ -82,6 +88,8 @@ export function LiquorPanel() {
   const [formBrandId, setFormBrandId] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formImageUrl, setFormImageUrl] = useState('')
+  const imageUploaderRef = useRef<ImageUploaderRef>(null)
+  const [existingImagesList, setExistingImagesList] = useState<ExistingImageItem[]>([])
   const [formIsFeatured, setFormIsFeatured] = useState(false)
   const [formIsActive, setFormIsActive] = useState(true)
   const [formVariants, setFormVariants] = useState<VariantFormItem[]>([
@@ -136,6 +144,8 @@ export function LiquorPanel() {
     setFormBrandId(taxonomy.liquorBrands[0]?.id ?? '')
     setFormDescription('')
     setFormImageUrl('')
+    setExistingImagesList([])
+    imageUploaderRef.current?.discardDrafts()
     setFormIsFeatured(false)
     setFormIsActive(true)
     setFormVariants([
@@ -163,6 +173,13 @@ export function LiquorPanel() {
     setFormImageUrl(p.primaryImage ?? '')
     setFormIsFeatured(p.isFeatured)
     setFormIsActive(p.isActive)
+    const imgs =
+      (p as any).images && (p as any).images.length > 0
+        ? (p as any).images
+        : p.primaryImage
+          ? [{ url: p.primaryImage, isPrimary: true, sortOrder: 0 }]
+          : []
+    setExistingImagesList(imgs)
     setFormVariants(
       p.variants.map((v) => ({
         id: v.id,
@@ -220,6 +237,17 @@ export function LiquorPanel() {
 
     setIsSubmitting(true)
     try {
+      // 1. Upload any staged compressed images from IndexedDB to Neon Object Storage
+      const uploadedImages = imageUploaderRef.current
+        ? await imageUploaderRef.current.uploadStagedAndGetAll()
+        : []
+
+      const primaryImg =
+        uploadedImages.find((img) => img.isPrimary)?.url ||
+        uploadedImages[0]?.url ||
+        formImageUrl.trim() ||
+        null
+
       await upsertLiquorProductFn({
         data: {
           id: editingId ?? undefined,
@@ -228,7 +256,8 @@ export function LiquorPanel() {
           categoryId: formCategoryId,
           brandId: formBrandId || null,
           description: formDescription.trim() || null,
-          imageUrl: formImageUrl.trim() || null,
+          imageUrl: primaryImg,
+          images: uploadedImages,
           isFeatured: formIsFeatured,
           isActive: formIsActive,
           variants: formVariants.map((v) => ({
@@ -591,33 +620,41 @@ export function LiquorPanel() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="liq-slug" className="text-xs">
-                  URL slug (optional)
-                </Label>
-                <Input
-                  id="liq-slug"
-                  value={formSlug}
-                  onChange={(e) => setFormSlug(e.target.value)}
-                  placeholder="auto-generated-from-name"
-                  className="h-8 font-mono text-xs"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="liq-slug" className="text-xs">
+                URL slug (optional)
+              </Label>
+              <Input
+                id="liq-slug"
+                value={formSlug}
+                onChange={(e) => setFormSlug(e.target.value)}
+                placeholder="auto-generated-from-name"
+                className="h-8 font-mono text-xs"
+              />
+            </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="liq-img" className="text-xs">
-                  Primary image URL
-                </Label>
-                <Input
-                  id="liq-img"
-                  type="url"
-                  value={formImageUrl}
-                  onChange={(e) => setFormImageUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="h-8 text-xs"
-                />
-              </div>
+            <div className="space-y-1.5 border-t border-border/60 pt-3">
+              <Label className="text-xs font-medium">
+                Product Images (Neon Object Storage)
+              </Label>
+              <ImageUploader
+                ref={imageUploaderRef}
+                draftKey={`liquor-${editingId || 'new'}`}
+                existingImages={existingImagesList}
+                onDeleteExisting={async (img) => {
+                  if (img.id) {
+                    await deleteProductImageFn({
+                      data: {
+                        catalogType: 'liquor',
+                        imageId: img.id,
+                        imageUrl: img.url,
+                      },
+                    })
+                    await router.invalidate()
+                  }
+                }}
+                prefix="products/liquor"
+              />
             </div>
 
             <div className="space-y-1.5">
