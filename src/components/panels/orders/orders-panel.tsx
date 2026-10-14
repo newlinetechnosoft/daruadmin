@@ -195,12 +195,26 @@ export function OrdersPanel() {
   const handleAssignRider = async (orderId: string, riderId: string) => {
     try {
       setIsUpdating(true)
-      await updateOrderFn({ data: { id: orderId, riderId: riderId || null } })
+      const targetStatus = riderId
+        ? (['pending', 'confirmed', 'packing'].includes(selectedOrder?.status || '') ? 'assigned' : undefined)
+        : (selectedOrder?.status === 'assigned' ? 'packing' : undefined)
+
+      await updateOrderFn({
+        data: {
+          id: orderId,
+          riderId: riderId || null,
+          ...(targetStatus ? { status: targetStatus } : {}),
+        },
+      })
       const riderName = ops.riders.find((r) => r.id === riderId)?.name || 'None'
-      toast.success(`Assigned to rider: ${riderName}`)
+      toast.success(riderId ? `Assigned to rider: ${riderName}` : 'Courier unassigned')
       await router.invalidate()
       if (selectedOrder && selectedOrder.id === orderId) {
-        setSelectedOrder({ ...selectedOrder, riderId: riderId || null })
+        setSelectedOrder({
+          ...selectedOrder,
+          riderId: riderId || null,
+          ...(targetStatus ? { status: targetStatus as OrderStatus } : {}),
+        })
       }
     } catch {
       toast.error('Failed to assign rider')

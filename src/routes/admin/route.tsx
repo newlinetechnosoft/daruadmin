@@ -6,7 +6,9 @@ import {
   redirect,
   useRouterState,
   useNavigate,
+  useRouter,
 } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   globalSearchFn,
   markNotificationsFn,
@@ -95,7 +97,7 @@ import { ThemeToggle } from '#/components/shared/theme-toggle'
 
 export const Route = createFileRoute('/admin')({
   beforeLoad: async ({ location, context }) => {
-    const access = await context.queryClient.ensureQueryData(
+    const access = await context.queryClient.fetchQuery(
       adminQueries.access(),
     )
     if (!access.authenticated) {
@@ -272,6 +274,8 @@ function AdminLayout() {
   const { unread, notifications } = Route.useLoaderData()
   const routerState = useRouterState()
   const navigate = useNavigate()
+  const router = useRouter()
+  const queryClient = useQueryClient()
   const [searchOpen, setSearchOpen] = useState(false)
   const [globalQ, setGlobalQ] = useState('')
   const [results, setResults] = useState<{
@@ -320,6 +324,8 @@ function AdminLayout() {
     try {
       await authClient.signOut()
       await clearAllLocalData()
+      queryClient.clear()
+      await router.invalidate()
       toast.success('Signed out successfully')
       navigate({ to: '/login' })
     } catch {
@@ -369,7 +375,9 @@ function AdminLayout() {
                         Mezmani
                       </span>
                       <span className="text-[11px] text-muted-foreground">
-                        Admin console
+                        {adminUser.role === 'manager'
+                          ? 'Manager console'
+                          : 'Admin console'}
                       </span>
                     </div>
                   </Link>
@@ -439,7 +447,9 @@ function AdminLayout() {
               <BreadcrumbList>
                 <BreadcrumbItem>
                   <BreadcrumbLink asChild>
-                    <Link to="/admin">Admin</Link>
+                    <Link to="/admin">
+                      {adminUser.role === 'manager' ? 'Manager' : 'Admin'}
+                    </Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
@@ -460,7 +470,11 @@ function AdminLayout() {
               >
                 <span className="flex items-center gap-2">
                   <Search className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Search admin...</span>
+                  <span className="hidden sm:inline">
+                    {adminUser.role === 'manager'
+                      ? 'Search console...'
+                      : 'Search admin...'}
+                  </span>
                   <span className="sm:hidden">Search...</span>
                 </span>
                 <Kbd className="hidden sm:inline-flex">⌘K</Kbd>

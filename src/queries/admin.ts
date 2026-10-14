@@ -29,7 +29,7 @@ export const adminQueries = {
     queryOptions({
       queryKey: ['auth', 'my-access'],
       queryFn: () => getMyAccessFn(),
-      staleTime: 1000 * 60 * 5, // 5 mins
+      staleTime: 0,
     }),
 
   chrome: () =>

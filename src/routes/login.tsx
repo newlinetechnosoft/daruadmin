@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import { authClient } from '#/lib/auth-client'
 import { Header } from '#/components/store/header'
@@ -39,6 +40,8 @@ export const Route = createFileRoute('/login')({
 function LoginPage() {
   const search = Route.useSearch()
   const navigate = useNavigate()
+  const router = useRouter()
+  const queryClient = useQueryClient()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -66,6 +69,10 @@ function LoginPage() {
         setIsLoading(false)
         return
       }
+
+      // Wipe any previous session's in-memory query cache immediately
+      queryClient.clear()
+      await router.invalidate()
 
       toast.success('Welcome back to Mezmani!')
       const userRole = (res.data as any)?.user?.role

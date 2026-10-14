@@ -4,7 +4,7 @@ import { RiderLayout } from '#/components/panels/rider'
 
 export const Route = createFileRoute('/rider')({
   beforeLoad: async ({ location, context }) => {
-    const access = await context.queryClient.ensureQueryData(
+    const access = await context.queryClient.fetchQuery(
       adminQueries.access(),
     )
     if (!access.authenticated) {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate, useRouter } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCart } from '#/lib/cart-context'
 import { authClient } from '#/lib/auth-client'
 import { clearAllLocalData } from '#/lib/idb'
@@ -42,6 +43,8 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   const [searchVal, setSearchVal] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const navigate = useNavigate()
+  const router = useRouter()
+  const queryClient = useQueryClient()
 
   const handleSearchSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -59,6 +62,8 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
     try {
       await authClient.signOut()
       await clearAllLocalData()
+      queryClient.clear()
+      await router.invalidate()
       setMobileMenuOpen(false)
       toast.success('Signed out successfully')
       navigate({ to: '/' })

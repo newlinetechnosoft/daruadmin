@@ -800,18 +800,30 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
     await dbTx.transaction(async (tx) => {
       const updates: Record<string, any> = { updatedAt: new Date() }
       if (data.status) updates.status = data.status
-      if (data.riderId !== undefined) updates.riderId = data.riderId
+      if (data.riderId !== undefined) {
+        updates.riderId = data.riderId
+        if (data.riderId && data.riderId !== order.riderId) {
+          if (!data.status && ['pending', 'confirmed', 'packing'].includes(order.status)) {
+            updates.status = 'assigned'
+          }
+        } else if (data.riderId === null && order.riderId) {
+          if (!data.status && order.status === 'assigned') {
+            updates.status = 'packing'
+          }
+        }
+      }
       if (data.paymentStatus) updates.paymentStatus = data.paymentStatus
       if (data.notes !== undefined) updates.notes = data.notes
 
       await tx.update(orders).set(updates).where(eq(orders.id, data.id))
 
-      if (data.status && data.status !== order.status) {
+      const finalStatus = updates.status || data.status
+      if (finalStatus && finalStatus !== order.status) {
         await tx.insert(orderStatusHistory).values({
           id: nid('ev'),
           orderId: data.id,
-          status: data.status,
-          note: `Status updated to ${data.status.replaceAll('_', ' ')}`,
+          status: finalStatus,
+          note: `Status updated to ${finalStatus.replaceAll('_', ' ')}`,
           actor: user.name,
         })
       }
