@@ -20,6 +20,11 @@ import {
   Star,
   Radio,
   Navigation,
+  Lock,
+  Mail,
+  Eye,
+  EyeOff,
+  Phone,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
@@ -56,12 +61,14 @@ export function RidersPanel() {
   const [zoneFilter, setZoneFilter] = useState('all')
   const [isAddRiderOpen, setIsAddRiderOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showRiderPassword, setShowRiderPassword] = useState(false)
 
   // Add rider form state
   const [riderForm, setRiderForm] = useState({
     name: '',
     email: '',
     phone: '+977 ',
+    password: '',
     vehicle: 'bike' as 'bike' | 'scooter' | 'car',
     licenseNo: '',
     zone: 'Kathmandu Central',
@@ -163,16 +170,23 @@ export function RidersPanel() {
       toast.error('Please enter rider name and phone')
       return
     }
+    if (!riderForm.email.trim()) {
+      toast.error('Please enter an email address for courier login')
+      return
+    }
+    if (riderForm.password.length < 8) {
+      toast.error('Password must be at least 8 characters long')
+      return
+    }
 
     try {
       setIsSubmitting(true)
       await upsertRiderFn({
         data: {
-          name: riderForm.name,
-          email:
-            riderForm.email ||
-            `${riderForm.name.toLowerCase().replace(/\s+/g, '')}@courier.np`,
-          phone: riderForm.phone,
+          name: riderForm.name.trim(),
+          email: riderForm.email.trim(),
+          phone: riderForm.phone.trim(),
+          password: riderForm.password,
           vehicle: riderForm.vehicle,
           licenseNo: riderForm.licenseNo || 'BA-2-PA-1234',
           zone: riderForm.zone,
@@ -181,20 +195,21 @@ export function RidersPanel() {
           available: true,
         },
       })
-      toast.success('Rider onboarded successfully')
+      toast.success('Rider onboarded with login account successfully')
       setIsAddRiderOpen(false)
       setRiderForm({
         name: '',
         email: '',
         phone: '+977 ',
+        password: '',
         vehicle: 'bike',
         licenseNo: '',
         zone: 'Kathmandu Central',
         commissionRate: 150,
       })
       await router.invalidate()
-    } catch {
-      toast.error('Failed to onboard rider')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to onboard rider')
     } finally {
       setIsSubmitting(false)
     }
@@ -536,16 +551,66 @@ export function RidersPanel() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Contact phone *</Label>
-                <Input
-                  required
-                  value={riderForm.phone}
-                  onChange={(e) =>
-                    setRiderForm({ ...riderForm, phone: e.target.value })
-                  }
-                  placeholder="+977 98..."
-                  className="h-8 font-mono text-xs"
-                />
+                <div className="relative">
+                  <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    required
+                    value={riderForm.phone}
+                    onChange={(e) =>
+                      setRiderForm({ ...riderForm, phone: e.target.value })
+                    }
+                    placeholder="+977 98..."
+                    className="pl-8 h-8 font-mono text-xs"
+                  />
+                </div>
               </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Email address *</Label>
+                <div className="relative">
+                  <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    type="email"
+                    required
+                    value={riderForm.email}
+                    onChange={(e) =>
+                      setRiderForm({ ...riderForm, email: e.target.value })
+                    }
+                    placeholder="rider@mezmani.com.np"
+                    className="pl-8 h-8 font-mono text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Login password *</Label>
+              <div className="relative">
+                <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  type={showRiderPassword ? 'text' : 'password'}
+                  required
+                  value={riderForm.password}
+                  onChange={(e) =>
+                    setRiderForm({ ...riderForm, password: e.target.value })
+                  }
+                  placeholder="Min. 8 characters"
+                  className="pl-8 pr-8 h-8 font-mono text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRiderPassword(!showRiderPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showRiderPassword ? (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Vehicle type</Label>
                 <NativeSelect
@@ -570,9 +635,7 @@ export function RidersPanel() {
                   </NativeSelectOption>
                 </NativeSelect>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Vehicle plate no.</Label>
                 <Input
@@ -584,6 +647,9 @@ export function RidersPanel() {
                   className="h-8 font-mono text-xs"
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Delivery zone</Label>
                 <NativeSelect
@@ -605,24 +671,24 @@ export function RidersPanel() {
                   </NativeSelectOption>
                 </NativeSelect>
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs">
-                Per-delivery commission rate (NPR)
-              </Label>
-              <Input
-                type="number"
-                min="0"
-                value={riderForm.commissionRate}
-                onChange={(e) =>
-                  setRiderForm({
-                    ...riderForm,
-                    commissionRate: Number(e.target.value),
-                  })
-                }
-                className="h-8 font-mono text-xs"
-              />
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  Per-delivery commission (NPR)
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={riderForm.commissionRate}
+                  onChange={(e) =>
+                    setRiderForm({
+                      ...riderForm,
+                      commissionRate: Number(e.target.value),
+                    })
+                  }
+                  className="h-8 font-mono text-xs"
+                />
+              </div>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">

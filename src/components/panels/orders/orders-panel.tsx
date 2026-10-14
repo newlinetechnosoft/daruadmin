@@ -10,6 +10,7 @@ import type {
   PaymentMethod,
 } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
+import { getGoogleMapsUrl } from '#/lib/map-config'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
 import { StatusBadge } from '#/components/shared/status-badge'
@@ -596,7 +597,14 @@ export function OrdersPanel() {
                     </div>
                     <div className="text-muted-foreground flex items-center gap-1.5">
                       <MapPin className="h-3 w-3 text-muted-foreground" />
-                      {selectedOrder.address}, {selectedOrder.city}
+                      <a
+                        href={getGoogleMapsUrl(selectedOrder)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:underline hover:text-foreground transition-colors"
+                      >
+                        {selectedOrder.address}, {selectedOrder.city}
+                      </a>
                     </div>
                   </CardContent>
                 </Card>

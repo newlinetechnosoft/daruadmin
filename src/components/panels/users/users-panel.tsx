@@ -12,7 +12,9 @@ import {
   Phone,
   Mail,
   Calendar,
+  UserPlus,
 } from 'lucide-react'
+import { CreateStaffDialog } from '#/components/panels/staff'
 import { toast } from 'sonner'
 import { PageHeader } from '#/components/shared/page-header'
 import { Input } from '#/components/ui/input'
@@ -46,6 +48,7 @@ export function UsersPanel() {
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
 
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
@@ -139,9 +142,19 @@ export function UsersPanel() {
         title="Users and permissions"
         description="Manage staff privileges, rider assignments, customer profiles, and account status."
         actions={
-          <Badge variant="secondary" className="font-mono text-xs">
-            {users.length} users
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="font-mono text-xs">
+              {users.length} users
+            </Badge>
+            <Button
+              size="sm"
+              onClick={() => setIsCreateOpen(true)}
+              className="gap-1.5 h-8 text-xs bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              Add Account
+            </Button>
+          </div>
         }
       />
 
@@ -293,6 +306,11 @@ export function UsersPanel() {
           </TableBody>
         </Table>
       </div>
+
+      <CreateStaffDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+      />
     </div>
   )
 }

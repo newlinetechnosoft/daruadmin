@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { getOrderDetailsFn } from '#/server/orders/order.functions'
 import type { Order } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
+import { getGoogleMapsUrl } from '#/lib/map-config'
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import {
@@ -178,15 +179,22 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
                     <MapPin className="h-3.5 w-3.5 text-primary" />
                     Delivery Destination
                   </span>
-                  <p className="text-xs font-semibold text-foreground">
-                    {order.address}
-                  </p>
-                  {order.lat && order.lng && (
-                    <p className="text-[11px] font-mono text-muted-foreground">
-                      Coordinates: {order.lat.toFixed(6)}° N,{' '}
-                      {order.lng.toFixed(6)}° E
+                  <a
+                    href={getGoogleMapsUrl(order)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block group"
+                  >
+                    <p className="text-xs font-semibold text-foreground group-hover:underline">
+                      {order.address}
                     </p>
-                  )}
+                    {order.lat && order.lng && (
+                      <p className="text-[11px] font-mono text-muted-foreground group-hover:text-primary transition-colors">
+                        Coordinates: {order.lat.toFixed(6)}° N,{' '}
+                        {order.lng.toFixed(6)}° E ↗
+                      </p>
+                    )}
+                  </a>
                 </div>
 
                 <div className="space-y-1">

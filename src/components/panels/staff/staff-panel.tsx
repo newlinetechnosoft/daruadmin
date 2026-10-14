@@ -15,7 +15,9 @@ import {
   Users,
   ShieldCheck,
   Save,
+  UserPlus,
 } from 'lucide-react'
+import { CreateStaffDialog } from './create-staff-dialog'
 import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -48,6 +50,7 @@ export function StaffPanel() {
     users[0]?.id || '',
   )
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
 
   // Filter staff users (admin, manager, or rider)
   const staffUsers = useMemo(() => {
@@ -180,6 +183,16 @@ export function StaffPanel() {
         kicker="Operations"
         title="Staff and access control"
         description="Configure granular module action privileges across managers, couriers, and support staff."
+        actions={
+          <Button
+            size="sm"
+            onClick={() => setIsCreateOpen(true)}
+            className="gap-1.5 h-8 text-xs bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Add Staff Account
+          </Button>
+        }
       />
 
       {/* KPI Cards */}
@@ -511,6 +524,11 @@ export function StaffPanel() {
           </div>
         </div>
       )}
+
+      <CreateStaffDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+      />
     </div>
   )
 }

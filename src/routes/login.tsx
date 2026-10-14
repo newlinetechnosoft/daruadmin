@@ -68,6 +68,17 @@ function LoginPage() {
       }
 
       toast.success('Welcome back to Mezmani!')
+      if (!search.redirect) {
+        const userRole = (res.data as any)?.user?.role
+        if (userRole === 'admin' || userRole === 'manager') {
+          navigate({ to: '/admin' })
+          return
+        }
+        if (userRole === 'rider') {
+          navigate({ to: '/rider' })
+          return
+        }
+      }
       navigate({
         to: search.redirect || '/drinks',
       })

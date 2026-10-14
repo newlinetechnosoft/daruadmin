@@ -7,6 +7,7 @@ import {
 import { queueOutboxAction } from '#/lib/idb/outbox'
 import type { Rider, Order } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
+import { getGoogleMapsUrl } from '#/lib/map-config'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
@@ -358,7 +359,7 @@ export function RiderDashboard({ data }: RiderDashboardProps) {
                         className="h-8 text-xs flex-1"
                       >
                         <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${order.address}, ${order.city}`)}`}
+                          href={getGoogleMapsUrl(order)}
                           target="_blank"
                           rel="noreferrer"
                         >

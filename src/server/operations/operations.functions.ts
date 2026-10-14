@@ -15,7 +15,11 @@ import {
   liquorVariants,
   groceryVariants,
   stockMovements,
+  notifications,
+  user,
 } from '#/db/schema'
+import { auth } from '#/lib/auth'
+import { getGoogleMapsUrl } from '#/lib/map-config'
 import { eq, count, or } from 'drizzle-orm'
 import {
   requirePermission,
@@ -805,6 +809,22 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
           actor: user.name,
         })
       }
+
+      if (data.riderId && data.riderId !== order.riderId) {
+        const assignedRider = await getRiderByIdQuery(data.riderId)
+        if (assignedRider?.userId) {
+          const mapUrl = getGoogleMapsUrl(order)
+          await tx.insert(notifications).values({
+            id: nid('notif'),
+            title: `New Delivery Assigned: ${order.number}`,
+            body: `Deliver to ${order.customerName} at ${order.address}. Map: ${mapUrl}`,
+            type: 'rider',
+            read: false,
+            href: `/rider/deliveries`,
+            userId: assignedRider.userId,
+          })
+        }
+      }
     })
 
     await logAudit(
@@ -985,22 +1005,56 @@ export const upsertRiderFn = createServerFn({ method: 'POST' })
         available: z.boolean().default(true),
         status: z.enum(['offline', 'available', 'busy']).default('available'),
         verified: z.boolean().default(true),
+        password: z.string().min(8).optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const { user } = await requirePermission(
+    const { user: actor } = await requirePermission(
       'riders',
       data.id ? 'edit' : 'create',
     )
     const riderId = data.id || nid('rid')
+    const normalizedEmail = data.email.trim().toLowerCase()
+    let assignedUserId: string | null = null
+
+    if (!data.id) {
+      const existingUsers = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.email, normalizedEmail))
+        .limit(1)
+
+      if (existingUsers[0]) {
+        assignedUserId = existingUsers[0].id
+        await db
+          .update(user)
+          .set({ role: 'rider' })
+          .where(eq(user.id, assignedUserId))
+      } else if (data.password) {
+        const created = await auth.api.createUser({
+          body: {
+            name: data.name.trim(),
+            email: normalizedEmail,
+            password: data.password,
+            role: 'rider' as any,
+            data: {
+              phone: data.phone.trim(),
+              isActive: true,
+            },
+          },
+        })
+        assignedUserId = created?.user?.id ?? null
+      }
+    }
 
     await db
       .insert(riders)
       .values({
         id: riderId,
+        userId: assignedUserId,
         name: data.name,
-        email: data.email,
+        email: normalizedEmail,
         phone: data.phone,
         vehicle: data.vehicle,
         licenseNo: data.licenseNo,
@@ -1014,7 +1068,7 @@ export const upsertRiderFn = createServerFn({ method: 'POST' })
         target: riders.id,
         set: {
           name: data.name,
-          email: data.email,
+          email: normalizedEmail,
           phone: data.phone,
           vehicle: data.vehicle,
           licenseNo: data.licenseNo,
@@ -1023,12 +1077,13 @@ export const upsertRiderFn = createServerFn({ method: 'POST' })
           available: data.available,
           status: data.status,
           verified: data.verified,
+          ...(assignedUserId ? { userId: assignedUserId } : {}),
           updatedAt: new Date(),
         },
       })
 
     await logAudit(
-      user.name,
+      actor.name,
       'riders',
       data.id ? 'edit' : 'create',
       `${data.id ? 'Updated' : 'Added'} rider: ${data.name}`,
@@ -1036,6 +1091,95 @@ export const upsertRiderFn = createServerFn({ method: 'POST' })
 
     return true
   })
+
+export const createStaffUserFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        name: z.string().min(2, 'Name must be at least 2 characters'),
+        email: z.string().email('Invalid email address'),
+        phone: z.string().min(6, 'Mobile number must be at least 6 digits'),
+        password: z.string().min(8, 'Password must be at least 8 characters'),
+        role: z.enum(['admin', 'manager', 'rider']),
+        // Rider specific fields:
+        vehicle: z.enum(['bike', 'scooter', 'car']).optional().default('bike'),
+        licenseNo: z.string().optional().default(''),
+        zone: z.string().optional().default('Kathmandu Core'),
+        commissionRate: z.number().min(0).max(100).optional().default(10),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user: actor } = await requireRole('admin')
+
+    const normalizedEmail = data.email.trim().toLowerCase()
+
+    // 1. Check if user already exists
+    const existing = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, normalizedEmail))
+      .limit(1)
+
+    if (existing.length > 0) {
+      throw new Error(`An account with email ${normalizedEmail} already exists`)
+    }
+
+    // 2. Create the user in Better Auth
+    const created = await auth.api.createUser({
+      body: {
+        name: data.name.trim(),
+        email: normalizedEmail,
+        password: data.password,
+        role: data.role as any,
+        data: {
+          phone: data.phone.trim(),
+          isActive: true,
+        },
+      },
+    })
+
+    const newUserId = created?.user?.id
+    if (!newUserId) {
+      throw new Error('Failed to create staff account')
+    }
+
+    // 3. If role is 'rider', also create rider profile
+    if (data.role === 'rider') {
+      const riderId = nid('rid')
+      await db.insert(riders).values({
+        id: riderId,
+        userId: newUserId,
+        name: data.name.trim(),
+        email: normalizedEmail,
+        phone: data.phone.trim(),
+        vehicle: data.vehicle || 'bike',
+        licenseNo: data.licenseNo || 'BA-2-PA-1001',
+        zone: data.zone || 'Kathmandu Core',
+        commissionRate: data.commissionRate ?? 10,
+        available: true,
+        status: 'available',
+        verified: true,
+        lat: '27.7172',
+        lng: '85.3240',
+        cashOnHand: 0,
+        earnings: 0,
+        deliveries: 0,
+        rating: '5.00',
+      })
+    }
+
+    // 4. Audit log
+    await logAudit(
+      actor.name,
+      'staff',
+      'create',
+      `Created ${data.role} account for ${normalizedEmail} (${data.name.trim()})`,
+    )
+
+    return { success: true, userId: newUserId }
+  })
+
 
 export const updateRiderLiveFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>

@@ -194,6 +194,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { label: 'Riders', to: '/admin/riders', icon: Bike, module: 'riders' },
       { label: 'Staff', to: '/admin/staff', icon: Shield, module: 'staff' },
+      { label: 'Users', to: '/admin/users', icon: Users, module: 'staff' },
       {
         label: 'Shipping',
         to: '/admin/shipping',
