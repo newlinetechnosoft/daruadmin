@@ -7,6 +7,7 @@ import {
   updateRiderLiveFn,
 } from '#/server/operations/operations.functions'
 import { toast } from 'sonner'
+import { createQueryClient } from '#/integrations/tanstack-query/root-provider'
 
 export type OutboxType = 'delivery_status' | 'cash_handover' | 'rider_live'
 
@@ -130,6 +131,21 @@ export async function flushOutboxQueue(): Promise<{
 
     if (successCount > 0) {
       toast.success(`Synced ${successCount} offline action(s) successfully!`)
+      try {
+        const qc = createQueryClient()
+        qc.invalidateQueries({ queryKey: ['rider', 'portal'] })
+      } catch {}
+    }
+
+    if (failedCount > 0) {
+      toast.error(`Failed to sync ${failedCount} offline action(s). Tap to retry.`, {
+        action: {
+          label: 'Retry',
+          onClick: () => {
+            flushOutboxQueue()
+          },
+        },
+      })
     }
   } finally {
     isFlushing = false
@@ -157,7 +173,7 @@ if (typeof window !== 'undefined') {
  * React hook to observe offline outbox state.
  */
 export function useRiderOutbox() {
-  const [pendingCount, setPendingCount] = useState(0)
+  const [pendingActions, setPendingActions] = useState<OutboxAction[]>([])
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true,
   )
@@ -168,7 +184,7 @@ export function useRiderOutbox() {
     async function update() {
       const pending = await getPendingOutboxActions()
       if (mounted) {
-        setPendingCount(pending.length)
+        setPendingActions(pending)
       }
     }
 
@@ -196,7 +212,8 @@ export function useRiderOutbox() {
   }, [])
 
   return {
-    pendingCount,
+    pendingCount: pendingActions.length,
+    pendingActions,
     isOnline,
     flushOutbox: flushOutboxQueue,
   }

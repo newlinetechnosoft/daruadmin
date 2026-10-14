@@ -10,6 +10,5 @@ export const Route = createFileRoute('/rider/')({
 })
 
 function RiderDashboardPage() {
-  const data = Route.useLoaderData()
-  return <RiderDashboard data={data} />
+  return <RiderDashboard />
 }

@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useSuspenseQuery } from '@tanstack/react-query'
 import { riderQueries } from '#/queries/rider'
 import { RiderProfile } from '#/components/panels/rider'
 
@@ -10,6 +11,6 @@ export const Route = createFileRoute('/rider/profile')({
 })
 
 function RiderProfilePage() {
-  const data = Route.useLoaderData()
+  const { data } = useSuspenseQuery(riderQueries.portal())
   return <RiderProfile rider={data.rider} />
 }
