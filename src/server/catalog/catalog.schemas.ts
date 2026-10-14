@@ -64,6 +64,7 @@ export const upsertGroceryProductSchema = z.object({
   name: z.string().min(2).max(200),
   slug: z.string().min(2).max(200).optional(),
   categoryId: z.string().uuid(),
+  brandId: z.string().uuid().optional().nullable(),
   description: z.string().optional().nullable(),
   imageUrl: z.string().optional().nullable(),
   images: z
@@ -115,6 +116,7 @@ export const upsertCategorySchema = z.object({
 })
 
 export const upsertBrandSchema = z.object({
+  catalogType: z.enum(['liquor', 'grocery']).default('liquor'),
   id: z.string().uuid().optional(),
   name: z.string().min(2).max(100),
   slug: z.string().min(2).max(100).optional(),
@@ -131,6 +133,7 @@ export const deleteItemSchema = z.object({
     'liquor-category',
     'grocery-category',
     'liquor-brand',
+    'grocery-brand',
   ]),
   id: z.string().uuid(),
 })

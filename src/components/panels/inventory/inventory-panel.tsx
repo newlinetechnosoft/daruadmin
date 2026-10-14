@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
 import { addLedgerFn } from '#/server/operations/operations.functions'
 import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
@@ -39,11 +40,10 @@ import {
 } from '#/components/ui/dialog'
 import { EmptyState } from '#/components/shared/empty-state'
 
-const routeApi = getRouteApi('/admin/inventory')
-
 export function InventoryPanel() {
-  const { liquor, grocery } = routeApi.useLoaderData()
-  const router = useRouter()
+  const queryClient = useQueryClient()
+  const { data } = useSuspenseQuery(adminQueries.inventory())
+  const { liquor, grocery } = data
 
   const [searchQuery, setSearchQuery] = useState('')
   const [catalogFilter, setCatalogFilter] = useState<
@@ -170,7 +170,10 @@ export function InventoryPanel() {
         `Restocked ${restockQty} units. COGS bill of ${formatNPR(totalExpense)} logged to Ledger.`,
       )
       setRestockItem(null)
-      await router.invalidate()
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'ledger'] })
+      await queryClient.invalidateQueries({ queryKey: ['catalog'] })
+      await queryClient.invalidateQueries({ queryKey: ['storefront'] })
     } catch {
       toast.error('Failed to log restock purchase')
     } finally {

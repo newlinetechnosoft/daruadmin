@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react'
 import type { FormEvent } from 'react'
-import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
 import {
   upsertGroceryProductFn,
   toggleProductStatusFn,
@@ -23,6 +24,8 @@ import {
   XCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { BrandDialog, type BrandData } from '#/components/panels/brands'
+import { can } from '#/server/auth/permissions-shared'
 import { PageHeader } from '#/components/shared/page-header'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -62,14 +65,20 @@ interface GroceryVariantItem {
   isActive: boolean
 }
 
-const routeApi = getRouteApi('/admin/grocery')
-
 export function GroceryPanel() {
-  const { products, taxonomy } = routeApi.useLoaderData()
-  const router = useRouter()
+  const queryClient = useQueryClient()
+  const { data: products } = useSuspenseQuery(adminQueries.groceryProducts())
+  const { data: taxonomy } = useSuspenseQuery(adminQueries.taxonomy())
+  const { data: access } = useSuspenseQuery(adminQueries.access())
+
+  const grants = access.authenticated ? access.grants : null
+  const canCreateBrand = can(grants, 'brands', 'create')
+  const canEditBrand = can(grants, 'brands', 'edit')
+  const canDeleteBrand = can(grants, 'brands', 'delete')
 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedBrand, setSelectedBrand] = useState('all')
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false)
@@ -80,10 +89,40 @@ export function GroceryPanel() {
     name: string
   } | null>(null)
 
+  // Brand Dialog & CRUD state
+  const [brandDialogOpen, setBrandDialogOpen] = useState(false)
+  const [editingBrand, setEditingBrand] = useState<BrandData | null>(null)
+  const [deleteBrandTarget, setDeleteBrandTarget] = useState<BrandData | null>(null)
+
+  const handleDeleteBrand = async () => {
+    if (!deleteBrandTarget) return
+    try {
+      await deleteItemFn({
+        data: {
+          catalogType: 'grocery-brand',
+          id: deleteBrandTarget.id,
+        },
+      })
+      toast.success(`Brand "${deleteBrandTarget.name}" deleted`)
+      if (formBrandId === deleteBrandTarget.id) {
+        setFormBrandId('')
+      }
+      setDeleteBrandTarget(null)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'brands'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] }),
+      ])
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete brand')
+    }
+  }
+
   // Form State
   const [formName, setFormName] = useState('')
   const [formSlug, setFormSlug] = useState('')
   const [formCategoryId, setFormCategoryId] = useState('')
+  const [formBrandId, setFormBrandId] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formImageUrl, setFormImageUrl] = useState('')
   const imageUploaderRef = useRef<ImageUploaderRef>(null)
@@ -113,24 +152,33 @@ export function GroceryPanel() {
       ) {
         return false
       }
+      if (
+        selectedBrand !== 'all' &&
+        p.brandId !== selectedBrand &&
+        (p as any).brandSlug !== selectedBrand
+      ) {
+        return false
+      }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase()
         const matchesName = p.name.toLowerCase().includes(q)
         const matchesCat = p.categoryName.toLowerCase().includes(q)
+        const matchesBrand = (p as any).brandName?.toLowerCase().includes(q)
         const matchesSku = p.variants.some((v) =>
           v.sku.toLowerCase().includes(q),
         )
-        return matchesName || matchesCat || matchesSku
+        return matchesName || matchesCat || matchesBrand || matchesSku
       }
       return true
     })
-  }, [products, searchQuery, selectedCategory])
+  }, [products, searchQuery, selectedCategory, selectedBrand])
 
   const openAddModal = () => {
     setEditingId(null)
     setFormName('')
     setFormSlug('')
     setFormCategoryId(taxonomy.groceryCategories[0]?.id ?? '')
+    setFormBrandId('')
     setFormDescription('')
     setFormImageUrl('')
     setExistingImagesList([])
@@ -157,6 +205,7 @@ export function GroceryPanel() {
     setFormName(p.name)
     setFormSlug(p.slug)
     setFormCategoryId(p.categoryId)
+    setFormBrandId((p as any).brandId ?? '')
     setFormDescription(p.description ?? '')
     setFormImageUrl(p.primaryImage ?? '')
     setFormIsFeatured(p.isFeatured)
@@ -242,6 +291,7 @@ export function GroceryPanel() {
           name: formName.trim(),
           slug: formSlug.trim() || undefined,
           categoryId: formCategoryId,
+          brandId: formBrandId || null,
           description: formDescription.trim() || null,
           imageUrl: primaryImg,
           images: uploadedImages,
@@ -265,7 +315,11 @@ export function GroceryPanel() {
         editingId ? 'Grocery item updated!' : 'Grocery item created!',
       )
       setModalOpen(false)
-      await router.invalidate()
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
+      await queryClient.invalidateQueries({ queryKey: ['catalog'] })
+      await queryClient.invalidateQueries({ queryKey: ['storefront'] })
     } catch (err: any) {
       toast.error(err?.message || 'Failed to save grocery product')
     } finally {
@@ -288,9 +342,12 @@ export function GroceryPanel() {
         },
       })
       toast.success('Updated status')
-      await router.invalidate()
-    } catch {
-      toast.error('Failed to update status')
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
+      await queryClient.invalidateQueries({ queryKey: ['catalog'] })
+      await queryClient.invalidateQueries({ queryKey: ['storefront'] })
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update status')
     }
   }
 
@@ -305,9 +362,13 @@ export function GroceryPanel() {
       })
       toast.success('Grocery product deleted')
       setDeleteTarget(null)
-      await router.invalidate()
-    } catch {
-      toast.error('Failed to delete grocery product')
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
+      await queryClient.invalidateQueries({ queryKey: ['catalog'] })
+      await queryClient.invalidateQueries({ queryKey: ['storefront'] })
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete grocery product')
     }
   }
 
@@ -366,6 +427,39 @@ export function GroceryPanel() {
             </NativeSelectOption>
           ))}
         </NativeSelect>
+
+        <div className="flex items-center gap-1">
+          <NativeSelect
+            value={selectedBrand}
+            onChange={(e) => setSelectedBrand(e.target.value)}
+            size="sm"
+            className="h-8 text-xs"
+          >
+            <NativeSelectOption value="all">
+              All brands ({taxonomy.groceryBrands?.length ?? 0})
+            </NativeSelectOption>
+            {(taxonomy.groceryBrands ?? []).map((b) => (
+              <NativeSelectOption key={b.id} value={b.id}>
+                {b.name}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          {canCreateBrand && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 text-xs shrink-0"
+              title="Add new grocery brand"
+              onClick={() => {
+                setEditingBrand(null)
+                setBrandDialogOpen(true)
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -374,7 +468,7 @@ export function GroceryPanel() {
           <TableHeader>
             <TableRow>
               <TableHead className="text-xs">Item</TableHead>
-              <TableHead className="text-xs">Category</TableHead>
+              <TableHead className="text-xs">Brand &amp; Category</TableHead>
               <TableHead className="text-xs">
                 Variants and pricing (NPR)
               </TableHead>
@@ -424,8 +518,24 @@ export function GroceryPanel() {
                     </div>
                   </TableCell>
 
-                  <TableCell className="font-medium text-xs text-foreground">
-                    {p.categoryName}
+                  <TableCell>
+                    <div className="space-y-0.5">
+                      <span className="font-medium text-xs text-foreground block">
+                        {p.categoryName}
+                      </span>
+                      {(p as any).brandName ? (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0 font-normal text-muted-foreground"
+                        >
+                          {(p as any).brandName}
+                        </Badge>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground block">
+                          No brand
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
 
                   <TableCell>
@@ -556,17 +666,101 @@ export function GroceryPanel() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="gro-slug" className="text-xs">
-                  URL slug (optional)
-                </Label>
-                <Input
-                  id="gro-slug"
-                  value={formSlug}
-                  onChange={(e) => setFormSlug(e.target.value)}
-                  placeholder="auto-generated-from-name"
-                  className="h-8 font-mono text-xs"
-                />
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="gro-brand" className="text-xs">
+                    Brand (optional)
+                  </Label>
+                  {canCreateBrand && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 px-1.5 text-[11px] text-primary hover:text-primary gap-1"
+                      onClick={() => {
+                        setEditingBrand(null)
+                        setBrandDialogOpen(true)
+                      }}
+                    >
+                      <Plus className="h-3 w-3" />
+                      New Brand
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <NativeSelect
+                    id="gro-brand"
+                    value={formBrandId}
+                    onChange={(e) => setFormBrandId(e.target.value)}
+                    size="sm"
+                    className="w-full text-xs"
+                  >
+                    <NativeSelectOption value="">
+                      No specific brand
+                    </NativeSelectOption>
+                    {(taxonomy.groceryBrands ?? []).map((b) => (
+                      <NativeSelectOption key={b.id} value={b.id}>
+                        {b.name}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                  {formBrandId && (
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {canEditBrand && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2 text-xs"
+                          title="Edit selected brand"
+                          onClick={() => {
+                            const found = (taxonomy.groceryBrands ?? []).find(
+                              (b) => b.id === formBrandId,
+                            )
+                            if (found) {
+                              setEditingBrand(found)
+                              setBrandDialogOpen(true)
+                            }
+                          }}
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {canDeleteBrand && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
+                          title="Delete selected brand"
+                          onClick={() => {
+                            const found = (taxonomy.groceryBrands ?? []).find(
+                              (b) => b.id === formBrandId,
+                            )
+                            if (found) {
+                              setDeleteBrandTarget(found)
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="gro-slug" className="text-xs">
+                URL slug (optional)
+              </Label>
+              <Input
+                id="gro-slug"
+                value={formSlug}
+                onChange={(e) => setFormSlug(e.target.value)}
+                placeholder="auto-generated-from-name"
+                className="h-8 font-mono text-xs"
+              />
             </div>
 
             <div className="space-y-1.5 border-t border-border/60 pt-3">
@@ -586,7 +780,9 @@ export function GroceryPanel() {
                         imageUrl: img.url,
                       },
                     })
-                    await router.invalidate()
+                    await queryClient.invalidateQueries({
+                      queryKey: ['admin', 'grocery'],
+                    })
                   }
                 }}
                 prefix="products/grocery"
@@ -763,6 +959,32 @@ export function GroceryPanel() {
         confirmLabel="Delete"
         tone="destructive"
         onConfirm={handleConfirmDelete}
+      />
+
+      {/* Brand Dialog for Inline Create/Edit */}
+      <BrandDialog
+        open={brandDialogOpen}
+        onOpenChange={setBrandDialogOpen}
+        catalogType="grocery"
+        brand={editingBrand}
+        onSuccess={(saved) => {
+          if (saved.id) {
+            setFormBrandId(saved.id)
+          }
+        }}
+      />
+
+      {/* Brand Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={Boolean(deleteBrandTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteBrandTarget(null)
+        }}
+        title={`Delete Brand "${deleteBrandTarget?.name}"?`}
+        description="Are you sure you want to delete this brand? Products linked to it will remain, but will no longer have an assigned brand."
+        confirmLabel="Delete Brand"
+        tone="destructive"
+        onConfirm={handleDeleteBrand}
       />
     </div>
   )

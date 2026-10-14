@@ -6,9 +6,11 @@ import {
   liquorVariants,
   liquorImages,
   groceryCategories,
+  groceryBrands,
   groceryProducts,
   groceryVariants,
   groceryImages,
+  dealerStock,
   user,
 } from '#/db/schema'
 import {
@@ -20,6 +22,7 @@ import {
   desc,
   count,
   inArray,
+  notInArray,
   sum,
   lte,
 } from 'drizzle-orm'
@@ -52,10 +55,31 @@ export async function getLiquorCategoriesQuery() {
 }
 
 export async function getAllLiquorCategoriesQuery() {
-  return db
-    .select()
+  const rows = await db
+    .select({
+      id: liquorCategories.id,
+      name: liquorCategories.name,
+      slug: liquorCategories.slug,
+      description: liquorCategories.description,
+      imageUrl: liquorCategories.imageUrl,
+      sortOrder: liquorCategories.sortOrder,
+      isActive: liquorCategories.isActive,
+      createdAt: liquorCategories.createdAt,
+      updatedAt: liquorCategories.updatedAt,
+      productCount: count(liquorProducts.id),
+    })
     .from(liquorCategories)
+    .leftJoin(
+      liquorProducts,
+      eq(liquorCategories.id, liquorProducts.categoryId),
+    )
+    .groupBy(liquorCategories.id)
     .orderBy(asc(liquorCategories.sortOrder), asc(liquorCategories.name))
+
+  return rows.map((r) => ({
+    ...r,
+    productCount: Number(r.productCount),
+  }))
 }
 
 export async function getLiquorBrandsQuery() {
@@ -67,7 +91,61 @@ export async function getLiquorBrandsQuery() {
 }
 
 export async function getAllLiquorBrandsQuery() {
-  return db.select().from(liquorBrands).orderBy(asc(liquorBrands.name))
+  const rows = await db
+    .select({
+      id: liquorBrands.id,
+      name: liquorBrands.name,
+      slug: liquorBrands.slug,
+      origin: liquorBrands.origin,
+      description: liquorBrands.description,
+      logoUrl: liquorBrands.logoUrl,
+      isActive: liquorBrands.isActive,
+      createdAt: liquorBrands.createdAt,
+      updatedAt: liquorBrands.updatedAt,
+      productCount: count(liquorProducts.id),
+    })
+    .from(liquorBrands)
+    .leftJoin(liquorProducts, eq(liquorBrands.id, liquorProducts.brandId))
+    .groupBy(liquorBrands.id)
+    .orderBy(asc(liquorBrands.name))
+
+  return rows.map((r) => ({
+    ...r,
+    productCount: Number(r.productCount),
+  }))
+}
+
+export async function getGroceryBrandsQuery() {
+  return db
+    .select()
+    .from(groceryBrands)
+    .where(eq(groceryBrands.isActive, true))
+    .orderBy(asc(groceryBrands.name))
+}
+
+export async function getAllGroceryBrandsQuery() {
+  const rows = await db
+    .select({
+      id: groceryBrands.id,
+      name: groceryBrands.name,
+      slug: groceryBrands.slug,
+      origin: groceryBrands.origin,
+      description: groceryBrands.description,
+      logoUrl: groceryBrands.logoUrl,
+      isActive: groceryBrands.isActive,
+      createdAt: groceryBrands.createdAt,
+      updatedAt: groceryBrands.updatedAt,
+      productCount: count(groceryProducts.id),
+    })
+    .from(groceryBrands)
+    .leftJoin(groceryProducts, eq(groceryBrands.id, groceryProducts.brandId))
+    .groupBy(groceryBrands.id)
+    .orderBy(asc(groceryBrands.name))
+
+  return rows.map((r) => ({
+    ...r,
+    productCount: Number(r.productCount),
+  }))
 }
 
 export async function getLiquorProductsQuery(input: ListLiquorInput) {
@@ -181,10 +259,31 @@ export async function getGroceryCategoriesQuery() {
 }
 
 export async function getAllGroceryCategoriesQuery() {
-  return db
-    .select()
+  const rows = await db
+    .select({
+      id: groceryCategories.id,
+      name: groceryCategories.name,
+      slug: groceryCategories.slug,
+      description: groceryCategories.description,
+      imageUrl: groceryCategories.imageUrl,
+      sortOrder: groceryCategories.sortOrder,
+      isActive: groceryCategories.isActive,
+      createdAt: groceryCategories.createdAt,
+      updatedAt: groceryCategories.updatedAt,
+      productCount: count(groceryProducts.id),
+    })
     .from(groceryCategories)
+    .leftJoin(
+      groceryProducts,
+      eq(groceryCategories.id, groceryProducts.categoryId),
+    )
+    .groupBy(groceryCategories.id)
     .orderBy(asc(groceryCategories.sortOrder), asc(groceryCategories.name))
+
+  return rows.map((r) => ({
+    ...r,
+    productCount: Number(r.productCount),
+  }))
 }
 
 export async function getGroceryProductsQuery(input: ListGroceryInput) {
@@ -284,6 +383,7 @@ export async function getAdminStatsQuery() {
     liquorRes,
     groceryRes,
     brandRes,
+    grocBrandRes,
     liquorCatRes,
     groceryCatRes,
     userRes,
@@ -295,6 +395,7 @@ export async function getAdminStatsQuery() {
     db.select({ total: count() }).from(liquorProducts),
     db.select({ total: count() }).from(groceryProducts),
     db.select({ total: count() }).from(liquorBrands),
+    db.select({ total: count() }).from(groceryBrands),
     db.select({ total: count() }).from(liquorCategories),
     db.select({ total: count() }).from(groceryCategories),
     db.select({ total: count() }).from(user),
@@ -318,7 +419,7 @@ export async function getAdminStatsQuery() {
   return {
     totalLiquorProducts: liquorRes[0]?.total ?? 0,
     totalGroceryProducts: groceryRes[0]?.total ?? 0,
-    totalBrands: brandRes[0]?.total ?? 0,
+    totalBrands: (brandRes[0]?.total ?? 0) + (grocBrandRes[0]?.total ?? 0),
     totalCategories:
       (liquorCatRes[0]?.total ?? 0) + (groceryCatRes[0]?.total ?? 0),
     totalUsers: userRes[0]?.total ?? 0,
@@ -403,15 +504,19 @@ export async function getAdminGroceryProductsQuery() {
       isFeatured: groceryProducts.isFeatured,
       isActive: groceryProducts.isActive,
       categoryId: groceryProducts.categoryId,
+      brandId: groceryProducts.brandId,
       createdAt: groceryProducts.createdAt,
       categoryName: groceryCategories.name,
       categorySlug: groceryCategories.slug,
+      brandName: groceryBrands.name,
+      brandSlug: groceryBrands.slug,
     })
     .from(groceryProducts)
     .innerJoin(
       groceryCategories,
       eq(groceryProducts.categoryId, groceryCategories.id),
     )
+    .leftJoin(groceryBrands, eq(groceryProducts.brandId, groceryBrands.id))
     .orderBy(desc(groceryProducts.createdAt))
 
   if (productsList.length === 0) return []
@@ -526,6 +631,38 @@ export async function upsertLiquorProductQuery(
     }
   }
 
+  if (input.id) {
+    const keptVariantIds = input.variants
+      .map((v) => v.id)
+      .filter((id): id is string => Boolean(id))
+
+    if (keptVariantIds.length > 0) {
+      const removedVariants = await db
+        .select({ id: liquorVariants.id })
+        .from(liquorVariants)
+        .where(
+          and(
+            eq(liquorVariants.productId, productId),
+            notInArray(liquorVariants.id, keptVariantIds),
+          ),
+        )
+      const removedIds = removedVariants.map((v) => v.id)
+      if (removedIds.length > 0) {
+        await db
+          .delete(dealerStock)
+          .where(
+            and(
+              eq(dealerStock.catalogType, 'liquor'),
+              inArray(dealerStock.variantId, removedIds),
+            ),
+          )
+        await db
+          .delete(liquorVariants)
+          .where(inArray(liquorVariants.id, removedIds))
+      }
+    }
+  }
+
   for (const v of input.variants) {
     if (v.id) {
       await db
@@ -587,6 +724,7 @@ export async function upsertGroceryProductQuery(
         name: input.name,
         slug,
         categoryId: input.categoryId,
+        brandId: input.brandId ?? null,
         description: input.description ?? null,
         isFeatured: input.isFeatured,
         isActive: input.isActive,
@@ -599,6 +737,7 @@ export async function upsertGroceryProductQuery(
         name: input.name,
         slug,
         categoryId: input.categoryId,
+        brandId: input.brandId ?? null,
         description: input.description ?? null,
         isFeatured: input.isFeatured,
         isActive: input.isActive,
@@ -639,6 +778,38 @@ export async function upsertGroceryProductQuery(
         alt: input.name,
         isPrimary: true,
       })
+    }
+  }
+
+  if (input.id) {
+    const keptVariantIds = input.variants
+      .map((v) => v.id)
+      .filter((id): id is string => Boolean(id))
+
+    if (keptVariantIds.length > 0) {
+      const removedVariants = await db
+        .select({ id: groceryVariants.id })
+        .from(groceryVariants)
+        .where(
+          and(
+            eq(groceryVariants.productId, productId),
+            notInArray(groceryVariants.id, keptVariantIds),
+          ),
+        )
+      const removedIds = removedVariants.map((v) => v.id)
+      if (removedIds.length > 0) {
+        await db
+          .delete(dealerStock)
+          .where(
+            and(
+              eq(dealerStock.catalogType, 'grocery'),
+              inArray(dealerStock.variantId, removedIds),
+            ),
+          )
+        await db
+          .delete(groceryVariants)
+          .where(inArray(groceryVariants.id, removedIds))
+      }
     }
   }
 
@@ -707,13 +878,24 @@ export async function toggleProductStatusQuery(
 }
 
 export async function upsertCategoryQuery(input: UpsertCategoryInput) {
-  const slug = input.slug?.trim() || slugify(input.name)
+  const slug = slugify(input.slug?.trim() || input.name)
 
-  if (input.catalogType === 'liquor') {
-    if (input.id) {
-      await db
-        .update(liquorCategories)
-        .set({
+  try {
+    if (input.catalogType === 'liquor') {
+      if (input.id) {
+        await db
+          .update(liquorCategories)
+          .set({
+            name: input.name,
+            slug,
+            description: input.description ?? null,
+            imageUrl: input.imageUrl ?? null,
+            sortOrder: input.sortOrder,
+            isActive: input.isActive,
+          })
+          .where(eq(liquorCategories.id, input.id))
+      } else {
+        await db.insert(liquorCategories).values({
           name: input.name,
           slug,
           description: input.description ?? null,
@@ -721,22 +903,22 @@ export async function upsertCategoryQuery(input: UpsertCategoryInput) {
           sortOrder: input.sortOrder,
           isActive: input.isActive,
         })
-        .where(eq(liquorCategories.id, input.id))
+      }
     } else {
-      await db.insert(liquorCategories).values({
-        name: input.name,
-        slug,
-        description: input.description ?? null,
-        imageUrl: input.imageUrl ?? null,
-        sortOrder: input.sortOrder,
-        isActive: input.isActive,
-      })
-    }
-  } else {
-    if (input.id) {
-      await db
-        .update(groceryCategories)
-        .set({
+      if (input.id) {
+        await db
+          .update(groceryCategories)
+          .set({
+            name: input.name,
+            slug,
+            description: input.description ?? null,
+            imageUrl: input.imageUrl ?? null,
+            sortOrder: input.sortOrder,
+            isActive: input.isActive,
+          })
+          .where(eq(groceryCategories.id, input.id))
+      } else {
+        await db.insert(groceryCategories).values({
           name: input.name,
           slug,
           description: input.description ?? null,
@@ -744,60 +926,185 @@ export async function upsertCategoryQuery(input: UpsertCategoryInput) {
           sortOrder: input.sortOrder,
           isActive: input.isActive,
         })
-        .where(eq(groceryCategories.id, input.id))
-    } else {
-      await db.insert(groceryCategories).values({
-        name: input.name,
-        slug,
-        description: input.description ?? null,
-        imageUrl: input.imageUrl ?? null,
-        sortOrder: input.sortOrder,
-        isActive: input.isActive,
-      })
+      }
     }
+    return { success: true }
+  } catch (err: any) {
+    if (
+      err?.code === '23505' ||
+      err?.message?.includes('unique constraint') ||
+      err?.message?.includes('duplicate key')
+    ) {
+      throw new Error(
+        `A category with the name "${input.name}" or slug "${slug}" already exists.`,
+      )
+    }
+    throw err
   }
-
-  return { success: true }
 }
 
 export async function upsertBrandQuery(input: UpsertBrandInput) {
-  const slug = input.slug?.trim() || slugify(input.name)
+  const slug = slugify(input.slug?.trim() || input.name)
 
-  if (input.id) {
-    await db
-      .update(liquorBrands)
-      .set({
-        name: input.name,
-        slug,
-        origin: input.origin ?? null,
-        description: input.description ?? null,
-        logoUrl: input.logoUrl ?? null,
-        isActive: input.isActive,
-      })
-      .where(eq(liquorBrands.id, input.id))
-  } else {
-    await db.insert(liquorBrands).values({
-      name: input.name,
-      slug,
-      origin: input.origin ?? null,
-      description: input.description ?? null,
-      logoUrl: input.logoUrl ?? null,
-      isActive: input.isActive,
-    })
+  try {
+    if (input.catalogType === 'grocery') {
+      if (input.id) {
+        const [updated] = await db
+          .update(groceryBrands)
+          .set({
+            name: input.name,
+            slug,
+            origin: input.origin ?? null,
+            description: input.description ?? null,
+            logoUrl: input.logoUrl ?? null,
+            isActive: input.isActive,
+          })
+          .where(eq(groceryBrands.id, input.id))
+          .returning()
+        return { success: true, brand: updated }
+      } else {
+        const [inserted] = await db
+          .insert(groceryBrands)
+          .values({
+            name: input.name,
+            slug,
+            origin: input.origin ?? null,
+            description: input.description ?? null,
+            logoUrl: input.logoUrl ?? null,
+            isActive: input.isActive,
+          })
+          .returning()
+        return { success: true, brand: inserted }
+      }
+    } else {
+      if (input.id) {
+        const [updated] = await db
+          .update(liquorBrands)
+          .set({
+            name: input.name,
+            slug,
+            origin: input.origin ?? null,
+            description: input.description ?? null,
+            logoUrl: input.logoUrl ?? null,
+            isActive: input.isActive,
+          })
+          .where(eq(liquorBrands.id, input.id))
+          .returning()
+        return { success: true, brand: updated }
+      } else {
+        const [inserted] = await db
+          .insert(liquorBrands)
+          .values({
+            name: input.name,
+            slug,
+            origin: input.origin ?? null,
+            description: input.description ?? null,
+            logoUrl: input.logoUrl ?? null,
+            isActive: input.isActive,
+          })
+          .returning()
+        return { success: true, brand: inserted }
+      }
+    }
+  } catch (err: any) {
+    if (
+      err?.code === '23505' ||
+      err?.message?.includes('unique constraint') ||
+      err?.message?.includes('duplicate key')
+    ) {
+      throw new Error(
+        `A brand with the name "${input.name}" or slug "${slug}" already exists.`,
+      )
+    }
+    throw err
   }
-
-  return { success: true }
 }
 
 export async function deleteItemQuery(input: DeleteItemInput) {
   if (input.catalogType === 'liquor') {
+    const variantRows = await db
+      .select({ id: liquorVariants.id })
+      .from(liquorVariants)
+      .where(eq(liquorVariants.productId, input.id))
+    const variantIds = variantRows.map((v) => v.id)
+    if (variantIds.length > 0) {
+      await db
+        .delete(dealerStock)
+        .where(
+          and(
+            eq(dealerStock.catalogType, 'liquor'),
+            inArray(dealerStock.variantId, variantIds),
+          ),
+        )
+    }
     await db.delete(liquorProducts).where(eq(liquorProducts.id, input.id))
   } else if (input.catalogType === 'grocery') {
+    const variantRows = await db
+      .select({ id: groceryVariants.id })
+      .from(groceryVariants)
+      .where(eq(groceryVariants.productId, input.id))
+    const variantIds = variantRows.map((v) => v.id)
+    if (variantIds.length > 0) {
+      await db
+        .delete(dealerStock)
+        .where(
+          and(
+            eq(dealerStock.catalogType, 'grocery'),
+            inArray(dealerStock.variantId, variantIds),
+          ),
+        )
+    }
     await db.delete(groceryProducts).where(eq(groceryProducts.id, input.id))
   } else if (input.catalogType === 'liquor-category') {
+    const products = await db
+      .select({ id: liquorProducts.id })
+      .from(liquorProducts)
+      .where(eq(liquorProducts.categoryId, input.id))
+    const productIds = products.map((p) => p.id)
+    if (productIds.length > 0) {
+      const variantRows = await db
+        .select({ id: liquorVariants.id })
+        .from(liquorVariants)
+        .where(inArray(liquorVariants.productId, productIds))
+      const variantIds = variantRows.map((v) => v.id)
+      if (variantIds.length > 0) {
+        await db
+          .delete(dealerStock)
+          .where(
+            and(
+              eq(dealerStock.catalogType, 'liquor'),
+              inArray(dealerStock.variantId, variantIds),
+            ),
+          )
+      }
+    }
     await db.delete(liquorCategories).where(eq(liquorCategories.id, input.id))
   } else if (input.catalogType === 'grocery-category') {
+    const products = await db
+      .select({ id: groceryProducts.id })
+      .from(groceryProducts)
+      .where(eq(groceryProducts.categoryId, input.id))
+    const productIds = products.map((p) => p.id)
+    if (productIds.length > 0) {
+      const variantRows = await db
+        .select({ id: groceryVariants.id })
+        .from(groceryVariants)
+        .where(inArray(groceryVariants.productId, productIds))
+      const variantIds = variantRows.map((v) => v.id)
+      if (variantIds.length > 0) {
+        await db
+          .delete(dealerStock)
+          .where(
+            and(
+              eq(dealerStock.catalogType, 'grocery'),
+              inArray(dealerStock.variantId, variantIds),
+            ),
+          )
+      }
+    }
     await db.delete(groceryCategories).where(eq(groceryCategories.id, input.id))
+  } else if (input.catalogType === 'grocery-brand') {
+    await db.delete(groceryBrands).where(eq(groceryBrands.id, input.id))
   } else {
     await db.delete(liquorBrands).where(eq(liquorBrands.id, input.id))
   }

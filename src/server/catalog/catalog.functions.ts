@@ -20,6 +20,8 @@ import {
   getLiquorProductsQuery,
   getGroceryCategoriesQuery,
   getAllGroceryCategoriesQuery,
+  getGroceryBrandsQuery,
+  getAllGroceryBrandsQuery,
   getGroceryProductsQuery,
   getAdminStatsQuery,
   getAdminLiquorProductsQuery,
@@ -40,7 +42,9 @@ import {
   logAudit,
   getSessionUser,
   getUserGrants,
+  can,
 } from '#/server/auth/permissions'
+import type { ModuleKey } from '#/server/operations/types'
 
 export const getLiquorCategoriesFn = createServerFn({ method: 'GET' }).handler(
   async () => {
@@ -51,6 +55,12 @@ export const getLiquorCategoriesFn = createServerFn({ method: 'GET' }).handler(
 export const getLiquorBrandsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     return getLiquorBrandsQuery()
+  },
+)
+
+export const getGroceryBrandsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    return getGroceryBrandsQuery()
   },
 )
 
@@ -115,31 +125,58 @@ export const getAdminStatsFn = createServerFn({ method: 'GET' }).handler(
 export const getAdminLiquorProductsFn = createServerFn({
   method: 'GET',
 }).handler(async () => {
-  await requirePermission('products', 'view')
+  await requirePermission('liquor', 'view')
   return getAdminLiquorProductsQuery()
 })
 
 export const getAdminGroceryProductsFn = createServerFn({
   method: 'GET',
 }).handler(async () => {
-  await requirePermission('products', 'view')
+  await requirePermission('grocery', 'view')
   return getAdminGroceryProductsQuery()
 })
 
 export const getAllTaxonomyFn = createServerFn({ method: 'GET' }).handler(
   async () => {
-    await requirePermission('products', 'view')
-    const [liquorCategories, groceryCategories, liquorBrands] =
+    const user = await getSessionUser()
+    const grants = await getUserGrants(user)
+    const canView =
+      can(grants, 'categories', 'view') ||
+      can(grants, 'brands', 'view') ||
+      can(grants, 'liquor', 'view') ||
+      can(grants, 'grocery', 'view')
+
+    if (!canView) {
+      throw new Error('403: Forbidden: Insufficient permissions for taxonomy')
+    }
+
+    const [liquorCategories, groceryCategories, liquorBrands, groceryBrands] =
       await Promise.all([
         getAllLiquorCategoriesQuery(),
         getAllGroceryCategoriesQuery(),
         getAllLiquorBrandsQuery(),
+        getAllGroceryBrandsQuery(),
       ])
 
     return {
       liquorCategories,
       groceryCategories,
       liquorBrands,
+      groceryBrands,
+    }
+  },
+)
+
+export const getAdminBrandsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    await requirePermission('brands', 'view')
+    const [liquorBrands, groceryBrands] = await Promise.all([
+      getAllLiquorBrandsQuery(),
+      getAllGroceryBrandsQuery(),
+    ])
+    return {
+      liquorBrands,
+      groceryBrands,
     }
   },
 )
@@ -148,11 +185,11 @@ export const upsertLiquorProductFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => upsertLiquorProductSchema.parse(d))
   .handler(async ({ data }) => {
     const action = data.id ? 'edit' : 'create'
-    const { user } = await requirePermission('products', action)
+    const { user } = await requirePermission('liquor', action)
     const result = await upsertLiquorProductQuery(data)
     await logAudit(
       user.name,
-      'products',
+      'liquor',
       action,
       `${action === 'create' ? 'Created' : 'Updated'} liquor product: ${data.name}`,
     )
@@ -163,11 +200,11 @@ export const upsertGroceryProductFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => upsertGroceryProductSchema.parse(d))
   .handler(async ({ data }) => {
     const action = data.id ? 'edit' : 'create'
-    const { user } = await requirePermission('products', action)
+    const { user } = await requirePermission('grocery', action)
     const result = await upsertGroceryProductQuery(data)
     await logAudit(
       user.name,
-      'products',
+      'grocery',
       action,
       `${action === 'create' ? 'Created' : 'Updated'} grocery product: ${data.name}`,
     )
@@ -177,11 +214,12 @@ export const upsertGroceryProductFn = createServerFn({ method: 'POST' })
 export const toggleProductStatusFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => toggleProductStatusSchema.parse(d))
   .handler(async ({ data }) => {
-    const { user } = await requirePermission('products', 'edit')
+    const mod: ModuleKey = data.catalogType === 'liquor' ? 'liquor' : 'grocery'
+    const { user } = await requirePermission(mod, 'edit')
     const result = await toggleProductStatusQuery(data)
     await logAudit(
       user.name,
-      'products',
+      mod,
       'edit',
       `Toggled status for product ${data.id} in ${data.catalogType} to ${data.field}=${data.value}`,
     )
@@ -192,11 +230,11 @@ export const upsertCategoryFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => upsertCategorySchema.parse(d))
   .handler(async ({ data }) => {
     const action = data.id ? 'edit' : 'create'
-    const { user } = await requirePermission('products', action)
+    const { user } = await requirePermission('categories', action)
     const result = await upsertCategoryQuery(data)
     await logAudit(
       user.name,
-      'products',
+      'categories',
       action,
       `${action === 'create' ? 'Created' : 'Updated'} category: ${data.name}`,
     )
@@ -207,13 +245,13 @@ export const upsertBrandFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => upsertBrandSchema.parse(d))
   .handler(async ({ data }) => {
     const action = data.id ? 'edit' : 'create'
-    const { user } = await requirePermission('products', action)
+    const { user } = await requirePermission('brands', action)
     const result = await upsertBrandQuery(data)
     await logAudit(
       user.name,
-      'products',
+      'brands',
       action,
-      `${action === 'create' ? 'Created' : 'Updated'} brand: ${data.name}`,
+      `${action === 'create' ? 'Created' : 'Updated'} brand: ${data.name} (${data.catalogType})`,
     )
     return result
   })
@@ -222,11 +260,20 @@ export const deleteItemFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => deleteItemSchema.parse(d))
   .handler(async ({ data }) => {
     const action = 'delete'
-    const { user } = await requirePermission('products', action)
+    const mod: ModuleKey =
+      data.catalogType === 'liquor'
+        ? 'liquor'
+        : data.catalogType === 'grocery'
+          ? 'grocery'
+          : data.catalogType === 'liquor-brand' ||
+              data.catalogType === 'grocery-brand'
+            ? 'brands'
+            : 'categories'
+    const { user } = await requirePermission(mod, action)
     const result = await deleteItemQuery(data)
     await logAudit(
       user.name,
-      'products',
+      mod,
       'delete',
       `Deleted ${data.catalogType} with id ${data.id}`,
     )
@@ -235,7 +282,7 @@ export const deleteItemFn = createServerFn({ method: 'POST' })
 
 export const getAdminUsersFn = createServerFn({ method: 'GET' }).handler(
   async () => {
-    await requirePermission('staff', 'view')
+    await requirePermission('users', 'view')
     return getAdminUsersQuery()
   },
 )
@@ -310,7 +357,7 @@ export const checkAdminSessionFn = createServerFn({ method: 'GET' }).handler(
 export const createImageUploadFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => createImageUploadSchema.parse(d))
   .handler(async ({ data }) => {
-    await requireRole('admin')
+    await requireRole('admin', 'manager')
     const { presignPut, getPublicUrl } = await import('#/lib/storage')
     const ext = data.filename.split('.').pop() || 'jpg'
     const key = `${data.prefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
@@ -322,7 +369,7 @@ export const createImageUploadFn = createServerFn({ method: 'POST' })
 export const deleteProductImageFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => deleteProductImageSchema.parse(d))
   .handler(async ({ data }) => {
-    await requireRole('admin')
+    await requireRole('admin', 'manager')
     const { deleteProductImageQuery } = await import('./catalog.queries')
     await deleteProductImageQuery(data.catalogType, data.imageId)
 

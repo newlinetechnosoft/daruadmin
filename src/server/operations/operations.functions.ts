@@ -644,7 +644,7 @@ export const getCustomersOpsFn = createServerFn({ method: 'GET' }).handler(
 
 export const getInventoryOpsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
-    await requirePermission('products', 'view')
+    await requirePermission('inventory', 'view')
     const [liquor, grocery, orderList, settings] = await Promise.all([
       getAdminLiquorProductsQuery(),
       getAdminGroceryProductsQuery(),
@@ -1451,7 +1451,19 @@ export const savePermissionsFn = createServerFn({ method: 'POST' })
       }
     }
 
-    await saveUserPermissionsQuery(data.userId, data.permissions)
+    const permissionsToSave = { ...data.permissions }
+    if (!permissionsToSave.products) {
+      permissionsToSave.products = Array.from(
+        new Set([
+          ...(permissionsToSave.liquor || []),
+          ...(permissionsToSave.grocery || []),
+          ...(permissionsToSave.categories || []),
+          ...(permissionsToSave.inventory || []),
+        ]),
+      )
+    }
+
+    await saveUserPermissionsQuery(data.userId, permissionsToSave)
     await logAudit(
       actor.name,
       'staff',

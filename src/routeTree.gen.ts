@@ -20,6 +20,7 @@ import { Route as RiderRouteRouteImport } from './routes/rider/route'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAccountsRouteImport } from './routes/admin/accounts'
+import { Route as AdminBrandsRouteImport } from './routes/admin/brands'
 import { Route as AdminCustomersRouteImport } from './routes/admin/customers'
 import { Route as AdminForbiddenRouteImport } from './routes/admin/forbidden'
 import { Route as AdminGroceryRouteImport } from './routes/admin/grocery'
@@ -98,6 +99,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const AdminAccountsRoute = AdminAccountsRouteImport.update({
   id: '/accounts',
   path: '/accounts',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminBrandsRoute = AdminBrandsRouteImport.update({
+  id: '/brands',
+  path: '/brands',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminCustomersRoute = AdminCustomersRouteImport.update({
@@ -235,6 +241,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/admin/accounts': typeof AdminAccountsRoute
+  '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/forbidden': typeof AdminForbiddenRoute
   '/admin/grocery': typeof AdminGroceryRoute
@@ -270,6 +277,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/admin/accounts': typeof AdminAccountsRoute
+  '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/forbidden': typeof AdminForbiddenRoute
   '/admin/grocery': typeof AdminGroceryRoute
@@ -308,6 +316,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/admin/accounts': typeof AdminAccountsRoute
+  '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/forbidden': typeof AdminForbiddenRoute
   '/admin/grocery': typeof AdminGroceryRoute
@@ -347,6 +356,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/admin/accounts'
+    | '/admin/brands'
     | '/admin/customers'
     | '/admin/forbidden'
     | '/admin/grocery'
@@ -382,6 +392,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/admin/accounts'
+    | '/admin/brands'
     | '/admin/customers'
     | '/admin/forbidden'
     | '/admin/grocery'
@@ -419,6 +430,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/admin/accounts'
+    | '/admin/brands'
     | '/admin/customers'
     | '/admin/forbidden'
     | '/admin/grocery'
@@ -538,6 +550,13 @@ declare module '@tanstack/react-router' {
       path: '/accounts'
       fullPath: '/admin/accounts'
       preLoaderRoute: typeof AdminAccountsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/brands': {
+      id: '/admin/brands'
+      path: '/brands'
+      fullPath: '/admin/brands'
+      preLoaderRoute: typeof AdminBrandsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/customers': {
@@ -713,6 +732,7 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteRouteChildren {
   AdminAccountsRoute: typeof AdminAccountsRoute
+  AdminBrandsRoute: typeof AdminBrandsRoute
   AdminCustomersRoute: typeof AdminCustomersRoute
   AdminForbiddenRoute: typeof AdminForbiddenRoute
   AdminGroceryRoute: typeof AdminGroceryRoute
@@ -733,6 +753,7 @@ interface AdminRouteRouteChildren {
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAccountsRoute: AdminAccountsRoute,
+  AdminBrandsRoute: AdminBrandsRoute,
   AdminCustomersRoute: AdminCustomersRoute,
   AdminForbiddenRoute: AdminForbiddenRoute,
   AdminGroceryRoute: AdminGroceryRoute,

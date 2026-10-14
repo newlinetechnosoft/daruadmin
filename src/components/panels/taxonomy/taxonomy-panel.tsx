@@ -1,12 +1,25 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
-import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { useState, useRef } from 'react'
+import type { FormEvent, ChangeEvent } from 'react'
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import {
   upsertCategoryFn,
   upsertBrandFn,
   deleteItemFn,
+  createImageUploadFn,
 } from '#/server/catalog/catalog.functions'
-import { Wine, ShoppingBag, Award, Plus, Edit2, Trash2 } from 'lucide-react'
+import { compressImage } from '#/lib/image-compression'
+import { adminQueries } from '#/queries/admin'
+import {
+  Wine,
+  ShoppingBag,
+  Award,
+  Plus,
+  Edit2,
+  Trash2,
+  UploadCloud,
+  X,
+  Loader2,
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '#/components/shared/page-header'
@@ -15,6 +28,7 @@ import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Textarea } from '#/components/ui/textarea'
 import { Badge } from '#/components/ui/badge'
+import { Checkbox } from '#/components/ui/checkbox'
 import { Card, CardContent, CardFooter } from '#/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import {
@@ -35,13 +49,24 @@ interface CategoryLike {
   description?: string | null
   imageUrl?: string | null
   sortOrder?: number | null
+  isActive?: boolean
+  productCount?: number
 }
 
-const routeApi = getRouteApi('/admin/taxonomy')
+interface BrandLike {
+  id: string
+  name: string
+  slug: string
+  origin?: string | null
+  description?: string | null
+  logoUrl?: string | null
+  isActive?: boolean
+  productCount?: number
+}
 
 export function TaxonomyPanel() {
-  const { taxonomy } = routeApi.useLoaderData()
-  const router = useRouter()
+  const queryClient = useQueryClient()
+  const { data: taxonomy } = useSuspenseQuery(adminQueries.taxonomy())
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('liquor-cat')
 
@@ -49,6 +74,8 @@ export function TaxonomyPanel() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Generic Form State
   const [formName, setFormName] = useState('')
@@ -57,11 +84,13 @@ export function TaxonomyPanel() {
   const [formImageUrl, setFormImageUrl] = useState('')
   const [formOrigin, setFormOrigin] = useState('Nepal')
   const [formSortOrder, setFormSortOrder] = useState(0)
+  const [formIsActive, setFormIsActive] = useState(true)
 
   // Delete State
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string
     name: string
+    productCount?: number
   } | null>(null)
 
   const openAddModal = () => {
@@ -72,10 +101,11 @@ export function TaxonomyPanel() {
     setFormImageUrl('')
     setFormOrigin('Nepal')
     setFormSortOrder(0)
+    setFormIsActive(true)
     setModalOpen(true)
   }
 
-  const openEditModal = (item: any) => {
+  const openEditModal = (item: CategoryLike | BrandLike | any) => {
     setEditingId(item.id)
     setFormName(item.name)
     setFormSlug(item.slug)
@@ -83,7 +113,53 @@ export function TaxonomyPanel() {
     setFormImageUrl(item.imageUrl ?? item.logoUrl ?? '')
     setFormOrigin(item.origin ?? 'Nepal')
     setFormSortOrder(item.sortOrder ?? 0)
+    setFormIsActive(item.isActive !== false)
     setModalOpen(true)
+  }
+
+  const handleImageFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingImage(true)
+    try {
+      const compressed = await compressImage(file, {
+        maxWidth: 1000,
+        maxHeight: 1000,
+        quality: 0.85,
+        format: 'image/webp',
+      })
+
+      const { uploadUrl, publicUrl } = await createImageUploadFn({
+        data: {
+          filename: `${file.name.replace(/\.[^/.]+$/, '')}.webp`,
+          contentType: 'image/webp',
+          prefix: activeTab === 'brands' ? 'brands' : 'categories',
+        },
+      })
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: compressed.blob,
+        headers: {
+          'Content-Type': 'image/webp',
+        },
+      })
+
+      if (!uploadRes.ok) {
+        throw new Error('Failed to upload image to storage')
+      }
+
+      setFormImageUrl(publicUrl)
+      toast.success('Image uploaded successfully')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to upload image')
+    } finally {
+      setIsUploadingImage(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -105,10 +181,12 @@ export function TaxonomyPanel() {
             description: formDescription.trim() || null,
             imageUrl: formImageUrl.trim() || null,
             sortOrder: Number(formSortOrder),
-            isActive: true,
+            isActive: formIsActive,
           },
         })
-        toast.success(editingId ? 'Category updated' : 'Category created')
+        toast.success(
+          editingId ? 'Liquor category updated' : 'Liquor category created',
+        )
       } else if (activeTab === 'grocery-cat') {
         await upsertCategoryFn({
           data: {
@@ -119,10 +197,12 @@ export function TaxonomyPanel() {
             description: formDescription.trim() || null,
             imageUrl: formImageUrl.trim() || null,
             sortOrder: Number(formSortOrder),
-            isActive: true,
+            isActive: formIsActive,
           },
         })
-        toast.success(editingId ? 'Category updated' : 'Category created')
+        toast.success(
+          editingId ? 'Grocery category updated' : 'Grocery category created',
+        )
       } else {
         await upsertBrandFn({
           data: {
@@ -132,14 +212,20 @@ export function TaxonomyPanel() {
             origin: formOrigin.trim() || null,
             description: formDescription.trim() || null,
             logoUrl: formImageUrl.trim() || null,
-            isActive: true,
+            isActive: formIsActive,
           },
         })
         toast.success(editingId ? 'Brand updated' : 'Brand created')
       }
 
       setModalOpen(false)
-      await router.invalidate()
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'brands'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'liquor'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
+      await queryClient.invalidateQueries({ queryKey: ['catalog'] })
+      await queryClient.invalidateQueries({ queryKey: ['storefront'] })
     } catch (err: any) {
       toast.error(err?.message || 'Failed to save item')
     } finally {
@@ -164,11 +250,17 @@ export function TaxonomyPanel() {
           id: deleteTarget.id,
         },
       })
-      toast.success('Deleted successfully')
+      toast.success(`${deleteTarget.name} deleted successfully`)
       setDeleteTarget(null)
-      await router.invalidate()
-    } catch {
-      toast.error('Failed to delete item')
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'brands'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'liquor'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
+      await queryClient.invalidateQueries({ queryKey: ['catalog'] })
+      await queryClient.invalidateQueries({ queryKey: ['storefront'] })
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete item')
     }
   }
 
@@ -214,19 +306,38 @@ export function TaxonomyPanel() {
   }`
 
   const renderCategoryCard = (cat: CategoryLike) => (
-    <Card key={cat.id} className="flex flex-col justify-between">
+    <Card
+      key={cat.id}
+      className="flex flex-col justify-between overflow-hidden border-border transition-all hover:shadow-sm"
+    >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          {cat.imageUrl && (
+          {cat.imageUrl ? (
             <img
               src={cat.imageUrl}
               alt={cat.name}
               className="h-12 w-12 shrink-0 rounded-md bg-muted object-cover border border-border"
             />
+          ) : (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground border border-border">
+              {activeTab === 'liquor-cat' ? (
+                <Wine className="h-5 w-5" />
+              ) : (
+                <ShoppingBag className="h-5 w-5" />
+              )}
+            </div>
           )}
           <div className="min-w-0 flex-1">
-            <div className="text-xs font-semibold text-foreground">
-              {cat.name}
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs font-semibold text-foreground truncate">
+                {cat.name}
+              </div>
+              <Badge
+                variant={cat.isActive !== false ? 'default' : 'secondary'}
+                className="text-[10px] px-1.5 py-0 h-4 font-normal shrink-0"
+              >
+                {cat.isActive !== false ? 'Active' : 'Inactive'}
+              </Badge>
             </div>
             <div className="font-mono text-[11px] text-muted-foreground">
               /{cat.slug}
@@ -240,24 +351,131 @@ export function TaxonomyPanel() {
         </div>
       </CardContent>
 
-      <CardFooter className="flex items-center justify-between border-t border-border/50 px-4 py-2.5">
-        <span className="font-mono text-[11px] text-muted-foreground">
-          Order {cat.sortOrder ?? 0}
-        </span>
+      <CardFooter className="flex items-center justify-between border-t border-border/50 px-4 py-2.5 bg-muted/20">
+        <div className="flex items-center gap-2">
+          <Badge
+            variant="outline"
+            className="text-[10px] font-mono px-1.5 py-0 h-4"
+          >
+            {cat.productCount ?? 0}{' '}
+            {cat.productCount === 1 ? 'product' : 'products'}
+          </Badge>
+          <span className="font-mono text-[11px] text-muted-foreground">
+            Order {cat.sortOrder ?? 0}
+          </span>
+        </div>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => openEditModal(cat)}
             className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            title="Edit category"
           >
             <Edit2 className="h-3.5 w-3.5" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setDeleteTarget({ id: cat.id, name: cat.name })}
+            onClick={() =>
+              setDeleteTarget({
+                id: cat.id,
+                name: cat.name,
+                productCount: cat.productCount ?? 0,
+              })
+            }
             className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            title="Delete category"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </CardFooter>
+    </Card>
+  )
+
+  const renderBrandCard = (brand: BrandLike) => (
+    <Card
+      key={brand.id}
+      className="flex flex-col justify-between overflow-hidden border-border transition-all hover:shadow-sm"
+    >
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          {brand.logoUrl ? (
+            <img
+              src={brand.logoUrl}
+              alt={brand.name}
+              className="h-12 w-12 shrink-0 rounded-md bg-muted object-cover border border-border"
+            />
+          ) : (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground border border-border">
+              <Award className="h-5 w-5" />
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs font-semibold text-foreground truncate">
+                {brand.name}
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {brand.origin && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] font-normal px-1.5 py-0 h-4"
+                  >
+                    {brand.origin}
+                  </Badge>
+                )}
+                <Badge
+                  variant={brand.isActive !== false ? 'default' : 'secondary'}
+                  className="text-[10px] px-1.5 py-0 h-4 font-normal"
+                >
+                  {brand.isActive !== false ? 'Active' : 'Inactive'}
+                </Badge>
+              </div>
+            </div>
+            <div className="font-mono text-[11px] text-muted-foreground">
+              /{brand.slug}
+            </div>
+            {brand.description && (
+              <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
+                {brand.description}
+              </p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+
+      <CardFooter className="flex items-center justify-between border-t border-border/50 px-4 py-2.5 bg-muted/20">
+        <Badge
+          variant="outline"
+          className="text-[10px] font-mono px-1.5 py-0 h-4"
+        >
+          {brand.productCount ?? 0}{' '}
+          {brand.productCount === 1 ? 'product' : 'products'}
+        </Badge>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => openEditModal(brand)}
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            title="Edit brand"
+          >
+            <Edit2 className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() =>
+              setDeleteTarget({
+                id: brand.id,
+                name: brand.name,
+                productCount: brand.productCount ?? 0,
+              })
+            }
+            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            title="Delete brand"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
@@ -318,56 +536,7 @@ export function TaxonomyPanel() {
           taxonomy.groceryCategories.map((cat) => renderCategoryCard(cat))}
 
         {activeTab === 'brands' &&
-          taxonomy.liquorBrands.map((brand) => (
-            <Card key={brand.id} className="flex flex-col justify-between">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="text-xs font-semibold text-foreground">
-                    {brand.name}
-                  </div>
-                  {brand.origin && (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] font-normal"
-                    >
-                      {brand.origin}
-                    </Badge>
-                  )}
-                </div>
-                <div className="font-mono text-[11px] text-muted-foreground">
-                  /{brand.slug}
-                </div>
-                {brand.description && (
-                  <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-                    {brand.description}
-                  </p>
-                )}
-              </CardContent>
-
-              <CardFooter className="flex items-center justify-end border-t border-border/50 px-4 py-2.5">
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEditModal(brand)}
-                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() =>
-                      setDeleteTarget({ id: brand.id, name: brand.name })
-                    }
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </CardFooter>
-            </Card>
-          ))}
+          taxonomy.liquorBrands.map((brand) => renderBrandCard(brand))}
       </div>
 
       {/* Add / Edit Dialog */}
@@ -438,17 +607,56 @@ export function TaxonomyPanel() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="tax-img" className="text-xs">
-                Image or logo URL
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="tax-img" className="text-xs">
+                  {activeTab === 'brands' ? 'Brand Logo' : 'Category Image'}
+                </Label>
+                <label className="cursor-pointer text-xs text-primary hover:underline font-medium flex items-center gap-1">
+                  {isUploadingImage ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="h-3 w-3" />
+                      <span>Upload file</span>
+                    </>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageFileUpload}
+                    disabled={isUploadingImage}
+                  />
+                </label>
+              </div>
               <Input
                 id="tax-img"
-                type="url"
                 value={formImageUrl}
                 onChange={(e) => setFormImageUrl(e.target.value)}
-                placeholder="https://..."
-                className="h-8 text-xs"
+                placeholder="https://... or upload from disk"
+                className="h-8 text-xs font-mono"
               />
+              {formImageUrl && (
+                <div className="relative mt-2 inline-block">
+                  <img
+                    src={formImageUrl}
+                    alt="Preview"
+                    className="h-16 w-16 rounded-md object-cover border border-border bg-muted"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFormImageUrl('')}
+                    className="absolute -top-1.5 -right-1.5 rounded-full bg-destructive text-destructive-foreground p-0.5 shadow-sm hover:opacity-90"
+                    title="Remove image"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -465,6 +673,20 @@ export function TaxonomyPanel() {
               />
             </div>
 
+            <div className="flex items-center gap-2 border-t border-border pt-3">
+              <Checkbox
+                id="tax-is-active"
+                checked={formIsActive}
+                onCheckedChange={(checked) => setFormIsActive(Boolean(checked))}
+              />
+              <Label
+                htmlFor="tax-is-active"
+                className="text-xs cursor-pointer font-normal"
+              >
+                Active on storefront
+              </Label>
+            </div>
+
             <DialogFooter className="gap-2 sm:gap-0">
               <Button
                 type="button"
@@ -478,7 +700,7 @@ export function TaxonomyPanel() {
               <Button
                 type="submit"
                 size="sm"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUploadingImage}
                 className="h-8 text-xs"
               >
                 {isSubmitting ? 'Saving...' : 'Save changes'}
@@ -492,9 +714,21 @@ export function TaxonomyPanel() {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Delete item"
-        description={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        title={`Delete ${activeTab === 'brands' ? 'Brand' : 'Category'}`}
+        description={
+          deleteTarget?.productCount && deleteTarget.productCount > 0
+            ? activeTab === 'brands'
+              ? `Are you sure you want to delete "${deleteTarget.name}"? Its ${deleteTarget.productCount} associated product${deleteTarget.productCount > 1 ? 's' : ''} will remain in the catalog, but will have their brand unassigned.`
+              : `Warning: "${deleteTarget.name}" currently contains ${deleteTarget.productCount} product${deleteTarget.productCount > 1 ? 's' : ''}. Deleting this category will cascade and permanently remove all associated products, variants, and stock. Are you sure you want to proceed?`
+            : `Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`
+        }
+        confirmLabel={
+          deleteTarget?.productCount &&
+          deleteTarget.productCount > 0 &&
+          activeTab !== 'brands'
+            ? 'Delete category and all products'
+            : 'Delete'
+        }
         tone="destructive"
         onConfirm={handleConfirmDelete}
       />

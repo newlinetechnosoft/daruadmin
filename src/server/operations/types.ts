@@ -1,13 +1,19 @@
 export const MODULES = [
   'dashboard',
-  'products',
+  'liquor',
+  'grocery',
+  'categories',
+  'brands',
+  'products', // legacy/umbrella
   'orders',
   'customers',
+  'inventory',
   'riders',
   'staff',
+  'users',
+  'shipping',
   'accounts',
   'payments',
-  'shipping',
   'marketing',
   'reports',
   'settings',
@@ -15,7 +21,12 @@ export const MODULES = [
 
 export type ModuleKey = (typeof MODULES)[number]
 export type ActionKey =
-  'view' | 'create' | 'edit' | 'delete' | 'export' | 'approve'
+  | 'view'
+  | 'create'
+  | 'edit'
+  | 'delete'
+  | 'export'
+  | 'approve'
 
 export const ACTIONS: ActionKey[] = [
   'view',
@@ -24,6 +35,185 @@ export const ACTIONS: ActionKey[] = [
   'delete',
   'export',
   'approve',
+]
+
+export interface ModuleDefinition {
+  key: ModuleKey
+  label: string
+  description: string
+  section: string
+}
+
+export interface PermissionSection {
+  name: string
+  description: string
+  modules: ModuleDefinition[]
+}
+
+export const PERMISSION_SECTIONS: PermissionSection[] = [
+  {
+    name: 'Overview',
+    description: 'Executive dashboard, KPI cards and operational summaries',
+    modules: [
+      {
+        key: 'dashboard',
+        label: 'Dashboard',
+        description:
+          'View administrative metrics, revenue stats, and system highlights',
+        section: 'Overview',
+      },
+    ],
+  },
+  {
+    name: 'Catalog',
+    description:
+      'Products, categories, brands, variants, and liquor metadata',
+    modules: [
+      {
+        key: 'liquor',
+        label: 'Liquor',
+        description:
+          'Manage liquor bottles, spirit variants, ABV, pricing, and media',
+        section: 'Catalog',
+      },
+      {
+        key: 'grocery',
+        label: 'Grocery',
+        description:
+          'Manage grocery items, pack sizes, inventory variants, and pricing',
+        section: 'Catalog',
+      },
+      {
+        key: 'categories',
+        label: 'Categories',
+        description:
+          'Create and configure liquor and grocery item categories',
+        section: 'Catalog',
+      },
+      {
+        key: 'brands',
+        label: 'Brands',
+        description:
+          'Manage liquor distilleries, grocery brands, logos and manufacturer profiles',
+        section: 'Catalog',
+      },
+    ],
+  },
+  {
+    name: 'Commerce',
+    description:
+      'Customer transactions, order processing, and warehouse inventory',
+    modules: [
+      {
+        key: 'orders',
+        label: 'Orders',
+        description:
+          'Fulfill, assign, modify order statuses, refunds, and line items',
+        section: 'Commerce',
+      },
+      {
+        key: 'customers',
+        label: 'Customers',
+        description:
+          'Customer profiles, order histories, phone records, and notes',
+        section: 'Commerce',
+      },
+      {
+        key: 'inventory',
+        label: 'Inventory',
+        description:
+          'Real-time stock on hand, restock purchasing, and low-stock alerts',
+        section: 'Commerce',
+      },
+    ],
+  },
+  {
+    name: 'Operations',
+    description: 'Logistics fleet, team access controls, and delivery zones',
+    modules: [
+      {
+        key: 'riders',
+        label: 'Riders',
+        description:
+          'Manage delivery fleet, payout rates, shifts, and online status',
+        section: 'Operations',
+      },
+      {
+        key: 'staff',
+        label: 'Staff & RBAC',
+        description:
+          'Configure staff accounts, role assignments, and granular permissions',
+        section: 'Operations',
+      },
+      {
+        key: 'users',
+        label: 'System Users',
+        description:
+          'Browse all registered customer and staff accounts in the system',
+        section: 'Operations',
+      },
+      {
+        key: 'shipping',
+        label: 'Shipping',
+        description:
+          'Configure delivery zones, base delivery charges, and distance fees',
+        section: 'Operations',
+      },
+    ],
+  },
+  {
+    name: 'Finance',
+    description: 'Double-entry ledger, settlements, and payment gateways',
+    modules: [
+      {
+        key: 'accounts',
+        label: 'Accounts',
+        description:
+          'General ledger, COGS tracking, expense logging, and balance sheets',
+        section: 'Finance',
+      },
+      {
+        key: 'payments',
+        label: 'Payments',
+        description:
+          'Gateway reconciliation (eSewa, Khalti, COD), refunds, and dispute logs',
+        section: 'Finance',
+      },
+    ],
+  },
+  {
+    name: 'Growth',
+    description: 'Discounts, promotional campaigns, and financial analytics',
+    modules: [
+      {
+        key: 'marketing',
+        label: 'Marketing',
+        description:
+          'Create and manage coupon codes, promotional banners, and discount rules',
+        section: 'Growth',
+      },
+      {
+        key: 'reports',
+        label: 'Reports',
+        description:
+          'Download and export sales, inventory, and tax compliance reports',
+        section: 'Growth',
+      },
+    ],
+  },
+  {
+    name: 'System',
+    description: 'Global configuration, operating hours, and store rules',
+    modules: [
+      {
+        key: 'settings',
+        label: 'Settings',
+        description:
+          'Store contact details, delivery boundaries, age policy, and preferences',
+        section: 'System',
+      },
+    ],
+  },
 ]
 
 export type DateRangeKey = '7d' | '30d' | '90d' | 'ytd' | 'custom'

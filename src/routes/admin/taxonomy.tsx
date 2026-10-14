@@ -4,7 +4,7 @@ import { TaxonomyPanel } from '#/components/panels/taxonomy'
 import { adminQueries } from '#/queries/admin'
 
 export const Route = createFileRoute('/admin/taxonomy')({
-  beforeLoad: guardModule('products'),
+  beforeLoad: guardModule('categories'),
   loader: async ({ context }) => {
     const taxonomy = await context.queryClient.ensureQueryData(
       adminQueries.taxonomy(),

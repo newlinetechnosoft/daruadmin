@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react'
 import type { FormEvent } from 'react'
-import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
 import {
   upsertLiquorProductFn,
   toggleProductStatusFn,
@@ -23,6 +24,8 @@ import {
   XCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { BrandDialog, type BrandData } from '#/components/panels/brands'
+import { can } from '#/server/auth/permissions-shared'
 import { PageHeader } from '#/components/shared/page-header'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -62,11 +65,16 @@ interface VariantFormItem {
   isActive: boolean
 }
 
-const routeApi = getRouteApi('/admin/liquor')
-
 export function LiquorPanel() {
-  const { products, taxonomy } = routeApi.useLoaderData()
-  const router = useRouter()
+  const queryClient = useQueryClient()
+  const { data: products } = useSuspenseQuery(adminQueries.liquorProducts())
+  const { data: taxonomy } = useSuspenseQuery(adminQueries.taxonomy())
+  const { data: access } = useSuspenseQuery(adminQueries.access())
+
+  const grants = access.authenticated ? access.grants : null
+  const canCreateBrand = can(grants, 'brands', 'create')
+  const canEditBrand = can(grants, 'brands', 'edit')
+  const canDeleteBrand = can(grants, 'brands', 'delete')
 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -80,6 +88,35 @@ export function LiquorPanel() {
     id: string
     name: string
   } | null>(null)
+
+  // Brand Dialog & CRUD state
+  const [brandDialogOpen, setBrandDialogOpen] = useState(false)
+  const [editingBrand, setEditingBrand] = useState<BrandData | null>(null)
+  const [deleteBrandTarget, setDeleteBrandTarget] = useState<BrandData | null>(null)
+
+  const handleDeleteBrand = async () => {
+    if (!deleteBrandTarget) return
+    try {
+      await deleteItemFn({
+        data: {
+          catalogType: 'liquor-brand',
+          id: deleteBrandTarget.id,
+        },
+      })
+      toast.success(`Brand "${deleteBrandTarget.name}" deleted`)
+      if (formBrandId === deleteBrandTarget.id) {
+        setFormBrandId('')
+      }
+      setDeleteBrandTarget(null)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'brands'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'liquor'] }),
+      ])
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete brand')
+    }
+  }
 
   // Form state
   const [formName, setFormName] = useState('')
@@ -280,7 +317,11 @@ export function LiquorPanel() {
           : 'Product added successfully!',
       )
       setModalOpen(false)
-      await router.invalidate()
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'liquor'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
+      await queryClient.invalidateQueries({ queryKey: ['catalog'] })
+      await queryClient.invalidateQueries({ queryKey: ['storefront'] })
     } catch (err: any) {
       toast.error(err?.message || 'Failed to save product')
     } finally {
@@ -303,9 +344,12 @@ export function LiquorPanel() {
         },
       })
       toast.success('Updated status')
-      await router.invalidate()
-    } catch {
-      toast.error('Failed to update status')
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'liquor'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
+      await queryClient.invalidateQueries({ queryKey: ['catalog'] })
+      await queryClient.invalidateQueries({ queryKey: ['storefront'] })
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update status')
     }
   }
 
@@ -320,9 +364,13 @@ export function LiquorPanel() {
       })
       toast.success('Product deleted')
       setDeleteTarget(null)
-      await router.invalidate()
-    } catch {
-      toast.error('Failed to delete product')
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'liquor'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
+      await queryClient.invalidateQueries({ queryKey: ['catalog'] })
+      await queryClient.invalidateQueries({ queryKey: ['storefront'] })
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete product')
     }
   }
 
@@ -382,21 +430,38 @@ export function LiquorPanel() {
           ))}
         </NativeSelect>
 
-        <NativeSelect
-          value={selectedBrand}
-          onChange={(e) => setSelectedBrand(e.target.value)}
-          size="sm"
-          className="h-8 text-xs"
-        >
-          <NativeSelectOption value="all">
-            All brands ({taxonomy.liquorBrands.length})
-          </NativeSelectOption>
-          {taxonomy.liquorBrands.map((b) => (
-            <NativeSelectOption key={b.id} value={b.id}>
-              {b.name}
+        <div className="flex items-center gap-1">
+          <NativeSelect
+            value={selectedBrand}
+            onChange={(e) => setSelectedBrand(e.target.value)}
+            size="sm"
+            className="h-8 text-xs"
+          >
+            <NativeSelectOption value="all">
+              All brands ({taxonomy.liquorBrands.length})
             </NativeSelectOption>
-          ))}
-        </NativeSelect>
+            {taxonomy.liquorBrands.map((b) => (
+              <NativeSelectOption key={b.id} value={b.id}>
+                {b.name}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          {canCreateBrand && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 text-xs shrink-0"
+              title="Add new liquor brand"
+              onClick={() => {
+                setEditingBrand(null)
+                setBrandDialogOpen(true)
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -598,25 +663,87 @@ export function LiquorPanel() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="liq-brand" className="text-xs">
-                  Brand / distillery
-                </Label>
-                <NativeSelect
-                  id="liq-brand"
-                  value={formBrandId}
-                  onChange={(e) => setFormBrandId(e.target.value)}
-                  size="sm"
-                  className="w-full text-xs"
-                >
-                  <NativeSelectOption value="">
-                    No specific brand
-                  </NativeSelectOption>
-                  {taxonomy.liquorBrands.map((b) => (
-                    <NativeSelectOption key={b.id} value={b.id}>
-                      {b.name}
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="liq-brand" className="text-xs">
+                    Brand / distillery
+                  </Label>
+                  {canCreateBrand && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 px-1.5 text-[11px] text-primary hover:text-primary gap-1"
+                      onClick={() => {
+                        setEditingBrand(null)
+                        setBrandDialogOpen(true)
+                      }}
+                    >
+                      <Plus className="h-3 w-3" />
+                      New Brand
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <NativeSelect
+                    id="liq-brand"
+                    value={formBrandId}
+                    onChange={(e) => setFormBrandId(e.target.value)}
+                    size="sm"
+                    className="w-full text-xs"
+                  >
+                    <NativeSelectOption value="">
+                      No specific brand
                     </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                    {taxonomy.liquorBrands.map((b) => (
+                      <NativeSelectOption key={b.id} value={b.id}>
+                        {b.name}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                  {formBrandId && (
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      {canEditBrand && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2 text-xs"
+                          title="Edit selected brand"
+                          onClick={() => {
+                            const found = taxonomy.liquorBrands.find(
+                              (b) => b.id === formBrandId,
+                            )
+                            if (found) {
+                              setEditingBrand(found)
+                              setBrandDialogOpen(true)
+                            }
+                          }}
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {canDeleteBrand && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
+                          title="Delete selected brand"
+                          onClick={() => {
+                            const found = taxonomy.liquorBrands.find(
+                              (b) => b.id === formBrandId,
+                            )
+                            if (found) {
+                              setDeleteBrandTarget(found)
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -650,7 +777,9 @@ export function LiquorPanel() {
                         imageUrl: img.url,
                       },
                     })
-                    await router.invalidate()
+                    await queryClient.invalidateQueries({
+                      queryKey: ['admin', 'liquor'],
+                    })
                   }
                 }}
                 prefix="products/liquor"
@@ -835,6 +964,32 @@ export function LiquorPanel() {
         confirmLabel="Delete"
         tone="destructive"
         onConfirm={handleConfirmDelete}
+      />
+
+      {/* Brand Dialog for Inline Create/Edit */}
+      <BrandDialog
+        open={brandDialogOpen}
+        onOpenChange={setBrandDialogOpen}
+        catalogType="liquor"
+        brand={editingBrand}
+        onSuccess={(saved) => {
+          if (saved.id) {
+            setFormBrandId(saved.id)
+          }
+        }}
+      />
+
+      {/* Brand Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={Boolean(deleteBrandTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteBrandTarget(null)
+        }}
+        title={`Delete Brand "${deleteBrandTarget?.name}"?`}
+        description="Are you sure you want to delete this brand? Products linked to it will remain, but will no longer have an assigned brand."
+        confirmLabel="Delete Brand"
+        tone="destructive"
+        onConfirm={handleDeleteBrand}
       />
     </div>
   )

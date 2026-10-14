@@ -31,6 +31,27 @@ export const groceryCategories = pgTable(
   (table) => [index('grocery_categories_slug_idx').on(table.slug)],
 )
 
+export const groceryBrands = pgTable(
+  'grocery_brands',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull().unique(),
+    origin: text('origin'),
+    description: text('description'),
+    logoUrl: text('logo_url'),
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index('grocery_brands_slug_idx').on(table.slug)],
+)
+
 export const groceryProducts = pgTable(
   'grocery_products',
   {
@@ -39,7 +60,10 @@ export const groceryProducts = pgTable(
     slug: text('slug').notNull().unique(),
     categoryId: uuid('category_id')
       .notNull()
-      .references(() => groceryCategories.id, { onDelete: 'restrict' }),
+      .references(() => groceryCategories.id, { onDelete: 'cascade' }),
+    brandId: uuid('brand_id').references(() => groceryBrands.id, {
+      onDelete: 'set null',
+    }),
     description: text('description'),
     isFeatured: boolean('is_featured').default(false).notNull(),
     isActive: boolean('is_active').default(true).notNull(),
@@ -54,6 +78,7 @@ export const groceryProducts = pgTable(
   (table) => [
     index('grocery_products_slug_idx').on(table.slug),
     index('grocery_products_category_idx').on(table.categoryId),
+    index('grocery_products_brand_idx').on(table.brandId),
   ],
 )
 
@@ -122,10 +147,18 @@ export const groceryProductsRelations = relations(
       fields: [groceryProducts.categoryId],
       references: [groceryCategories.id],
     }),
+    brand: one(groceryBrands, {
+      fields: [groceryProducts.brandId],
+      references: [groceryBrands.id],
+    }),
     variants: many(groceryVariants),
     images: many(groceryImages),
   }),
 )
+
+export const groceryBrandsRelations = relations(groceryBrands, ({ many }) => ({
+  products: many(groceryProducts),
+}))
 
 export const groceryVariantsRelations = relations(
   groceryVariants,

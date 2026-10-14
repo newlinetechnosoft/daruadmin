@@ -37,6 +37,7 @@ import {
   Settings,
   ClipboardList,
   Check,
+  Award,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -151,18 +152,24 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Catalog',
     items: [
-      { label: 'Liquor', to: '/admin/liquor', icon: Wine, module: 'products' },
+      { label: 'Liquor', to: '/admin/liquor', icon: Wine, module: 'liquor' },
       {
         label: 'Grocery',
         to: '/admin/grocery',
         icon: ShoppingBag,
-        module: 'products',
+        module: 'grocery',
       },
       {
         label: 'Categories',
         to: '/admin/taxonomy',
         icon: Tags,
-        module: 'products',
+        module: 'categories',
+      },
+      {
+        label: 'Brands',
+        to: '/admin/brands',
+        icon: Award,
+        module: 'brands',
       },
     ],
   },
@@ -185,7 +192,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         label: 'Inventory',
         to: '/admin/inventory',
         icon: Package,
-        module: 'products',
+        module: 'inventory',
       },
     ],
   },
@@ -194,7 +201,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { label: 'Riders', to: '/admin/riders', icon: Bike, module: 'riders' },
       { label: 'Staff', to: '/admin/staff', icon: Shield, module: 'staff' },
-      { label: 'Users', to: '/admin/users', icon: Users, module: 'staff' },
+      { label: 'Users', to: '/admin/users', icon: Users, module: 'users' },
       {
         label: 'Shipping',
         to: '/admin/shipping',

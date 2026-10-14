@@ -21,6 +21,7 @@ import {
   getAdminLiquorProductsFn,
   getAdminUsersFn,
   getAllTaxonomyFn,
+  getAdminBrandsFn,
 } from '#/server/catalog/catalog.functions'
 
 export const adminQueries = {
@@ -141,6 +142,13 @@ export const adminQueries = {
       queryKey: ['admin', 'grocery'],
       queryFn: () => getAdminGroceryProductsFn(),
       staleTime: 1000 * 60 * 2,
+    }),
+
+  brands: () =>
+    queryOptions({
+      queryKey: ['admin', 'brands'],
+      queryFn: () => getAdminBrandsFn(),
+      staleTime: 1000 * 60 * 5,
     }),
 
   taxonomy: () =>

@@ -60,7 +60,7 @@ export const liquorProducts = pgTable(
     slug: text('slug').notNull().unique(),
     categoryId: uuid('category_id')
       .notNull()
-      .references(() => liquorCategories.id, { onDelete: 'restrict' }),
+      .references(() => liquorCategories.id, { onDelete: 'cascade' }),
     brandId: uuid('brand_id').references(() => liquorBrands.id, {
       onDelete: 'set null',
     }),

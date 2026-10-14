@@ -4,7 +4,7 @@ import { GroceryPanel } from '#/components/panels/grocery'
 import { adminQueries } from '#/queries/admin'
 
 export const Route = createFileRoute('/admin/grocery')({
-  beforeLoad: guardModule('products'),
+  beforeLoad: guardModule('grocery'),
   loader: async ({ context }) => {
     const [products, taxonomy] = await Promise.all([
       context.queryClient.ensureQueryData(adminQueries.groceryProducts()),

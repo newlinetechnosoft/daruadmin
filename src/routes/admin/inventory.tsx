@@ -4,7 +4,7 @@ import { InventoryPanel } from '#/components/panels/inventory'
 import { adminQueries } from '#/queries/admin'
 
 export const Route = createFileRoute('/admin/inventory')({
-  beforeLoad: guardModule('products'),
+  beforeLoad: guardModule('inventory'),
   loader: async ({ context }) => {
     return context.queryClient.ensureQueryData(adminQueries.inventory())
   },

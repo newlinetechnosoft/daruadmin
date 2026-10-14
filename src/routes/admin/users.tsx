@@ -4,7 +4,7 @@ import { UsersPanel } from '#/components/panels/users'
 import { adminQueries } from '#/queries/admin'
 
 export const Route = createFileRoute('/admin/users')({
-  beforeLoad: guardModule('staff'),
+  beforeLoad: guardModule('users'),
   loader: async ({ context }) => {
     const users = await context.queryClient.ensureQueryData(
       adminQueries.users(),
