@@ -20,7 +20,7 @@ import {
 } from '#/db/schema'
 import { auth } from '#/lib/auth'
 import { getGoogleMapsUrl } from '#/lib/map-config'
-import { eq, count, or } from 'drizzle-orm'
+import { and, count, eq, isNull, or } from 'drizzle-orm'
 import {
   requirePermission,
   requireRole,
@@ -120,8 +120,8 @@ export const getMyAccessFn = createServerFn({ method: 'GET' }).handler(
 
 export const getAdminChromeFn = createServerFn({ method: 'GET' }).handler(
   async () => {
-    const user = await getSessionUser()
-    const grants = await getUserGrants(user)
+    const sessionUser = await getSessionUser()
+    const grants = await getUserGrants(sessionUser)
 
     const canOrders = can(grants, 'orders', 'view')
     const canRiders = can(grants, 'riders', 'view')
@@ -153,8 +153,12 @@ export const getAdminChromeFn = createServerFn({ method: 'GET' }).handler(
         ? db
             .select({ count: count() })
             .from(riders)
+            .leftJoin(user, eq(riders.userId, user.id))
             .where(
-              or(eq(riders.status, 'available'), eq(riders.status, 'busy')),
+              and(
+                or(isNull(riders.userId), eq(user.role, 'rider')),
+                or(eq(riders.status, 'available'), eq(riders.status, 'busy')),
+              ),
             )
         : Promise.resolve([{ count: 0 }]),
       canAccounts
@@ -191,7 +195,7 @@ export const getAdminChromeFn = createServerFn({ method: 'GET' }).handler(
       unread: filteredNotifications.filter((n) => !n.read).length,
       notifications: filteredNotifications.slice(0, 8),
       badges,
-      user,
+      user: sessionUser,
       grants,
     }
   },
@@ -1022,12 +1026,20 @@ export const upsertRiderFn = createServerFn({ method: 'POST' })
 
     if (!data.id) {
       const existingUsers = await db
-        .select({ id: user.id })
+        .select({ id: user.id, role: user.role })
         .from(user)
         .where(eq(user.email, normalizedEmail))
         .limit(1)
 
       if (existingUsers[0]) {
+        if (
+          existingUsers[0].role === 'admin' ||
+          existingUsers[0].role === 'manager'
+        ) {
+          throw new Error(
+            `A staff account with role ${existingUsers[0].role} cannot be converted to a rider.`,
+          )
+        }
         assignedUserId = existingUsers[0].id
         await db
           .update(user)
@@ -1195,7 +1207,15 @@ export const updateRiderLiveFn = createServerFn({ method: 'POST' })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    await requireRole('admin', 'manager', 'rider')
+    const { user: actor } = await requireRole('admin', 'manager', 'rider')
+    if (actor.role === 'rider') {
+      const rider = await getRiderByUserIdQuery(actor.id)
+      if (!rider || rider.id !== data.riderId) {
+        throw new Error(
+          'Forbidden: You can only update your own location and status',
+        )
+      }
+    }
     const updates: Record<string, any> = { updatedAt: new Date() }
     if (data.lat !== undefined) updates.lat = String(data.lat)
     if (data.lng !== undefined) updates.lng = String(data.lng)
@@ -1644,48 +1664,25 @@ export const getRiderPortalFn = createServerFn({ method: 'GET' }).handler(
     if (!user.isActive || user.banned) {
       throw new Error('Forbidden: Account suspended')
     }
-    if (user.role !== 'rider' && user.role !== 'admin') {
+    if (user.role !== 'rider') {
       throw new Error('Forbidden: Rider access required')
     }
 
     let rider = await getRiderByUserIdQuery(user.id)
 
-    if (!rider) {
+    if (!rider && user.email) {
       const allRiders = await getAllRidersQuery()
       rider =
         allRiders.find(
-          (r) =>
-            user.email && r.email.toLowerCase() === user.email.toLowerCase(),
+          (r) => r.email.toLowerCase() === user.email.toLowerCase(),
         ) ?? null
     }
 
     if (!rider) {
-      // Auto-provision a rider profile for the logged in user with rider role
-      const riderId = nid('rid')
-      await db.insert(riders).values({
-        id: riderId,
-        userId: user.id,
-        name: user.name || 'Rider Partner',
-        email: user.email || '',
-        phone: '+977 9800000000',
-        vehicle: 'bike',
-        licenseNo: 'BA-2-PA-9999',
-        verified: true,
-        available: true,
-        status: 'available',
-        lat: '27.7172',
-        lng: '85.3240',
-        zone: 'Kathmandu Core',
-        commissionRate: 85,
-        cashOnHand: 0,
-        earnings: 0,
-        deliveries: 0,
-        rating: '5.00',
-      })
-      rider = await getRiderByIdQuery(riderId)
+      throw new Error('Rider profile not found. Please contact administration.')
     }
 
-    const currentRider = rider!
+    const currentRider = rider
     const orderList = await getAllOrdersQuery()
     const assignedOrders = orderList.filter(
       (o) => o.riderId === currentRider.id,
@@ -1731,7 +1728,7 @@ export const updateRiderDeliveryStatusFn = createServerFn({ method: 'POST' })
     if (!user.isActive || user.banned) {
       throw new Error('Forbidden: Account suspended')
     }
-    if (user.role !== 'rider' && user.role !== 'admin') {
+    if (user.role !== 'rider') {
       throw new Error('Forbidden: Rider access required')
     }
 
@@ -1741,7 +1738,7 @@ export const updateRiderDeliveryStatusFn = createServerFn({ method: 'POST' })
     const order = await getOrderByIdQuery(data.orderId)
     if (!order) throw new Error('Order not found')
 
-    if (order.riderId !== rider.id && user.role !== 'admin') {
+    if (order.riderId !== rider.id) {
       throw new Error('Forbidden: You are not assigned to this delivery')
     }
 
@@ -1825,7 +1822,7 @@ export const toggleRiderAvailabilityFn = createServerFn({ method: 'POST' })
     if (!user.isActive || user.banned) {
       throw new Error('Forbidden: Account suspended')
     }
-    if (user.role !== 'rider' && user.role !== 'admin') {
+    if (user.role !== 'rider') {
       throw new Error('Forbidden: Rider access required')
     }
 
@@ -1858,7 +1855,7 @@ export const depositRiderCashFn = createServerFn({ method: 'POST' })
     if (!user.isActive || user.banned) {
       throw new Error('Forbidden: Account suspended')
     }
-    if (user.role !== 'rider' && user.role !== 'admin') {
+    if (user.role !== 'rider') {
       throw new Error('Forbidden: Rider access required')
     }
 

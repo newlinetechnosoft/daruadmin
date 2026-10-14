@@ -68,16 +68,18 @@ function LoginPage() {
       }
 
       toast.success('Welcome back to Mezmani!')
-      if (!search.redirect) {
-        const userRole = (res.data as any)?.user?.role
-        if (userRole === 'admin' || userRole === 'manager') {
-          navigate({ to: '/admin' })
-          return
-        }
-        if (userRole === 'rider') {
-          navigate({ to: '/rider' })
-          return
-        }
+      const userRole = (res.data as any)?.user?.role
+      if (userRole === 'rider') {
+        navigate({
+          to: search.redirect?.startsWith('/rider') ? search.redirect : '/rider',
+        })
+        return
+      }
+      if (userRole === 'admin' || userRole === 'manager') {
+        navigate({
+          to: search.redirect?.startsWith('/admin') ? search.redirect : '/admin',
+        })
+        return
       }
       navigate({
         to: search.redirect || '/drinks',

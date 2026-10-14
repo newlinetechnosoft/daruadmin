@@ -19,7 +19,10 @@ export const Route = createFileRoute('/rider')({
         search: { redirect: location.pathname },
       })
     }
-    if (access.user.role !== 'rider' && access.user.role !== 'admin') {
+    if (access.user.role === 'admin' || access.user.role === 'manager') {
+      throw redirect({ to: '/admin' })
+    }
+    if (access.user.role !== 'rider') {
       throw redirect({ to: '/' })
     }
     return {

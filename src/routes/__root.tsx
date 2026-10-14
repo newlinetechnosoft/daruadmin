@@ -2,6 +2,8 @@ import {
   HeadContent,
   Scripts,
   createRootRouteWithContext,
+  isRedirect,
+  redirect,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
@@ -12,6 +14,7 @@ import { CartProvider } from '#/lib/cart-context'
 import { CartSheet } from '#/components/store/cart-sheet'
 import { AgeGate } from '#/components/store/age-gate'
 import { Toaster } from '#/components/ui/sonner'
+import { adminQueries } from '#/queries/admin'
 
 import appCss from '../styles.css?url'
 
@@ -22,6 +25,26 @@ interface MyRouterContext {
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
+  beforeLoad: async ({ location, context }) => {
+    if (
+      location.pathname.startsWith('/rider') ||
+      location.pathname.startsWith('/admin') ||
+      location.pathname.startsWith('/api')
+    ) {
+      return
+    }
+
+    try {
+      const access = await context.queryClient.ensureQueryData(
+        adminQueries.access(),
+      )
+      if (access?.authenticated && access.user?.role === 'rider') {
+        throw redirect({ to: '/rider' })
+      }
+    } catch (err) {
+      if (isRedirect(err)) throw err
+    }
+  },
   head: () => ({
     meta: [
       {

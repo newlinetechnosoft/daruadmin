@@ -1,6 +1,6 @@
 import { db } from '#/db'
-import { riders, settlements } from '#/db/schema'
-import { desc, eq } from 'drizzle-orm'
+import { riders, settlements, user } from '#/db/schema'
+import { and, desc, eq, isNull, or } from 'drizzle-orm'
 import type { Rider, Settlement } from '#/server/operations/types'
 
 function mapRiderRecord(r: typeof riders.$inferSelect): Rider {
@@ -44,24 +44,46 @@ function mapSettlementRecord(s: typeof settlements.$inferSelect): Settlement {
 }
 
 export async function getAllRidersQuery(): Promise<Rider[]> {
-  const rows = await db.select().from(riders).orderBy(desc(riders.createdAt))
-  return rows.map(mapRiderRecord)
+  const rows = await db
+    .select({
+      rider: riders,
+    })
+    .from(riders)
+    .leftJoin(user, eq(riders.userId, user.id))
+    .where(or(isNull(riders.userId), eq(user.role, 'rider')))
+    .orderBy(desc(riders.createdAt))
+  return rows.map((r) => mapRiderRecord(r.rider))
 }
 
 export async function getRiderByIdQuery(id: string): Promise<Rider | null> {
-  const rows = await db.select().from(riders).where(eq(riders.id, id)).limit(1)
-  return rows[0] ? mapRiderRecord(rows[0]) : null
+  const rows = await db
+    .select({
+      rider: riders,
+    })
+    .from(riders)
+    .leftJoin(user, eq(riders.userId, user.id))
+    .where(
+      and(
+        eq(riders.id, id),
+        or(isNull(riders.userId), eq(user.role, 'rider')),
+      ),
+    )
+    .limit(1)
+  return rows[0] ? mapRiderRecord(rows[0].rider) : null
 }
 
 export async function getRiderByUserIdQuery(
   userId: string,
 ): Promise<Rider | null> {
   const rows = await db
-    .select()
+    .select({
+      rider: riders,
+    })
     .from(riders)
-    .where(eq(riders.userId, userId))
+    .innerJoin(user, eq(riders.userId, user.id))
+    .where(and(eq(riders.userId, userId), eq(user.role, 'rider')))
     .limit(1)
-  return rows[0] ? mapRiderRecord(rows[0]) : null
+  return rows[0] ? mapRiderRecord(rows[0].rider) : null
 }
 
 export async function getAllSettlementsQuery(): Promise<Settlement[]> {
