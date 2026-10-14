@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useRouter } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
 import { createStaffUserFn } from '#/server/operations/operations.functions'
 import {
   Dialog,
@@ -39,11 +40,11 @@ export function CreateStaffDialog({
   defaultRole = 'manager',
   onSuccess,
 }: CreateStaffDialogProps) {
-  const router = useRouter()
+  const queryClient = useQueryClient()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  const [form, setForm] = useState({
+  const initialFormState = {
     name: '',
     email: '',
     phone: '+977 ',
@@ -53,8 +54,10 @@ export function CreateStaffDialog({
     vehicle: 'bike' as 'bike' | 'scooter' | 'car',
     licenseNo: '',
     zone: 'Kathmandu Central',
-    commissionRate: 150,
-  })
+    commissionRate: 10,
+  }
+
+  const [form, setForm] = useState(initialFormState)
 
   const handleRoleChange = (role: 'admin' | 'manager' | 'rider') => {
     setForm((prev) => ({ ...prev, role }))
@@ -63,30 +66,41 @@ export function CreateStaffDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!form.name.trim()) {
-      toast.error('Please enter the full name')
+    const name = form.name.trim()
+    const email = form.email.trim()
+    const phone = form.phone.trim()
+
+    if (name.length < 2) {
+      toast.error('Name must be at least 2 characters')
       return
     }
-    if (!form.email.trim()) {
-      toast.error('Please enter a valid email address')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error('Invalid email address')
       return
     }
-    if (!form.phone.trim() || form.phone.trim() === '+977') {
-      toast.error('Please enter a contact phone number')
+    if (phone.length < 6 || phone === '+977') {
+      toast.error('Mobile number must be at least 6 digits')
       return
     }
     if (form.password.length < 8) {
-      toast.error('Password must be at least 8 characters long')
+      toast.error('Password must be at least 8 characters')
       return
+    }
+    if (form.role === 'rider') {
+      const comm = Number(form.commissionRate)
+      if (isNaN(comm) || comm < 0 || comm > 100) {
+        toast.error('Commission rate must be between 0% and 100%')
+        return
+      }
     }
 
     try {
       setIsSubmitting(true)
       await createStaffUserFn({
         data: {
-          name: form.name.trim(),
-          email: form.email.trim(),
-          phone: form.phone.trim(),
+          name,
+          email,
+          phone,
           password: form.password,
           role: form.role,
           vehicle: form.vehicle,
@@ -97,24 +111,22 @@ export function CreateStaffDialog({
       })
 
       toast.success(
-        `${form.role.toUpperCase()} account created for ${form.name}!`,
+        `${form.role.toUpperCase()} account created for ${name}!`,
       )
       onOpenChange(false)
       setForm({
-        name: '',
-        email: '',
-        phone: '+977 ',
-        password: '',
+        ...initialFormState,
         role: defaultRole,
-        vehicle: 'bike',
-        licenseNo: '',
-        zone: 'Kathmandu Central',
-        commissionRate: 150,
       })
-      await router.invalidate()
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminQueries.staff().queryKey }),
+        queryClient.invalidateQueries({ queryKey: adminQueries.users().queryKey }),
+        queryClient.invalidateQueries({ queryKey: adminQueries.chrome().queryKey }),
+      ])
       onSuccess?.()
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to create staff account')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to create staff account'
+      toast.error(msg)
     } finally {
       setIsSubmitting(false)
     }
@@ -329,10 +341,11 @@ export function CreateStaffDialog({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Commission (NPR)</Label>
+                  <Label className="text-xs">Commission rate (%)</Label>
                   <Input
                     type="number"
                     min="0"
+                    max="100"
                     value={form.commissionRate}
                     onChange={(e) =>
                       setForm({

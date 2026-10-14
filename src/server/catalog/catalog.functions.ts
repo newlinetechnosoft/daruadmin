@@ -253,6 +253,10 @@ export const updateUserRoleFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { user: actor } = await requireRole('admin')
 
+    if (actor.id === data.userId && data.role !== actor.role) {
+      throw new Error('Forbidden: You cannot change your own role')
+    }
+
     const allUsers = await getAdminUsersQuery()
     const targetUser = allUsers.find((u) => u.id === data.userId)
 

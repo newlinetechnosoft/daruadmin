@@ -188,24 +188,25 @@ export async function saveUserPermissionsQuery(
   permissions: Partial<Record<string, string[]>>,
 ) {
   for (const [mod, acts] of Object.entries(permissions)) {
-    if (!acts || acts.length === 0) {
-      await db.delete(userPermissions).where(eq(userPermissions.userId, userId))
-    } else {
-      const id = `perm_${userId}_${mod}`
-      await db
-        .insert(userPermissions)
-        .values({
-          id,
-          userId,
-          module: mod,
-          actions: acts,
-        })
-        .onConflictDoUpdate({
-          target: [userPermissions.userId, userPermissions.module],
-          set: { actions: acts, updatedAt: new Date() },
-        })
-    }
+    const id = `perm_${userId}_${mod}`
+    const safeActs = acts ?? []
+    await db
+      .insert(userPermissions)
+      .values({
+        id,
+        userId,
+        module: mod,
+        actions: safeActs,
+      })
+      .onConflictDoUpdate({
+        target: [userPermissions.userId, userPermissions.module],
+        set: { actions: safeActs, updatedAt: new Date() },
+      })
   }
+}
+
+export async function resetUserPermissionsQuery(userId: string) {
+  await db.delete(userPermissions).where(eq(userPermissions.userId, userId))
 }
 
 // -------------------------------------------------------------

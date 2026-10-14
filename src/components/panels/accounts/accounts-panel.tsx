@@ -101,7 +101,8 @@ export function AccountsPanel() {
   const totalCredits = ops.ledger
     .filter((l) => l.type === 'credit')
     .reduce((sum, l) => sum + l.amount, 0)
-  const netLiquidityBalance = totalCredits - totalDebits + 2500000
+  const netLiquidityBalance = totalCredits - totalDebits
+  // const netLiquidityBalance = totalCredits - totalDebits + 2500000
 
   // P&L Statement Metrics
   const grossSales = ops.ledger

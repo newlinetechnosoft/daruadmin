@@ -57,6 +57,7 @@ import {
   saveStoreSettingsQuery,
   getAllUserPermissionsQuery,
   saveUserPermissionsQuery,
+  resetUserPermissionsQuery,
   getAllCouponsQuery,
   upsertCouponQuery,
   deleteCouponQuery,
@@ -71,7 +72,7 @@ import {
   getAllShippingZonesQuery,
   upsertShippingZoneQuery,
 } from '#/server/platform/platform.queries'
-import type { DateRangeKey, OpsState } from './types'
+import type { DateRangeKey, OpsState, ModuleKey } from './types'
 import { ACTIONS, MODULES } from './types'
 
 export { ACTIONS, MODULES }
@@ -659,7 +660,7 @@ export const getInventoryOpsFn = createServerFn({ method: 'GET' }).handler(
 
 export const getStaffOpsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
-    await requirePermission('staff', 'view')
+    const { user: actor } = await requirePermission('staff', 'view')
     const [users, permissionsMap, auditList] = await Promise.all([
       getAdminUsersQuery(),
       getAllUserPermissionsQuery(),
@@ -671,6 +672,7 @@ export const getStaffOpsFn = createServerFn({ method: 'GET' }).handler(
         audit: auditList,
       },
       users,
+      currentUserId: actor.id,
     }
   },
 )
@@ -1387,18 +1389,87 @@ export const savePermissionsFn = createServerFn({ method: 'POST' })
     z
       .object({
         userId: z.string(),
-        permissions: z.record(z.string(), z.array(z.string())),
+        permissions: z.record(
+          z.enum(MODULES),
+          z.array(
+            z.enum(['view', 'create', 'edit', 'delete', 'export', 'approve']),
+          ),
+        ),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const { user } = await requirePermission('staff', 'edit')
+    const { user: actor } = await requirePermission('staff', 'edit')
+
+    // Guard 1: Non-admins cannot edit their own permissions
+    if (actor.role !== 'admin' && actor.id === data.userId) {
+      throw new Error('Forbidden: You cannot modify your own permissions')
+    }
+
+    const allUsers = await getAdminUsersQuery()
+    const targetUser = allUsers.find((u) => u.id === data.userId)
+    if (!targetUser) {
+      throw new Error('User not found')
+    }
+
+    // Guard 2: Non-admins cannot edit admin accounts
+    if (targetUser.role === 'admin' && actor.role !== 'admin') {
+      throw new Error('Forbidden: You cannot modify administrator permissions')
+    }
+
+    // Guard 3: Non-admins cannot grant actions they do not hold themselves
+    if (actor.role !== 'admin') {
+      const actorGrants = await getUserGrants(actor)
+      for (const [mod, acts] of Object.entries(data.permissions)) {
+        for (const act of acts) {
+          if (!can(actorGrants, mod as ModuleKey, act)) {
+            throw new Error(
+              `Forbidden: You cannot grant privilege ${mod}.${act} which you do not possess`,
+            )
+          }
+        }
+      }
+    }
+
     await saveUserPermissionsQuery(data.userId, data.permissions)
     await logAudit(
-      user.name,
+      actor.name,
       'staff',
       'edit',
-      `Updated custom permissions for user ${data.userId}`,
+      `Updated custom permissions for user ${targetUser.name || data.userId}`,
+    )
+    return true
+  })
+
+export const resetPermissionsFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        userId: z.string(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user: actor } = await requirePermission('staff', 'edit')
+
+    if (actor.role !== 'admin' && actor.id === data.userId) {
+      throw new Error('Forbidden: You cannot reset your own permissions')
+    }
+
+    const allUsers = await getAdminUsersQuery()
+    const targetUser = allUsers.find((u) => u.id === data.userId)
+    if (!targetUser) throw new Error('User not found')
+
+    if (targetUser.role === 'admin' && actor.role !== 'admin') {
+      throw new Error('Forbidden: You cannot modify administrator permissions')
+    }
+
+    await resetUserPermissionsQuery(data.userId)
+    await logAudit(
+      actor.name,
+      'staff',
+      'edit',
+      `Reset custom permissions to role defaults for user ${targetUser.name || data.userId}`,
     )
     return true
   })

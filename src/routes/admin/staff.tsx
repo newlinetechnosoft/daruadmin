@@ -8,5 +8,9 @@ export const Route = createFileRoute('/admin/staff')({
   loader: async ({ context }) => {
     return context.queryClient.ensureQueryData(adminQueries.staff())
   },
-  component: StaffPanel,
+  component: StaffPanelPage,
 })
+
+function StaffPanelPage() {
+  return <StaffPanel />
+}
