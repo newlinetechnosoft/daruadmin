@@ -23,6 +23,7 @@ const STATUS_MAP: Record<string, Tone> = {
 
   // Destructive
   failed: 'destructive',
+  delivery_failed: 'destructive',
   cancelled: 'destructive',
   canceled: 'destructive',
   refunded: 'destructive',
@@ -31,6 +32,9 @@ const STATUS_MAP: Record<string, Tone> = {
 
   // Info / In-progress
   confirmed: 'info',
+  dealer_assigned: 'info',
+  rider_assigned: 'info',
+  picked_up: 'info',
   preparing: 'info',
   processing: 'info',
   packing: 'info',

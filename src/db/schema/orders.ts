@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   text,
@@ -44,6 +45,9 @@ export const orders = pgTable(
     ageVerifiedAtDelivery: boolean('age_verified_at_delivery')
       .notNull()
       .default(false),
+    isLegacy: boolean('is_legacy').notNull().default(false),
+    cancellationReason: text('cancellation_reason'),
+    deliveryFailureReason: text('delivery_failure_reason'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -82,11 +86,19 @@ export const orderItems = pgTable(
     dealerId: text('dealer_id').references(() => dealers.id, {
       onDelete: 'set null',
     }),
+    dealerCostPrice: integer('dealer_cost_price'), // snapshotted dealer unit cost (paisa)
+    actualDealerCostPrice: integer('actual_dealer_cost_price'), // actual rider-paid unit cost (paisa)
+    dealerBillPhotoUrl: text('dealer_bill_photo_url'),
+    sourcingStatus: text('sourcing_status').notNull().default('pending'), // 'pending' | 'assigned' | 'unavailable' | 'picked_up'
+    isSettled: boolean('is_settled').notNull().default(false),
+    settlementId: text('settlement_id'),
   },
   (table) => [
     index('order_items_order_id_idx').on(table.orderId),
     index('order_items_variant_id_idx').on(table.variantId),
     index('order_items_dealer_id_idx').on(table.dealerId),
+    index('order_items_sourcing_status_idx').on(table.sourcingStatus),
+    index('order_items_settlement_id_idx').on(table.settlementId),
   ],
 )
 
@@ -98,13 +110,21 @@ export const orderStatusHistory = pgTable(
       .notNull()
       .references(() => orders.id, { onDelete: 'cascade' }),
     status: text('status').notNull(),
+    fromStatus: text('from_status'),
+    toStatus: text('to_status'),
     note: text('note').notNull(),
     actor: text('actor').notNull(),
+    actorId: text('actor_id'),
+    actorRole: text('actor_role'),
+    metadata: jsonb('metadata'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
-  (table) => [index('order_status_history_order_id_idx').on(table.orderId)],
+  (table) => [
+    index('order_status_history_order_id_idx').on(table.orderId),
+    index('order_status_history_to_status_idx').on(table.toStatus),
+  ],
 )
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({

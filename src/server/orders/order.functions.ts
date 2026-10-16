@@ -12,8 +12,8 @@ import {
   orders,
   orderItems,
   orderStatusHistory,
-  stockMovements,
   coupons,
+  couponRedemptions,
   ledgerEntries,
   payments,
   notifications,
@@ -22,15 +22,16 @@ import { getSessionUser, logAudit } from '#/server/auth/permissions'
 import {
   getCouponByCodeQuery,
   getStoreSettingsQuery,
+  getCustomerCouponRedemptionCountQuery,
 } from '#/server/platform/platform.queries'
 import { getOrderByIdQuery } from '#/server/orders/order.queries'
 import type { PaymentMethod } from '#/server/operations/types'
 import { checkoutFormSchema, validatePromoSchema } from './order.schemas'
 import { fromPaisa } from '#/lib/money'
-
-// Free delivery threshold: Rs 3,000 (300,000 paisa). Standard express delivery: Rs 150 (15,000 paisa)
-const FREE_DELIVERY_THRESHOLD = 300000
-const STANDARD_DELIVERY_CHARGE = 15000
+import {
+  validateCoupon,
+  calculateOrderTotals,
+} from '#/lib/pricing'
 
 // eSewa configuration defaults (UAT / Test credentials)
 const ESEWA_PRODUCT_CODE = process.env.ESEWA_PRODUCT_CODE || 'EPAYTEST'
@@ -66,7 +67,7 @@ function nid(prefix = 'id') {
 export const validatePromoFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => validatePromoSchema.parse(d))
   .handler(async ({ data }) => {
-    await getSessionUser()
+    const sessionUser = await getSessionUser()
 
     const cleanCode = data.code.trim().toUpperCase()
     const coupon = await getCouponByCodeQuery(cleanCode)
@@ -78,42 +79,35 @@ export const validatePromoFn = createServerFn({ method: 'POST' })
       }
     }
 
-    if (!coupon.active) {
+    const [redemptionCount, customerOrders] = await Promise.all([
+      getCustomerCouponRedemptionCountQuery(coupon.id, sessionUser.id),
+      db
+        .select({ count: count() })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.customerId, sessionUser.id),
+            eq(orders.status, 'delivered'),
+          ),
+        ),
+    ])
+
+    const validation = validateCoupon({
+      coupon: {
+        ...coupon,
+        perCustomerLimit: coupon.perCustomerLimit ?? 1,
+        firstOrderOnly: coupon.firstOrderOnly ?? false,
+      },
+      subtotalPaisa: data.subtotal,
+      customerOrderCount: customerOrders[0]?.count ?? 0,
+      customerRedemptionCount: redemptionCount,
+    })
+
+    if (!validation.valid) {
       return {
         valid: false,
-        error: 'This promo code is currently inactive.',
+        error: validation.errorReason || 'Coupon cannot be applied.',
       }
-    }
-
-    const now = new Date()
-    const expires = new Date(coupon.expiresAt)
-    if (expires < now) {
-      return {
-        valid: false,
-        error: 'This promo code has expired.',
-      }
-    }
-
-    if (coupon.used >= coupon.usageLimit) {
-      return {
-        valid: false,
-        error: 'Usage limit for this promo code has been reached.',
-      }
-    }
-
-    if (data.subtotal < coupon.minOrder) {
-      const minNpr = fromPaisa(coupon.minOrder)
-      return {
-        valid: false,
-        error: `Minimum order amount of Rs. ${minNpr.toLocaleString()} required for this coupon.`,
-      }
-    }
-
-    let discountPaisa = 0
-    if (coupon.type === 'percent') {
-      discountPaisa = Math.round(data.subtotal * (coupon.value / 100))
-    } else {
-      discountPaisa = Math.min(data.subtotal, coupon.value)
     }
 
     return {
@@ -121,7 +115,7 @@ export const validatePromoFn = createServerFn({ method: 'POST' })
       code: coupon.code,
       type: coupon.type,
       value: coupon.value,
-      discountPaisa,
+      discountPaisa: validation.discountPaisa,
       error: null,
     }
   })
@@ -203,7 +197,6 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         variantName: string
         sku: string
         price: number
-        stock: number
         productId: string
         catalogType: 'liquor' | 'grocery'
       }
@@ -216,7 +209,6 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         variantName: row.variant.name,
         sku: row.variant.sku,
         price: row.variant.price,
-        stock: row.variant.stock,
         productId: row.product.id,
         catalogType: 'liquor',
       })
@@ -229,13 +221,12 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         variantName: row.variant.name,
         sku: row.variant.sku,
         price: row.variant.price,
-        stock: row.variant.stock,
         productId: row.product.id,
         catalogType: 'grocery',
       })
     }
 
-    // Verify all requested items are active and have sufficient stock
+    // Verify all requested items are active
     const verifiedOrderItems: {
       id: string
       catalogType: 'liquor' | 'grocery'
@@ -258,12 +249,6 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         )
       }
 
-      if (itemInfo.stock < reqItem.quantity) {
-        throw new Error(
-          `Insufficient stock for "${itemInfo.name} (${itemInfo.variantName})". Only ${itemInfo.stock} available.`,
-        )
-      }
-
       const lineTotal = itemInfo.price * reqItem.quantity
       calculatedSubtotal += lineTotal
 
@@ -281,38 +266,58 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
       })
     }
 
-    // Server-side promo calculation
+    // Server-side promo calculation with limits & first-order check
     let discountPaisa = 0
-    let appliedCouponCode: string | null = null
+    let appliedCoupon: any = null
 
     if (data.promoCode && data.promoCode.trim()) {
       const cleanCode = data.promoCode.trim().toUpperCase()
       const coupon = await getCouponByCodeQuery(cleanCode)
-      if (
-        coupon &&
-        coupon.active &&
-        new Date(coupon.expiresAt) >= new Date() &&
-        coupon.used < coupon.usageLimit &&
-        calculatedSubtotal >= coupon.minOrder
-      ) {
-        appliedCouponCode = coupon.code
-        if (coupon.type === 'percent') {
-          discountPaisa = Math.round(calculatedSubtotal * (coupon.value / 100))
-        } else {
-          discountPaisa = Math.min(calculatedSubtotal, coupon.value)
+      if (coupon) {
+        const [redemptions, customerOrders] = await Promise.all([
+          getCustomerCouponRedemptionCountQuery(coupon.id, sessionUser.id),
+          db
+            .select({ count: count() })
+            .from(orders)
+            .where(
+              and(
+                eq(orders.customerId, sessionUser.id),
+                eq(orders.status, 'delivered'),
+              ),
+            ),
+        ])
+
+        const validation = validateCoupon({
+          coupon: {
+            ...coupon,
+            perCustomerLimit: coupon.perCustomerLimit ?? 1,
+            firstOrderOnly: coupon.firstOrderOnly ?? false,
+          },
+          subtotalPaisa: calculatedSubtotal,
+          customerOrderCount: customerOrders[0]?.count ?? 0,
+          customerRedemptionCount: redemptions,
+        })
+
+        if (validation.valid) {
+          discountPaisa = validation.discountPaisa
+          appliedCoupon = coupon
         }
       }
     }
 
-    const deliveryCharge =
-      calculatedSubtotal >= FREE_DELIVERY_THRESHOLD
-        ? 0
-        : STANDARD_DELIVERY_CHARGE
+    const settings = await getStoreSettingsQuery()
 
-    const finalTotal = Math.max(
-      0,
-      calculatedSubtotal - discountPaisa + deliveryCharge,
-    )
+    // Pricing calculation via pricing engine
+    const totals = calculateOrderTotals({
+      items: verifiedOrderItems,
+      discountPaisa,
+      deliverySettings: {
+        defaultDeliveryFeePaisa: (settings as any).deliveryFee ?? 15000,
+        freeDeliveryThresholdPaisa:
+          (settings as any).freeDeliveryThreshold ?? 300000,
+      },
+      vatRate: settings.taxRate ?? 13,
+    })
 
     // Save phone as default on user profile if requested
     if (data.savePhoneAsDefault) {
@@ -328,7 +333,6 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         })
     }
 
-    const settings = await getStoreSettingsQuery()
     const orderCountRes = await db.select({ count: count() }).from(orders)
     const orderSeq = (orderCountRes[0]?.count ?? 0) + 1
     const orderNumber = `${settings.invoicePrefix}-${String(10000 + orderSeq).padStart(5, '0')}`
@@ -339,63 +343,40 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
 
     // Execute atomic creation in transaction with dbTx
     await dbTx.transaction(async (tx) => {
-      // 1. Decrement stock and record stock movements
-      for (const item of verifiedOrderItems) {
-        if (item.catalogType === 'liquor') {
-          const current = await tx
-            .select({ stock: liquorVariants.stock })
-            .from(liquorVariants)
-            .where(eq(liquorVariants.id, item.variantId))
-            .limit(1)
-          if (current[0]) {
-            await tx
-              .update(liquorVariants)
-              .set({ stock: Math.max(0, current[0].stock - item.qty) })
-              .where(eq(liquorVariants.id, item.variantId))
-          }
-        } else {
-          const current = await tx
-            .select({ stock: groceryVariants.stock })
-            .from(groceryVariants)
-            .where(eq(groceryVariants.id, item.variantId))
-            .limit(1)
-          if (current[0]) {
-            await tx
-              .update(groceryVariants)
-              .set({ stock: Math.max(0, current[0].stock - item.qty) })
-              .where(eq(groceryVariants.id, item.variantId))
-          }
+      // 1. Atomic coupon redemption with row-level lock
+      if (appliedCoupon) {
+        const lockedCoupons = await tx
+          .select({ used: coupons.used, usageLimit: coupons.usageLimit })
+          .from(coupons)
+          .where(eq(coupons.id, appliedCoupon.id))
+          .for('update')
+
+        const locked = lockedCoupons[0]
+        if (!locked || locked.used >= locked.usageLimit) {
+          throw new Error('This promo code has just reached its total usage limit.')
         }
 
-        await tx.insert(stockMovements).values({
-          id: nid('sm'),
-          catalogType: item.catalogType,
-          variantId: item.variantId,
-          delta: -item.qty,
-          type: 'sale',
-          refType: 'order',
-          refId: orderId,
-          notes: `Sold in order ${orderNumber}`,
-          createdBy: sessionUser.id,
+        await tx
+          .update(coupons)
+          .set({ used: locked.used + 1 })
+          .where(eq(coupons.id, appliedCoupon.id))
+
+        await tx.insert(couponRedemptions).values({
+          id: nid('cpr'),
+          couponId: appliedCoupon.id,
+          couponCode: appliedCoupon.code,
+          orderId,
+          customerId: sessionUser.id,
+          customerName: sessionUser.name,
+          customerEmail: sessionUser.email,
+          customerPhone: data.phone,
+          orderTotal: totals.totalPaisa,
+          discountAmount: totals.discountPaisa,
+          createdAt: now,
         })
       }
 
-      // 2. Increment coupon used count if coupon used
-      if (appliedCouponCode) {
-        const cpRow = await tx
-          .select({ used: coupons.used })
-          .from(coupons)
-          .where(eq(coupons.code, appliedCouponCode))
-          .limit(1)
-        if (cpRow[0]) {
-          await tx
-            .update(coupons)
-            .set({ used: cpRow[0].used + 1 })
-            .where(eq(coupons.code, appliedCouponCode))
-        }
-      }
-
-      // 3. Insert order
+      // 2. Insert order with server-calculated subtotal, deliveryCharge, VAT tax, and total
       await tx.insert(orders).values({
         id: orderId,
         number: orderNumber,
@@ -411,16 +392,16 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         status: 'pending',
         paymentMethod: data.paymentMethod,
         paymentStatus: data.paymentMethod === 'cod' ? 'cod_pending' : 'pending',
-        subtotal: calculatedSubtotal,
-        deliveryCharge,
-        discount: discountPaisa,
-        tax: 0,
-        total: finalTotal,
+        subtotal: totals.subtotalPaisa,
+        deliveryCharge: totals.deliveryChargePaisa,
+        discount: totals.discountPaisa,
+        tax: totals.vatPaisa, // 13% Nepal VAT component computed by pricing engine
+        total: totals.totalPaisa,
         riderId: null,
         dealerId: null,
         trackingCode,
         notes: '',
-        couponCode: appliedCouponCode,
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
         idempotencyKey: data.idempotencyKey || null,
       })
 
@@ -438,6 +419,7 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
           qty: item.qty,
           unitPrice: item.unitPrice,
           lineTotal: item.lineTotal,
+          sourcingStatus: 'pending',
         })
       }
 
@@ -445,15 +427,19 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
       await tx.insert(orderStatusHistory).values({
         id: nid('ev'),
         orderId,
+        fromStatus: null,
+        toStatus: 'pending',
         status: 'pending',
         note:
           data.paymentMethod === 'cod'
             ? 'Order placed (Cash on Delivery)'
             : 'Order placed (Pending eSewa payment)',
         actor: sessionUser.name,
+        actorId: sessionUser.id,
+        actorRole: sessionUser.role,
       })
 
-      // 6. Record in Ledger
+      // 6. Record in Legacy Ledger (for backward compatibility)
       await tx.insert(ledgerEntries).values({
         id: nid('led'),
         date: now.toISOString().slice(0, 10),
@@ -461,7 +447,7 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         category: 'sales',
         account: 'Sales revenue',
         memo: `Sale ${orderNumber}`,
-        amount: finalTotal,
+        amount: totals.totalPaisa,
         refType: 'order',
         refId: orderId,
       })
@@ -470,7 +456,7 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
       await tx.insert(notifications).values({
         id: nid('notif'),
         title: `New Order: ${orderNumber}`,
-        body: `${sessionUser.name} placed order ${orderNumber} (Rs. ${fromPaisa(finalTotal)})`,
+        body: `${sessionUser.name} placed order ${orderNumber} (Rs. ${fromPaisa(totals.totalPaisa)})`,
         type: 'order',
         read: false,
         href: `/admin/orders`,
@@ -481,17 +467,15 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
       sessionUser.name,
       'orders',
       'create',
-      `Placed order ${orderNumber} via ${data.paymentMethod} (Rs. ${fromPaisa(finalTotal)})`,
+      `Placed order ${orderNumber} via ${data.paymentMethod} (Rs. ${fromPaisa(totals.totalPaisa)})`,
     )
 
     // Prepare payment flow data
     let esewaPayload: Record<string, string> | null = null
     if (data.paymentMethod === 'esewa') {
-      const totalAmountNpr = fromPaisa(finalTotal).toFixed(2)
-      const subtotalNpr = fromPaisa(calculatedSubtotal - discountPaisa).toFixed(
-        2,
-      )
-      const deliveryChargeNpr = fromPaisa(deliveryCharge).toFixed(2)
+      const totalAmountNpr = fromPaisa(totals.totalPaisa).toFixed(2)
+      const subtotalNpr = fromPaisa(totals.discountedSubtotalPaisa).toFixed(2)
+      const deliveryChargeNpr = fromPaisa(totals.deliveryChargePaisa).toFixed(2)
       const transactionUuid = `${orderId}`
       const signature = generateEsewaSignature(
         totalAmountNpr,
@@ -520,7 +504,7 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
       orderId,
       orderNumber,
       paymentMethod: data.paymentMethod as PaymentMethod,
-      totalPaisa: finalTotal,
+      totalPaisa: totals.totalPaisa,
       esewaPayload,
       isDuplicate: false,
     }

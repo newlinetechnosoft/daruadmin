@@ -23,9 +23,11 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
 
   const activeOrders = orders.filter((o) =>
-    ['assigned', 'out_for_delivery'].includes(o.status),
+    ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status),
   )
-  const completedOrders = orders.filter((o) => o.status === 'delivered')
+  const completedOrders = orders.filter((o) =>
+    ['delivered', 'delivery_failed'].includes(o.status),
+  )
 
   const displayedOrders =
     filter === 'active'
@@ -36,13 +38,18 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
 
   const handleUpdateStatus = async (
     orderId: string,
-    status: 'out_for_delivery' | 'delivered',
+    status: 'picked_up' | 'out_for_delivery' | 'delivered' | 'delivery_failed',
+    deliveryFailureReason?: string,
   ) => {
     try {
       setUpdatingOrderId(orderId)
 
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        await queueOutboxAction('delivery_status', { orderId, status })
+        await queueOutboxAction('delivery_status', {
+          orderId,
+          status,
+          deliveryFailureReason,
+        })
         toast.info(
           status === 'delivered'
             ? 'Saved offline! Status & cash queued.'
@@ -55,13 +62,16 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
         data: {
           orderId,
           status,
+          deliveryFailureReason,
         },
       })
-      toast.success(
-        status === 'delivered'
-          ? 'Delivery completed! Cash on hand updated.'
-          : 'Delivery started!',
-      )
+      const toastMessages: Record<string, string> = {
+        picked_up: 'Order picked up from dealer!',
+        out_for_delivery: 'Delivery started!',
+        delivered: 'Delivery completed! Cash on hand updated.',
+        delivery_failed: 'Delivery attempt marked as failed.',
+      }
+      toast.success(toastMessages[status] || 'Status updated!')
       await router.invalidate()
     } catch (err: any) {
       if (
@@ -126,7 +136,10 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {displayedOrders.map((order) => {
             const isDelivered = order.status === 'delivered'
+            const isFailed = order.status === 'delivery_failed'
             const isOut = order.status === 'out_for_delivery'
+            const isPickedUp = order.status === 'picked_up'
+            const isRiderAssigned = order.status === 'rider_assigned'
             const isCOD = order.paymentMethod === 'cod'
             const isUpdating = updatingOrderId === order.id
 
@@ -134,7 +147,7 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
               <Card
                 key={order.id}
                 className={`border-border bg-card flex flex-col justify-between ${
-                  isDelivered ? 'opacity-75' : ''
+                  isDelivered || isFailed ? 'opacity-75' : ''
                 }`}
               >
                 <CardHeader className="p-4 pb-2">
@@ -148,9 +161,11 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                           variant={
                             isDelivered
                               ? 'secondary'
-                              : isOut
-                                ? 'default'
-                                : 'outline'
+                              : isFailed
+                                ? 'destructive'
+                                : isOut
+                                  ? 'default'
+                                  : 'outline'
                           }
                           className="text-[10px] uppercase tracking-wider"
                         >
@@ -266,9 +281,23 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                       </a>
                     </Button>
 
-                    {!isDelivered && (
+                    {!isDelivered && !isFailed && (
                       <>
-                        {!isOut ? (
+                        {isRiderAssigned && (
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              handleUpdateStatus(order.id, 'picked_up')
+                            }
+                            disabled={isUpdating}
+                            className="h-8 text-xs flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                          >
+                            <Package className="h-3.5 w-3.5 mr-1" />
+                            {isUpdating ? 'Updating...' : 'Pick Up from Dealer'}
+                          </Button>
+                        )}
+
+                        {isPickedUp && (
                           <Button
                             size="sm"
                             onClick={() =>
@@ -278,9 +307,11 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                             className="h-8 text-xs flex-1 bg-info hover:bg-info/90 text-info-foreground"
                           >
                             <Truck className="h-3.5 w-3.5 mr-1" />
-                            {isUpdating ? 'Updating...' : 'Start'}
+                            {isUpdating ? 'Updating...' : 'Start Delivery'}
                           </Button>
-                        ) : (
+                        )}
+
+                        {isOut && (
                           <Button
                             size="sm"
                             onClick={() =>
@@ -295,6 +326,29 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                               : isCOD
                                 ? 'Collect & Complete'
                                 : 'Complete'}
+                          </Button>
+                        )}
+
+                        {(isPickedUp || isOut) && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                              const reason = window.prompt(
+                                'Please state the reason for delivery failure (e.g., customer unreachable, address not found):',
+                              )
+                              if (reason && reason.trim()) {
+                                void handleUpdateStatus(
+                                  order.id,
+                                  'delivery_failed',
+                                  reason.trim(),
+                                )
+                              }
+                            }}
+                            disabled={isUpdating}
+                            className="h-8 text-xs"
+                          >
+                            Failed
                           </Button>
                         )}
                       </>

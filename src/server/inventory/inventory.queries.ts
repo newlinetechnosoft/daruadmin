@@ -2,6 +2,7 @@ import { db } from '#/db'
 import {
   dealers,
   dealerItems,
+  dealerPriceHistory,
   stockMovements,
   liquorProducts,
   groceryProducts,
@@ -24,6 +25,9 @@ export interface AssignedItemDto {
   productName: string
   categoryName?: string | null
   brandName?: string | null
+  costPrice?: number
+  isAvailable?: boolean
+  effectiveFrom?: string
 }
 
 export interface DealerDto {
@@ -32,6 +36,12 @@ export interface DealerDto {
   contact: string
   whatsappNumber: string | null
   pan: string | null
+  vatNumber?: string | null
+  providesVatBill?: boolean
+  tdsRate?: string
+  creditLimit?: number
+  paymentTermsDays?: number
+  openingBalance?: number
   address: string
   city: string
   lat: number | null
@@ -132,6 +142,9 @@ export async function getAllDealersQuery(): Promise<DealerDto[]> {
       productName,
       categoryName,
       brandName,
+      costPrice: item.costPrice,
+      isAvailable: item.isAvailable !== false,
+      effectiveFrom: item.effectiveFrom.toISOString(),
     })
     itemsByDealer.set(item.dealerId, list)
   }
@@ -144,6 +157,12 @@ export async function getAllDealersQuery(): Promise<DealerDto[]> {
       contact: d.contact,
       whatsappNumber: d.whatsappNumber ?? null,
       pan: d.pan,
+      vatNumber: d.vatNumber ?? null,
+      providesVatBill: d.providesVatBill,
+      tdsRate: d.tdsRate,
+      creditLimit: d.creditLimit,
+      paymentTermsDays: d.paymentTermsDays,
+      openingBalance: d.openingBalance,
       address: d.address,
       city: d.city,
       lat: d.lat ? Number(d.lat) : null,
@@ -225,6 +244,9 @@ export async function getDealerByIdQuery(
       productName,
       categoryName,
       brandName,
+      costPrice: item.costPrice,
+      isAvailable: item.isAvailable !== false,
+      effectiveFrom: item.effectiveFrom.toISOString(),
     }
   })
 
@@ -234,6 +256,12 @@ export async function getDealerByIdQuery(
     contact: d.contact,
     whatsappNumber: d.whatsappNumber ?? null,
     pan: d.pan,
+    vatNumber: d.vatNumber ?? null,
+    providesVatBill: d.providesVatBill,
+    tdsRate: d.tdsRate,
+    creditLimit: d.creditLimit,
+    paymentTermsDays: d.paymentTermsDays,
+    openingBalance: d.openingBalance,
     address: d.address,
     city: d.city,
     lat: d.lat ? Number(d.lat) : null,
@@ -257,6 +285,12 @@ export async function upsertDealerQuery(
     contact: input.contact.trim(),
     whatsappNumber: input.whatsappNumber?.trim() || null,
     pan: input.pan?.trim() || null,
+    vatNumber: input.vatNumber?.trim() || null,
+    providesVatBill: input.providesVatBill,
+    tdsRate: String(input.tdsRate),
+    creditLimit: input.creditLimit,
+    paymentTermsDays: input.paymentTermsDays,
+    openingBalance: input.openingBalance,
     address: input.address.trim(),
     city: input.city.trim() || 'Kathmandu',
     lat:
@@ -277,6 +311,12 @@ export async function upsertDealerQuery(
         contact: payload.contact,
         whatsappNumber: payload.whatsappNumber,
         pan: payload.pan,
+        vatNumber: payload.vatNumber,
+        providesVatBill: payload.providesVatBill,
+        tdsRate: payload.tdsRate,
+        creditLimit: payload.creditLimit,
+        paymentTermsDays: payload.paymentTermsDays,
+        openingBalance: payload.openingBalance,
         address: payload.address,
         city: payload.city,
         lat: payload.lat,
@@ -307,8 +347,26 @@ export async function upsertDealerQuery(
             dealerId,
             catalogType: item.catalogType,
             productId: item.productId,
+            costPrice: item.costPrice ?? 0,
+            isAvailable: item.isAvailable ?? true,
           })),
         )
+
+        // Record price history for priced items
+        const priceHistoryRows = uniqueItems
+          .filter((item) => item.costPrice !== undefined && item.costPrice > 0)
+          .map((item) => ({
+            id: crypto.randomUUID(),
+            dealerId,
+            catalogType: item.catalogType,
+            productId: item.productId,
+            costPrice: item.costPrice!,
+            effectiveFrom: new Date(),
+          }))
+
+        if (priceHistoryRows.length > 0) {
+          await db.insert(dealerPriceHistory).values(priceHistoryRows)
+        }
       }
     }
   }

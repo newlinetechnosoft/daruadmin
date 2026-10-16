@@ -65,12 +65,14 @@ const ORDER_STATUSES: { value: string; label: string }[] = [
   { value: 'all', label: 'All Statuses' },
   { value: 'pending', label: 'Pending' },
   { value: 'confirmed', label: 'Confirmed' },
-  { value: 'packing', label: 'Packing' },
-  { value: 'assigned', label: 'Rider Assigned' },
+  { value: 'dealer_assigned', label: 'Dealer Assigned' },
+  { value: 'rider_assigned', label: 'Rider Assigned' },
+  { value: 'picked_up', label: 'Picked Up' },
   { value: 'out_for_delivery', label: 'Out for Delivery' },
   { value: 'delivered', label: 'Delivered' },
+  { value: 'delivery_failed', label: 'Delivery Failed' },
+  { value: 'returned', label: 'Returned' },
   { value: 'cancelled', label: 'Cancelled' },
-  { value: 'refunded', label: 'Refunded' },
 ]
 
 export function OrdersPanel() {
@@ -175,7 +177,10 @@ export function OrdersPanel() {
     (o) => o.status === 'pending' || o.status === 'confirmed',
   ).length
   const outForDeliveryCount = ops.orders.filter(
-    (o) => o.status === 'out_for_delivery' || o.status === 'assigned',
+    (o) =>
+      o.status === 'out_for_delivery' ||
+      o.status === 'rider_assigned' ||
+      o.status === 'picked_up',
   ).length
   const deliveredRevenue = ops.orders
     .filter((o) => o.status === 'delivered')
@@ -201,13 +206,13 @@ export function OrdersPanel() {
     try {
       setIsUpdating(true)
       const targetStatus = riderId
-        ? ['pending', 'confirmed', 'packing'].includes(
+        ? ['pending', 'confirmed', 'dealer_assigned'].includes(
             selectedOrder?.status || '',
           )
-          ? 'assigned'
+          ? 'rider_assigned'
           : undefined
-        : selectedOrder?.status === 'assigned'
-          ? 'packing'
+        : selectedOrder?.status === 'rider_assigned'
+          ? 'confirmed'
           : undefined
 
       await updateOrderFn({
@@ -776,9 +781,27 @@ export function OrdersPanel() {
                     {selectedOrder.items.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell>
-                          <span className="font-medium text-foreground">
-                            {item.name}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-medium text-foreground">
+                              {item.name}
+                            </span>
+                            {item.sourcingStatus && (
+                              <Badge
+                                variant="outline"
+                                className={`text-[9px] px-1 py-0 uppercase font-mono ${
+                                  item.sourcingStatus === 'picked_up'
+                                    ? 'border-emerald-500/30 text-emerald-600 bg-emerald-500/10'
+                                    : item.sourcingStatus === 'unavailable'
+                                      ? 'border-destructive/30 text-destructive bg-destructive/10'
+                                      : item.sourcingStatus === 'assigned'
+                                        ? 'border-amber-500/30 text-amber-600 bg-amber-500/10'
+                                        : 'border-muted-foreground/30 text-muted-foreground'
+                                }`}
+                              >
+                                {item.sourcingStatus.replace('_', ' ')}
+                              </Badge>
+                            )}
+                          </div>
                           <span className="block text-[11px] text-muted-foreground">
                             {item.variantName}
                           </span>
@@ -873,6 +896,11 @@ export function OrdersPanel() {
                                     {item.dealer.address}
                                   </span>
                                 </a>
+                                {item.dealerCostPrice ? (
+                                  <span className="font-mono text-emerald-600 dark:text-emerald-400 font-medium">
+                                    Cost: {formatNPR(item.dealerCostPrice)}
+                                  </span>
+                                ) : null}
                               </div>
                             ) : (
                               <span className="text-[10px] text-amber-600 dark:text-amber-400 block">

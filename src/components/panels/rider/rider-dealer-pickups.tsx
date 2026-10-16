@@ -177,12 +177,28 @@ export function RiderDealerPickups({ order }: RiderDealerPickupsProps) {
                         ({it.variantName})
                       </span>
                     </span>
-                    <Badge
-                      variant="secondary"
-                      className="text-[9px] py-0 px-1 font-mono uppercase"
-                    >
-                      {it.catalogType}
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      {it.sourcingStatus && (
+                        <Badge
+                          variant="outline"
+                          className={`text-[9px] py-0 px-1 font-mono uppercase ${
+                            it.sourcingStatus === 'picked_up'
+                              ? 'border-emerald-500/30 text-emerald-600 bg-emerald-500/10'
+                              : it.sourcingStatus === 'unavailable'
+                                ? 'border-destructive/30 text-destructive bg-destructive/10'
+                                : 'border-amber-500/30 text-amber-600 bg-amber-500/10'
+                          }`}
+                        >
+                          {it.sourcingStatus.replace('_', ' ')}
+                        </Badge>
+                      )}
+                      <Badge
+                        variant="secondary"
+                        className="text-[9px] py-0 px-1 font-mono uppercase"
+                      >
+                        {it.catalogType}
+                      </Badge>
+                    </div>
                   </li>
                 ))}
               </ul>

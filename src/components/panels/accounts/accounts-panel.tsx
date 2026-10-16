@@ -9,7 +9,11 @@ import {
   addLedgerFn,
   approveSettlementFn,
 } from '#/server/operations/operations.functions'
-import type { LedgerEntry } from '#/server/operations/types'
+import {
+  postManualJournalVoucherFn,
+  recordDealerDisbursementFn,
+  recordManagerCashHandoverFn,
+} from '#/server/finance/finance.functions'
 import { formatNPR, toPaisa } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
@@ -34,6 +38,11 @@ import {
   BadgePercent,
   Truck,
   Building2,
+  ChevronDown,
+  ChevronRight,
+  CheckCircle2,
+  FileText,
+  ExternalLink,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
@@ -61,6 +70,7 @@ import {
 } from '#/components/ui/dialog'
 import { EmptyState } from '#/components/shared/empty-state'
 import { Progress } from '#/components/ui/progress'
+import { BatchDealerSettlementDialog } from './batch-dealer-settlement-dialog'
 
 const routeApi = getRouteApi('/admin/accounts')
 
@@ -70,6 +80,7 @@ type SubAccountTab =
   | 'dealer-ledger'
   | 'sales-account'
   | 'salary-account'
+  | 'chart-of-accounts'
 
 export function AccountsPanel() {
   const { ops } = routeApi.useLoaderData()
@@ -111,20 +122,39 @@ export function AccountsPanel() {
   // Modals state
   const [isAddVoucherOpen, setIsAddVoucherOpen] = useState(false)
   const [isDealerPayoutOpen, setIsDealerPayoutOpen] = useState(false)
+  const [isBatchDealerSettlementOpen, setIsBatchDealerSettlementOpen] =
+    useState(false)
+  const [batchDealerId, setBatchDealerId] = useState<string>('')
   const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false)
   const [isStatementModalOpen, setIsStatementModalOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Voucher form state (amounts handled in NPR Rs. by user, converted to Paisa on submit)
-  const [voucherForm, setVoucherForm] = useState({
-    memo: '',
-    category: 'expense' as LedgerEntry['category'],
-    account: 'bank',
-    type: 'debit' as 'debit' | 'credit',
-    amountInRs: 500,
-    refType: 'manual' as
-      'order' | 'settlement' | 'manual' | 'refund' | 'dealer' | 'salary',
-    refId: '',
+  // Double-Entry State
+  const [ledgerSubView, setLedgerSubView] = useState<
+    'vouchers' | 'general-ledger' | 'legacy'
+  >('vouchers')
+  const [expandedVoucherId, setExpandedVoucherId] = useState<string | null>(
+    null,
+  )
+  const [coaCategoryFilter, setCoaCategoryFilter] = useState('all')
+  const [coaSearch, setCoaSearch] = useState('')
+  const [voucherTypeFilter, setVoucherTypeFilter] = useState('all')
+
+  // Double-entry manual voucher form
+  const [manualVoucherForm, setManualVoucherForm] = useState({
+    voucherType: 'JV' as 'JV' | 'PV' | 'RV' | 'CV',
+    narration: '',
+    debitAccountId: 'acc_5041',
+    creditAccountId: 'acc_1012',
+    amountInRs: 1000,
+  })
+
+  // Handover modal state
+  const [isHandoverModalOpen, setIsHandoverModalOpen] = useState(false)
+  const [handoverForm, setHandoverForm] = useState({
+    riderId: '',
+    amountInRs: 0,
+    notes: '',
   })
 
   // Dealer payout form
@@ -132,6 +162,7 @@ export function AccountsPanel() {
     dealerId: '',
     dealerName: '',
     amountInRs: 0,
+    tdsRate: 0,
     account: 'bank',
     memo: '',
     ref: '',
@@ -154,6 +185,12 @@ export function AccountsPanel() {
   const rawDealers = ops.dealers
   const rawOrders = ops.orders
   const rawSettlements = ops.settlements
+  const rawJournalEntries = ops.journalEntries
+  const rawGeneralLedger = ops.generalLedger
+  const rawChartOfAccounts = ops.chartOfAccounts
+  const rawFiscalYears = ops.fiscalYears
+  const rawDealerPayables = ops.dealerPayables
+  const rawRiderAccounts = ops.riderAccounts
 
   // 1. General Ledger calculations
   const filteredLedger = useMemo(() => {
@@ -173,6 +210,61 @@ export function AccountsPanel() {
       return true
     })
   }, [rawLedger, accountFilter, categoryFilter, ledgerSearch])
+
+  // Double-Entry Calculations
+  const filteredJournalEntries = useMemo(() => {
+    return rawJournalEntries.filter((e) => {
+      if (voucherTypeFilter !== 'all' && e.voucherType !== voucherTypeFilter) {
+        return false
+      }
+      if (ledgerSearch.trim()) {
+        const q = ledgerSearch.toLowerCase()
+        return (
+          e.voucherNo.toLowerCase().includes(q) ||
+          e.narration.toLowerCase().includes(q) ||
+          (e.refId || '').toLowerCase().includes(q)
+        )
+      }
+      return true
+    })
+  }, [rawJournalEntries, voucherTypeFilter, ledgerSearch])
+
+  const filteredGeneralLedger = useMemo(() => {
+    return rawGeneralLedger.filter((row) => {
+      if (
+        accountFilter !== 'all' &&
+        row.accountId !== accountFilter &&
+        row.accountCode !== accountFilter
+      ) {
+        return false
+      }
+      if (ledgerSearch.trim()) {
+        const q = ledgerSearch.toLowerCase()
+        return (
+          row.voucherNo.toLowerCase().includes(q) ||
+          row.accountName.toLowerCase().includes(q) ||
+          (row.narration || '').toLowerCase().includes(q)
+        )
+      }
+      return true
+    })
+  }, [rawGeneralLedger, accountFilter, ledgerSearch])
+
+  const filteredChartOfAccounts = useMemo(() => {
+    return rawChartOfAccounts.filter((acc) => {
+      if (coaCategoryFilter !== 'all' && acc.rootType !== coaCategoryFilter) {
+        return false
+      }
+      if (coaSearch.trim()) {
+        const q = coaSearch.toLowerCase()
+        return (
+          acc.code.toLowerCase().includes(q) ||
+          acc.name.toLowerCase().includes(q)
+        )
+      }
+      return true
+    })
+  }, [rawChartOfAccounts, coaCategoryFilter, coaSearch])
 
   const totalDebits = rawLedger
     .filter((l) => l.type === 'debit')
@@ -282,13 +374,28 @@ export function AccountsPanel() {
   }, [rawOrders, rawDealers])
 
   const dealerVouchers = useMemo(() => {
-    return rawLedger.filter(
+    const fromLedger = rawLedger.filter(
       (l) =>
         l.category === 'dealer_payment' ||
         l.refType === 'dealer' ||
         (l.category === 'purchase' && l.refId?.startsWith('dlr_')),
     )
-  }, [rawLedger])
+    const fromSettlements = (ops.dealerSettlements || []).map((ds: any) => ({
+      id: ds.id,
+      date: ds.createdAt ? ds.createdAt.slice(0, 10) : '',
+      type: 'debit',
+      category: 'dealer_settlement',
+      account: ds.paymentMethod || 'bank',
+      memo:
+        ds.notes || `Disbursement for ${ds.dealerName} (${ds.voucherNo || ''})`,
+      amount: ds.netAmount || ds.grossAmount,
+      refType: 'dealer_settlement',
+      refId: ds.dealerId,
+      slug: ds.slug,
+      voucherNo: ds.voucherNo,
+    }))
+    return [...fromSettlements, ...fromLedger]
+  }, [rawLedger, ops.dealerSettlements])
 
   // Aggregate balance per dealer
   const dealerBalances = useMemo(() => {
@@ -326,8 +433,17 @@ export function AccountsPanel() {
       }
     }
 
+    // Merge double-entry AP summaries when present
+    for (const dp of rawDealerPayables) {
+      const existing = map.get(dp.dealerId)
+      if (existing) {
+        if (dp.totalProcured > 0) existing.totalProcured = dp.totalProcured
+        if (dp.totalPaid > 0) existing.totalPaid = dp.totalPaid
+      }
+    }
+
     return Array.from(map.values())
-  }, [rawDealers, dealerProcurements, dealerVouchers])
+  }, [rawDealers, dealerProcurements, dealerVouchers, rawDealerPayables])
 
   const filteredProcurements = useMemo(() => {
     return dealerProcurements.filter((p) => {
@@ -438,40 +554,48 @@ export function AccountsPanel() {
   // ----------------------------------------------------
   // HANDLERS
   // ----------------------------------------------------
-  const handlePostVoucher = async (e: React.FormEvent) => {
+  const handlePostManualVoucher = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!voucherForm.memo || voucherForm.amountInRs <= 0) {
-      toast.error('Please enter a description and valid amount in Rs.')
+    if (!manualVoucherForm.narration || manualVoucherForm.amountInRs <= 0) {
+      toast.error('Please enter a narration and valid amount in Rs.')
       return
     }
 
     try {
       setIsSubmitting(true)
-      await addLedgerFn({
+      const amtPaisa = toPaisa(Number(manualVoucherForm.amountInRs))
+      await postManualJournalVoucherFn({
         data: {
-          type: voucherForm.type,
-          category: voucherForm.category,
-          account: voucherForm.account,
-          memo: voucherForm.memo,
-          amount: toPaisa(Number(voucherForm.amountInRs)),
-          refType: voucherForm.refType,
-          refId: voucherForm.refId || null,
+          voucherType: manualVoucherForm.voucherType,
+          narration: manualVoucherForm.narration,
+          lines: [
+            {
+              accountId: manualVoucherForm.debitAccountId,
+              debit: amtPaisa,
+              credit: 0,
+              narration: manualVoucherForm.narration,
+            },
+            {
+              accountId: manualVoucherForm.creditAccountId,
+              debit: 0,
+              credit: amtPaisa,
+              narration: manualVoucherForm.narration,
+            },
+          ],
         },
       })
-      toast.success('Journal voucher posted to general ledger')
+      toast.success('Double-entry journal voucher posted successfully!')
       setIsAddVoucherOpen(false)
-      setVoucherForm({
-        memo: '',
-        category: 'expense',
-        account: 'bank',
-        type: 'debit',
-        amountInRs: 500,
-        refType: 'manual',
-        refId: '',
+      setManualVoucherForm({
+        voucherType: 'JV',
+        narration: '',
+        debitAccountId: 'acc_5041',
+        creditAccountId: 'acc_1012',
+        amountInRs: 1000,
       })
       await router.invalidate()
-    } catch {
-      toast.error('Failed to post voucher')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to post voucher')
     } finally {
       setIsSubmitting(false)
     }
@@ -481,10 +605,14 @@ export function AccountsPanel() {
     dealer: (typeof rawDealers)[number],
     balance: number,
   ) => {
+    const defaultTds = (dealer as any).tdsRate
+      ? Number((dealer as any).tdsRate)
+      : 0
     setDealerPayoutForm({
       dealerId: dealer.id,
       dealerName: dealer.name,
       amountInRs: Math.max(0, Math.round(balance / 100)),
+      tdsRate: defaultTds,
       account: 'bank',
       memo: `Procurement settlement payout to ${dealer.name}`,
       ref: `INV-DLR-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`,
@@ -501,24 +629,61 @@ export function AccountsPanel() {
 
     try {
       setIsSubmitting(true)
-      await addLedgerFn({
+      await recordDealerDisbursementFn({
         data: {
-          type: 'debit',
-          category: 'dealer_payment',
-          account: dealerPayoutForm.account,
+          dealerId: dealerPayoutForm.dealerId,
+          amountInRs: Number(dealerPayoutForm.amountInRs),
+          paymentAccount: dealerPayoutForm.account === 'cash' ? 'cash' : 'bank',
+          tdsRate: Number(dealerPayoutForm.tdsRate || 0),
           memo: dealerPayoutForm.memo,
-          amount: toPaisa(Number(dealerPayoutForm.amountInRs)),
-          refType: 'dealer',
-          refId: dealerPayoutForm.dealerId,
         },
       })
       toast.success(
-        `Dealer payout of Rs. ${dealerPayoutForm.amountInRs} recorded successfully`,
+        `Dealer payout of Rs. ${dealerPayoutForm.amountInRs} posted with PV voucher`,
       )
       setIsDealerPayoutOpen(false)
       await router.invalidate()
-    } catch {
-      toast.error('Failed to record dealer payout')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to record dealer payout')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleOpenCashHandover = (
+    riderId?: string,
+    riderName?: string,
+    cash?: number,
+  ) => {
+    setHandoverForm({
+      riderId: riderId || '',
+      amountInRs: cash ? Math.round(cash / 100) : 500,
+      notes: riderName ? `Cash handover from ${riderName}` : '',
+    })
+    setIsHandoverModalOpen(true)
+  }
+
+  const handlePostCashHandover = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!handoverForm.riderId || handoverForm.amountInRs <= 0) {
+      toast.error('Please select a rider and enter a valid handover amount')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      await recordManagerCashHandoverFn({
+        data: {
+          riderId: handoverForm.riderId,
+          amountInRs: Number(handoverForm.amountInRs),
+          notes: handoverForm.notes || undefined,
+        },
+      })
+      toast.success('Rider cash handover received and RV voucher posted!')
+      setIsHandoverModalOpen(false)
+      await router.invalidate()
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to record cash handover')
     } finally {
       setIsSubmitting(false)
     }
@@ -649,7 +814,7 @@ export function AccountsPanel() {
           value={activeTab}
           onValueChange={(val) => setActiveTab(val as SubAccountTab)}
         >
-          <TabsList className="grid w-full grid-cols-2 h-auto gap-1 bg-muted/60 p-1 sm:grid-cols-5">
+          <TabsList className="grid w-full grid-cols-2 h-auto gap-1 bg-muted/60 p-1 md:grid-cols-3 lg:grid-cols-6">
             <TabsTrigger
               value="ledger"
               className="flex items-center gap-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-xs"
@@ -658,7 +823,7 @@ export function AccountsPanel() {
               <div className="text-left leading-tight">
                 <span className="block font-semibold">Ledger</span>
                 <span className="text-[10px] text-muted-foreground hidden lg:block">
-                  General Ledger ({rawLedger.length})
+                  Double-Entry ({rawJournalEntries.length})
                 </span>
               </div>
             </TabsTrigger>
@@ -711,6 +876,19 @@ export function AccountsPanel() {
                 <span className="block font-semibold">Salary Account</span>
                 <span className="text-[10px] text-muted-foreground hidden lg:block">
                   Rider Settlements ({rawSettlements.length})
+                </span>
+              </div>
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="chart-of-accounts"
+              className="flex items-center gap-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-xs"
+            >
+              <Building2 className="h-4 w-4 shrink-0 text-indigo-500" />
+              <div className="text-left leading-tight">
+                <span className="block font-semibold">Chart of Accounts</span>
+                <span className="text-[10px] text-muted-foreground hidden lg:block">
+                  Nepal Standard (39)
                 </span>
               </div>
             </TabsTrigger>
@@ -788,174 +966,546 @@ export function AccountsPanel() {
             />
           </div>
 
-          {/* Filters & Search */}
-          <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 md:flex-row md:items-center md:justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Search memo, voucher ID, reference..."
-                value={ledgerSearch}
-                onChange={(e) => setLedgerSearch(e.target.value)}
-                className="h-8 pl-9 text-xs"
-              />
+          {/* Sub-view Switcher & Filters */}
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-2.5">
+              <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
+                <Button
+                  type="button"
+                  variant={ledgerSubView === 'vouchers' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setLedgerSubView('vouchers')}
+                  className="h-7 text-xs gap-1.5"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Journal Vouchers ({rawJournalEntries.length})
+                </Button>
+                <Button
+                  type="button"
+                  variant={
+                    ledgerSubView === 'general-ledger' ? 'default' : 'ghost'
+                  }
+                  size="sm"
+                  onClick={() => setLedgerSubView('general-ledger')}
+                  className="h-7 text-xs gap-1.5"
+                >
+                  <Receipt className="h-3.5 w-3.5" />
+                  General Ledger ({rawGeneralLedger.length})
+                </Button>
+                <Button
+                  type="button"
+                  variant={ledgerSubView === 'legacy' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setLedgerSubView('legacy')}
+                  className="h-7 text-xs gap-1.5"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  Legacy Archive ({rawLedger.length})
+                </Button>
+              </div>
+
+              <span className="text-xs text-muted-foreground">
+                {ledgerSubView === 'vouchers' &&
+                  `${filteredJournalEntries.length} vouchers`}
+                {ledgerSubView === 'general-ledger' &&
+                  `${filteredGeneralLedger.length} ledger postings`}
+                {ledgerSubView === 'legacy' &&
+                  `${filteredLedger.length} legacy entries`}
+              </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <NativeSelect
-                value={accountFilter}
-                onChange={(e) => setAccountFilter(e.target.value)}
-                size="sm"
-                className="h-8 text-xs"
-              >
-                <NativeSelectOption value="all">
-                  All accounts
-                </NativeSelectOption>
-                <NativeSelectOption value="bank">
-                  Bank account
-                </NativeSelectOption>
-                <NativeSelectOption value="cash">
-                  Cash in hand (COD)
-                </NativeSelectOption>
-                <NativeSelectOption value="esewa">
-                  eSewa wallet
-                </NativeSelectOption>
-                <NativeSelectOption value="khalti">
-                  Khalti wallet
-                </NativeSelectOption>
-                <NativeSelectOption value="dealer_payable">
-                  Dealer accounts payable
-                </NativeSelectOption>
-                <NativeSelectOption value="sales_revenue">
-                  Sales revenue
-                </NativeSelectOption>
-                <NativeSelectOption value="rider_payable">
-                  Rider compensation payable
-                </NativeSelectOption>
-              </NativeSelect>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder={
+                    ledgerSubView === 'vouchers'
+                      ? 'Search voucher #, narration, ref ID...'
+                      : 'Search account, memo, voucher...'
+                  }
+                  value={ledgerSearch}
+                  onChange={(e) => setLedgerSearch(e.target.value)}
+                  className="h-8 pl-9 text-xs"
+                />
+              </div>
 
-              <NativeSelect
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                size="sm"
-                className="h-8 text-xs"
-              >
-                <NativeSelectOption value="all">
-                  All categories
-                </NativeSelectOption>
-                <NativeSelectOption value="sales">
-                  Sales income
-                </NativeSelectOption>
-                <NativeSelectOption value="purchase">
-                  Inventory purchases
-                </NativeSelectOption>
-                <NativeSelectOption value="dealer_payment">
-                  Dealer supplier payout
-                </NativeSelectOption>
-                <NativeSelectOption value="salary">
-                  Staff & rider payroll
-                </NativeSelectOption>
-                <NativeSelectOption value="expense">
-                  Operating expense
-                </NativeSelectOption>
-                <NativeSelectOption value="cod">
-                  COD remittance
-                </NativeSelectOption>
-                <NativeSelectOption value="refund">
-                  Refund payout
-                </NativeSelectOption>
-              </NativeSelect>
+              {ledgerSubView === 'vouchers' ? (
+                <div className="flex items-center gap-2">
+                  <NativeSelect
+                    value={voucherTypeFilter}
+                    onChange={(e) => setVoucherTypeFilter(e.target.value)}
+                    size="sm"
+                    className="h-8 text-xs font-mono"
+                  >
+                    <NativeSelectOption value="all">
+                      All Voucher Types
+                    </NativeSelectOption>
+                    <NativeSelectOption value="SV">
+                      SV - Sales Voucher
+                    </NativeSelectOption>
+                    <NativeSelectOption value="RV">
+                      RV - Receipt Voucher
+                    </NativeSelectOption>
+                    <NativeSelectOption value="PV">
+                      PV - Payment Voucher
+                    </NativeSelectOption>
+                    <NativeSelectOption value="JV">
+                      JV - Journal Voucher
+                    </NativeSelectOption>
+                    <NativeSelectOption value="CV">
+                      CV - Contra Voucher
+                    </NativeSelectOption>
+                  </NativeSelect>
+                </div>
+              ) : ledgerSubView === 'general-ledger' ? (
+                <div className="flex items-center gap-2">
+                  <NativeSelect
+                    value={accountFilter}
+                    onChange={(e) => setAccountFilter(e.target.value)}
+                    size="sm"
+                    className="h-8 text-xs font-mono"
+                  >
+                    <NativeSelectOption value="all">
+                      All Chart Accounts ({rawChartOfAccounts.length})
+                    </NativeSelectOption>
+                    {rawChartOfAccounts
+                      .filter((a: any) => !a.isGroup)
+                      .map((a: any) => (
+                        <NativeSelectOption key={a.id} value={a.id}>
+                          {a.code} - {a.name} ({a.rootType})
+                        </NativeSelectOption>
+                      ))}
+                  </NativeSelect>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <NativeSelect
+                    value={accountFilter}
+                    onChange={(e) => setAccountFilter(e.target.value)}
+                    size="sm"
+                    className="h-8 text-xs"
+                  >
+                    <NativeSelectOption value="all">
+                      All accounts
+                    </NativeSelectOption>
+                    <NativeSelectOption value="bank">
+                      Bank account
+                    </NativeSelectOption>
+                    <NativeSelectOption value="cash">
+                      Cash in hand (COD)
+                    </NativeSelectOption>
+                    <NativeSelectOption value="esewa">
+                      eSewa wallet
+                    </NativeSelectOption>
+                    <NativeSelectOption value="khalti">
+                      Khalti wallet
+                    </NativeSelectOption>
+                    <NativeSelectOption value="dealer_payable">
+                      Dealer accounts payable
+                    </NativeSelectOption>
+                    <NativeSelectOption value="sales_revenue">
+                      Sales revenue
+                    </NativeSelectOption>
+                    <NativeSelectOption value="rider_payable">
+                      Rider compensation payable
+                    </NativeSelectOption>
+                  </NativeSelect>
+
+                  <NativeSelect
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    size="sm"
+                    className="h-8 text-xs"
+                  >
+                    <NativeSelectOption value="all">
+                      All categories
+                    </NativeSelectOption>
+                    <NativeSelectOption value="sales">
+                      Sales income
+                    </NativeSelectOption>
+                    <NativeSelectOption value="purchase">
+                      Inventory purchases
+                    </NativeSelectOption>
+                    <NativeSelectOption value="dealer_payment">
+                      Dealer supplier payout
+                    </NativeSelectOption>
+                    <NativeSelectOption value="salary">
+                      Staff & rider payroll
+                    </NativeSelectOption>
+                    <NativeSelectOption value="expense">
+                      Operating expense
+                    </NativeSelectOption>
+                    <NativeSelectOption value="cod">
+                      COD remittance
+                    </NativeSelectOption>
+                    <NativeSelectOption value="refund">
+                      Refund payout
+                    </NativeSelectOption>
+                  </NativeSelect>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Ledger Table */}
+          {/* Ledger Table Container */}
           <div className="overflow-hidden rounded-lg border border-border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Date and ID</TableHead>
-                  <TableHead className="text-xs">Description & memo</TableHead>
-                  <TableHead className="text-xs">Category</TableHead>
-                  <TableHead className="text-xs">Account</TableHead>
-                  <TableHead className="text-right text-xs">
-                    Debit out (-)
-                  </TableHead>
-                  <TableHead className="text-right text-xs">
-                    Credit in (+)
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLedger.length === 0 ? (
+            {ledgerSubView === 'vouchers' && (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="p-0">
-                      <EmptyState
-                        title="No ledger vouchers found"
-                        description="Try adjusting your filters or search terms."
-                      />
-                    </TableCell>
+                    <TableHead className="w-[30px]"></TableHead>
+                    <TableHead className="text-xs">Voucher No & Type</TableHead>
+                    <TableHead className="text-xs">Date (BS & AD)</TableHead>
+                    <TableHead className="text-xs">Narration & Event</TableHead>
+                    <TableHead className="text-xs">Reference</TableHead>
+                    <TableHead className="text-right text-xs">
+                      Total Debit
+                    </TableHead>
+                    <TableHead className="text-right text-xs">
+                      Total Credit
+                    </TableHead>
+                    <TableHead className="text-center text-xs">
+                      Status
+                    </TableHead>
                   </TableRow>
-                ) : (
-                  filteredLedger.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <span className="font-mono text-xs text-foreground block">
-                          {item.id}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground">
-                          {item.date}
-                        </span>
-                      </TableCell>
-
-                      <TableCell>
-                        <div className="font-medium text-xs text-foreground">
-                          {item.memo}
-                        </div>
-                        {item.refId && (
-                          <span className="text-[11px] text-muted-foreground font-mono">
-                            Ref: {item.refId} ({item.refType})
-                          </span>
-                        )}
-                      </TableCell>
-
-                      <TableCell>
-                        <Badge
-                          variant="secondary"
-                          className="text-[10px] font-normal capitalize"
-                        >
-                          {item.category.replace('_', ' ')}
-                        </Badge>
-                      </TableCell>
-
-                      <TableCell>
-                        <span className="font-mono text-xs uppercase text-muted-foreground">
-                          {item.account.replace('_', ' ')}
-                        </span>
-                      </TableCell>
-
-                      <TableCell className="text-right">
-                        {item.type === 'debit' ? (
-                          <span className="font-mono text-xs font-semibold tabular-nums text-destructive">
-                            -{formatNPR(item.amount)}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground/40">-</span>
-                        )}
-                      </TableCell>
-
-                      <TableCell className="text-right">
-                        {item.type === 'credit' ? (
-                          <span className="font-mono text-xs font-semibold tabular-nums text-success">
-                            +{formatNPR(item.amount)}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground/40">-</span>
-                        )}
+                </TableHeader>
+                <TableBody>
+                  {filteredJournalEntries.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="p-0">
+                        <EmptyState
+                          title="No journal vouchers found"
+                          description="Double-entry vouchers (JV, PV, RV, SV) will appear here once generated."
+                        />
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    filteredJournalEntries.map((entry: any) => {
+                      const isExpanded = expandedVoucherId === entry.id
+                      return (
+                        <>
+                          <TableRow
+                            key={entry.id}
+                            className="cursor-pointer hover:bg-muted/30"
+                            onClick={() =>
+                              setExpandedVoucherId(isExpanded ? null : entry.id)
+                            }
+                          >
+                            <TableCell className="p-2 text-muted-foreground">
+                              {isExpanded ? (
+                                <ChevronDown className="h-3.5 w-3.5" />
+                              ) : (
+                                <ChevronRight className="h-3.5 w-3.5" />
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant="outline"
+                                  className="font-mono text-[10px]"
+                                >
+                                  {entry.voucherType}
+                                </Badge>
+                                <span className="font-mono text-xs font-semibold text-foreground">
+                                  {entry.voucherNo}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs text-foreground block font-medium">
+                                {entry.bsDate}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {entry.postingDate.slice(0, 10)}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-xs text-foreground font-medium">
+                                {entry.narration}
+                              </div>
+                              {entry.event && (
+                                <span className="text-[10px] text-muted-foreground capitalize">
+                                  Event: {entry.event.replace('_', ' ')}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className="font-mono text-[11px] text-muted-foreground">
+                                {entry.refType
+                                  ? `${entry.refType}: ${entry.refId || '—'}`
+                                  : '—'}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold tabular-nums text-foreground">
+                              {formatNPR(entry.totalDebit)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold tabular-nums text-foreground">
+                              {formatNPR(entry.totalCredit)}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge
+                                variant={
+                                  entry.postingStatus === 'submitted'
+                                    ? 'success'
+                                    : 'secondary'
+                                }
+                                className="text-[10px] uppercase font-normal"
+                              >
+                                {entry.postingStatus}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+
+                          {/* Expanded Lines */}
+                          {isExpanded && (
+                            <TableRow
+                              key={`${entry.id}-lines`}
+                              className="bg-muted/20"
+                            >
+                              <TableCell colSpan={8} className="p-3">
+                                <div className="rounded-md border border-border bg-card p-2.5 space-y-2">
+                                  <div className="flex items-center justify-between text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">
+                                    <span>Voucher Balanced Lines</span>
+                                    <span>Created by: {entry.createdBy}</span>
+                                  </div>
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr className="border-b border-border/50 text-muted-foreground text-[10px]">
+                                        <th className="text-left py-1 font-medium">
+                                          Account Code & Title
+                                        </th>
+                                        <th className="text-left py-1 font-medium">
+                                          Party / Cost Center
+                                        </th>
+                                        <th className="text-left py-1 font-medium">
+                                          Line Narration
+                                        </th>
+                                        <th className="text-right py-1 font-medium">
+                                          Debit (Rs.)
+                                        </th>
+                                        <th className="text-right py-1 font-medium">
+                                          Credit (Rs.)
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border/30 font-mono">
+                                      {entry.lines.map((l: any) => (
+                                        <tr key={l.id} className="py-1">
+                                          <td className="py-1 text-left text-foreground">
+                                            <span className="font-bold">
+                                              {l.accountCode}
+                                            </span>{' '}
+                                            · {l.accountName}
+                                          </td>
+                                          <td className="py-1 text-left text-muted-foreground text-[11px]">
+                                            {l.partyType
+                                              ? `${l.partyType} (${l.partyId})`
+                                              : l.costCenter || '—'}
+                                          </td>
+                                          <td className="py-1 text-left text-muted-foreground text-[11px] font-sans">
+                                            {l.narration || '—'}
+                                          </td>
+                                          <td className="py-1 text-right text-emerald-600 dark:text-emerald-400">
+                                            {l.debit > 0
+                                              ? formatNPR(l.debit)
+                                              : '—'}
+                                          </td>
+                                          <td className="py-1 text-right text-blue-600 dark:text-blue-400">
+                                            {l.credit > 0
+                                              ? formatNPR(l.credit)
+                                              : '—'}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            )}
+
+            {ledgerSubView === 'general-ledger' && (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">
+                      Posting Date (BS & AD)
+                    </TableHead>
+                    <TableHead className="text-xs">Voucher No</TableHead>
+                    <TableHead className="text-xs">Account</TableHead>
+                    <TableHead className="text-xs">
+                      Description & Memo
+                    </TableHead>
+                    <TableHead className="text-xs">
+                      Cost Center / Party
+                    </TableHead>
+                    <TableHead className="text-right text-xs">Debit</TableHead>
+                    <TableHead className="text-right text-xs">Credit</TableHead>
+                    <TableHead className="text-right text-xs">
+                      Running Balance
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredGeneralLedger.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="p-0">
+                        <EmptyState
+                          title="No general ledger lines found"
+                          description="Postings to the selected account will appear here."
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredGeneralLedger.map((row: any) => (
+                      <TableRow key={row.lineId}>
+                        <TableCell>
+                          <span className="text-xs font-medium text-foreground block">
+                            {row.bsDate}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {row.postingDate.slice(0, 10)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-mono text-xs font-semibold text-foreground">
+                            {row.voucherNo}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-mono text-xs font-bold text-foreground block">
+                            {row.accountCode}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {row.accountName}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs text-foreground font-medium">
+                            {row.narration}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-[11px] text-muted-foreground">
+                            {row.partyType
+                              ? `${row.partyType}: ${row.partyId}`
+                              : row.costCenter || '—'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs text-destructive">
+                          {row.debit > 0 ? `-${formatNPR(row.debit)}` : '—'}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs text-success">
+                          {row.credit > 0 ? `+${formatNPR(row.credit)}` : '—'}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-bold tabular-nums">
+                          {formatNPR(row.balance)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            )}
+
+            {ledgerSubView === 'legacy' && (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Date and ID</TableHead>
+                    <TableHead className="text-xs">
+                      Description & memo
+                    </TableHead>
+                    <TableHead className="text-xs">Category</TableHead>
+                    <TableHead className="text-xs">Account</TableHead>
+                    <TableHead className="text-right text-xs">
+                      Debit out (-)
+                    </TableHead>
+                    <TableHead className="text-right text-xs">
+                      Credit in (+)
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLedger.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="p-0">
+                        <EmptyState
+                          title="No legacy ledger vouchers found"
+                          description="Try adjusting your filters or search terms."
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredLedger.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <span className="font-mono text-xs text-foreground block">
+                            {item.id}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {item.date}
+                          </span>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="font-medium text-xs text-foreground">
+                            {item.memo}
+                          </div>
+                          {item.refId && (
+                            <span className="text-[11px] text-muted-foreground font-mono">
+                              Ref: {item.refId} ({item.refType})
+                            </span>
+                          )}
+                        </TableCell>
+
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] font-normal capitalize"
+                          >
+                            {item.category.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+
+                        <TableCell>
+                          <span className="font-mono text-xs uppercase text-muted-foreground">
+                            {item.account.replace('_', ' ')}
+                          </span>
+                        </TableCell>
+
+                        <TableCell className="text-right">
+                          {item.type === 'debit' ? (
+                            <span className="font-mono text-xs font-semibold tabular-nums text-destructive">
+                              -{formatNPR(item.amount)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/40">-</span>
+                          )}
+                        </TableCell>
+
+                        <TableCell className="text-right">
+                          {item.type === 'credit' ? (
+                            <span className="font-mono text-xs font-semibold tabular-nums text-success">
+                              +{formatNPR(item.amount)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/40">-</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </div>
       )}
@@ -1202,6 +1752,17 @@ export function AccountsPanel() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => {
+                  setBatchDealerId('')
+                  setIsBatchDealerSettlementOpen(true)
+                }}
+                className="h-8 gap-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                <Receipt className="h-3.5 w-3.5" />
+                Batch Settle Delivered Items
+              </Button>
               <Link to="/admin/dealers">
                 <Button
                   variant="outline"
@@ -1327,15 +1888,32 @@ export function AccountsPanel() {
                         <Phone className="h-3 w-3" />
                         <span>{dealer.contact}</span>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleOpenDealerPayout(dealer, balance)}
-                        className="h-6 px-2 text-[10px] gap-1"
-                      >
-                        <Plus className="h-3 w-3" />
-                        Record Payout
-                      </Button>
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setBatchDealerId(dealer.id)
+                            setIsBatchDealerSettlementOpen(true)
+                          }}
+                          className="h-6 px-2 text-[10px] gap-1"
+                          title="Select and settle delivered items for this dealer"
+                        >
+                          <Receipt className="h-3 w-3 text-amber-500" />
+                          Settle Items
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            handleOpenDealerPayout(dealer, balance)
+                          }
+                          className="h-6 px-2 text-[10px] gap-1"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Payout
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                 )
@@ -1511,11 +2089,11 @@ export function AccountsPanel() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredDealerVouchers.map((v) => (
+                    filteredDealerVouchers.map((v: any) => (
                       <TableRow key={v.id}>
                         <TableCell>
                           <span className="font-mono text-xs text-foreground block">
-                            {v.id}
+                            {v.voucherNo || v.id}
                           </span>
                           <span className="text-[11px] text-muted-foreground">
                             {v.date}
@@ -1535,9 +2113,22 @@ export function AccountsPanel() {
                         </TableCell>
 
                         <TableCell>
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {v.refId || '-'}
-                          </span>
+                          {v.slug ? (
+                            <a
+                              href={`/voucher/${v.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-mono"
+                              title="View printable settlement voucher"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              <span>{v.voucherNo || 'Voucher'}</span>
+                            </a>
+                          ) : (
+                            <span className="font-mono text-xs text-muted-foreground">
+                              {v.refId || '-'}
+                            </span>
+                          )}
                         </TableCell>
 
                         <TableCell className="text-right">
@@ -1943,6 +2534,15 @@ export function AccountsPanel() {
             </div>
             <div className="flex items-center gap-2">
               <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleOpenCashHandover()}
+                className="h-8 gap-1.5 text-xs"
+              >
+                <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-500" />
+                Receive Cash Handover
+              </Button>
+              <Button
                 size="sm"
                 onClick={() => handleOpenSalaryDisbursement()}
                 className="h-8 gap-1.5 text-xs"
@@ -1982,6 +2582,69 @@ export function AccountsPanel() {
               tone={pendingSettlementPayouts > 0 ? 'warning' : 'success'}
             />
           </div>
+
+          {/* Rider Fleet Accounts Overview */}
+          {rawRiderAccounts.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Rider Accounts & COD Cash Balances
+                </h4>
+                <span className="text-xs text-muted-foreground">
+                  {rawRiderAccounts.length} active couriers
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {rawRiderAccounts.map((r: any) => (
+                  <Card key={r.riderId} className="p-3.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-xs text-foreground block">
+                          {r.riderName}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground font-mono">
+                          {r.phone || 'No phone'}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          handleOpenCashHandover(
+                            r.riderId,
+                            r.riderName,
+                            r.cashOnHand,
+                          )
+                        }
+                        className="h-6 px-2 text-[10px] gap-1"
+                      >
+                        <ArrowDownLeft className="h-3 w-3 text-emerald-500" />
+                        Receive
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/30 p-2 text-center text-xs">
+                      <div>
+                        <span className="text-[10px] text-muted-foreground block">
+                          Cash in Hand
+                        </span>
+                        <span className="font-mono font-bold text-foreground">
+                          {formatNPR(r.cashOnHand)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-muted-foreground block">
+                          Commission Payable
+                        </span>
+                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          {formatNPR(r.commissionPayable)}
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Rider Settlements Table */}
           <div className="space-y-3">
@@ -2078,18 +2741,32 @@ export function AccountsPanel() {
                         </TableCell>
 
                         <TableCell className="text-right">
-                          {set.status !== 'paid' && (
-                            <Button
-                              size="sm"
-                              onClick={() =>
-                                handleApproveSettlement(set.id, 'paid')
-                              }
-                              disabled={isSubmitting}
-                              className="h-7 px-2 text-xs"
-                            >
-                              Mark paid
-                            </Button>
-                          )}
+                          <div className="flex items-center justify-end gap-1.5">
+                            {set.slug && (
+                              <a
+                                href={`/voucher/${set.slug}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                                title="Open printable public voucher"
+                              >
+                                <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                                <span>Voucher</span>
+                              </a>
+                            )}
+                            {set.status !== 'paid' && (
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  handleApproveSettlement(set.id, 'paid')
+                                }
+                                disabled={isSubmitting}
+                                className="h-7 px-2 text-xs"
+                              >
+                                Mark paid
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -2179,127 +2856,324 @@ export function AccountsPanel() {
       )}
 
       {/* ==================================================== */}
+      {/* 6. SUB-ACCOUNT: CHART OF ACCOUNTS                    */}
+      {/* ==================================================== */}
+      {activeTab === 'chart-of-accounts' && (
+        <div className="space-y-6">
+          {/* Sub-account Banner Heading */}
+          <div className="flex flex-col gap-2 rounded-lg border border-border bg-gradient-to-r from-card to-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Double-Entry Chart of Accounts
+                  </h3>
+                  <Badge variant="secondary" className="text-[10px]">
+                    Nepal Standard · 39 Accounts
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Hierarchical general ledger chart of accounts adapted for
+                  Nepal (NPR, 13% VAT, TDS, COD fleet, and dealer procurement).
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className="text-xs py-1 px-2.5 gap-1.5 border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Active FY:{' '}
+                {rawFiscalYears.find((fy: any) => !fy.isClosed)?.name ||
+                  '2083/84'}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Root Category KPI Cards */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <KpiCard
+              label="Total Assets (1xxx)"
+              value={formatNPR(
+                rawChartOfAccounts
+                  .filter((a: any) => a.rootType === 'asset' && !a.isGroup)
+                  .reduce(
+                    (sum: number, a: any) => sum + Math.max(0, a.netBalance),
+                    0,
+                  ),
+              )}
+              note="Cash, fleet, bank, clearing"
+              icon={Wallet}
+            />
+            <KpiCard
+              label="Total Liabilities (2xxx)"
+              value={formatNPR(
+                rawChartOfAccounts
+                  .filter((a: any) => a.rootType === 'liability' && !a.isGroup)
+                  .reduce(
+                    (sum: number, a: any) => sum + Math.max(0, a.netBalance),
+                    0,
+                  ),
+              )}
+              note="Dealer AP, VAT 13%, TDS, riders"
+              icon={Store}
+              tone="warning"
+            />
+            <KpiCard
+              label="Equity (3xxx)"
+              value={formatNPR(
+                rawChartOfAccounts
+                  .filter((a: any) => a.rootType === 'equity' && !a.isGroup)
+                  .reduce(
+                    (sum: number, a: any) => sum + Math.max(0, a.netBalance),
+                    0,
+                  ),
+              )}
+              note="Capital & retained earnings"
+              icon={Coins}
+            />
+            <KpiCard
+              label="Total Revenue (4xxx)"
+              value={formatNPR(
+                rawChartOfAccounts
+                  .filter((a: any) => a.rootType === 'income' && !a.isGroup)
+                  .reduce(
+                    (sum: number, a: any) => sum + Math.max(0, a.netBalance),
+                    0,
+                  ),
+              )}
+              note="Liquor, grocery, delivery"
+              icon={TrendingUp}
+              tone="success"
+            />
+            <KpiCard
+              label="Total Expenses (5xxx)"
+              value={formatNPR(
+                rawChartOfAccounts
+                  .filter((a: any) => a.rootType === 'expense' && !a.isGroup)
+                  .reduce(
+                    (sum: number, a: any) => sum + Math.max(0, a.netBalance),
+                    0,
+                  ),
+              )}
+              note="COGS, commission, overhead"
+              icon={ArrowUpRight}
+              tone="danger"
+            />
+          </div>
+
+          {/* Filters & Search */}
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 md:flex-row md:items-center md:justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search account code (e.g. 1011) or name..."
+                value={coaSearch}
+                onChange={(e) => setCoaSearch(e.target.value)}
+                className="h-8 pl-9 text-xs"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <NativeSelect
+                value={coaCategoryFilter}
+                onChange={(e) => setCoaCategoryFilter(e.target.value)}
+                size="sm"
+                className="h-8 text-xs"
+              >
+                <NativeSelectOption value="all">
+                  All Root Types ({rawChartOfAccounts.length})
+                </NativeSelectOption>
+                <NativeSelectOption value="asset">
+                  Assets (1000s)
+                </NativeSelectOption>
+                <NativeSelectOption value="liability">
+                  Liabilities (2000s)
+                </NativeSelectOption>
+                <NativeSelectOption value="equity">
+                  Equity (3000s)
+                </NativeSelectOption>
+                <NativeSelectOption value="income">
+                  Income / Revenue (4000s)
+                </NativeSelectOption>
+                <NativeSelectOption value="expense">
+                  Expenses / COGS (5000s)
+                </NativeSelectOption>
+              </NativeSelect>
+            </div>
+          </div>
+
+          {/* Chart of Accounts Table */}
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs w-[120px]">
+                    Account Code
+                  </TableHead>
+                  <TableHead className="text-xs">
+                    Account Title & Ledger
+                  </TableHead>
+                  <TableHead className="text-xs">Root Type</TableHead>
+                  <TableHead className="text-xs">Classification</TableHead>
+                  <TableHead className="text-right text-xs">
+                    Total Debit
+                  </TableHead>
+                  <TableHead className="text-right text-xs">
+                    Total Credit
+                  </TableHead>
+                  <TableHead className="text-right text-xs">
+                    Net Balance
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredChartOfAccounts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="p-0">
+                      <EmptyState
+                        title="No accounts match filter"
+                        description="Try adjusting your search or category filter."
+                      />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredChartOfAccounts.map((acc: any) => {
+                    const isGroup = acc.isGroup
+                    const isDebitNormal =
+                      acc.rootType === 'asset' || acc.rootType === 'expense'
+                    return (
+                      <TableRow
+                        key={acc.id}
+                        className={isGroup ? 'bg-muted/30 font-semibold' : ''}
+                      >
+                        <TableCell>
+                          <span className="font-mono text-xs font-bold text-foreground">
+                            {acc.code}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {isGroup && (
+                              <Badge
+                                variant="outline"
+                                className="text-[9px] px-1.5 py-0"
+                              >
+                                GROUP
+                              </Badge>
+                            )}
+                            <span className="text-xs text-foreground font-medium">
+                              {acc.name}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={`text-[10px] capitalize ${
+                              acc.rootType === 'asset'
+                                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                : acc.rootType === 'liability'
+                                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                  : acc.rootType === 'income'
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                    : acc.rootType === 'expense'
+                                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                      : 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                            }`}
+                          >
+                            {acc.rootType}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-[11px] text-muted-foreground">
+                            {acc.ownerType
+                              ? `${acc.ownerType} ledger`
+                              : isGroup
+                                ? 'Parent Group'
+                                : 'Ledger Account'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                          {acc.totalDebit > 0 ? formatNPR(acc.totalDebit) : '—'}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                          {acc.totalCredit > 0
+                            ? formatNPR(acc.totalCredit)
+                            : '—'}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-bold">
+                          <span
+                            className={
+                              acc.netBalance > 0
+                                ? isDebitNormal
+                                  ? 'text-primary'
+                                  : 'text-emerald-600 dark:text-emerald-400'
+                                : acc.netBalance < 0
+                                  ? 'text-destructive'
+                                  : 'text-muted-foreground'
+                            }
+                          >
+                            {formatNPR(acc.netBalance)}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================== */}
       {/* MODALS                                               */}
       {/* ==================================================== */}
 
-      {/* Record Voucher Dialog */}
+      {/* Record Double-Entry Voucher Dialog */}
       <Dialog open={isAddVoucherOpen} onOpenChange={setIsAddVoucherOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-sm font-semibold">
-              Post Journal Voucher
+              Post Double-Entry Journal Voucher
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Direct entry into general ledger chart of accounts.
+              Balanced journal voucher posting directly to Nepal Chart of
+              Accounts.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handlePostVoucher} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Description / memo *</Label>
-              <Input
-                required
-                value={voucherForm.memo}
-                onChange={(e) =>
-                  setVoucherForm({ ...voucherForm, memo: e.target.value })
-                }
-                placeholder="e.g. Warehouse electricity utility payment"
-                className="h-8 text-xs"
-              />
-            </div>
-
+          <form onSubmit={handlePostManualVoucher} className="space-y-4 pt-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Category</Label>
+                <Label className="text-xs">Voucher Type *</Label>
                 <NativeSelect
-                  value={voucherForm.category}
+                  value={manualVoucherForm.voucherType}
                   onChange={(e) =>
-                    setVoucherForm({
-                      ...voucherForm,
-                      category: e.target.value as any,
+                    setManualVoucherForm({
+                      ...manualVoucherForm,
+                      voucherType: e.target.value as any,
                     })
                   }
                   size="sm"
-                  className="w-full text-xs"
+                  className="w-full text-xs font-mono"
                 >
-                  <NativeSelectOption value="expense">
-                    Operating expense
+                  <NativeSelectOption value="JV">
+                    JV - Journal Voucher
                   </NativeSelectOption>
-                  <NativeSelectOption value="purchase">
-                    Inventory purchase (COGS)
+                  <NativeSelectOption value="PV">
+                    PV - Payment Voucher
                   </NativeSelectOption>
-                  <NativeSelectOption value="dealer_payment">
-                    Dealer supplier payout
+                  <NativeSelectOption value="RV">
+                    RV - Receipt Voucher
                   </NativeSelectOption>
-                  <NativeSelectOption value="salary">
-                    Staff & rider payroll
-                  </NativeSelectOption>
-                  <NativeSelectOption value="sales">
-                    Direct sales income
-                  </NativeSelectOption>
-                  <NativeSelectOption value="cod">
-                    COD remittance
-                  </NativeSelectOption>
-                  <NativeSelectOption value="refund">
-                    Refund payout
-                  </NativeSelectOption>
-                </NativeSelect>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Target account</Label>
-                <NativeSelect
-                  value={voucherForm.account}
-                  onChange={(e) =>
-                    setVoucherForm({ ...voucherForm, account: e.target.value })
-                  }
-                  size="sm"
-                  className="w-full text-xs"
-                >
-                  <NativeSelectOption value="bank">
-                    Bank account
-                  </NativeSelectOption>
-                  <NativeSelectOption value="cash">
-                    Cash in hand
-                  </NativeSelectOption>
-                  <NativeSelectOption value="esewa">
-                    eSewa wallet
-                  </NativeSelectOption>
-                  <NativeSelectOption value="khalti">
-                    Khalti wallet
-                  </NativeSelectOption>
-                  <NativeSelectOption value="dealer_payable">
-                    Dealer accounts payable
-                  </NativeSelectOption>
-                  <NativeSelectOption value="sales_revenue">
-                    Sales revenue
-                  </NativeSelectOption>
-                  <NativeSelectOption value="rider_payable">
-                    Rider compensation payable
-                  </NativeSelectOption>
-                </NativeSelect>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Voucher type</Label>
-                <NativeSelect
-                  value={voucherForm.type}
-                  onChange={(e) =>
-                    setVoucherForm({
-                      ...voucherForm,
-                      type: e.target.value as any,
-                    })
-                  }
-                  size="sm"
-                  className="w-full text-xs"
-                >
-                  <NativeSelectOption value="debit">
-                    Debit (-) Outflow / Expense
-                  </NativeSelectOption>
-                  <NativeSelectOption value="credit">
-                    Credit (+) Inflow / Revenue
+                  <NativeSelectOption value="CV">
+                    CV - Contra Voucher
                   </NativeSelectOption>
                 </NativeSelect>
               </div>
@@ -2310,15 +3184,95 @@ export function AccountsPanel() {
                   type="number"
                   min="1"
                   required
-                  value={voucherForm.amountInRs}
+                  value={manualVoucherForm.amountInRs}
                   onChange={(e) =>
-                    setVoucherForm({
-                      ...voucherForm,
+                    setManualVoucherForm({
+                      ...manualVoucherForm,
                       amountInRs: Number(e.target.value),
                     })
                   }
                   className="h-8 font-mono text-xs"
                 />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Narration / memo *</Label>
+              <Input
+                required
+                value={manualVoucherForm.narration}
+                onChange={(e) =>
+                  setManualVoucherForm({
+                    ...manualVoucherForm,
+                    narration: e.target.value,
+                  })
+                }
+                placeholder="e.g. Warehouse electricity utility payment"
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="space-y-3 rounded-md border border-border bg-muted/20 p-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    Debit Line (Dr.) *
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    Rs.{' '}
+                    {Number(manualVoucherForm.amountInRs || 0).toLocaleString()}
+                  </span>
+                </div>
+                <NativeSelect
+                  value={manualVoucherForm.debitAccountId}
+                  onChange={(e) =>
+                    setManualVoucherForm({
+                      ...manualVoucherForm,
+                      debitAccountId: e.target.value,
+                    })
+                  }
+                  size="sm"
+                  className="w-full text-xs font-mono"
+                >
+                  {rawChartOfAccounts
+                    .filter((a: any) => !a.isGroup)
+                    .map((a: any) => (
+                      <NativeSelectOption key={a.id} value={a.id}>
+                        {a.code} - {a.name} ({a.rootType})
+                      </NativeSelectOption>
+                    ))}
+                </NativeSelect>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                    Credit Line (Cr.) *
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    Rs.{' '}
+                    {Number(manualVoucherForm.amountInRs || 0).toLocaleString()}
+                  </span>
+                </div>
+                <NativeSelect
+                  value={manualVoucherForm.creditAccountId}
+                  onChange={(e) =>
+                    setManualVoucherForm({
+                      ...manualVoucherForm,
+                      creditAccountId: e.target.value,
+                    })
+                  }
+                  size="sm"
+                  className="w-full text-xs font-mono"
+                >
+                  {rawChartOfAccounts
+                    .filter((a: any) => !a.isGroup)
+                    .map((a: any) => (
+                      <NativeSelectOption key={a.id} value={a.id}>
+                        {a.code} - {a.name} ({a.rootType})
+                      </NativeSelectOption>
+                    ))}
+                </NativeSelect>
               </div>
             </div>
 
@@ -2338,7 +3292,7 @@ export function AccountsPanel() {
                 disabled={isSubmitting}
                 className="h-8 text-xs"
               >
-                {isSubmitting ? 'Posting...' : 'Post entry'}
+                {isSubmitting ? 'Posting...' : 'Post balanced voucher'}
               </Button>
             </DialogFooter>
           </form>
@@ -2354,7 +3308,7 @@ export function AccountsPanel() {
             </DialogTitle>
             <DialogDescription className="text-xs">
               Records an accounts payable settlement voucher to the dealer in
-              the general ledger.
+              the general ledger with optional TDS withholding.
             </DialogDescription>
           </DialogHeader>
 
@@ -2385,32 +3339,7 @@ export function AccountsPanel() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Disburse from</Label>
-                <NativeSelect
-                  value={dealerPayoutForm.account}
-                  onChange={(e) =>
-                    setDealerPayoutForm({
-                      ...dealerPayoutForm,
-                      account: e.target.value,
-                    })
-                  }
-                  size="sm"
-                  className="w-full text-xs"
-                >
-                  <NativeSelectOption value="bank">
-                    Bank transfer / Cheque
-                  </NativeSelectOption>
-                  <NativeSelectOption value="cash">
-                    Cash in hand
-                  </NativeSelectOption>
-                  <NativeSelectOption value="esewa">
-                    eSewa business payout
-                  </NativeSelectOption>
-                </NativeSelect>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Amount (in Rs. NPR) *</Label>
+                <Label className="text-xs">Gross Amount (in Rs. NPR) *</Label>
                 <Input
                   type="number"
                   min="1"
@@ -2424,6 +3353,83 @@ export function AccountsPanel() {
                   }
                   className="h-8 font-mono text-xs"
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">TDS Withholding Rate %</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={dealerPayoutForm.tdsRate}
+                  onChange={(e) =>
+                    setDealerPayoutForm({
+                      ...dealerPayoutForm,
+                      tdsRate: Number(e.target.value),
+                    })
+                  }
+                  placeholder="0 (default)"
+                  className="h-8 font-mono text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Disburse from</Label>
+              <NativeSelect
+                value={dealerPayoutForm.account}
+                onChange={(e) =>
+                  setDealerPayoutForm({
+                    ...dealerPayoutForm,
+                    account: e.target.value,
+                  })
+                }
+                size="sm"
+                className="w-full text-xs"
+              >
+                <NativeSelectOption value="bank">
+                  Bank transfer / Cheque (acc_1012)
+                </NativeSelectOption>
+                <NativeSelectOption value="cash">
+                  Cash in hand (acc_1011)
+                </NativeSelectOption>
+              </NativeSelect>
+            </div>
+
+            {/* Payout Calculation Preview */}
+            <div className="rounded-md border border-border bg-muted/20 p-2.5 text-xs space-y-1">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Gross Payable (Dr Dealer AP):</span>
+                <span className="font-mono">
+                  Rs.{' '}
+                  {Number(dealerPayoutForm.amountInRs || 0).toLocaleString()}
+                </span>
+              </div>
+              {Number(dealerPayoutForm.tdsRate || 0) > 0 && (
+                <div className="flex justify-between text-amber-500">
+                  <span>
+                    TDS Withholding ({dealerPayoutForm.tdsRate}% Cr TDS):
+                  </span>
+                  <span className="font-mono">
+                    -Rs.{' '}
+                    {(
+                      (Number(dealerPayoutForm.amountInRs || 0) *
+                        Number(dealerPayoutForm.tdsRate)) /
+                      100
+                    ).toFixed(2)}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between font-semibold text-foreground pt-1 border-t border-border/50">
+                <span>Net Disbursed (Cr Cash/Bank):</span>
+                <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                  Rs.{' '}
+                  {(
+                    Number(dealerPayoutForm.amountInRs || 0) *
+                    (1 - Number(dealerPayoutForm.tdsRate || 0) / 100)
+                  ).toFixed(2)}
+                </span>
               </div>
             </div>
 
@@ -2443,7 +3449,107 @@ export function AccountsPanel() {
                 disabled={isSubmitting}
                 className="h-8 text-xs"
               >
-                {isSubmitting ? 'Recording...' : 'Disburse & record'}
+                {isSubmitting ? 'Posting...' : 'Disburse & Post PV'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receive Rider Cash Handover Dialog */}
+      <Dialog open={isHandoverModalOpen} onOpenChange={setIsHandoverModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">
+              Receive Rider Cash Handover
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Receives COD cash collected by rider into operations counter and
+              posts Receipt Voucher (RV).
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handlePostCashHandover} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Select Rider *</Label>
+              <NativeSelect
+                value={handoverForm.riderId}
+                onChange={(e) => {
+                  const r = ops.riders.find(
+                    (rider) => rider.id === e.target.value,
+                  )
+                  setHandoverForm({
+                    ...handoverForm,
+                    riderId: e.target.value,
+                    amountInRs: r
+                      ? Math.round(r.cashOnHand / 100)
+                      : handoverForm.amountInRs,
+                    notes: r
+                      ? `Cash handover from ${r.name}`
+                      : handoverForm.notes,
+                  })
+                }}
+                size="sm"
+                className="w-full text-xs"
+              >
+                <NativeSelectOption value="">
+                  Choose rider...
+                </NativeSelectOption>
+                {ops.riders.map((r) => (
+                  <NativeSelectOption key={r.id} value={r.id}>
+                    {r.name} — Cash on hand: Rs.{' '}
+                    {(r.cashOnHand / 100).toLocaleString()}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Amount Received (in Rs. NPR) *</Label>
+              <Input
+                type="number"
+                min="1"
+                required
+                value={handoverForm.amountInRs}
+                onChange={(e) =>
+                  setHandoverForm({
+                    ...handoverForm,
+                    amountInRs: Number(e.target.value),
+                  })
+                }
+                className="h-8 font-mono text-xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Notes / Verification memo</Label>
+              <Input
+                value={handoverForm.notes}
+                onChange={(e) =>
+                  setHandoverForm({ ...handoverForm, notes: e.target.value })
+                }
+                placeholder="Counter handover verified"
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsHandoverModalOpen(false)}
+                className="h-8 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting}
+                className="h-8 text-xs"
+              >
+                {isSubmitting ? 'Receiving...' : 'Verify & Post RV'}
               </Button>
             </DialogFooter>
           </form>
@@ -2667,6 +3773,20 @@ export function AccountsPanel() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Batch Dealer Settlement Dialog */}
+      <BatchDealerSettlementDialog
+        open={isBatchDealerSettlementOpen}
+        onOpenChange={setIsBatchDealerSettlementOpen}
+        dealers={rawDealers.map((d) => ({
+          id: d.id,
+          name: d.name,
+          city: d.city,
+          pan: d.pan,
+          defaultTdsRate: d.tdsRate ? parseFloat(d.tdsRate) : 0,
+        }))}
+        initialDealerId={batchDealerId}
+      />
     </div>
   )
 }

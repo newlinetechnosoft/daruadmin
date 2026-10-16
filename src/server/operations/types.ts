@@ -224,13 +224,14 @@ export type DateRangeKey = '7d' | '30d' | '90d' | 'ytd' | 'custom'
 export type OrderStatus =
   | 'pending'
   | 'confirmed'
-  | 'packing'
-  | 'assigned'
+  | 'dealer_assigned'
+  | 'rider_assigned'
+  | 'picked_up'
   | 'out_for_delivery'
   | 'delivered'
-  | 'cancelled'
+  | 'delivery_failed'
   | 'returned'
-  | 'refunded'
+  | 'cancelled'
 
 export type PaymentMethod =
   'cod' | 'esewa' | 'khalti' | 'fonepay' | 'connectips'
@@ -239,12 +240,17 @@ export interface OrderItemDealerInfo {
   id: string
   name: string
   pan?: string | null
+  vatNumber?: string | null
+  providesVatBill?: boolean
+  tdsRate?: string | number
   contact: string
   whatsappNumber?: string | null
   address: string
   city: string
   lat?: number | null
   lng?: number | null
+  distanceKm?: number | null
+  costPrice?: number
 }
 
 export interface OrderItem {
@@ -259,6 +265,12 @@ export interface OrderItem {
   unitPrice: number
   lineTotal: number
   dealerId?: string | null
+  dealerCostPrice?: number | null
+  actualDealerCostPrice?: number | null
+  dealerBillPhotoUrl?: string | null
+  sourcingStatus?: 'pending' | 'assigned' | 'unavailable' | 'picked_up'
+  isSettled?: boolean
+  settlementId?: string | null
   dealer?: OrderItemDealerInfo | null
   availableDealers?: OrderItemDealerInfo[]
 }
@@ -267,8 +279,13 @@ export interface OrderEvent {
   id: string
   at: string
   status: OrderStatus
+  fromStatus?: OrderStatus | null
+  toStatus?: OrderStatus | null
   note: string
   actor: string
+  actorId?: string | null
+  actorRole?: string | null
+  metadata?: Record<string, any> | null
 }
 
 export interface Order {
@@ -296,6 +313,9 @@ export interface Order {
   notes: string
   couponCode: string | null
   idempotencyKey?: string | null
+  isLegacy?: boolean
+  cancellationReason?: string | null
+  deliveryFailureReason?: string | null
   items: OrderItem[]
   events: OrderEvent[]
   createdAt: string
@@ -316,6 +336,8 @@ export interface Rider {
   lat: number
   lng: number
   zone: string
+  baseSalary?: number
+  perDropRate?: number
   commissionRate: number
   cashOnHand: number
   earnings: number
@@ -363,13 +385,29 @@ export interface Settlement {
   id: string
   riderId: string
   riderName: string
+  voucherNo?: string | null
+  slug?: string | null
   periodStart: string
   periodEnd: string
   deliveries: number
   cashCollected: number
+  baseSalaryAmount?: number
+  perDropAmount?: number
+  commissionAmount?: number
   commission: number
+  grossEarnings?: number
+  advancesDeducted?: number
+  cashShortageDeducted?: number
+  cashHeldDeducted?: number
+  netPayout?: number
   payout: number
   status: 'draft' | 'approved' | 'paid'
+  paymentMethod?: string | null
+  paymentReference?: string | null
+  paidAt?: string | null
+  notes?: string | null
+  proofUrls?: string[]
+  journalEntryId?: string | null
   createdAt: string
 }
 
@@ -391,8 +429,24 @@ export interface Coupon {
   minOrder: number
   usageLimit: number
   used: number
+  perCustomerLimit?: number
+  firstOrderOnly?: boolean
   active: boolean
   expiresAt: string
+}
+
+export interface CouponRedemption {
+  id: string
+  couponId: string
+  couponCode: string
+  orderId: string | null
+  customerId: string | null
+  customerName: string
+  customerEmail: string
+  customerPhone: string
+  orderTotal: number // paisa
+  discountAmount: number // paisa
+  createdAt: string
 }
 
 export interface Banner {
@@ -472,6 +526,9 @@ export interface StoreSettings {
     PaymentMethod,
     { enabled: boolean; merchantId: string; mode: 'sandbox' | 'live' }
   >
+  riderCodLimit?: number // in paisa, default 2000000 (Rs. 20,000)
+  deliveryFee?: number // in paisa, default 15000 (Rs. 150)
+  freeDeliveryThreshold?: number // in paisa, default 300000 (Rs. 3,000)
 }
 
 export type PermissionMap = Record<
@@ -496,4 +553,11 @@ export interface OpsState {
   audit: AuditLog[]
   permissions: PermissionMap
   settings: StoreSettings
+  journalEntries?: any[]
+  generalLedger?: any[]
+  chartOfAccounts?: any[]
+  fiscalYears?: any[]
+  dealerPayables?: any[]
+  dealerSettlements?: any[]
+  riderAccounts?: any[]
 }

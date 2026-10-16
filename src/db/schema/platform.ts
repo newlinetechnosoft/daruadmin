@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import {
   boolean,
   index,
@@ -95,6 +95,8 @@ export const coupons = pgTable(
     minOrder: integer('min_order').notNull().default(0), // paisa
     usageLimit: integer('usage_limit').notNull().default(100),
     used: integer('used').notNull().default(0),
+    perCustomerLimit: integer('per_customer_limit').notNull().default(1),
+    firstOrderOnly: boolean('first_order_only').notNull().default(false),
     active: boolean('active').notNull().default(true),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -104,6 +106,39 @@ export const coupons = pgTable(
   (table) => [
     index('coupons_code_idx').on(table.code),
     index('coupons_active_idx').on(table.active),
+  ],
+)
+
+export const couponRedemptions = pgTable(
+  'coupon_redemptions',
+  {
+    id: text('id').primaryKey(),
+    couponId: text('coupon_id')
+      .notNull()
+      .references(() => coupons.id, { onDelete: 'cascade' }),
+    couponCode: text('coupon_code').notNull(),
+    orderId: text('order_id').references(() => orders.id, {
+      onDelete: 'set null',
+    }),
+    customerId: text('customer_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    customerName: text('customer_name').notNull(),
+    customerEmail: text('customer_email').notNull(),
+    customerPhone: text('customer_phone').notNull(),
+    orderTotal: integer('order_total').notNull(), // paisa
+    discountAmount: integer('discount_amount').notNull(), // paisa
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('coupon_redemptions_coupon_id_idx').on(table.couponId),
+    index('coupon_redemptions_order_id_idx').on(table.orderId),
+    index('coupon_redemptions_customer_id_idx').on(table.customerId),
+    uniqueIndex('coupon_redemptions_coupon_order_uniq_idx')
+      .on(table.couponId, table.orderId)
+      .where(sql`order_id IS NOT NULL`),
   ],
 )
 
@@ -226,3 +261,25 @@ export const complaintsRelations = relations(complaints, ({ one }) => ({
     references: [orders.id],
   }),
 }))
+
+export const couponsRelations = relations(coupons, ({ many }) => ({
+  redemptions: many(couponRedemptions),
+}))
+
+export const couponRedemptionsRelations = relations(
+  couponRedemptions,
+  ({ one }) => ({
+    coupon: one(coupons, {
+      fields: [couponRedemptions.couponId],
+      references: [coupons.id],
+    }),
+    order: one(orders, {
+      fields: [couponRedemptions.orderId],
+      references: [orders.id],
+    }),
+    customer: one(user, {
+      fields: [couponRedemptions.customerId],
+      references: [user.id],
+    }),
+  }),
+)

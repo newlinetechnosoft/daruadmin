@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   text,
@@ -28,6 +29,8 @@ export const riders = pgTable(
     lat: numeric('lat', { precision: 10, scale: 7 }).default('27.7172'),
     lng: numeric('lng', { precision: 10, scale: 7 }).default('85.3240'),
     zone: text('zone').notNull().default('Kathmandu'),
+    baseSalary: integer('base_salary').notNull().default(0), // paisa
+    perDropRate: integer('per_drop_rate').notNull().default(5000), // paisa (default Rs. 50)
     commissionRate: integer('commission_rate').notNull().default(10), // percent
     cashOnHand: integer('cash_on_hand').notNull().default(0), // paisa
     earnings: integer('earnings').notNull().default(0), // paisa
@@ -79,20 +82,43 @@ export const settlements = pgTable(
       .notNull()
       .references(() => riders.id, { onDelete: 'cascade' }),
     riderName: text('rider_name').notNull(),
+    voucherNo: text('voucher_no'),
+    slug: text('slug'),
     periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
     periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
     deliveries: integer('deliveries').notNull().default(0),
     cashCollected: integer('cash_collected').notNull().default(0), // paisa
-    commission: integer('commission').notNull().default(0), // paisa
-    payout: integer('payout').notNull().default(0), // paisa
+    baseSalaryAmount: integer('base_salary_amount').notNull().default(0), // paisa
+    perDropAmount: integer('per_drop_amount').notNull().default(0), // paisa
+    commissionAmount: integer('commission_amount').notNull().default(0), // paisa
+    commission: integer('commission').notNull().default(0), // legacy backwards compatibility
+    grossEarnings: integer('gross_earnings').notNull().default(0), // paisa
+    advancesDeducted: integer('advances_deducted').notNull().default(0), // paisa
+    cashShortageDeducted: integer('cash_shortage_deducted').notNull().default(0), // paisa
+    cashHeldDeducted: integer('cash_held_deducted').notNull().default(0), // paisa
+    netPayout: integer('net_payout').notNull().default(0), // paisa
+    payout: integer('payout').notNull().default(0), // legacy backwards compatibility (paisa)
     status: text('status').notNull().default('draft'), // 'draft' | 'approved' | 'paid'
+    paymentMethod: text('payment_method'), // 'cash' | 'bank_transfer' | 'esewa' | 'khalti' | 'cheque'
+    paymentReference: text('payment_reference'),
+    paidAt: timestamp('paid_at', { withTimezone: true }),
+    paidBy: text('paid_by'),
+    notes: text('notes'),
+    proofUrls: jsonb('proof_urls').notNull().default([]),
+    journalEntryId: text('journal_entry_id'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [
     index('settlements_rider_id_idx').on(table.riderId),
     index('settlements_status_idx').on(table.status),
+    index('settlements_voucher_no_idx').on(table.voucherNo),
+    index('settlements_slug_idx').on(table.slug),
   ],
 )
 

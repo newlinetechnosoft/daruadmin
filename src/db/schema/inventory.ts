@@ -19,6 +19,12 @@ export const dealers = pgTable(
     contact: text('contact').notNull(),
     whatsappNumber: text('whatsapp_number'),
     pan: text('pan'),
+    vatNumber: text('vat_number'),
+    providesVatBill: boolean('provides_vat_bill').notNull().default(false),
+    tdsRate: numeric('tds_rate', { precision: 5, scale: 2 }).notNull().default('0'),
+    creditLimit: integer('credit_limit').notNull().default(0), // paisa
+    paymentTermsDays: integer('payment_terms_days').notNull().default(0),
+    openingBalance: integer('opening_balance').notNull().default(0), // paisa
     address: text('address').notNull(),
     city: text('city').notNull().default('Kathmandu'),
     lat: numeric('lat', { precision: 10, scale: 7 }),
@@ -44,6 +50,11 @@ export const dealerItems = pgTable(
       .references(() => dealers.id, { onDelete: 'cascade' }),
     catalogType: text('catalog_type').notNull(), // 'liquor' | 'grocery'
     productId: uuid('product_id').notNull(),
+    costPrice: integer('cost_price').notNull().default(0), // in paisa
+    isAvailable: boolean('is_available').notNull().default(true),
+    effectiveFrom: timestamp('effective_from', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -53,6 +64,33 @@ export const dealerItems = pgTable(
     index('dealer_items_product_idx').on(table.catalogType, table.productId),
     uniqueIndex('dealer_items_unique_idx').on(
       table.dealerId,
+      table.catalogType,
+      table.productId,
+    ),
+  ],
+)
+
+export const dealerPriceHistory = pgTable(
+  'dealer_price_history',
+  {
+    id: text('id').primaryKey(),
+    dealerId: text('dealer_id')
+      .notNull()
+      .references(() => dealers.id, { onDelete: 'cascade' }),
+    catalogType: text('catalog_type').notNull(), // 'liquor' | 'grocery'
+    productId: uuid('product_id').notNull(),
+    costPrice: integer('cost_price').notNull(), // paisa
+    effectiveFrom: timestamp('effective_from', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    createdBy: text('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('dealer_price_history_dealer_idx').on(table.dealerId),
+    index('dealer_price_history_product_idx').on(
       table.catalogType,
       table.productId,
     ),

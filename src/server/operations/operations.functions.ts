@@ -12,14 +12,10 @@ import {
   payments,
   complaints,
   reviews,
-  liquorVariants,
-  groceryVariants,
-  stockMovements,
-  notifications,
+  dealerItems,
   user,
 } from '#/db/schema'
 import { auth } from '#/lib/auth'
-import { getGoogleMapsUrl } from '#/lib/map-config'
 import { and, count, eq, isNull, or } from 'drizzle-orm'
 import {
   requirePermission,
@@ -43,13 +39,19 @@ import {
 import { getAllDealersQuery } from '#/server/inventory/inventory.queries'
 import {
   getAllRidersQuery,
-  getRiderByIdQuery,
   getRiderByUserIdQuery,
   getAllSettlementsQuery,
 } from '#/server/riders/rider.queries'
 import {
   getAllLedgerEntriesQuery,
   getAllPaymentsQuery,
+  getJournalEntriesQuery,
+  getGeneralLedgerQuery,
+  getChartOfAccountsWithBalancesQuery,
+  getFiscalYearsQuery,
+  getDealerPayablesSummaryQuery,
+  getRiderAccountsSummaryQuery,
+  getAllDealerSettlementsQuery,
 } from '#/server/finance/finance.queries'
 import {
   getAllNotificationsQuery,
@@ -74,8 +76,16 @@ import {
   getAllShippingZonesQuery,
   upsertShippingZoneQuery,
 } from '#/server/platform/platform.queries'
-import type { DateRangeKey, OpsState, ModuleKey } from './types'
+import type { DateRangeKey, OpsState, ModuleKey, OrderStatus } from './types'
 import { ACTIONS, MODULES } from './types'
+import {
+  transitionOrderTx,
+  transitionOrder,
+} from '#/server/orders/order.transitions'
+import {
+  postCashHandoverTx,
+  postRiderPayoutTx,
+} from '#/server/finance/double-entry'
 
 export { ACTIONS, MODULES }
 
@@ -358,7 +368,7 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
     const delivered = inRangeOrders.filter((o) => o.status === 'delivered')
     const revenue = delivered.reduce((s, o) => s + o.total, 0)
     const refunds = inRangeOrders
-      .filter((o) => o.status === 'refunded' || o.status === 'returned')
+      .filter((o) => o.status === 'returned')
       .reduce((s, o) => s + o.total, 0)
     const cogs = Math.round(revenue * 0.62)
     const profit = revenue - cogs - refunds
@@ -488,6 +498,13 @@ export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
       paymentsList,
       dealersList,
       ordersList,
+      journalEntriesList,
+      generalLedgerList,
+      chartOfAccountsList,
+      fiscalYearsList,
+      dealerPayablesList,
+      riderAccountsList,
+      dealerSettlementsList,
     ] = await Promise.all([
       getAllLedgerEntriesQuery(),
       getAllSettlementsQuery(),
@@ -497,6 +514,13 @@ export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
       getAllPaymentsQuery(),
       getAllDealersQuery(),
       getAllOrdersQuery(),
+      getJournalEntriesQuery({ limit: 100 }),
+      getGeneralLedgerQuery({ limit: 250 }),
+      getChartOfAccountsWithBalancesQuery(),
+      getFiscalYearsQuery(),
+      getDealerPayablesSummaryQuery(),
+      getRiderAccountsSummaryQuery(),
+      getAllDealerSettlementsQuery(),
     ])
     return {
       ops: {
@@ -507,6 +531,13 @@ export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
         payments: paymentsList,
         dealers: dealersList,
         orders: ordersList,
+        journalEntries: journalEntriesList,
+        generalLedger: generalLedgerList,
+        chartOfAccounts: chartOfAccountsList,
+        fiscalYears: fiscalYearsList,
+        dealerPayables: dealerPayablesList,
+        dealerSettlements: dealerSettlementsList,
+        riderAccounts: riderAccountsList,
       },
       ledger,
       settlements: settlementsList,
@@ -516,6 +547,13 @@ export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
       payments: paymentsList,
       dealers: dealersList,
       orders: ordersList,
+      journalEntries: journalEntriesList,
+      generalLedger: generalLedgerList,
+      chartOfAccounts: chartOfAccountsList,
+      fiscalYears: fiscalYearsList,
+      dealerPayables: dealerPayablesList,
+      dealerSettlements: dealerSettlementsList,
+      riderAccounts: riderAccountsList,
     }
   },
 )
@@ -811,6 +849,9 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
         riderId: z.string().nullable().optional(),
         paymentStatus: z.string().optional(),
         notes: z.string().optional(),
+        cancellationReason: z.string().optional(),
+        deliveryFailureReason: z.string().optional(),
+        ageVerifiedAtDelivery: z.boolean().optional(),
         itemDealers: z
           .array(
             z.object({
@@ -828,33 +869,46 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
     if (!order) throw new Error('Order not found')
 
     await dbTx.transaction(async (tx) => {
-      const updates: Record<string, any> = { updatedAt: new Date() }
-      if (data.status) updates.status = data.status
-      if (data.riderId !== undefined) {
-        updates.riderId = data.riderId
-        if (data.riderId && data.riderId !== order.riderId) {
-          if (
-            !data.status &&
-            ['pending', 'confirmed', 'packing'].includes(order.status)
-          ) {
-            updates.status = 'assigned'
-          }
-        } else if (data.riderId === null && order.riderId) {
-          if (!data.status && order.status === 'assigned') {
-            updates.status = 'packing'
-          }
-        }
-      }
-      if (data.paymentStatus) updates.paymentStatus = data.paymentStatus
-      if (data.notes !== undefined) updates.notes = data.notes
-
-      await tx.update(orders).set(updates).where(eq(orders.id, data.id))
-
+      // 1. If item dealers were updated, save them first
       if (data.itemDealers && data.itemDealers.length > 0) {
         for (const itemD of data.itemDealers) {
+          let snapshottedCost: number | null = null
+          if (itemD.dealerId) {
+            const currentItem = await tx
+              .select({
+                productId: orderItems.productId,
+                unitPrice: orderItems.unitPrice,
+              })
+              .from(orderItems)
+              .where(eq(orderItems.id, itemD.itemId))
+              .limit(1)
+
+            if (currentItem[0]) {
+              const dItem = await tx
+                .select({ costPrice: dealerItems.costPrice })
+                .from(dealerItems)
+                .where(
+                  and(
+                    eq(dealerItems.dealerId, itemD.dealerId),
+                    eq(dealerItems.productId, currentItem[0].productId),
+                  ),
+                )
+                .limit(1)
+
+              snapshottedCost =
+                dItem[0]?.costPrice && dItem[0].costPrice > 0
+                  ? dItem[0].costPrice
+                  : Math.round(currentItem[0].unitPrice * 0.85)
+            }
+          }
+
           await tx
             .update(orderItems)
-            .set({ dealerId: itemD.dealerId || null })
+            .set({
+              dealerId: itemD.dealerId || null,
+              dealerCostPrice: snapshottedCost,
+              sourcingStatus: itemD.dealerId ? 'assigned' : 'pending',
+            })
             .where(
               and(
                 eq(orderItems.id, itemD.itemId),
@@ -864,31 +918,60 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
         }
       }
 
-      const finalStatus = updates.status || data.status
-      if (finalStatus && finalStatus !== order.status) {
-        await tx.insert(orderStatusHistory).values({
-          id: nid('ev'),
+      // 2. Determine target status transition
+      let targetStatus: OrderStatus | undefined = data.status as
+        OrderStatus | undefined
+      if (!targetStatus && data.riderId !== undefined) {
+        if (data.riderId && data.riderId !== order.riderId) {
+          if (
+            ['pending', 'confirmed', 'dealer_assigned'].includes(order.status)
+          ) {
+            targetStatus = 'rider_assigned'
+          }
+        } else if (data.riderId === null && order.riderId) {
+          if (order.status === 'rider_assigned') {
+            targetStatus = 'confirmed'
+          }
+        }
+      }
+
+      // 3. If there is a status transition, execute through the validated state machine
+      if (targetStatus && targetStatus !== order.status) {
+        await transitionOrderTx(tx, {
           orderId: data.id,
-          status: finalStatus,
-          note: `Status updated to ${finalStatus.replaceAll('_', ' ')}`,
-          actor: user.name,
+          toStatus: targetStatus,
+          user: {
+            id: user.id,
+            name: user.name,
+            role: user.role as any,
+          },
+          options: {
+            riderId:
+              data.riderId !== undefined
+                ? data.riderId || undefined
+                : undefined,
+            cancellationReason: data.cancellationReason,
+            deliveryFailureReason: data.deliveryFailureReason,
+            ageVerifiedAtDelivery: data.ageVerifiedAtDelivery,
+            note: data.notes,
+          },
         })
       }
 
-      if (data.riderId && data.riderId !== order.riderId) {
-        const assignedRider = await getRiderByIdQuery(data.riderId)
-        if (assignedRider?.userId) {
-          const mapUrl = getGoogleMapsUrl(order)
-          await tx.insert(notifications).values({
-            id: nid('notif'),
-            title: `New Delivery Assigned: ${order.number}`,
-            body: `Deliver to ${order.customerName} at ${order.address}. Map: ${mapUrl}`,
-            type: 'rider',
-            read: false,
-            href: `/rider/deliveries`,
-            userId: assignedRider.userId,
-          })
-        }
+      // 4. Update non-status order fields if provided
+      const directUpdates: Record<string, any> = {}
+      if (data.paymentStatus) directUpdates.paymentStatus = data.paymentStatus
+      if (data.notes !== undefined) directUpdates.notes = data.notes
+      if (
+        data.riderId !== undefined &&
+        (!targetStatus || targetStatus === order.status)
+      ) {
+        directUpdates.riderId = data.riderId
+      }
+
+      if (Object.keys(directUpdates).length > 0) {
+        directUpdates.updatedAt = new Date()
+        await tx.update(orders).set(directUpdates).where(eq(orders.id, data.id))
       }
     })
 
@@ -924,6 +1007,126 @@ export const assignOrderItemDealerFn = createServerFn({ method: 'POST' })
       'orders',
       'edit',
       `Assigned dealer ${data.dealerId || 'none'} to item ${data.orderItemId} on order ${order.number}`,
+    )
+
+    return { success: true }
+  })
+
+export const markOrderItemUnavailableFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        orderId: z.string(),
+        orderItemId: z.string(),
+        reason: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const session = await getSessionUser()
+    const order = await getOrderByIdQuery(data.orderId)
+    if (!order) throw new Error('Order not found')
+
+    const isAssignedRider =
+      session.role === 'rider' && order.riderId === session.id
+    const isStaff = session.role === 'admin' || session.role === 'manager'
+    if (!isAssignedRider && !isStaff) {
+      throw new Error(
+        'Forbidden: only assigned rider or manager can mark an item unavailable',
+      )
+    }
+
+    const item = order.items.find((it) => it.id === data.orderItemId)
+    if (!item) throw new Error('Order item not found')
+
+    await dbTx.transaction(async (tx) => {
+      await tx
+        .update(orderItems)
+        .set({
+          sourcingStatus: 'unavailable',
+        })
+        .where(eq(orderItems.id, data.orderItemId))
+
+      await tx.insert(orderStatusHistory).values({
+        id: nid('ev'),
+        orderId: data.orderId,
+        fromStatus: order.status,
+        toStatus: order.status,
+        status: order.status,
+        note: `Item "${item.name}" marked unavailable from dealer. Reason: ${data.reason || 'Out of stock at dealer'}`,
+        actor: session.name,
+        actorId: session.id,
+        actorRole: session.role,
+      })
+    })
+
+    await logAudit(
+      session.name,
+      'orders',
+      'edit',
+      `Marked item ${item.name} (${data.orderItemId}) unavailable on order ${order.number}`,
+    )
+
+    return { success: true }
+  })
+
+export const recordRiderDealerPickupBillFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        orderId: z.string(),
+        orderItemId: z.string(),
+        actualDealerCostPrice: z.number().int().nonnegative().optional(),
+        dealerBillPhotoUrl: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const session = await getSessionUser()
+    const order = await getOrderByIdQuery(data.orderId)
+    if (!order) throw new Error('Order not found')
+
+    const isAssignedRider =
+      session.role === 'rider' && order.riderId === session.id
+    const isStaff = session.role === 'admin' || session.role === 'manager'
+    if (!isAssignedRider && !isStaff) {
+      throw new Error(
+        'Forbidden: only assigned rider or manager can record dealer pickup bill',
+      )
+    }
+
+    const item = order.items.find((it) => it.id === data.orderItemId)
+    if (!item) throw new Error('Order item not found')
+
+    await dbTx.transaction(async (tx) => {
+      await tx
+        .update(orderItems)
+        .set({
+          sourcingStatus: 'picked_up',
+          actualDealerCostPrice:
+            data.actualDealerCostPrice ?? item.dealerCostPrice ?? null,
+          dealerBillPhotoUrl: data.dealerBillPhotoUrl || null,
+        })
+        .where(eq(orderItems.id, data.orderItemId))
+
+      await tx.insert(orderStatusHistory).values({
+        id: nid('ev'),
+        orderId: data.orderId,
+        fromStatus: order.status,
+        toStatus: order.status,
+        status: order.status,
+        note: `Item "${item.name}" picked up from dealer. Bill recorded.`,
+        actor: session.name,
+        actorId: session.id,
+        actorRole: session.role,
+      })
+    })
+
+    await logAudit(
+      session.name,
+      'orders',
+      'edit',
+      `Recorded dealer pickup bill for item ${item.name} on order ${order.number}`,
     )
 
     return { success: true }
@@ -1000,6 +1203,26 @@ export const createOrderFn = createServerFn({ method: 'POST' })
       })
 
       for (const item of data.items) {
+        let snapshottedCost: number | null = null
+        if (item.dealerId) {
+          const dItem = await tx
+            .select({ costPrice: dealerItems.costPrice })
+            .from(dealerItems)
+            .where(
+              and(
+                eq(dealerItems.dealerId, item.dealerId),
+                eq(dealerItems.catalogType, item.catalogType),
+                eq(dealerItems.productId, item.productId),
+              ),
+            )
+            .limit(1)
+
+          snapshottedCost =
+            dItem[0]?.costPrice && dItem[0].costPrice > 0
+              ? dItem[0].costPrice
+              : Math.round(item.unitPrice * 0.85)
+        }
+
         await tx.insert(orderItems).values({
           id: nid('oi'),
           orderId,
@@ -1013,52 +1236,21 @@ export const createOrderFn = createServerFn({ method: 'POST' })
           unitPrice: item.unitPrice,
           lineTotal: item.unitPrice * item.qty,
           dealerId: item.dealerId || null,
-        })
-
-        if (item.catalogType === 'liquor') {
-          const v = await tx
-            .select({ stock: liquorVariants.stock })
-            .from(liquorVariants)
-            .where(eq(liquorVariants.id, item.variantId))
-            .limit(1)
-          if (v[0]) {
-            await tx
-              .update(liquorVariants)
-              .set({ stock: Math.max(0, v[0].stock - item.qty) })
-              .where(eq(liquorVariants.id, item.variantId))
-          }
-        } else {
-          const v = await tx
-            .select({ stock: groceryVariants.stock })
-            .from(groceryVariants)
-            .where(eq(groceryVariants.id, item.variantId))
-            .limit(1)
-          if (v[0]) {
-            await tx
-              .update(groceryVariants)
-              .set({ stock: Math.max(0, v[0].stock - item.qty) })
-              .where(eq(groceryVariants.id, item.variantId))
-          }
-        }
-
-        await tx.insert(stockMovements).values({
-          id: nid('sm'),
-          catalogType: item.catalogType,
-          variantId: item.variantId,
-          delta: -item.qty,
-          type: 'sale',
-          refType: 'order',
-          refId: orderId,
-          createdBy: actor.id,
+          dealerCostPrice: snapshottedCost,
+          sourcingStatus: item.dealerId ? 'assigned' : 'pending',
         })
       }
 
       await tx.insert(orderStatusHistory).values({
         id: nid('ev'),
         orderId,
+        fromStatus: null,
+        toStatus: 'confirmed',
         status: 'confirmed',
         note: `Order manually created by ${actor.name}`,
         actor: actor.name,
+        actorId: actor.id,
+        actorRole: actor.role,
       })
 
       await tx.insert(ledgerEntries).values({
@@ -1543,11 +1735,11 @@ export const savePermissionsFn = createServerFn({ method: 'POST' })
     const permissionsToSave: Record<string, string[]> = { ...data.permissions }
     permissionsToSave.products = Array.from(
       new Set([
-        ...data.permissions.liquor,
-        ...data.permissions.grocery,
-        ...data.permissions.categories,
-        ...data.permissions.inventory,
-        ...data.permissions.dealers,
+        ...(data.permissions.liquor || []),
+        ...(data.permissions.grocery || []),
+        ...(data.permissions.categories || []),
+        ...(data.permissions.inventory || []),
+        ...(data.permissions.dealers || []),
       ]),
     )
 
@@ -1648,33 +1840,59 @@ export const approveSettlementFn = createServerFn({ method: 'POST' })
 
     if (!row[0]) throw new Error('Settlement not found')
 
-    await dbTx.transaction(async (tx) => {
+    const slug =
+      row[0].slug || `vch_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`
+    const now = new Date()
+
+    const result = await dbTx.transaction(async (tx) => {
+      const posting = await postRiderPayoutTx(tx, {
+        settlementId: row[0].id,
+        riderId: row[0].riderId,
+        riderName: row[0].riderName,
+        amount: row[0].payout || row[0].netPayout,
+        paymentAccount: 'cash',
+        actor: user,
+      })
+
       await tx
         .update(settlements)
-        .set({ status: 'approved' })
+        .set({
+          status: 'paid',
+          voucherNo: posting.voucherNo,
+          slug,
+          journalEntryId: posting.journalEntryId,
+          paidAt: now,
+          paidBy: user.id,
+          updatedAt: now,
+        })
         .where(eq(settlements.id, data.id))
 
       await tx.insert(ledgerEntries).values({
         id: nid('led'),
-        date: new Date().toISOString().slice(0, 10),
+        date: now.toISOString().slice(0, 10),
         type: 'debit',
         category: 'settlement',
         account: 'Fleet settlement payable',
-        memo: `Settlement approved for ${row[0].riderName}`,
-        amount: row[0].payout,
+        memo: `Settlement approved for ${row[0].riderName} (${posting.voucherNo})`,
+        amount: row[0].payout || row[0].netPayout,
         refType: 'settlement',
         refId: row[0].id,
       })
+
+      return {
+        ...posting,
+        slug,
+      }
     })
 
     await logAudit(
       user.name,
       'accounts',
       'approve',
-      `Approved settlement ${row[0].id} for ${row[0].riderName}`,
+      `Approved settlement ${result.voucherNo} for ${row[0].riderName} (slug: ${slug})`,
     )
 
-    return true
+    return result
   })
 
 export const reconcilePaymentFn = createServerFn({ method: 'POST' })
@@ -1749,7 +1967,10 @@ export const deleteBannerFn = createServerFn({ method: 'POST' })
 export const resetOpsFn = createServerFn({ method: 'POST' }).handler(
   async () => {
     await requireRole('admin')
-    // No-op in production relational database
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Forbidden: Reset operations are disabled in production')
+    }
+    // No-op in relational database
     return true
   },
 )
@@ -1818,7 +2039,14 @@ export const updateRiderDeliveryStatusFn = createServerFn({ method: 'POST' })
     z
       .object({
         orderId: z.string(),
-        status: z.enum(['out_for_delivery', 'delivered']),
+        status: z.enum([
+          'picked_up',
+          'out_for_delivery',
+          'delivered',
+          'delivery_failed',
+        ]),
+        deliveryFailureReason: z.string().optional(),
+        ageVerifiedAtDelivery: z.boolean().optional(),
         notes: z.string().optional(),
       })
       .parse(d),
@@ -1842,71 +2070,69 @@ export const updateRiderDeliveryStatusFn = createServerFn({ method: 'POST' })
       throw new Error('Forbidden: You are not assigned to this delivery')
     }
 
-    const now = new Date()
-
     await dbTx.transaction(async (tx) => {
-      await tx
-        .update(orders)
-        .set({ status: data.status, updatedAt: now })
-        .where(eq(orders.id, data.orderId))
-
-      if (data.status === 'out_for_delivery') {
-        await tx
-          .update(riders)
-          .set({ status: 'busy', updatedAt: now })
-          .where(eq(riders.id, rider.id))
-
-        await tx.insert(orderStatusHistory).values({
-          id: nid('evt'),
-          orderId: order.id,
-          status: 'out_for_delivery',
-          note: data.notes || `Rider ${rider.name} started delivery`,
-          actor: rider.name,
-        })
-      } else {
-        const commission = Math.round(
-          order.deliveryCharge * (rider.commissionRate / 100),
-        )
-        const newEarnings = rider.earnings + commission
-        let newCashOnHand = rider.cashOnHand
-
-        if (order.paymentMethod === 'cod' && order.paymentStatus !== 'paid') {
-          await tx
-            .update(orders)
-            .set({ paymentStatus: 'paid' })
-            .where(eq(orders.id, order.id))
-          newCashOnHand += order.total
-        }
-
-        await tx
-          .update(riders)
-          .set({
-            deliveries: rider.deliveries + 1,
-            earnings: newEarnings,
-            cashOnHand: newCashOnHand,
-            status: rider.available ? 'available' : 'offline',
-            updatedAt: now,
-          })
-          .where(eq(riders.id, rider.id))
-
-        await tx.insert(orderStatusHistory).values({
-          id: nid('evt'),
-          orderId: order.id,
-          status: 'delivered',
-          note: data.notes || `Delivered by rider ${rider.name}`,
-          actor: rider.name,
-        })
-      }
+      await transitionOrderTx(tx, {
+        orderId: data.orderId,
+        toStatus: data.status,
+        user: {
+          id: user.id,
+          name: rider.name,
+          role: 'rider',
+        },
+        options: {
+          note: data.notes,
+          deliveryFailureReason: data.deliveryFailureReason,
+          ageVerifiedAtDelivery: data.ageVerifiedAtDelivery,
+        },
+      })
     })
 
-    await logAudit(
-      rider.name,
-      'riders',
-      'edit',
-      `Rider ${rider.name} marked order ${order.number} as ${data.status}`,
-    )
-
     return true
+  })
+
+export const transitionOrderFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        orderId: z.string(),
+        toStatus: z.enum([
+          'pending',
+          'confirmed',
+          'dealer_assigned',
+          'rider_assigned',
+          'picked_up',
+          'out_for_delivery',
+          'delivered',
+          'delivery_failed',
+          'returned',
+          'cancelled',
+        ]),
+        riderId: z.string().optional(),
+        cancellationReason: z.string().optional(),
+        deliveryFailureReason: z.string().optional(),
+        ageVerifiedAtDelivery: z.boolean().optional(),
+        note: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const user = await getSessionUser()
+    return transitionOrder({
+      orderId: data.orderId,
+      toStatus: data.toStatus,
+      user: {
+        id: user.id,
+        name: user.name,
+        role: user.role as any,
+      },
+      options: {
+        riderId: data.riderId,
+        cancellationReason: data.cancellationReason,
+        deliveryFailureReason: data.deliveryFailureReason,
+        ageVerifiedAtDelivery: data.ageVerifiedAtDelivery,
+        note: data.note,
+      },
+    })
   })
 
 export const toggleRiderAvailabilityFn = createServerFn({ method: 'POST' })
@@ -1967,6 +2193,7 @@ export const depositRiderCashFn = createServerFn({ method: 'POST' })
 
     const now = new Date()
 
+    const handoverId = nid('rch')
     await dbTx.transaction(async (tx) => {
       await tx
         .update(riders)
@@ -1977,11 +2204,19 @@ export const depositRiderCashFn = createServerFn({ method: 'POST' })
         .where(eq(riders.id, rider.id))
 
       await tx.insert(riderCashHandovers).values({
-        id: nid('rch'),
+        id: handoverId,
         riderId: rider.id,
         amount: data.amount,
-        status: 'pending',
+        status: 'verified',
         notes: data.note || 'Cash deposit to operations counter',
+      })
+
+      await postCashHandoverTx(tx, {
+        handoverId,
+        riderId: rider.id,
+        riderName: rider.name,
+        amount: data.amount,
+        actor: user,
       })
 
       await tx.insert(ledgerEntries).values({

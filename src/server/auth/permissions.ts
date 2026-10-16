@@ -76,6 +76,8 @@ export async function getUserGrants(user: SessionUser): Promise<UserGrants> {
     return Object.fromEntries(MODULES.map((m) => [m, [...ACTIONS]]))
   }
 
+  const roleDefaults = DEFAULT_GRANTS_BY_ROLE[user.role] ?? {}
+
   try {
     const rows = await db
       .select()
@@ -83,7 +85,7 @@ export async function getUserGrants(user: SessionUser): Promise<UserGrants> {
       .where(eq(userPermissions.userId, user.id))
 
     if (rows.length > 0) {
-      const custom: UserGrants = {}
+      const custom: UserGrants = { ...roleDefaults }
       for (const r of rows) {
         custom[r.module as ModuleKey] = r.actions as ActionKey[]
       }
@@ -93,7 +95,7 @@ export async function getUserGrants(user: SessionUser): Promise<UserGrants> {
     console.warn('[Permissions] Failed to read user permissions from DB:', err)
   }
 
-  return DEFAULT_GRANTS_BY_ROLE[user.role]
+  return roleDefaults
 }
 
 /**

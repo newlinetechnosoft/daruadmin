@@ -29,8 +29,12 @@ import {
   CheckCircle2,
   X,
   Copy,
+  Receipt,
+  Percent,
+  CreditCard,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { toPaisa, fromPaisa } from '#/lib/money'
 import { upsertDealerFn } from '#/server/inventory/inventory.functions'
 import { adminQueries } from '#/queries/admin'
 import type {
@@ -58,6 +62,11 @@ export function DealerDialog({
   // Form states
   const [name, setName] = useState('')
   const [pan, setPan] = useState('')
+  const [vatNumber, setVatNumber] = useState('')
+  const [providesVatBill, setProvidesVatBill] = useState(false)
+  const [tdsRate, setTdsRate] = useState('0')
+  const [creditLimitNpr, setCreditLimitNpr] = useState('0')
+  const [paymentTermsDays, setPaymentTermsDays] = useState('0')
   const [contact, setContact] = useState('')
   const [whatsappNumber, setWhatsappNumber] = useState('')
   const [address, setAddress] = useState('')
@@ -90,6 +99,13 @@ export function DealerDialog({
       if (dealer) {
         setName(dealer.name || '')
         setPan(dealer.pan || '')
+        setVatNumber(dealer.vatNumber || '')
+        setProvidesVatBill(Boolean(dealer.providesVatBill))
+        setTdsRate(String(dealer.tdsRate ?? '0'))
+        setCreditLimitNpr(
+          String(dealer.creditLimit ? fromPaisa(dealer.creditLimit) : 0),
+        )
+        setPaymentTermsDays(String(dealer.paymentTermsDays ?? 0))
         setContact(dealer.contact || '')
         setWhatsappNumber(dealer.whatsappNumber || '')
         setAddress(dealer.address || '')
@@ -105,6 +121,11 @@ export function DealerDialog({
       } else {
         setName('')
         setPan('')
+        setVatNumber('')
+        setProvidesVatBill(false)
+        setTdsRate('0')
+        setCreditLimitNpr('0')
+        setPaymentTermsDays('0')
         setContact('')
         setWhatsappNumber('')
         setAddress('')
@@ -213,6 +234,11 @@ export function DealerDialog({
           id: dealer?.id,
           name: name.trim(),
           pan: pan.trim() || null,
+          vatNumber: vatNumber.trim() || null,
+          providesVatBill,
+          tdsRate: tdsRate.trim() || '0',
+          creditLimit: toPaisa(Math.max(0, Number(creditLimitNpr) || 0)),
+          paymentTermsDays: Math.max(0, parseInt(paymentTermsDays, 10) || 0),
           contact: contact.trim(),
           whatsappNumber: whatsappNumber.trim() || null,
           address: address.trim(),
@@ -391,6 +417,101 @@ export function DealerDialog({
                 placeholder="Kathmandu"
                 className="h-10"
               />
+            </div>
+          </div>
+
+          {/* Tax, VAT & Credit Terms */}
+          <div className="space-y-3 pt-3 border-t border-border">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+              <Receipt className="h-4 w-4 text-primary" />
+              <span>Tax, Invoicing & Credit Terms (Nepal Sourcing)</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="dealer-vat" className="text-xs font-medium">
+                  VAT Registration No.
+                </Label>
+                <Input
+                  id="dealer-vat"
+                  value={vatNumber}
+                  onChange={(e) => setVatNumber(e.target.value)}
+                  placeholder="e.g. 601234567"
+                  className="h-9 font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="dealer-tds"
+                  className="text-xs font-medium flex items-center gap-1"
+                >
+                  <Percent className="h-3 w-3 text-muted-foreground" />
+                  TDS Rate (%)
+                </Label>
+                <Input
+                  id="dealer-tds"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  value={tdsRate}
+                  onChange={(e) => setTdsRate(e.target.value)}
+                  placeholder="0.0"
+                  className="h-9 font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="dealer-credit"
+                  className="text-xs font-medium flex items-center gap-1"
+                >
+                  <CreditCard className="h-3 w-3 text-muted-foreground" />
+                  Credit Limit (NPR)
+                </Label>
+                <Input
+                  id="dealer-credit"
+                  type="number"
+                  min="0"
+                  step="500"
+                  value={creditLimitNpr}
+                  onChange={(e) => setCreditLimitNpr(e.target.value)}
+                  placeholder="0"
+                  className="h-9 font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="dealer-terms" className="text-xs font-medium">
+                  Payment Terms (Days)
+                </Label>
+                <Input
+                  id="dealer-terms"
+                  type="number"
+                  min="0"
+                  value={paymentTermsDays}
+                  onChange={(e) => setPaymentTermsDays(e.target.value)}
+                  placeholder="0"
+                  className="h-9 font-mono text-xs"
+                />
+              </div>
+
+              <div className="sm:col-span-2 flex items-center space-x-2 pt-3">
+                <Checkbox
+                  id="dealer-vat-bill"
+                  checked={providesVatBill}
+                  onCheckedChange={(checked) =>
+                    setProvidesVatBill(Boolean(checked))
+                  }
+                />
+                <Label
+                  htmlFor="dealer-vat-bill"
+                  className="text-xs font-medium leading-none cursor-pointer"
+                >
+                  Provides 13% VAT Bill (Tax Invoice with PAN/VAT)
+                </Label>
+              </div>
             </div>
           </div>
 

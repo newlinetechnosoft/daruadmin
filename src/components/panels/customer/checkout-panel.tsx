@@ -17,6 +17,7 @@ import {
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { DeliveryMap } from './delivery-map'
+import { DEFAULT_MAP_CENTER } from '#/lib/map-config'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -82,10 +83,10 @@ export function CheckoutPanel() {
     defaultValues: {
       paymentMethod: 'cod',
       promoCode: '',
-      lat: 27.7172,
-      lng: 85.324,
+      lat: DEFAULT_MAP_CENTER[0],
+      lng: DEFAULT_MAP_CENTER[1],
       address: '',
-      city: 'Kathmandu',
+      city: 'Butwal',
       phone: normalizedProfilePhone || '',
       savePhoneAsDefault: false,
       items: items.map((i) => ({
@@ -294,8 +295,8 @@ export function CheckoutPanel() {
                       1. Delivery Location
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Drop a precise pin on OpenStreetMap for Kathmandu express
-                      rider routing.
+                      Drop a precise pin on OpenStreetMap for Butwal / Rupandehi
+                      express rider routing.
                     </CardDescription>
                   </div>
                 </div>

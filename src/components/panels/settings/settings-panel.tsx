@@ -46,6 +46,7 @@ import {
   MapPin,
   Sparkles,
   Info,
+  Truck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -82,7 +83,13 @@ export function SettingsPanel() {
   const router = useRouter()
 
   const [activeTab, setActiveTab] = useState<
-    'general' | 'tax' | 'compliance' | 'notifications' | 'gateways' | 'system'
+    | 'general'
+    | 'delivery'
+    | 'tax'
+    | 'compliance'
+    | 'notifications'
+    | 'gateways'
+    | 'system'
   >('general')
 
   const [form, setForm] = useState<StoreSettings>(() => ({
@@ -100,6 +107,9 @@ export function SettingsPanel() {
     ageGate: ops.settings?.ageGate ?? true,
     notifyEmail: ops.settings?.notifyEmail ?? true,
     notifySms: ops.settings?.notifySms ?? false,
+    riderCodLimit: ops.settings?.riderCodLimit ?? 2000000,
+    deliveryFee: ops.settings?.deliveryFee ?? 15000,
+    freeDeliveryThreshold: ops.settings?.freeDeliveryThreshold ?? 300000,
     gateways: ops.settings?.gateways ?? {
       cod: { enabled: true, merchantId: 'COD-CUSTODY', mode: 'live' },
       esewa: { enabled: true, merchantId: 'EPAYTEST', mode: 'sandbox' },
@@ -255,6 +265,10 @@ export function SettingsPanel() {
           <TabsTrigger value="general" className="gap-2">
             <Building2 className="h-3.5 w-3.5" />
             <span>Store & Legal Profile</span>
+          </TabsTrigger>
+          <TabsTrigger value="delivery" className="gap-2">
+            <Truck className="h-3.5 w-3.5" />
+            <span>Delivery & Fleet</span>
           </TabsTrigger>
           <TabsTrigger value="tax" className="gap-2">
             <Receipt className="h-3.5 w-3.5" />
@@ -485,6 +499,181 @@ export function SettingsPanel() {
                     liquor transactions must maintain sequentially numbered tax
                     invoices and report VAT Annex 13 registers monthly.
                   </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Delivery & Fleet Settings */}
+        <TabsContent value="delivery">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Delivery Rates & Rider Safety Limits</CardTitle>
+                  <CardDescription>
+                    Configure dynamic delivery charges, free delivery
+                    merchandise thresholds, and rider cash-in-hand safety
+                    limits.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="delivery-fee-input">
+                        Base Delivery Fee (Rs.)
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="delivery-fee-input"
+                          type="number"
+                          min="0"
+                          step="10"
+                          value={Math.round((form.deliveryFee ?? 15000) / 100)}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              deliveryFee: Math.round(
+                                (parseFloat(e.target.value) || 0) * 100,
+                              ),
+                            })
+                          }
+                          required
+                        />
+                        <span className="absolute top-1/2 -translate-y-1/2 right-3 text-xs font-semibold text-muted-foreground">
+                          NPR
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Flat launch fee applied to orders below free threshold
+                        (default Rs. 150).
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="free-thresh-input">
+                        Free Delivery Threshold (Rs.)
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="free-thresh-input"
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={Math.round(
+                            (form.freeDeliveryThreshold ?? 300000) / 100,
+                          )}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              freeDeliveryThreshold: Math.round(
+                                (parseFloat(e.target.value) || 0) * 100,
+                              ),
+                            })
+                          }
+                          required
+                        />
+                        <span className="absolute top-1/2 -translate-y-1/2 right-3 text-xs font-semibold text-muted-foreground">
+                          NPR
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Orders at or above this net merchandise value qualify
+                        for free delivery (default Rs. 3,000).
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label htmlFor="rider-cod-limit-input">
+                        Rider COD Cash Holding Limit (Rs.)
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="rider-cod-limit-input"
+                          type="number"
+                          min="1000"
+                          step="1000"
+                          value={Math.round(
+                            (form.riderCodLimit ?? 2000000) / 100,
+                          )}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              riderCodLimit: Math.round(
+                                (parseFloat(e.target.value) || 0) * 100,
+                              ),
+                            })
+                          }
+                          required
+                        />
+                        <span className="absolute top-1/2 -translate-y-1/2 right-3 text-xs font-semibold text-muted-foreground">
+                          NPR
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        When a rider's outstanding collected cash reaches or
+                        exceeds this limit (default Rs. 20,000), new COD
+                        assignments are automatically blocked until a cash
+                        handover is verified, unless a manager authorizes an
+                        exception.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 flex justify-end border-t border-border">
+                    <Button
+                      onClick={() => handleSave()}
+                      disabled={isSaving}
+                      className="gap-2"
+                    >
+                      <Save className="h-4 w-4" />
+                      Save Delivery Settings
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">
+                    Fleet Sourcing & Logistics Rules
+                  </CardTitle>
+                  <CardDescription>
+                    How delivery rules are applied:
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 text-xs text-muted-foreground">
+                  <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1.5">
+                    <span className="font-semibold text-foreground block">
+                      Zero Inventory Model
+                    </span>
+                    <p>
+                      Mezmani holds no central inventory. Items are sourced
+                      directly from verified local dealers upon order
+                      confirmation.
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1.5">
+                    <span className="font-semibold text-foreground block">
+                      Cash-on-Delivery Protection
+                    </span>
+                    <p>
+                      Riders can deliver multiple pre-paid online orders
+                      regardless of cash held. Only new COD assignments are held
+                      when cash exceeds the limit.
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1.5">
+                    <span className="font-semibold text-foreground block">
+                      Rider Compensation Formula
+                    </span>
+                    <p className="font-mono text-[11px] text-foreground">
+                      Pay = Base Salary + Rs. 50/drop + (10% × Delivery Charge)
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </div>

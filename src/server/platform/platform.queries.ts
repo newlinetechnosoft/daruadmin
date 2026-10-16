@@ -10,14 +10,16 @@ import {
   campaigns,
   reviews,
   shippingZones,
+  couponRedemptions,
 } from '#/db/schema'
-import { desc, eq } from 'drizzle-orm'
+import { desc, eq, count, and } from 'drizzle-orm'
 import type {
   AuditLog,
   Banner,
   Campaign,
   Complaint,
   Coupon,
+  CouponRedemption,
   NotificationItem,
   PermissionMap,
   ModuleKey,
@@ -50,6 +52,9 @@ export function defaultStoreSettings(): StoreSettings {
       fonepay: { enabled: false, merchantId: '', mode: 'sandbox' },
       connectips: { enabled: false, merchantId: '', mode: 'sandbox' },
     },
+    riderCodLimit: 2000000, // Rs. 20,000 in paisa
+    deliveryFee: 15000, // Rs. 150 in paisa
+    freeDeliveryThreshold: 300000, // Rs. 3,000 in paisa
   }
 }
 
@@ -283,6 +288,46 @@ export async function upsertCouponQuery(c: Coupon) {
 
 export async function deleteCouponQuery(id: string) {
   await db.delete(coupons).where(eq(coupons.id, id))
+}
+
+export async function getCouponRedemptionsQuery(
+  limit = 100,
+): Promise<CouponRedemption[]> {
+  const rows = await db
+    .select()
+    .from(couponRedemptions)
+    .orderBy(desc(couponRedemptions.createdAt))
+    .limit(limit)
+
+  return rows.map((r) => ({
+    id: r.id,
+    couponId: r.couponId,
+    couponCode: r.couponCode,
+    orderId: r.orderId,
+    customerId: r.customerId,
+    customerName: r.customerName,
+    customerEmail: r.customerEmail,
+    customerPhone: r.customerPhone,
+    orderTotal: r.orderTotal,
+    discountAmount: r.discountAmount,
+    createdAt: r.createdAt.toISOString(),
+  }))
+}
+
+export async function getCustomerCouponRedemptionCountQuery(
+  couponId: string,
+  customerId: string,
+): Promise<number> {
+  const res = await db
+    .select({ count: count() })
+    .from(couponRedemptions)
+    .where(
+      and(
+        eq(couponRedemptions.couponId, couponId),
+        eq(couponRedemptions.customerId, customerId),
+      ),
+    )
+  return res[0]?.count ?? 0
 }
 
 // -------------------------------------------------------------

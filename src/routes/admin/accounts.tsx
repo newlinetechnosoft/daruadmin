@@ -12,6 +12,7 @@ const accountsSearchSchema = z.object({
       'dealer-ledger',
       'sales-account',
       'salary-account',
+      'chart-of-accounts',
     ])
     .optional(),
 })

@@ -219,7 +219,8 @@ export function RiderDashboard({
     // Guard against duplicate or invalid transitions
     if (
       targetStatus === 'out_for_delivery' &&
-      currentOrder.status !== 'assigned'
+      currentOrder.status !== 'rider_assigned' &&
+      currentOrder.status !== 'picked_up'
     ) {
       return
     }

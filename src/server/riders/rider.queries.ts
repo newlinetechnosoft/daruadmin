@@ -18,6 +18,8 @@ function mapRiderRecord(r: typeof riders.$inferSelect): Rider {
     lat: Number(r.lat ?? 27.7172),
     lng: Number(r.lng ?? 85.324),
     zone: r.zone,
+    baseSalary: r.baseSalary,
+    perDropRate: r.perDropRate,
     commissionRate: r.commissionRate,
     cashOnHand: r.cashOnHand,
     earnings: r.earnings,
@@ -32,13 +34,29 @@ function mapSettlementRecord(s: typeof settlements.$inferSelect): Settlement {
     id: s.id,
     riderId: s.riderId,
     riderName: s.riderName,
+    voucherNo: s.voucherNo,
+    slug: s.slug,
     periodStart: s.periodStart.toISOString(),
     periodEnd: s.periodEnd.toISOString(),
     deliveries: s.deliveries,
     cashCollected: s.cashCollected,
+    baseSalaryAmount: s.baseSalaryAmount,
+    perDropAmount: s.perDropAmount,
+    commissionAmount: s.commissionAmount,
     commission: s.commission,
+    grossEarnings: s.grossEarnings,
+    advancesDeducted: s.advancesDeducted,
+    cashShortageDeducted: s.cashShortageDeducted,
+    cashHeldDeducted: s.cashHeldDeducted,
+    netPayout: s.netPayout,
     payout: s.payout,
     status: s.status as 'draft' | 'approved' | 'paid',
+    paymentMethod: s.paymentMethod,
+    paymentReference: s.paymentReference,
+    paidAt: s.paidAt ? s.paidAt.toISOString() : null,
+    notes: s.notes,
+    proofUrls: Array.isArray(s.proofUrls) ? (s.proofUrls as string[]) : [],
+    journalEntryId: s.journalEntryId,
     createdAt: s.createdAt.toISOString(),
   }
 }
@@ -63,10 +81,7 @@ export async function getRiderByIdQuery(id: string): Promise<Rider | null> {
     .from(riders)
     .leftJoin(user, eq(riders.userId, user.id))
     .where(
-      and(
-        eq(riders.id, id),
-        or(isNull(riders.userId), eq(user.role, 'rider')),
-      ),
+      and(eq(riders.id, id), or(isNull(riders.userId), eq(user.role, 'rider'))),
     )
     .limit(1)
   return rows[0] ? mapRiderRecord(rows[0].rider) : null

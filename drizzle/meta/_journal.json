@@ -36,6 +36,34 @@
       "when": 1792200000000,
       "tag": "0004_order_items_dealer_id",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792300000000,
+      "tag": "0005_order_state_machine",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792400000000,
+      "tag": "0006_dealer_sourcing",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792500000000,
+      "tag": "0007_double_entry_accounting",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792600000000,
+      "tag": "0008_pricing_promotions_and_settlements",
+      "breakpoints": true
     }
   ]
 }

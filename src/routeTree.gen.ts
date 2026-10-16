@@ -43,6 +43,7 @@ import { Route as RiderIndexRouteImport } from './routes/rider/index'
 import { Route as RiderDeliveriesRouteImport } from './routes/rider/deliveries'
 import { Route as RiderEarningsRouteImport } from './routes/rider/earnings'
 import { Route as RiderProfileRouteImport } from './routes/rider/profile'
+import { Route as VoucherSlugRouteImport } from './routes/voucher.$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as CheckoutPaymentEsewaFailureRouteImport } from './routes/checkout.payment.esewa.failure'
 import { Route as CheckoutPaymentEsewaSuccessRouteImport } from './routes/checkout.payment.esewa.success'
@@ -218,6 +219,11 @@ const RiderProfileRoute = RiderProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => RiderRouteRoute,
 } as any)
+const VoucherSlugRoute = VoucherSlugRouteImport.update({
+  id: '/voucher/$slug',
+  path: '/voucher/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -269,6 +275,7 @@ export interface FileRoutesByFullPath {
   '/rider/deliveries': typeof RiderDeliveriesRoute
   '/rider/earnings': typeof RiderEarningsRoute
   '/rider/profile': typeof RiderProfileRoute
+  '/voucher/$slug': typeof VoucherSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/rider/': typeof RiderIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -306,6 +313,7 @@ export interface FileRoutesByTo {
   '/rider/deliveries': typeof RiderDeliveriesRoute
   '/rider/earnings': typeof RiderEarningsRoute
   '/rider/profile': typeof RiderProfileRoute
+  '/voucher/$slug': typeof VoucherSlugRoute
   '/admin': typeof AdminIndexRoute
   '/rider': typeof RiderIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -346,6 +354,7 @@ export interface FileRoutesById {
   '/rider/deliveries': typeof RiderDeliveriesRoute
   '/rider/earnings': typeof RiderEarningsRoute
   '/rider/profile': typeof RiderProfileRoute
+  '/voucher/$slug': typeof VoucherSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/rider/': typeof RiderIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -387,6 +396,7 @@ export interface FileRouteTypes {
     | '/rider/deliveries'
     | '/rider/earnings'
     | '/rider/profile'
+    | '/voucher/$slug'
     | '/admin/'
     | '/rider/'
     | '/api/auth/$'
@@ -424,6 +434,7 @@ export interface FileRouteTypes {
     | '/rider/deliveries'
     | '/rider/earnings'
     | '/rider/profile'
+    | '/voucher/$slug'
     | '/admin'
     | '/rider'
     | '/api/auth/$'
@@ -463,6 +474,7 @@ export interface FileRouteTypes {
     | '/rider/deliveries'
     | '/rider/earnings'
     | '/rider/profile'
+    | '/voucher/$slug'
     | '/admin/'
     | '/rider/'
     | '/api/auth/$'
@@ -482,6 +494,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   ApiNeonHealthRoute: typeof ApiNeonHealthRoute
   OrderConfirmationOrderIdRoute: typeof OrderConfirmationOrderIdRoute
+  VoucherSlugRoute: typeof VoucherSlugRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -725,6 +738,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RiderProfileRouteImport
       parentRoute: typeof RiderRouteRoute
     }
+    '/voucher/$slug': {
+      id: '/voucher/$slug'
+      path: '/voucher/$slug'
+      fullPath: '/voucher/$slug'
+      preLoaderRoute: typeof VoucherSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -841,6 +861,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   ApiNeonHealthRoute: ApiNeonHealthRoute,
   OrderConfirmationOrderIdRoute: OrderConfirmationOrderIdRoute,
+  VoucherSlugRoute: VoucherSlugRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

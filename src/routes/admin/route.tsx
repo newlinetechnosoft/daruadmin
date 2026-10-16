@@ -261,6 +261,11 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
             to: '/admin/accounts',
             search: { tab: 'salary-account' },
           },
+          {
+            label: 'Chart of Accounts',
+            to: '/admin/accounts',
+            search: { tab: 'chart-of-accounts' },
+          },
         ],
       },
       {

@@ -6,7 +6,7 @@ import {
   dealers,
   dealerItems,
 } from '#/db/schema'
-import { desc, eq, inArray, count } from 'drizzle-orm'
+import { desc, eq, inArray, count, and } from 'drizzle-orm'
 import type {
   Order,
   OrderItem,
@@ -14,6 +14,13 @@ import type {
   OrderEvent,
   OrderStatus,
 } from '#/server/operations/types'
+import { calculateHaversineDistanceKm } from '#/lib/map-config'
+
+interface DealerItemRecord {
+  dealerId: string
+  costPrice: number
+  isAvailable: boolean
+}
 
 async function loadDealersContext() {
   const [allDealers, allDealerItems] = await Promise.all([
@@ -26,11 +33,15 @@ async function loadDealersContext() {
     dealersMap.set(d.id, d)
   }
 
-  const dealerItemsMap = new Map<string, string[]>()
+  const dealerItemsMap = new Map<string, DealerItemRecord[]>()
   for (const di of allDealerItems) {
     const key = `${di.catalogType}:${di.productId}`
     const list = dealerItemsMap.get(key) ?? []
-    list.push(di.dealerId)
+    list.push({
+      dealerId: di.dealerId,
+      costPrice: di.costPrice,
+      isAvailable: di.isAvailable !== false,
+    })
     dealerItemsMap.set(key, list)
   }
 
@@ -42,8 +53,11 @@ function mapOrderRecord(
   items: (typeof orderItems.$inferSelect)[] = [],
   events: (typeof orderStatusHistory.$inferSelect)[] = [],
   dealersMap?: Map<string, typeof dealers.$inferSelect>,
-  dealerItemsMap?: Map<string, string[]>,
+  dealerItemsMap?: Map<string, DealerItemRecord[]>,
 ): Order {
+  const orderLat = order.lat ? Number(order.lat) : null
+  const orderLng = order.lng ? Number(order.lng) : null
+
   return {
     id: order.id,
     number: order.number,
@@ -54,8 +68,8 @@ function mapOrderRecord(
     address: order.address,
     city: order.city,
     landmark: order.landmark,
-    lat: order.lat ? Number(order.lat) : null,
-    lng: order.lng ? Number(order.lng) : null,
+    lat: orderLat,
+    lng: orderLng,
     status: order.status as OrderStatus,
     paymentMethod: order.paymentMethod as any,
     paymentStatus: order.paymentStatus as any,
@@ -69,29 +83,48 @@ function mapOrderRecord(
     notes: order.notes,
     couponCode: order.couponCode,
     idempotencyKey: order.idempotencyKey,
+    isLegacy: order.isLegacy,
+    cancellationReason: order.cancellationReason,
+    deliveryFailureReason: order.deliveryFailureReason,
     items: items.map((i): OrderItem => {
       const assignedDealer =
         i.dealerId && dealersMap ? (dealersMap.get(i.dealerId) ?? null) : null
       const productKey = `${i.catalogType}:${i.productId}`
-      const supplyingDealerIds = dealerItemsMap?.get(productKey) ?? []
-      const availableDealers: OrderItemDealerInfo[] = dealersMap
-        ? supplyingDealerIds
-            .map((id) => dealersMap.get(id))
-            .filter((d): d is typeof dealers.$inferSelect =>
-              Boolean(d && d.isActive),
-            )
-            .map((d) => ({
-              id: d.id,
-              name: d.name,
-              pan: d.pan,
-              contact: d.contact,
-              whatsappNumber: d.whatsappNumber,
-              address: d.address,
-              city: d.city,
-              lat: d.lat ? Number(d.lat) : null,
-              lng: d.lng ? Number(d.lng) : null,
-            }))
-        : []
+      const supplyingDealers = dealerItemsMap?.get(productKey) ?? []
+
+      const availableDealers: OrderItemDealerInfo[] = []
+      if (dealersMap) {
+        for (const rec of supplyingDealers) {
+          const d = dealersMap.get(rec.dealerId)
+          if (!d || !d.isActive) continue
+          const dLat = d.lat ? Number(d.lat) : null
+          const dLng = d.lng ? Number(d.lng) : null
+          const distanceKm =
+            orderLat != null && orderLng != null && dLat != null && dLng != null
+              ? calculateHaversineDistanceKm(orderLat, orderLng, dLat, dLng)
+              : null
+
+          availableDealers.push({
+            id: d.id,
+            name: d.name,
+            pan: d.pan ?? null,
+            vatNumber: d.vatNumber ?? null,
+            providesVatBill: Boolean(d.providesVatBill),
+            tdsRate: d.tdsRate,
+            contact: d.contact,
+            whatsappNumber: d.whatsappNumber ?? null,
+            address: d.address,
+            city: d.city,
+            lat: dLat,
+            lng: dLng,
+            distanceKm,
+            costPrice: rec.costPrice,
+          })
+        }
+        availableDealers.sort(
+          (a, b) => (a.distanceKm ?? 999999) - (b.distanceKm ?? 999999),
+        )
+      }
 
       return {
         id: i.id,
@@ -105,11 +138,20 @@ function mapOrderRecord(
         unitPrice: i.unitPrice,
         lineTotal: i.lineTotal,
         dealerId: i.dealerId ?? null,
+        dealerCostPrice: i.dealerCostPrice ?? null,
+        actualDealerCostPrice: i.actualDealerCostPrice ?? null,
+        dealerBillPhotoUrl: i.dealerBillPhotoUrl ?? null,
+        sourcingStatus: (i.sourcingStatus as any) ?? 'pending',
+        isSettled: i.isSettled,
+        settlementId: i.settlementId ?? null,
         dealer: assignedDealer
           ? {
               id: assignedDealer.id,
               name: assignedDealer.name,
               pan: assignedDealer.pan,
+              vatNumber: assignedDealer.vatNumber,
+              providesVatBill: assignedDealer.providesVatBill,
+              tdsRate: assignedDealer.tdsRate,
               contact: assignedDealer.contact,
               whatsappNumber: assignedDealer.whatsappNumber,
               address: assignedDealer.address,
@@ -125,8 +167,13 @@ function mapOrderRecord(
       id: e.id,
       at: e.createdAt.toISOString(),
       status: e.status as OrderStatus,
+      fromStatus: e.fromStatus as OrderStatus | null,
+      toStatus: (e.toStatus ?? e.status) as OrderStatus,
       note: e.note,
       actor: e.actor,
+      actorId: e.actorId,
+      actorRole: e.actorRole,
+      metadata: (e.metadata as Record<string, any> | null) ?? null,
     })),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
@@ -294,10 +341,42 @@ export async function assignOrderItemDealerQuery(
   orderItemId: string,
   dealerId: string | null,
 ): Promise<{ success: boolean }> {
+  const itemRows = await db
+    .select()
+    .from(orderItems)
+    .where(eq(orderItems.id, orderItemId))
+    .limit(1)
+
+  if (!itemRows[0]) throw new Error('Order item not found')
+
+  let snapshottedCost: number | null = null
+  if (dealerId) {
+    const dItem = await db
+      .select({ costPrice: dealerItems.costPrice })
+      .from(dealerItems)
+      .where(
+        and(
+          eq(dealerItems.dealerId, dealerId),
+          eq(dealerItems.productId, itemRows[0].productId),
+        ),
+      )
+      .limit(1)
+
+    snapshottedCost =
+      dItem[0]?.costPrice && dItem[0].costPrice > 0
+        ? dItem[0].costPrice
+        : Math.round(itemRows[0].unitPrice * 0.85) // default wholesale benchmark
+  }
+
   await db
     .update(orderItems)
-    .set({ dealerId: dealerId || null })
+    .set({
+      dealerId: dealerId || null,
+      dealerCostPrice: snapshottedCost,
+      sourcingStatus: dealerId ? 'assigned' : 'pending',
+    })
     .where(eq(orderItems.id, orderItemId))
+
   return { success: true }
 }
 
@@ -305,10 +384,7 @@ export async function assignOrderItemsDealersQuery(
   assignments: { orderItemId: string; dealerId: string | null }[],
 ): Promise<{ success: boolean }> {
   for (const a of assignments) {
-    await db
-      .update(orderItems)
-      .set({ dealerId: a.dealerId || null })
-      .where(eq(orderItems.id, a.orderItemId))
+    await assignOrderItemDealerQuery(a.orderItemId, a.dealerId)
   }
   return { success: true }
 }
