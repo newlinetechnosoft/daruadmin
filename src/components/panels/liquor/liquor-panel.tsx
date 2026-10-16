@@ -1,6 +1,10 @@
 import { useState, useMemo, useRef } from 'react'
 import type { FormEvent } from 'react'
-import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useSuspenseQuery,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
 import {
   upsertLiquorProductFn,
@@ -8,10 +12,10 @@ import {
   deleteItemFn,
   deleteProductImageFn,
 } from '#/server/catalog/catalog.functions'
-import {
-  ImageUploader,
-  type ImageUploaderRef,
-  type ExistingImageItem,
+import { ImageUploader } from '#/components/shared/image-uploader'
+import type {
+  ImageUploaderRef,
+  ExistingImageItem,
 } from '#/components/shared/image-uploader'
 import { formatNPR, toPaisa, toRupees } from '#/lib/money'
 import {
@@ -22,9 +26,12 @@ import {
   Trash2,
   CheckCircle2,
   XCircle,
+  Store,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { BrandDialog, type BrandData } from '#/components/panels/brands'
+import { BrandDialog } from '#/components/panels/brands'
+import type { BrandData } from '#/components/panels/brands'
+import { DealerDialog } from '#/components/panels/dealers'
 import { can } from '#/server/auth/permissions-shared'
 import { PageHeader } from '#/components/shared/page-header'
 import { Button } from '#/components/ui/button'
@@ -92,7 +99,9 @@ export function LiquorPanel() {
   // Brand Dialog & CRUD state
   const [brandDialogOpen, setBrandDialogOpen] = useState(false)
   const [editingBrand, setEditingBrand] = useState<BrandData | null>(null)
-  const [deleteBrandTarget, setDeleteBrandTarget] = useState<BrandData | null>(null)
+  const [deleteBrandTarget, setDeleteBrandTarget] = useState<BrandData | null>(
+    null,
+  )
 
   const handleDeleteBrand = async () => {
     if (!deleteBrandTarget) return
@@ -126,9 +135,18 @@ export function LiquorPanel() {
   const [formDescription, setFormDescription] = useState('')
   const [formImageUrl, setFormImageUrl] = useState('')
   const imageUploaderRef = useRef<ImageUploaderRef>(null)
-  const [existingImagesList, setExistingImagesList] = useState<ExistingImageItem[]>([])
+  const [existingImagesList, setExistingImagesList] = useState<
+    ExistingImageItem[]
+  >([])
   const [formIsFeatured, setFormIsFeatured] = useState(false)
+  const [formCustomBadge, setFormCustomBadge] = useState('')
+  const [formCustomDiscountLabel, setFormCustomDiscountLabel] = useState('')
   const [formIsActive, setFormIsActive] = useState(true)
+  const { data: dealersData } = useQuery(adminQueries.dealers())
+  const dealersList = dealersData?.dealers ?? []
+  const [formDealerIds, setFormDealerIds] = useState<string[]>([])
+  const [dealerDialogOpen, setDealerDialogOpen] = useState(false)
+
   const [formVariants, setFormVariants] = useState<VariantFormItem[]>([
     {
       name: '750 ml',
@@ -184,7 +202,10 @@ export function LiquorPanel() {
     setExistingImagesList([])
     imageUploaderRef.current?.discardDrafts()
     setFormIsFeatured(false)
+    setFormCustomBadge('')
+    setFormCustomDiscountLabel('')
     setFormIsActive(true)
+    setFormDealerIds([])
     setFormVariants([
       {
         name: '750 ml',
@@ -209,7 +230,10 @@ export function LiquorPanel() {
     setFormDescription(p.description ?? '')
     setFormImageUrl(p.primaryImage ?? '')
     setFormIsFeatured(p.isFeatured)
+    setFormCustomBadge(p.customBadge ?? '')
+    setFormCustomDiscountLabel(p.customDiscountLabel ?? '')
     setFormIsActive(p.isActive)
+    setFormDealerIds((p as any).dealerIds || [])
     const imgs =
       (p as any).images && (p as any).images.length > 0
         ? (p as any).images
@@ -296,7 +320,10 @@ export function LiquorPanel() {
           imageUrl: primaryImg,
           images: uploadedImages,
           isFeatured: formIsFeatured,
+          customBadge: formCustomBadge.trim() || null,
+          customDiscountLabel: formCustomDiscountLabel.trim() || null,
           isActive: formIsActive,
+          dealerIds: formDealerIds,
           variants: formVariants.map((v) => ({
             id: v.id,
             name: v.name.trim(),
@@ -319,6 +346,7 @@ export function LiquorPanel() {
       setModalOpen(false)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'liquor'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'dealers'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
       await queryClient.invalidateQueries({ queryKey: ['catalog'] })
       await queryClient.invalidateQueries({ queryKey: ['storefront'] })
@@ -502,14 +530,30 @@ export function LiquorPanel() {
                         className="h-10 w-10 shrink-0 rounded-md bg-muted object-cover border border-border"
                       />
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 font-medium text-xs text-foreground">
+                        <div className="flex items-center gap-1.5 flex-wrap font-medium text-xs text-foreground">
                           <span>{p.name}</span>
-                          {p.isFeatured && (
+                          {p.customBadge && (
+                            <Badge
+                              variant="default"
+                              className="text-[9px] px-1.5 py-0 font-medium"
+                            >
+                              {p.customBadge}
+                            </Badge>
+                          )}
+                          {!p.customBadge && p.isFeatured && (
                             <Badge
                               variant="secondary"
                               className="gap-1 text-[9px] px-1 py-0 font-normal"
                             >
                               <Sparkles className="h-2.5 w-2.5" /> Featured
+                            </Badge>
+                          )}
+                          {p.customDiscountLabel && (
+                            <Badge
+                              variant="secondary"
+                              className="text-[9px] px-1.5 py-0 font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+                            >
+                              {p.customDiscountLabel}
                             </Badge>
                           )}
                         </div>
@@ -527,6 +571,20 @@ export function LiquorPanel() {
                     <div className="text-[11px] text-muted-foreground">
                       {p.categoryName}
                     </div>
+                    {(p as any).dealers && (p as any).dealers.length > 0 && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] py-0 px-1.5 h-4 text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/20 font-normal flex items-center gap-1"
+                        >
+                          <Store className="h-2.5 w-2.5" />
+                          {(p as any).dealers.length}{' '}
+                          {(p as any).dealers.length === 1
+                            ? 'dealer'
+                            : 'dealers'}
+                        </Badge>
+                      </div>
+                    )}
                   </TableCell>
 
                   <TableCell>
@@ -551,6 +609,11 @@ export function LiquorPanel() {
                           <span className="font-mono font-semibold text-[11px] tabular-nums">
                             {formatNPR(v.price)}
                           </span>
+                          {v.mrp && v.mrp > v.price && (
+                            <span className="font-mono text-[10px] text-muted-foreground line-through tabular-nums">
+                              {formatNPR(v.mrp)}
+                            </span>
+                          )}
                           <span className="text-[10px] text-muted-foreground">
                             {v.stock} left
                           </span>
@@ -760,6 +823,98 @@ export function LiquorPanel() {
               />
             </div>
 
+            {/* Supplying Dealers Selection */}
+            <div className="space-y-2 border-t border-border/60 pt-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-xs font-semibold flex items-center gap-1.5">
+                    <Store className="h-3.5 w-3.5 text-amber-600" />
+                    Supplying Dealers
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Select dealers who supply and fulfill this liquor product.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1"
+                  onClick={() => setDealerDialogOpen(true)}
+                >
+                  <Plus className="h-3 w-3" />
+                  New Dealer
+                </Button>
+              </div>
+
+              {dealersList.length === 0 ? (
+                <div className="text-xs text-muted-foreground italic p-2.5 rounded-lg border border-dashed bg-muted/20">
+                  No dealers registered yet. Click &ldquo;New Dealer&rdquo; to
+                  add a supplier.
+                </div>
+              ) : (
+                <div className="max-h-36 overflow-y-auto rounded-lg border border-border p-2 space-y-1.5 bg-muted/10">
+                  {dealersList.map((d) => {
+                    const isSelected = formDealerIds.includes(d.id)
+                    return (
+                      <div
+                        key={d.id}
+                        onClick={() => {
+                          setFormDealerIds((prev) =>
+                            isSelected
+                              ? prev.filter((id) => id !== d.id)
+                              : [...prev, d.id],
+                          )
+                        }}
+                        className={`flex items-center justify-between p-2 rounded-md border text-xs cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'border-amber-500/40 bg-amber-500/10 text-foreground font-medium'
+                            : 'border-transparent hover:bg-muted/60 text-muted-foreground'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => {
+                              setFormDealerIds((prev) =>
+                                isSelected
+                                  ? prev.filter((id) => id !== d.id)
+                                  : [...prev, d.id],
+                              )
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <span className="truncate">{d.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 text-[11px]">
+                          {d.pan && (
+                            <span className="font-mono text-muted-foreground">
+                              PAN: {d.pan}
+                            </span>
+                          )}
+                          <span className="text-muted-foreground">
+                            {d.city}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {formDealerIds.length > 0 && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Badge
+                    variant="secondary"
+                    className="text-[11px] py-0 px-2 h-5"
+                  >
+                    {formDealerIds.length}{' '}
+                    {formDealerIds.length === 1 ? 'dealer' : 'dealers'} selected
+                  </Badge>
+                  <span>assigned to fulfill this product</span>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-1.5 border-t border-border/60 pt-3">
               <Label className="text-xs font-medium">
                 Product Images (Neon Object Storage)
@@ -800,6 +955,46 @@ export function LiquorPanel() {
               />
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="liq-custom-badge" className="text-xs">
+                  Custom Badge Label{' '}
+                  <span className="text-muted-foreground font-normal">
+                    (optional)
+                  </span>
+                </Label>
+                <Input
+                  id="liq-custom-badge"
+                  value={formCustomBadge}
+                  onChange={(e) => setFormCustomBadge(e.target.value)}
+                  placeholder="e.g. Popular, Top Pick, Organic"
+                  className="text-xs"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Overrides default "Popular" badge on storefront &amp; cart.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="liq-custom-discount" className="text-xs">
+                  Custom Discount Label{' '}
+                  <span className="text-muted-foreground font-normal">
+                    (optional)
+                  </span>
+                </Label>
+                <Input
+                  id="liq-custom-discount"
+                  value={formCustomDiscountLabel}
+                  onChange={(e) => setFormCustomDiscountLabel(e.target.value)}
+                  placeholder="e.g. 86% off, Special Offer, Save Rs 500"
+                  className="text-xs"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Overrides auto-calculated percentage discount badge.
+                </p>
+              </div>
+            </div>
+
             <div className="flex flex-wrap items-center gap-6 border-y border-border py-3">
               <div className="flex items-center gap-2">
                 <Checkbox
@@ -838,9 +1033,15 @@ export function LiquorPanel() {
             {/* Variants */}
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
-                <Label className="text-xs">
-                  Volume variants &amp; price tiers
-                </Label>
+                <div>
+                  <Label className="text-xs">
+                    Volume variants &amp; price tiers
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground">
+                    Set selling price and optional MRP for strikethrough
+                    discount display.
+                  </p>
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
@@ -850,6 +1051,15 @@ export function LiquorPanel() {
                 >
                   <Plus className="h-3 w-3" /> Add variant
                 </Button>
+              </div>
+
+              <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-2 text-[10px] text-muted-foreground font-medium">
+                <div className="col-span-3">Variant Name</div>
+                <div className="col-span-2">Volume (ml)</div>
+                <div className="col-span-2">Price (Rs.)</div>
+                <div className="col-span-2">MRP (Rs.)</div>
+                <div className="col-span-2">Stock</div>
+                <div className="col-span-1"></div>
               </div>
 
               <div className="max-h-60 space-y-2 overflow-y-auto">
@@ -884,7 +1094,7 @@ export function LiquorPanel() {
                       />
                     </div>
 
-                    <div className="sm:col-span-3">
+                    <div className="sm:col-span-2">
                       <Input
                         type="number"
                         placeholder="Price"
@@ -895,6 +1105,24 @@ export function LiquorPanel() {
                           })
                         }
                         className="h-7 font-mono text-xs"
+                        title="Sale Price (Rs.)"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <Input
+                        type="number"
+                        placeholder="MRP"
+                        value={v.mrp ?? ''}
+                        onChange={(e) =>
+                          updateVariant(i, {
+                            mrp: e.target.value
+                              ? Number(e.target.value)
+                              : undefined,
+                          })
+                        }
+                        className="h-7 font-mono text-xs"
+                        title="Original / strike-through MRP (Rs.)"
                       />
                     </div>
 
@@ -912,7 +1140,7 @@ export function LiquorPanel() {
                       />
                     </div>
 
-                    <div className="col-span-2 flex justify-end sm:col-span-2">
+                    <div className="col-span-2 flex justify-end sm:col-span-1">
                       <Button
                         type="button"
                         variant="ghost"
@@ -990,6 +1218,17 @@ export function LiquorPanel() {
         confirmLabel="Delete Brand"
         tone="destructive"
         onConfirm={handleDeleteBrand}
+      />
+
+      {/* Dealer Dialog for Inline Create/Edit */}
+      <DealerDialog
+        open={dealerDialogOpen}
+        onOpenChange={setDealerDialogOpen}
+        onSuccess={(saved) => {
+          if (saved.id) {
+            setFormDealerIds((prev) => Array.from(new Set([...prev, saved.id])))
+          }
+        }}
       />
     </div>
   )

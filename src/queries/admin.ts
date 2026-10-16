@@ -23,6 +23,7 @@ import {
   getAllTaxonomyFn,
   getAdminBrandsFn,
 } from '#/server/catalog/catalog.functions'
+import { getAdminDealersFn } from '#/server/inventory/inventory.functions'
 
 export const adminQueries = {
   access: () =>
@@ -162,6 +163,13 @@ export const adminQueries = {
     queryOptions({
       queryKey: ['admin', 'users'],
       queryFn: () => getAdminUsersFn(),
+      staleTime: 1000 * 60 * 2,
+    }),
+
+  dealers: () =>
+    queryOptions({
+      queryKey: ['admin', 'dealers'],
+      queryFn: () => getAdminDealersFn(),
       staleTime: 1000 * 60 * 2,
     }),
 }

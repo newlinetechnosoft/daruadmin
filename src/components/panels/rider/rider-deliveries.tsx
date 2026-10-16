@@ -11,6 +11,7 @@ import { Badge } from '#/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { Package, Phone, MapPin, CheckCircle2, Truck } from 'lucide-react'
 import { toast } from 'sonner'
+import { RiderDealerPickups } from './rider-dealer-pickups'
 
 interface RiderDeliveriesProps {
   orders: Order[]
@@ -180,28 +181,38 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                   </div>
                 </CardHeader>
 
-                <CardContent className="p-4 pt-2 space-y-3">
-                  <div className="p-2.5 rounded-md bg-muted/40 border border-border space-y-1 text-xs">
-                    <div className="flex items-start gap-2 text-foreground">
-                      <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
-                      <span>
-                        {order.address}, {order.city}
-                      </span>
+                <CardContent className="p-4 pt-2 space-y-3.5">
+                  {/* Dealer Pickup Stations */}
+                  <RiderDealerPickups order={order} />
+
+                  {/* Customer Drop-off Delivery Address */}
+                  <div className="space-y-1">
+                    <div className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1">
+                      <MapPin className="h-3 w-3 text-primary" />
+                      <span>Customer Drop-off Destination:</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <a
-                        href={`tel:${order.customerPhone}`}
-                        className="font-mono text-primary hover:underline"
-                      >
-                        {order.customerPhone}
-                      </a>
-                    </div>
-                    {order.notes && (
-                      <div className="pt-1 text-[11px] text-muted-foreground italic border-t border-border mt-1">
-                        Note: {order.notes}
+                    <div className="p-2.5 rounded-md bg-muted/40 border border-border space-y-1 text-xs">
+                      <div className="flex items-start gap-2 text-foreground">
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                        <span>
+                          {order.address}, {order.city}
+                        </span>
                       </div>
-                    )}
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <a
+                          href={`tel:${order.customerPhone}`}
+                          className="font-mono text-primary hover:underline"
+                        >
+                          {order.customerPhone}
+                        </a>
+                      </div>
+                      {order.notes && (
+                        <div className="pt-1 text-[11px] text-muted-foreground italic border-t border-border mt-1">
+                          Note: {order.notes}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-1">

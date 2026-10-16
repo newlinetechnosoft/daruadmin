@@ -3,6 +3,7 @@ import { getRouteApi, useRouter } from '@tanstack/react-router'
 import {
   updateOrderFn,
   createOrderFn,
+  assignOrderItemDealerFn,
 } from '#/server/operations/operations.functions'
 import type {
   Order,
@@ -53,6 +54,8 @@ import {
   Mail,
   Receipt,
   Trash2,
+  Store,
+  MessageCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -71,7 +74,8 @@ const ORDER_STATUSES: { value: string; label: string }[] = [
 ]
 
 export function OrdersPanel() {
-  const { ops, liquor, grocery } = routeApi.useLoaderData()
+  const { ops, liquor, grocery, dealers } = routeApi.useLoaderData()
+  const dealersList = dealers
   const router = useRouter()
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -99,6 +103,7 @@ export function OrdersPanel() {
       sku: string
       qty: number
       unitPrice: number
+      dealerId?: string
     }[],
   })
 
@@ -116,7 +121,7 @@ export function OrdersPanel() {
     }[] = []
 
     for (const p of liquor) {
-      if (p.variants && p.variants.length > 0) {
+      if (p.variants.length > 0) {
         for (const v of p.variants) {
           list.push({
             id: p.id,
@@ -131,7 +136,7 @@ export function OrdersPanel() {
       }
     }
     for (const g of grocery) {
-      if (g.variants && g.variants.length > 0) {
+      if (g.variants.length > 0) {
         for (const v of g.variants) {
           list.push({
             id: g.id,
@@ -196,8 +201,14 @@ export function OrdersPanel() {
     try {
       setIsUpdating(true)
       const targetStatus = riderId
-        ? (['pending', 'confirmed', 'packing'].includes(selectedOrder?.status || '') ? 'assigned' : undefined)
-        : (selectedOrder?.status === 'assigned' ? 'packing' : undefined)
+        ? ['pending', 'confirmed', 'packing'].includes(
+            selectedOrder?.status || '',
+          )
+          ? 'assigned'
+          : undefined
+        : selectedOrder?.status === 'assigned'
+          ? 'packing'
+          : undefined
 
       await updateOrderFn({
         data: {
@@ -207,7 +218,9 @@ export function OrdersPanel() {
         },
       })
       const riderName = ops.riders.find((r) => r.id === riderId)?.name || 'None'
-      toast.success(riderId ? `Assigned to rider: ${riderName}` : 'Courier unassigned')
+      toast.success(
+        riderId ? `Assigned to rider: ${riderName}` : 'Courier unassigned',
+      )
       await router.invalidate()
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder({
@@ -218,6 +231,59 @@ export function OrdersPanel() {
       }
     } catch {
       toast.error('Failed to assign rider')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleAssignItemDealer = async (
+    orderId: string,
+    orderItemId: string,
+    dealerId: string,
+  ) => {
+    try {
+      setIsUpdating(true)
+      await assignOrderItemDealerFn({
+        data: {
+          orderId,
+          orderItemId,
+          dealerId: dealerId || null,
+        },
+      })
+      const foundDealer = dealersList.find((d: any) => d.id === dealerId)
+      toast.success(
+        dealerId
+          ? `Assigned item to ${foundDealer?.name || 'dealer'}`
+          : 'Dealer unassigned from item',
+      )
+      await router.invalidate()
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder({
+          ...selectedOrder,
+          items: selectedOrder.items.map((it) =>
+            it.id === orderItemId
+              ? {
+                  ...it,
+                  dealerId: dealerId || null,
+                  dealer: foundDealer
+                    ? {
+                        id: foundDealer.id,
+                        name: foundDealer.name,
+                        contact: foundDealer.contact,
+                        whatsappNumber: foundDealer.whatsappNumber,
+                        address: foundDealer.address,
+                        city: foundDealer.city,
+                        lat: foundDealer.lat ? Number(foundDealer.lat) : null,
+                        lng: foundDealer.lng ? Number(foundDealer.lng) : null,
+                      }
+                    : null,
+                }
+              : it,
+          ),
+        })
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update item dealer')
     } finally {
       setIsUpdating(false)
     }
@@ -290,7 +356,12 @@ export function OrdersPanel() {
             catalogType: i.catalogType,
             productId: i.productId,
             variantId: i.variantId,
+            name: i.name,
+            variantName: i.variantName,
+            sku: i.sku,
             qty: i.qty,
+            unitPrice: i.unitPrice,
+            dealerId: i.dealerId || null,
           })),
         },
       })
@@ -504,10 +575,37 @@ export function OrdersPanel() {
                             <span>{assignedRider.name}</span>
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground italic">
-                            Unassigned
+                          <span className="text-xs text-muted-foreground italic block">
+                            No Courier
                           </span>
                         )}
+                        {(() => {
+                          const assignedCount = order.items.filter(
+                            (it) => it.dealerId,
+                          ).length
+                          const totalCount = order.items.length
+                          if (totalCount === 0) return null
+                          if (assignedCount === totalCount) {
+                            return (
+                              <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">
+                                <Store className="h-3 w-3 shrink-0" />
+                                <span>
+                                  {assignedCount === 1
+                                    ? 'Dealer Assigned'
+                                    : `${assignedCount} Dealers`}
+                                </span>
+                              </div>
+                            )
+                          }
+                          return (
+                            <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-1">
+                              <Store className="h-3 w-3 shrink-0" />
+                              <span>
+                                {assignedCount}/{totalCount} Dealers
+                              </span>
+                            </div>
+                          )
+                        })()}
                       </TableCell>
 
                       <TableCell className="text-right">
@@ -659,7 +757,7 @@ export function OrdersPanel() {
                 </Card>
               </div>
 
-              {/* Items List */}
+              {/* Items List with per-item Dealer Assignment */}
               <div className="rounded-lg border border-border overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -668,6 +766,9 @@ export function OrdersPanel() {
                       <TableHead>SKU</TableHead>
                       <TableHead className="text-center">Qty</TableHead>
                       <TableHead className="text-right">Unit Price</TableHead>
+                      <TableHead className="w-[260px]">
+                        Assigned Dealer (Pickup)
+                      </TableHead>
                       <TableHead className="text-right">Total</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -691,6 +792,95 @@ export function OrdersPanel() {
                         <TableCell className="text-right font-mono">
                           {formatNPR(item.unitPrice)}
                         </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <NativeSelect
+                              value={item.dealerId || ''}
+                              onChange={(e) =>
+                                handleAssignItemDealer(
+                                  selectedOrder.id,
+                                  item.id,
+                                  e.target.value,
+                                )
+                              }
+                              disabled={isUpdating}
+                              className="text-xs h-8"
+                            >
+                              <option value="">-- No Dealer Assigned --</option>
+                              {item.availableDealers &&
+                                item.availableDealers.length > 0 && (
+                                  <optgroup label="⭐ Registered Suppliers of this Item">
+                                    {item.availableDealers.map((d) => (
+                                      <option key={d.id} value={d.id}>
+                                        ⭐ {d.name} ({d.city})
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                )}
+                              <optgroup label="Other Active Dealers">
+                                {dealersList
+                                  .filter(
+                                    (d: any) =>
+                                      d.isActive &&
+                                      !item.availableDealers?.some(
+                                        (ad) => ad.id === d.id,
+                                      ),
+                                  )
+                                  .map((d: any) => (
+                                    <option key={d.id} value={d.id}>
+                                      {d.name} ({d.city})
+                                    </option>
+                                  ))}
+                              </optgroup>
+                            </NativeSelect>
+
+                            {item.dealer ? (
+                              <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground pt-0.5">
+                                <a
+                                  href={`tel:${item.dealer.contact}`}
+                                  className="flex items-center gap-0.5 text-primary hover:underline font-mono"
+                                  title="Call dealer"
+                                >
+                                  <Phone className="h-3 w-3" />
+                                  <span>{item.dealer.contact}</span>
+                                </a>
+                                {(item.dealer.whatsappNumber ||
+                                  item.dealer.contact) && (
+                                  <a
+                                    href={`https://wa.me/${(item.dealer.whatsappNumber || item.dealer.contact).replace(/[^0-9]/g, '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400 hover:underline"
+                                    title="WhatsApp dealer"
+                                  >
+                                    <MessageCircle className="h-3 w-3" />
+                                    <span>WhatsApp</span>
+                                  </a>
+                                )}
+                                <a
+                                  href={
+                                    item.dealer.lat && item.dealer.lng
+                                      ? `https://www.google.com/maps/search/?api=1&query=${item.dealer.lat},${item.dealer.lng}`
+                                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${item.dealer.name}, ${item.dealer.address}, ${item.dealer.city}`)}`
+                                  }
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400 hover:underline"
+                                  title="Dealer Map Location"
+                                >
+                                  <MapPin className="h-3 w-3" />
+                                  <span className="truncate max-w-[90px]">
+                                    {item.dealer.address}
+                                  </span>
+                                </a>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-amber-600 dark:text-amber-400 block">
+                                ⚠️ Needs dealer for rider pickup
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-right font-mono font-semibold text-foreground">
                           {formatNPR(item.lineTotal)}
                         </TableCell>
@@ -698,6 +888,147 @@ export function OrdersPanel() {
                     ))}
                   </TableBody>
                 </Table>
+              </div>
+
+              {/* Dealer Fulfillment & Pickup Stations Summary */}
+              <div className="rounded-lg border border-border bg-card p-3 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                      <Store className="h-3.5 w-3.5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-semibold text-foreground">
+                        Dealer Pickup Stations (Rider Route)
+                      </h4>
+                      <p className="text-[10px] text-muted-foreground">
+                        Rider collects items from these stations before
+                        delivering to customer
+                      </p>
+                    </div>
+                  </div>
+                  <Badge
+                    variant={
+                      selectedOrder.items.every((it) => it.dealerId)
+                        ? 'secondary'
+                        : 'outline'
+                    }
+                    className="text-[10px]"
+                  >
+                    {selectedOrder.items.filter((it) => it.dealerId).length} /{' '}
+                    {selectedOrder.items.length} Items Assigned
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {/* Group items by dealer */}
+                  {Array.from(
+                    selectedOrder.items
+                      .reduce((map, item) => {
+                        if (item.dealer) {
+                          const existing = map.get(item.dealer.id) || {
+                            dealer: item.dealer,
+                            items: [],
+                          }
+                          existing.items.push(item)
+                          map.set(item.dealer.id, existing)
+                        }
+                        return map
+                      }, new Map<string, { dealer: any; items: typeof selectedOrder.items }>())
+                      .values(),
+                  ).map(({ dealer, items }) => (
+                    <div
+                      key={dealer.id}
+                      className="rounded-md border border-amber-500/20 bg-amber-500/5 p-2.5 space-y-1.5 text-xs"
+                    >
+                      <div className="flex items-start justify-between gap-1.5">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-foreground flex items-center gap-1">
+                            <Store className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                            <span className="truncate">{dealer.name}</span>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            <span className="truncate">
+                              {dealer.address}, {dealer.city}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            asChild
+                            className="h-6 px-1.5 text-[10px]"
+                          >
+                            <a href={`tel:${dealer.contact}`}>
+                              <Phone className="h-2.5 w-2.5 mr-0.5 text-primary" />
+                              Call
+                            </a>
+                          </Button>
+                          {(dealer.whatsappNumber || dealer.contact) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              asChild
+                              className="h-6 px-1.5 text-[10px] text-emerald-600 dark:text-emerald-400"
+                            >
+                              <a
+                                href={`https://wa.me/${(dealer.whatsappNumber || dealer.contact).replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <MessageCircle className="h-2.5 w-2.5 mr-0.5" />
+                                WA
+                              </a>
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            asChild
+                            className="h-6 px-1.5 text-[10px] text-amber-600 dark:text-amber-400"
+                          >
+                            <a
+                              href={
+                                dealer.lat && dealer.lng
+                                  ? `https://www.google.com/maps/search/?api=1&query=${dealer.lat},${dealer.lng}`
+                                  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${dealer.name}, ${dealer.address}, ${dealer.city}`)}`
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <MapPin className="h-2.5 w-2.5 mr-0.5" />
+                              Map
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground pt-1 border-t border-border/50">
+                        <strong>Items:</strong>{' '}
+                        {items.map((it) => `${it.qty}x ${it.name}`).join(', ')}
+                      </div>
+                    </div>
+                  ))}
+
+                  {selectedOrder.items.some((it) => !it.dealerId) && (
+                    <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 space-y-1 text-xs">
+                      <div className="font-semibold text-amber-800 dark:text-amber-400 flex items-center gap-1">
+                        <span>⚠️ Unassigned Items</span>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {selectedOrder.items
+                          .filter((it) => !it.dealerId)
+                          .map((it) => `${it.qty}x ${it.name}`)
+                          .join(', ')}
+                      </div>
+                      <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                        Assign dealers in the items table so rider has complete
+                        pickup instructions.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Price Calculation Summary */}
@@ -1074,6 +1405,7 @@ export function OrdersPanel() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Item</TableHead>
+                        <TableHead className="w-[180px]">Dealer</TableHead>
                         <TableHead className="text-center">Qty</TableHead>
                         <TableHead className="text-right">Price</TableHead>
                         <TableHead className="text-right">Action</TableHead>
@@ -1084,6 +1416,32 @@ export function OrdersPanel() {
                         <TableRow key={`${it.productId}-${it.variantId}`}>
                           <TableCell className="font-medium text-foreground">
                             {it.name} ({it.variantName})
+                          </TableCell>
+                          <TableCell>
+                            <NativeSelect
+                              value={it.dealerId || ''}
+                              onChange={(e) =>
+                                setOrderForm((prev) => ({
+                                  ...prev,
+                                  items: prev.items.map((x) =>
+                                    x.productId === it.productId &&
+                                    x.variantId === it.variantId
+                                      ? { ...x, dealerId: e.target.value }
+                                      : x,
+                                  ),
+                                }))
+                              }
+                              className="text-xs h-7"
+                            >
+                              <option value="">No Dealer</option>
+                              {dealersList
+                                .filter((d: any) => d.isActive)
+                                .map((d: any) => (
+                                  <option key={d.id} value={d.id}>
+                                    {d.name} ({d.city})
+                                  </option>
+                                ))}
+                            </NativeSelect>
                           </TableCell>
                           <TableCell className="text-center font-semibold">
                             {it.qty}

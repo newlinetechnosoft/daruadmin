@@ -38,7 +38,9 @@ import {
 import {
   getAllOrdersQuery,
   getOrderByIdQuery,
+  assignOrderItemDealerQuery,
 } from '#/server/orders/order.queries'
+import { getAllDealersQuery } from '#/server/inventory/inventory.queries'
 import {
   getAllRidersQuery,
   getRiderByIdQuery,
@@ -446,7 +448,7 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
 export const getOrdersFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('orders', 'view')
-    const [orderList, riderList, users, liquor, grocery, settings] =
+    const [orderList, riderList, users, liquor, grocery, settings, dealerList] =
       await Promise.all([
         getAllOrdersQuery(),
         getAllRidersQuery(),
@@ -454,15 +456,18 @@ export const getOrdersFn = createServerFn({ method: 'GET' }).handler(
         getAdminLiquorProductsQuery(),
         getAdminGroceryProductsQuery(),
         getStoreSettingsQuery(),
+        getAllDealersQuery(),
       ])
     return {
       ops: {
         orders: orderList,
         riders: riderList,
+        dealers: dealerList,
         settings,
       },
       orders: orderList,
       riders: riderList,
+      dealers: dealerList,
       users,
       liquor,
       grocery,
@@ -474,26 +479,43 @@ export const getOrdersFn = createServerFn({ method: 'GET' }).handler(
 export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('accounts', 'view')
-    const [ledger, settlementsList, riderList, settings, users] =
-      await Promise.all([
-        getAllLedgerEntriesQuery(),
-        getAllSettlementsQuery(),
-        getAllRidersQuery(),
-        getStoreSettingsQuery(),
-        getAdminUsersQuery(),
-      ])
+    const [
+      ledger,
+      settlementsList,
+      riderList,
+      settings,
+      users,
+      paymentsList,
+      dealersList,
+      ordersList,
+    ] = await Promise.all([
+      getAllLedgerEntriesQuery(),
+      getAllSettlementsQuery(),
+      getAllRidersQuery(),
+      getStoreSettingsQuery(),
+      getAdminUsersQuery(),
+      getAllPaymentsQuery(),
+      getAllDealersQuery(),
+      getAllOrdersQuery(),
+    ])
     return {
       ops: {
         ledger,
         settlements: settlementsList,
         riders: riderList,
         settings,
+        payments: paymentsList,
+        dealers: dealersList,
+        orders: ordersList,
       },
       ledger,
       settlements: settlementsList,
       riders: riderList,
       settings,
       users,
+      payments: paymentsList,
+      dealers: dealersList,
+      orders: ordersList,
     }
   },
 )
@@ -789,6 +811,14 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
         riderId: z.string().nullable().optional(),
         paymentStatus: z.string().optional(),
         notes: z.string().optional(),
+        itemDealers: z
+          .array(
+            z.object({
+              itemId: z.string(),
+              dealerId: z.string().nullable(),
+            }),
+          )
+          .optional(),
       })
       .parse(d),
   )
@@ -803,7 +833,10 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
       if (data.riderId !== undefined) {
         updates.riderId = data.riderId
         if (data.riderId && data.riderId !== order.riderId) {
-          if (!data.status && ['pending', 'confirmed', 'packing'].includes(order.status)) {
+          if (
+            !data.status &&
+            ['pending', 'confirmed', 'packing'].includes(order.status)
+          ) {
             updates.status = 'assigned'
           }
         } else if (data.riderId === null && order.riderId) {
@@ -816,6 +849,20 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
       if (data.notes !== undefined) updates.notes = data.notes
 
       await tx.update(orders).set(updates).where(eq(orders.id, data.id))
+
+      if (data.itemDealers && data.itemDealers.length > 0) {
+        for (const itemD of data.itemDealers) {
+          await tx
+            .update(orderItems)
+            .set({ dealerId: itemD.dealerId || null })
+            .where(
+              and(
+                eq(orderItems.id, itemD.itemId),
+                eq(orderItems.orderId, data.id),
+              ),
+            )
+        }
+      }
 
       const finalStatus = updates.status || data.status
       if (finalStatus && finalStatus !== order.status) {
@@ -855,6 +902,33 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
     return true
   })
 
+export const assignOrderItemDealerFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        orderId: z.string(),
+        orderItemId: z.string(),
+        dealerId: z.string().nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('orders', 'edit')
+    const order = await getOrderByIdQuery(data.orderId)
+    if (!order) throw new Error('Order not found')
+
+    await assignOrderItemDealerQuery(data.orderItemId, data.dealerId)
+
+    await logAudit(
+      user.name,
+      'orders',
+      'edit',
+      `Assigned dealer ${data.dealerId || 'none'} to item ${data.orderItemId} on order ${order.number}`,
+    )
+
+    return { success: true }
+  })
+
 export const createOrderFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>
     z
@@ -879,6 +953,7 @@ export const createOrderFn = createServerFn({ method: 'POST' })
               sku: z.string(),
               qty: z.number().int().positive(),
               unitPrice: z.number().int().nonnegative(),
+              dealerId: z.string().nullable().optional(),
             }),
           )
           .min(1),
@@ -937,6 +1012,7 @@ export const createOrderFn = createServerFn({ method: 'POST' })
           qty: item.qty,
           unitPrice: item.unitPrice,
           lineTotal: item.unitPrice * item.qty,
+          dealerId: item.dealerId || null,
         })
 
         if (item.catalogType === 'liquor') {
@@ -1070,7 +1146,7 @@ export const upsertRiderFn = createServerFn({ method: 'POST' })
             },
           },
         })
-        assignedUserId = created?.user?.id ?? null
+        assignedUserId = created.user.id
       }
     }
 
@@ -1165,7 +1241,7 @@ export const createStaffUserFn = createServerFn({ method: 'POST' })
       },
     })
 
-    const newUserId = created?.user?.id
+    const newUserId = created.user.id
     if (!newUserId) {
       throw new Error('Failed to create staff account')
     }
@@ -1179,10 +1255,10 @@ export const createStaffUserFn = createServerFn({ method: 'POST' })
         name: data.name.trim(),
         email: normalizedEmail,
         phone: data.phone.trim(),
-        vehicle: data.vehicle || 'bike',
+        vehicle: data.vehicle,
         licenseNo: data.licenseNo || 'BA-2-PA-1001',
         zone: data.zone || 'Kathmandu Core',
-        commissionRate: data.commissionRate ?? 10,
+        commissionRate: data.commissionRate,
         available: true,
         status: 'available',
         verified: true,
@@ -1205,7 +1281,6 @@ export const createStaffUserFn = createServerFn({ method: 'POST' })
 
     return { success: true, userId: newUserId }
   })
-
 
 export const updateRiderLiveFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>
@@ -1252,12 +1327,14 @@ export const addLedgerFn = createServerFn({ method: 'POST' })
           'tax',
           'delivery',
           'other',
+          'salary',
+          'dealer_payment',
         ]),
         account: z.string().min(2),
         memo: z.string().min(2),
         amount: z.number().int().positive(),
         refType: z
-          .enum(['order', 'settlement', 'manual', 'refund'])
+          .enum(['order', 'settlement', 'manual', 'refund', 'dealer', 'salary'])
           .default('manual'),
         refId: z.string().nullable().optional(),
         date: z.string().optional(),
@@ -1463,17 +1540,16 @@ export const savePermissionsFn = createServerFn({ method: 'POST' })
       }
     }
 
-    const permissionsToSave = { ...data.permissions }
-    if (!permissionsToSave.products) {
-      permissionsToSave.products = Array.from(
-        new Set([
-          ...(permissionsToSave.liquor || []),
-          ...(permissionsToSave.grocery || []),
-          ...(permissionsToSave.categories || []),
-          ...(permissionsToSave.inventory || []),
-        ]),
-      )
-    }
+    const permissionsToSave: Record<string, string[]> = { ...data.permissions }
+    permissionsToSave.products = Array.from(
+      new Set([
+        ...data.permissions.liquor,
+        ...data.permissions.grocery,
+        ...data.permissions.categories,
+        ...data.permissions.inventory,
+        ...data.permissions.dealers,
+      ]),
+    )
 
     await saveUserPermissionsQuery(data.userId, permissionsToSave)
     await logAudit(

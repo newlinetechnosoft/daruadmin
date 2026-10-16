@@ -1,3 +1,5 @@
+import type { DealerDto } from '#/server/inventory/inventory.queries'
+
 export const MODULES = [
   'dashboard',
   'liquor',
@@ -8,6 +10,7 @@ export const MODULES = [
   'orders',
   'customers',
   'inventory',
+  'dealers',
   'riders',
   'staff',
   'users',
@@ -21,12 +24,7 @@ export const MODULES = [
 
 export type ModuleKey = (typeof MODULES)[number]
 export type ActionKey =
-  | 'view'
-  | 'create'
-  | 'edit'
-  | 'delete'
-  | 'export'
-  | 'approve'
+  'view' | 'create' | 'edit' | 'delete' | 'export' | 'approve'
 
 export const ACTIONS: ActionKey[] = [
   'view',
@@ -66,8 +64,7 @@ export const PERMISSION_SECTIONS: PermissionSection[] = [
   },
   {
     name: 'Catalog',
-    description:
-      'Products, categories, brands, variants, and liquor metadata',
+    description: 'Products, categories, brands, variants, and liquor metadata',
     modules: [
       {
         key: 'liquor',
@@ -86,8 +83,7 @@ export const PERMISSION_SECTIONS: PermissionSection[] = [
       {
         key: 'categories',
         label: 'Categories',
-        description:
-          'Create and configure liquor and grocery item categories',
+        description: 'Create and configure liquor and grocery item categories',
         section: 'Catalog',
       },
       {
@@ -123,6 +119,13 @@ export const PERMISSION_SECTIONS: PermissionSection[] = [
         label: 'Inventory',
         description:
           'Real-time stock on hand, restock purchasing, and low-stock alerts',
+        section: 'Commerce',
+      },
+      {
+        key: 'dealers',
+        label: 'Dealers',
+        description:
+          'Supplier profiles, PAN/VAT records, contact numbers, and catalog item assignments',
         section: 'Commerce',
       },
     ],
@@ -232,6 +235,18 @@ export type OrderStatus =
 export type PaymentMethod =
   'cod' | 'esewa' | 'khalti' | 'fonepay' | 'connectips'
 
+export interface OrderItemDealerInfo {
+  id: string
+  name: string
+  pan?: string | null
+  contact: string
+  whatsappNumber?: string | null
+  address: string
+  city: string
+  lat?: number | null
+  lng?: number | null
+}
+
 export interface OrderItem {
   id: string
   catalogType: 'liquor' | 'grocery'
@@ -243,6 +258,9 @@ export interface OrderItem {
   qty: number
   unitPrice: number
   lineTotal: number
+  dealerId?: string | null
+  dealer?: OrderItemDealerInfo | null
+  availableDealers?: OrderItemDealerInfo[]
 }
 
 export interface OrderEvent {
@@ -331,10 +349,12 @@ export interface LedgerEntry {
     | 'tax'
     | 'delivery'
     | 'other'
+    | 'salary'
+    | 'dealer_payment'
   account: string
   memo: string
   amount: number
-  refType: 'order' | 'settlement' | 'manual' | 'refund'
+  refType: 'order' | 'settlement' | 'manual' | 'refund' | 'dealer' | 'salary'
   refId: string | null
   createdAt: string
 }
@@ -462,6 +482,7 @@ export type PermissionMap = Record<
 export interface OpsState {
   orders: Order[]
   riders: Rider[]
+  dealers?: DealerDto[]
   complaints: Complaint[]
   ledger: LedgerEntry[]
   settlements: Settlement[]

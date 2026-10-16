@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   Sheet,
   SheetContent,
@@ -7,6 +8,7 @@ import {
 } from '#/components/ui/sheet'
 import { Separator } from '#/components/ui/separator'
 import { Button } from '#/components/ui/button'
+import { Badge } from '#/components/ui/badge'
 import { Progress } from '#/components/ui/progress'
 import { useCart } from '#/lib/cart-context'
 import { useNavigate } from '@tanstack/react-router'
@@ -35,6 +37,15 @@ export function CartSheet() {
     clearCart,
   } = useCart()
   const navigate = useNavigate()
+
+  const totalSavingsPaisa = useMemo(() => {
+    return items.reduce((sum, item) => {
+      if (item.mrp && item.mrp > item.price) {
+        return sum + (item.mrp - item.price) * item.quantity
+      }
+      return sum
+    }, 0)
+  }, [items])
 
   const freeDeliveryProgress = Math.min(
     100,
@@ -123,81 +134,118 @@ export function CartSheet() {
             </div>
           ) : (
             <div className="space-y-3">
-              {items.map((item) => (
-                <div
-                  key={item.variantId}
-                  className="flex gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20"
-                >
-                  {item.imageUrl ? (
-                    <img
-                      src={item.imageUrl}
-                      alt={item.productName}
-                      className="h-14 w-14 rounded-md object-contain bg-muted/30 p-1 shrink-0"
-                    />
-                  ) : (
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-muted/30 text-muted-foreground">
-                      <Package className="h-6 w-6" />
-                    </div>
-                  )}
+              {items.map((item) => {
+                const discountPercent =
+                  item.mrp && item.mrp > item.price
+                    ? Math.round(((item.mrp - item.price) / item.mrp) * 100)
+                    : null
+                const discountLabel =
+                  item.customDiscountLabel?.trim() ||
+                  (discountPercent ? `${discountPercent}% off` : null)
+                const badgeLabel = item.customBadge?.trim() || null
 
-                  <div className="flex flex-1 flex-col justify-between">
-                    <div>
-                      <div className="flex items-start justify-between gap-1">
-                        <h4 className="line-clamp-1 text-xs font-semibold text-foreground">
-                          {item.productName}
-                        </h4>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeItem(item.variantId)}
-                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                          title="Remove item"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                return (
+                  <div
+                    key={item.variantId}
+                    className="flex gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20"
+                  >
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.productName}
+                        className="h-14 w-14 rounded-md object-contain bg-muted/30 p-1 shrink-0"
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-muted/30 text-muted-foreground">
+                        <Package className="h-6 w-6" />
                       </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        {item.variantName}
-                      </p>
-                    </div>
+                    )}
 
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="font-semibold text-xs text-foreground font-mono">
-                        {formatNPR(item.price * item.quantity)}
-                      </span>
+                    <div className="flex flex-1 flex-col justify-between">
+                      <div>
+                        <div className="flex items-start justify-between gap-1">
+                          <h4 className="line-clamp-1 text-xs font-semibold text-foreground">
+                            {item.productName}
+                          </h4>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeItem(item.variantId)}
+                            className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0 cursor-pointer"
+                            title="Remove item"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
 
-                      <div className="flex items-center gap-1 rounded-md border border-border bg-muted/30 px-1.5 py-0.5">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            updateQuantity(item.variantId, item.quantity - 1)
-                          }
-                          className="h-5 w-5 text-muted-foreground hover:text-foreground"
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="min-w-4 text-center text-xs font-semibold text-foreground font-mono">
-                          {item.quantity}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            updateQuantity(item.variantId, item.quantity + 1)
-                          }
-                          className="h-5 w-5 text-muted-foreground hover:text-foreground"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                          <span className="text-[11px] text-muted-foreground">
+                            {item.variantName}
+                          </span>
+                          {badgeLabel && (
+                            <Badge
+                              variant="default"
+                              className="text-[9px] px-1.5 py-0 h-4 font-medium leading-none"
+                            >
+                              {badgeLabel}
+                            </Badge>
+                          )}
+                          {discountLabel && (
+                            <Badge
+                              variant="secondary"
+                              className="text-[9px] px-1.5 py-0 h-4 font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 leading-none"
+                            >
+                              {discountLabel}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <div className="flex items-baseline gap-1.5 flex-wrap">
+                          <span className="font-semibold text-xs text-foreground font-mono">
+                            {formatNPR(item.price * item.quantity)}
+                          </span>
+                          {item.mrp && item.mrp > item.price && (
+                            <span className="text-[11px] text-muted-foreground line-through font-mono">
+                              {formatNPR(item.mrp * item.quantity)}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1 rounded-md border border-border bg-muted/30 px-1.5 py-0.5 shrink-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              updateQuantity(item.variantId, item.quantity - 1)
+                            }
+                            className="h-5 w-5 text-muted-foreground hover:text-foreground cursor-pointer"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="min-w-4 text-center text-xs font-semibold text-foreground font-mono">
+                            {item.quantity}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              updateQuantity(item.variantId, item.quantity + 1)
+                            }
+                            className="h-5 w-5 text-muted-foreground hover:text-foreground cursor-pointer"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
@@ -206,6 +254,12 @@ export function CartSheet() {
         {items.length > 0 && (
           <SheetFooter className="border-t border-border bg-muted/20 p-4">
             <div className="w-full space-y-3">
+              {totalSavingsPaisa > 0 && (
+                <div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 text-center text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  🎉 You are saving {formatNPR(totalSavingsPaisa)} on this order!
+                </div>
+              )}
+
               <div className="space-y-1.5 text-xs text-muted-foreground">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
@@ -213,6 +267,14 @@ export function CartSheet() {
                     {formatNPR(totalPaisa)}
                   </span>
                 </div>
+                {totalSavingsPaisa > 0 && (
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
+                    <span>Total savings</span>
+                    <span className="font-semibold font-mono">
+                      -{formatNPR(totalSavingsPaisa)}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span>Kathmandu Valley 40m delivery</span>
                   <span className="font-medium text-foreground font-mono">

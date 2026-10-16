@@ -9,6 +9,8 @@ import {
   groceryProducts,
   groceryVariants,
   groceryImages,
+  dealers,
+  dealerItems,
   user,
 } from './schema'
 import { eq } from 'drizzle-orm'
@@ -1890,6 +1892,87 @@ export async function seed() {
             stock: v.stock,
           },
         })
+    }
+  }
+
+  // 6. Dealers & Suppliers
+  console.log('🏪 Seeding dealers...')
+  const sampleDealers = [
+    {
+      id: 'dealer-bagmati-01',
+      name: 'Bagmati Beverage & Wholesale Suppliers',
+      pan: '601928475',
+      contact: '+977-9841234567',
+      whatsappNumber: '+977-9841234567',
+      address: 'Tripureshwor, Ward 11',
+      city: 'Kathmandu',
+      isActive: true,
+    },
+    {
+      id: 'dealer-himalayan-02',
+      name: 'Himalayan Spirits & Grocery Distribution',
+      pan: '602384910',
+      contact: '+977-9801827364',
+      whatsappNumber: '+977-9801827364',
+      address: 'Naxal Bhagwati, Ward 1',
+      city: 'Kathmandu',
+      isActive: true,
+    },
+    {
+      id: 'dealer-lalitpur-03',
+      name: 'Lalitpur Mart & Trade Hub',
+      pan: '603492817',
+      contact: '+977-9813948271',
+      whatsappNumber: '+977-9813948271',
+      address: 'Kumaripati, Ward 5',
+      city: 'Lalitpur',
+      isActive: true,
+    },
+  ]
+
+  for (const d of sampleDealers) {
+    await db
+      .insert(dealers)
+      .values(d)
+      .onConflictDoUpdate({
+        target: dealers.id,
+        set: {
+          name: d.name,
+          pan: d.pan,
+          contact: d.contact,
+          whatsappNumber: d.whatsappNumber,
+          address: d.address,
+          city: d.city,
+          isActive: d.isActive,
+        },
+      })
+  }
+
+  const allLiquor = await db
+    .select({ id: liquorProducts.id })
+    .from(liquorProducts)
+    .limit(3)
+  if (allLiquor.length > 0) {
+    await db
+      .insert(dealerItems)
+      .values({
+        id: 'di-seed-01',
+        dealerId: 'dealer-bagmati-01',
+        catalogType: 'liquor',
+        productId: allLiquor[0].id,
+      })
+      .onConflictDoNothing()
+
+    if (allLiquor[1]) {
+      await db
+        .insert(dealerItems)
+        .values({
+          id: 'di-seed-02',
+          dealerId: 'dealer-himalayan-02',
+          catalogType: 'liquor',
+          productId: allLiquor[1].id,
+        })
+        .onConflictDoNothing()
     }
   }
 

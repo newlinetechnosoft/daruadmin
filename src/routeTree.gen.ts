@@ -22,6 +22,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAccountsRouteImport } from './routes/admin/accounts'
 import { Route as AdminBrandsRouteImport } from './routes/admin/brands'
 import { Route as AdminCustomersRouteImport } from './routes/admin/customers'
+import { Route as AdminDealersRouteImport } from './routes/admin/dealers'
 import { Route as AdminForbiddenRouteImport } from './routes/admin/forbidden'
 import { Route as AdminGroceryRouteImport } from './routes/admin/grocery'
 import { Route as AdminInventoryRouteImport } from './routes/admin/inventory'
@@ -109,6 +110,11 @@ const AdminBrandsRoute = AdminBrandsRouteImport.update({
 const AdminCustomersRoute = AdminCustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminDealersRoute = AdminDealersRouteImport.update({
+  id: '/dealers',
+  path: '/dealers',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminForbiddenRoute = AdminForbiddenRouteImport.update({
@@ -243,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/dealers': typeof AdminDealersRoute
   '/admin/forbidden': typeof AdminForbiddenRoute
   '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
@@ -279,6 +286,7 @@ export interface FileRoutesByTo {
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/dealers': typeof AdminDealersRoute
   '/admin/forbidden': typeof AdminForbiddenRoute
   '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
@@ -318,6 +326,7 @@ export interface FileRoutesById {
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/dealers': typeof AdminDealersRoute
   '/admin/forbidden': typeof AdminForbiddenRoute
   '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
@@ -358,6 +367,7 @@ export interface FileRouteTypes {
     | '/admin/accounts'
     | '/admin/brands'
     | '/admin/customers'
+    | '/admin/dealers'
     | '/admin/forbidden'
     | '/admin/grocery'
     | '/admin/inventory'
@@ -394,6 +404,7 @@ export interface FileRouteTypes {
     | '/admin/accounts'
     | '/admin/brands'
     | '/admin/customers'
+    | '/admin/dealers'
     | '/admin/forbidden'
     | '/admin/grocery'
     | '/admin/inventory'
@@ -432,6 +443,7 @@ export interface FileRouteTypes {
     | '/admin/accounts'
     | '/admin/brands'
     | '/admin/customers'
+    | '/admin/dealers'
     | '/admin/forbidden'
     | '/admin/grocery'
     | '/admin/inventory'
@@ -564,6 +576,13 @@ declare module '@tanstack/react-router' {
       path: '/customers'
       fullPath: '/admin/customers'
       preLoaderRoute: typeof AdminCustomersRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/dealers': {
+      id: '/admin/dealers'
+      path: '/dealers'
+      fullPath: '/admin/dealers'
+      preLoaderRoute: typeof AdminDealersRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/forbidden': {
@@ -734,6 +753,7 @@ interface AdminRouteRouteChildren {
   AdminAccountsRoute: typeof AdminAccountsRoute
   AdminBrandsRoute: typeof AdminBrandsRoute
   AdminCustomersRoute: typeof AdminCustomersRoute
+  AdminDealersRoute: typeof AdminDealersRoute
   AdminForbiddenRoute: typeof AdminForbiddenRoute
   AdminGroceryRoute: typeof AdminGroceryRoute
   AdminInventoryRoute: typeof AdminInventoryRoute
@@ -755,6 +775,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAccountsRoute: AdminAccountsRoute,
   AdminBrandsRoute: AdminBrandsRoute,
   AdminCustomersRoute: AdminCustomersRoute,
+  AdminDealersRoute: AdminDealersRoute,
   AdminForbiddenRoute: AdminForbiddenRoute,
   AdminGroceryRoute: AdminGroceryRoute,
   AdminInventoryRoute: AdminInventoryRoute,

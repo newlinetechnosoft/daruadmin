@@ -8,6 +8,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  uuid,
 } from 'drizzle-orm/pg-core'
 
 export const dealers = pgTable(
@@ -16,6 +17,7 @@ export const dealers = pgTable(
     id: text('id').primaryKey(),
     name: text('name').notNull(),
     contact: text('contact').notNull(),
+    whatsappNumber: text('whatsapp_number'),
     pan: text('pan'),
     address: text('address').notNull(),
     city: text('city').notNull().default('Kathmandu'),
@@ -31,6 +33,30 @@ export const dealers = pgTable(
       .notNull(),
   },
   (table) => [index('dealers_is_active_idx').on(table.isActive)],
+)
+
+export const dealerItems = pgTable(
+  'dealer_items',
+  {
+    id: text('id').primaryKey(),
+    dealerId: text('dealer_id')
+      .notNull()
+      .references(() => dealers.id, { onDelete: 'cascade' }),
+    catalogType: text('catalog_type').notNull(), // 'liquor' | 'grocery'
+    productId: uuid('product_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('dealer_items_dealer_id_idx').on(table.dealerId),
+    index('dealer_items_product_idx').on(table.catalogType, table.productId),
+    uniqueIndex('dealer_items_unique_idx').on(
+      table.dealerId,
+      table.catalogType,
+      table.productId,
+    ),
+  ],
 )
 
 export const dealerStock = pgTable(
@@ -88,7 +114,15 @@ export const stockMovements = pgTable(
 
 export const dealersRelations = relations(dealers, ({ many }) => ({
   stock: many(dealerStock),
+  items: many(dealerItems),
   movements: many(stockMovements),
+}))
+
+export const dealerItemsRelations = relations(dealerItems, ({ one }) => ({
+  dealer: one(dealers, {
+    fields: [dealerItems.dealerId],
+    references: [dealers.id],
+  }),
 }))
 
 export const dealerStockRelations = relations(dealerStock, ({ one }) => ({

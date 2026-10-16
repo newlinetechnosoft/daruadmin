@@ -41,7 +41,10 @@ export const upsertLiquorProductSchema = z.object({
     )
     .optional(),
   isFeatured: z.boolean().default(false),
+  customBadge: z.string().optional().nullable(),
+  customDiscountLabel: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
+  dealerIds: z.array(z.string()).optional(),
   variants: z
     .array(
       z.object({
@@ -79,7 +82,10 @@ export const upsertGroceryProductSchema = z.object({
     )
     .optional(),
   isFeatured: z.boolean().default(false),
+  customBadge: z.string().optional().nullable(),
+  customDiscountLabel: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
+  dealerIds: z.array(z.string()).optional(),
   variants: z
     .array(
       z.object({
@@ -134,8 +140,9 @@ export const deleteItemSchema = z.object({
     'grocery-category',
     'liquor-brand',
     'grocery-brand',
+    'dealer',
   ]),
-  id: z.string().uuid(),
+  id: z.string(),
 })
 
 export const deleteProductImageSchema = z.object({
@@ -163,4 +170,3 @@ export type UpsertBrandInput = z.infer<typeof upsertBrandSchema>
 export type DeleteItemInput = z.infer<typeof deleteItemSchema>
 export type DeleteProductImageInput = z.infer<typeof deleteProductImageSchema>
 export type CreateImageUploadInput = z.infer<typeof createImageUploadSchema>
-

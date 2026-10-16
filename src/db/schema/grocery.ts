@@ -66,6 +66,8 @@ export const groceryProducts = pgTable(
     }),
     description: text('description'),
     isFeatured: boolean('is_featured').default(false).notNull(),
+    customBadge: text('custom_badge'),
+    customDiscountLabel: text('custom_discount_label'),
     isActive: boolean('is_active').default(true).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()

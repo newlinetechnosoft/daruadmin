@@ -40,6 +40,7 @@ import {
   ClipboardList,
   Check,
   Award,
+  Store,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -84,6 +85,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
@@ -97,9 +101,7 @@ import { ThemeToggle } from '#/components/shared/theme-toggle'
 
 export const Route = createFileRoute('/admin')({
   beforeLoad: async ({ location, context }) => {
-    const access = await context.queryClient.fetchQuery(
-      adminQueries.access(),
-    )
+    const access = await context.queryClient.fetchQuery(adminQueries.access())
     if (!access.authenticated) {
       throw redirect({
         to: '/login',
@@ -130,12 +132,19 @@ export const Route = createFileRoute('/admin')({
   component: AdminLayout,
 })
 
+type NavSubItem = {
+  label: string
+  to: string
+  search?: Record<string, string>
+}
+
 type NavItem = {
   label: string
   to: string
   exact?: boolean
   icon: LucideIcon
   module: ModuleKey
+  subItems?: NavSubItem[]
 }
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
@@ -196,6 +205,12 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         icon: Package,
         module: 'inventory',
       },
+      {
+        label: 'Dealers',
+        to: '/admin/dealers',
+        icon: Store,
+        module: 'dealers',
+      },
     ],
   },
   {
@@ -220,6 +235,33 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         to: '/admin/accounts',
         icon: Wallet,
         module: 'accounts',
+        subItems: [
+          {
+            label: 'Ledger',
+            to: '/admin/accounts',
+            search: { tab: 'ledger' },
+          },
+          {
+            label: 'Transaction',
+            to: '/admin/accounts',
+            search: { tab: 'transactions' },
+          },
+          {
+            label: 'Dealer Ledger',
+            to: '/admin/accounts',
+            search: { tab: 'dealer-ledger' },
+          },
+          {
+            label: 'Sales Account',
+            to: '/admin/accounts',
+            search: { tab: 'sales-account' },
+          },
+          {
+            label: 'Salary Account',
+            to: '/admin/accounts',
+            search: { tab: 'salary-account' },
+          },
+        ],
       },
       {
         label: 'Payments',
@@ -410,6 +452,36 @@ function AdminLayout() {
                               <span>{item.label}</span>
                             </Link>
                           </SidebarMenuButton>
+                          {item.subItems &&
+                            item.subItems.length > 0 &&
+                            active && (
+                              <SidebarMenuSub className="my-1 ml-3 border-l border-border/60 pl-2">
+                                {item.subItems.map((sub) => {
+                                  const currentTab =
+                                    (routerState.location.search as any)?.tab ||
+                                    'ledger'
+                                  const isSubActive =
+                                    currentPath === sub.to &&
+                                    (sub.search?.tab === currentTab ||
+                                      (!sub.search?.tab &&
+                                        currentTab === 'ledger'))
+                                  return (
+                                    <SidebarMenuSubItem key={sub.label}>
+                                      <SidebarMenuSubButton
+                                        asChild
+                                        isActive={isSubActive}
+                                        size="sm"
+                                        className="h-6 py-0.5 text-[11px]"
+                                      >
+                                        <Link to={sub.to} search={sub.search}>
+                                          <span>{sub.label}</span>
+                                        </Link>
+                                      </SidebarMenuSubButton>
+                                    </SidebarMenuSubItem>
+                                  )
+                                })}
+                              </SidebarMenuSub>
+                            )}
                         </SidebarMenuItem>
                       )
                     })}

@@ -373,7 +373,11 @@ export const deleteProductImageFn = createServerFn({ method: 'POST' })
     const { deleteProductImageQuery } = await import('./catalog.queries')
     await deleteProductImageQuery(data.catalogType, data.imageId)
 
-    if (data.imageUrl && (data.imageUrl.includes('.storage.') || data.imageUrl.includes('/assets/'))) {
+    if (
+      data.imageUrl &&
+      (data.imageUrl.includes('.storage.') ||
+        data.imageUrl.includes('/assets/'))
+    ) {
       try {
         const { deleteObject } = await import('#/lib/storage')
         const urlObj = new URL(data.imageUrl)
@@ -394,11 +398,16 @@ export const verifyNeonServicesFn = createServerFn({ method: 'GET' }).handler(
     const { db } = await import('#/db')
     const { liquorProducts, groceryProducts } = await import('#/db/schema')
     const { count } = await import('drizzle-orm')
-    const { putObject, getObject, deleteObject, getPresignedUrl } = await import('#/lib/storage')
+    const { putObject, getObject, deleteObject, getPresignedUrl } =
+      await import('#/lib/storage')
 
     // 1. Verify Postgres query on new Singapore instance
-    const [liquorCount] = await db.select({ total: count() }).from(liquorProducts)
-    const [groceryCount] = await db.select({ total: count() }).from(groceryProducts)
+    const [liquorCount] = await db
+      .select({ total: count() })
+      .from(liquorProducts)
+    const [groceryCount] = await db
+      .select({ total: count() })
+      .from(groceryProducts)
 
     // 2. Verify Object Storage in ap-southeast-1
     const testKey = `health-check/${Date.now()}.txt`
@@ -415,8 +424,8 @@ export const verifyNeonServicesFn = createServerFn({ method: 'GET' }).handler(
         status: 'healthy',
         region: 'aws-ap-southeast-1',
         counts: {
-          liquorProducts: liquorCount?.total ?? 0,
-          groceryProducts: groceryCount?.total ?? 0,
+          liquorProducts: liquorCount.total,
+          groceryProducts: groceryCount.total,
         },
       },
       objectStorage: {
@@ -429,4 +438,3 @@ export const verifyNeonServicesFn = createServerFn({ method: 'GET' }).handler(
     }
   },
 )
-

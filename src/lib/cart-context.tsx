@@ -17,6 +17,8 @@ export interface CartItem {
   mrp?: number | null // in paisa
   imageUrl?: string | null
   quantity: number
+  customBadge?: string | null
+  customDiscountLabel?: string | null
 }
 
 interface CartContextType {

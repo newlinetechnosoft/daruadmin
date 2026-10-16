@@ -11,6 +11,8 @@ import {
   groceryVariants,
   groceryImages,
   dealerStock,
+  dealerItems,
+  dealers,
   user,
 } from '#/db/schema'
 import {
@@ -193,6 +195,8 @@ export async function getLiquorProductsQuery(input: ListLiquorInput) {
       slug: liquorProducts.slug,
       description: liquorProducts.description,
       isFeatured: liquorProducts.isFeatured,
+      customBadge: liquorProducts.customBadge,
+      customDiscountLabel: liquorProducts.customDiscountLabel,
       categoryName: liquorCategories.name,
       categorySlug: liquorCategories.slug,
       brandName: liquorBrands.name,
@@ -320,6 +324,8 @@ export async function getGroceryProductsQuery(input: ListGroceryInput) {
       slug: groceryProducts.slug,
       description: groceryProducts.description,
       isFeatured: groceryProducts.isFeatured,
+      customBadge: groceryProducts.customBadge,
+      customDiscountLabel: groceryProducts.customDiscountLabel,
       categoryName: groceryCategories.name,
       categorySlug: groceryCategories.slug,
     })
@@ -436,6 +442,8 @@ export async function getAdminLiquorProductsQuery() {
       slug: liquorProducts.slug,
       description: liquorProducts.description,
       isFeatured: liquorProducts.isFeatured,
+      customBadge: liquorProducts.customBadge,
+      customDiscountLabel: liquorProducts.customDiscountLabel,
       isActive: liquorProducts.isActive,
       categoryId: liquorProducts.categoryId,
       brandId: liquorProducts.brandId,
@@ -456,7 +464,7 @@ export async function getAdminLiquorProductsQuery() {
   if (productsList.length === 0) return []
 
   const productIds = productsList.map((p) => p.id)
-  const [variants, images] = await Promise.all([
+  const [variants, images, assignedDealerRows] = await Promise.all([
     db
       .select()
       .from(liquorVariants)
@@ -465,7 +473,28 @@ export async function getAdminLiquorProductsQuery() {
       .select()
       .from(liquorImages)
       .where(inArray(liquorImages.productId, productIds)),
+    db
+      .select({
+        productId: dealerItems.productId,
+        dealerId: dealers.id,
+        dealerName: dealers.name,
+      })
+      .from(dealerItems)
+      .innerJoin(dealers, eq(dealerItems.dealerId, dealers.id))
+      .where(
+        and(
+          eq(dealerItems.catalogType, 'liquor'),
+          inArray(dealerItems.productId, productIds),
+        ),
+      ),
   ])
+
+  const dealersMap = new Map<string, { id: string; name: string }[]>()
+  for (const row of assignedDealerRows) {
+    const list = dealersMap.get(row.productId) ?? []
+    list.push({ id: row.dealerId, name: row.dealerName })
+    dealersMap.set(row.productId, list)
+  }
 
   const variantsMap = new Map<string, typeof variants>()
   for (const v of variants) {
@@ -485,13 +514,20 @@ export async function getAdminLiquorProductsQuery() {
     allImagesMap.set(img.productId, current)
   }
 
-  return productsList.map((p) => ({
-    ...p,
-    catalogType: 'liquor' as const,
-    primaryImage: imagesMap.get(p.id) ?? null,
-    images: (allImagesMap.get(p.id) ?? []).sort((a, b) => a.sortOrder - b.sortOrder),
-    variants: (variantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
-  }))
+  return productsList.map((p) => {
+    const assigned = dealersMap.get(p.id) ?? []
+    return {
+      ...p,
+      catalogType: 'liquor' as const,
+      primaryImage: imagesMap.get(p.id) ?? null,
+      images: (allImagesMap.get(p.id) ?? []).sort(
+        (a, b) => a.sortOrder - b.sortOrder,
+      ),
+      variants: (variantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
+      dealers: assigned,
+      dealerIds: assigned.map((d) => d.id),
+    }
+  })
 }
 
 export async function getAdminGroceryProductsQuery() {
@@ -502,6 +538,8 @@ export async function getAdminGroceryProductsQuery() {
       slug: groceryProducts.slug,
       description: groceryProducts.description,
       isFeatured: groceryProducts.isFeatured,
+      customBadge: groceryProducts.customBadge,
+      customDiscountLabel: groceryProducts.customDiscountLabel,
       isActive: groceryProducts.isActive,
       categoryId: groceryProducts.categoryId,
       brandId: groceryProducts.brandId,
@@ -522,7 +560,7 @@ export async function getAdminGroceryProductsQuery() {
   if (productsList.length === 0) return []
 
   const productIds = productsList.map((p) => p.id)
-  const [variants, images] = await Promise.all([
+  const [variants, images, assignedDealerRows] = await Promise.all([
     db
       .select()
       .from(groceryVariants)
@@ -531,7 +569,28 @@ export async function getAdminGroceryProductsQuery() {
       .select()
       .from(groceryImages)
       .where(inArray(groceryImages.productId, productIds)),
+    db
+      .select({
+        productId: dealerItems.productId,
+        dealerId: dealers.id,
+        dealerName: dealers.name,
+      })
+      .from(dealerItems)
+      .innerJoin(dealers, eq(dealerItems.dealerId, dealers.id))
+      .where(
+        and(
+          eq(dealerItems.catalogType, 'grocery'),
+          inArray(dealerItems.productId, productIds),
+        ),
+      ),
   ])
+
+  const dealersMap = new Map<string, { id: string; name: string }[]>()
+  for (const row of assignedDealerRows) {
+    const list = dealersMap.get(row.productId) ?? []
+    list.push({ id: row.dealerId, name: row.dealerName })
+    dealersMap.set(row.productId, list)
+  }
 
   const variantsMap = new Map<string, typeof variants>()
   for (const v of variants) {
@@ -551,13 +610,20 @@ export async function getAdminGroceryProductsQuery() {
     allImagesMap.set(img.productId, current)
   }
 
-  return productsList.map((p) => ({
-    ...p,
-    catalogType: 'grocery' as const,
-    primaryImage: imagesMap.get(p.id) ?? null,
-    images: (allImagesMap.get(p.id) ?? []).sort((a, b) => a.sortOrder - b.sortOrder),
-    variants: (variantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
-  }))
+  return productsList.map((p) => {
+    const assigned = dealersMap.get(p.id) ?? []
+    return {
+      ...p,
+      catalogType: 'grocery' as const,
+      primaryImage: imagesMap.get(p.id) ?? null,
+      images: (allImagesMap.get(p.id) ?? []).sort(
+        (a, b) => a.sortOrder - b.sortOrder,
+      ),
+      variants: (variantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
+      dealers: assigned,
+      dealerIds: assigned.map((d) => d.id),
+    }
+  })
 }
 
 export async function upsertLiquorProductQuery(
@@ -577,6 +643,8 @@ export async function upsertLiquorProductQuery(
         brandId: input.brandId ?? null,
         description: input.description ?? null,
         isFeatured: input.isFeatured,
+        customBadge: input.customBadge ?? null,
+        customDiscountLabel: input.customDiscountLabel ?? null,
         isActive: input.isActive,
       })
       .where(eq(liquorProducts.id, productId))
@@ -590,6 +658,8 @@ export async function upsertLiquorProductQuery(
         brandId: input.brandId ?? null,
         description: input.description ?? null,
         isFeatured: input.isFeatured,
+        customBadge: input.customBadge ?? null,
+        customDiscountLabel: input.customDiscountLabel ?? null,
         isActive: input.isActive,
       })
       .returning({ id: liquorProducts.id })
@@ -600,12 +670,12 @@ export async function upsertLiquorProductQuery(
     await db.delete(liquorImages).where(eq(liquorImages.productId, productId))
     if (input.images.length > 0) {
       await db.insert(liquorImages).values(
-        input.images.map((img, idx) => ({
+        input.images.map((img) => ({
           productId,
           url: img.url,
           alt: img.alt ?? input.name,
-          sortOrder: img.sortOrder ?? idx,
-          isPrimary: img.isPrimary ?? idx === 0,
+          sortOrder: img.sortOrder,
+          isPrimary: img.isPrimary,
         })),
       )
     }
@@ -707,6 +777,28 @@ export async function upsertLiquorProductQuery(
     }
   }
 
+  if (input.dealerIds !== undefined) {
+    await db
+      .delete(dealerItems)
+      .where(
+        and(
+          eq(dealerItems.catalogType, 'liquor'),
+          eq(dealerItems.productId, productId),
+        ),
+      )
+    if (input.dealerIds.length > 0) {
+      const uniqueDealers = Array.from(new Set(input.dealerIds))
+      await db.insert(dealerItems).values(
+        uniqueDealers.map((dealerId) => ({
+          id: crypto.randomUUID(),
+          dealerId,
+          catalogType: 'liquor',
+          productId,
+        })),
+      )
+    }
+  }
+
   return { success: true, productId }
 }
 
@@ -727,6 +819,8 @@ export async function upsertGroceryProductQuery(
         brandId: input.brandId ?? null,
         description: input.description ?? null,
         isFeatured: input.isFeatured,
+        customBadge: input.customBadge ?? null,
+        customDiscountLabel: input.customDiscountLabel ?? null,
         isActive: input.isActive,
       })
       .where(eq(groceryProducts.id, productId))
@@ -740,6 +834,8 @@ export async function upsertGroceryProductQuery(
         brandId: input.brandId ?? null,
         description: input.description ?? null,
         isFeatured: input.isFeatured,
+        customBadge: input.customBadge ?? null,
+        customDiscountLabel: input.customDiscountLabel ?? null,
         isActive: input.isActive,
       })
       .returning({ id: groceryProducts.id })
@@ -750,12 +846,12 @@ export async function upsertGroceryProductQuery(
     await db.delete(groceryImages).where(eq(groceryImages.productId, productId))
     if (input.images.length > 0) {
       await db.insert(groceryImages).values(
-        input.images.map((img, idx) => ({
+        input.images.map((img) => ({
           productId,
           url: img.url,
           alt: img.alt ?? input.name,
-          sortOrder: img.sortOrder ?? idx,
-          isPrimary: img.isPrimary ?? idx === 0,
+          sortOrder: img.sortOrder,
+          isPrimary: img.isPrimary,
         })),
       )
     }
@@ -854,6 +950,28 @@ export async function upsertGroceryProductQuery(
             isActive: v.isActive,
           },
         })
+    }
+  }
+
+  if (input.dealerIds !== undefined) {
+    await db
+      .delete(dealerItems)
+      .where(
+        and(
+          eq(dealerItems.catalogType, 'grocery'),
+          eq(dealerItems.productId, productId),
+        ),
+      )
+    if (input.dealerIds.length > 0) {
+      const uniqueDealers = Array.from(new Set(input.dealerIds))
+      await db.insert(dealerItems).values(
+        uniqueDealers.map((dealerId) => ({
+          id: crypto.randomUUID(),
+          dealerId,
+          catalogType: 'grocery',
+          productId,
+        })),
+      )
     }
   }
 
@@ -1022,6 +1140,14 @@ export async function upsertBrandQuery(input: UpsertBrandInput) {
 
 export async function deleteItemQuery(input: DeleteItemInput) {
   if (input.catalogType === 'liquor') {
+    await db
+      .delete(dealerItems)
+      .where(
+        and(
+          eq(dealerItems.catalogType, 'liquor'),
+          eq(dealerItems.productId, input.id),
+        ),
+      )
     const variantRows = await db
       .select({ id: liquorVariants.id })
       .from(liquorVariants)
@@ -1039,6 +1165,14 @@ export async function deleteItemQuery(input: DeleteItemInput) {
     }
     await db.delete(liquorProducts).where(eq(liquorProducts.id, input.id))
   } else if (input.catalogType === 'grocery') {
+    await db
+      .delete(dealerItems)
+      .where(
+        and(
+          eq(dealerItems.catalogType, 'grocery'),
+          eq(dealerItems.productId, input.id),
+        ),
+      )
     const variantRows = await db
       .select({ id: groceryVariants.id })
       .from(groceryVariants)
@@ -1062,6 +1196,14 @@ export async function deleteItemQuery(input: DeleteItemInput) {
       .where(eq(liquorProducts.categoryId, input.id))
     const productIds = products.map((p) => p.id)
     if (productIds.length > 0) {
+      await db
+        .delete(dealerItems)
+        .where(
+          and(
+            eq(dealerItems.catalogType, 'liquor'),
+            inArray(dealerItems.productId, productIds),
+          ),
+        )
       const variantRows = await db
         .select({ id: liquorVariants.id })
         .from(liquorVariants)
@@ -1086,6 +1228,14 @@ export async function deleteItemQuery(input: DeleteItemInput) {
       .where(eq(groceryProducts.categoryId, input.id))
     const productIds = products.map((p) => p.id)
     if (productIds.length > 0) {
+      await db
+        .delete(dealerItems)
+        .where(
+          and(
+            eq(dealerItems.catalogType, 'grocery'),
+            inArray(dealerItems.productId, productIds),
+          ),
+        )
       const variantRows = await db
         .select({ id: groceryVariants.id })
         .from(groceryVariants)
@@ -1105,8 +1255,11 @@ export async function deleteItemQuery(input: DeleteItemInput) {
     await db.delete(groceryCategories).where(eq(groceryCategories.id, input.id))
   } else if (input.catalogType === 'grocery-brand') {
     await db.delete(groceryBrands).where(eq(groceryBrands.id, input.id))
-  } else {
+  } else if (input.catalogType === 'liquor-brand') {
     await db.delete(liquorBrands).where(eq(liquorBrands.id, input.id))
+  } else {
+    await db.delete(dealerItems).where(eq(dealerItems.dealerId, input.id))
+    await db.delete(dealers).where(eq(dealers.id, input.id))
   }
   return { success: true }
 }
@@ -1152,6 +1305,8 @@ export async function getProductsByIdsQuery(ids: string[]) {
         slug: liquorProducts.slug,
         description: liquorProducts.description,
         isFeatured: liquorProducts.isFeatured,
+        customBadge: liquorProducts.customBadge,
+        customDiscountLabel: liquorProducts.customDiscountLabel,
         categoryName: liquorCategories.name,
         categorySlug: liquorCategories.slug,
         brandName: liquorBrands.name,
@@ -1174,6 +1329,8 @@ export async function getProductsByIdsQuery(ids: string[]) {
         slug: groceryProducts.slug,
         description: groceryProducts.description,
         isFeatured: groceryProducts.isFeatured,
+        customBadge: groceryProducts.customBadge,
+        customDiscountLabel: groceryProducts.customDiscountLabel,
         categoryName: groceryCategories.name,
         categorySlug: groceryCategories.slug,
       })
@@ -1294,4 +1451,3 @@ export async function deleteProductImageQuery(
   }
   return { success: true }
 }
-

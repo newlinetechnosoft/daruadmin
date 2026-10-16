@@ -9,6 +9,7 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core'
 import { user } from './auth'
+import { dealers } from './inventory'
 
 export const orders = pgTable(
   'orders',
@@ -78,10 +79,14 @@ export const orderItems = pgTable(
     qty: integer('qty').notNull(),
     unitPrice: integer('unit_price').notNull(), // in paisa
     lineTotal: integer('line_total').notNull(), // in paisa
+    dealerId: text('dealer_id').references(() => dealers.id, {
+      onDelete: 'set null',
+    }),
   },
   (table) => [
     index('order_items_order_id_idx').on(table.orderId),
     index('order_items_variant_id_idx').on(table.variantId),
+    index('order_items_dealer_id_idx').on(table.dealerId),
   ],
 )
 
@@ -115,6 +120,10 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
   order: one(orders, {
     fields: [orderItems.orderId],
     references: [orders.id],
+  }),
+  dealer: one(dealers, {
+    fields: [orderItems.dealerId],
+    references: [dealers.id],
   }),
 }))
 

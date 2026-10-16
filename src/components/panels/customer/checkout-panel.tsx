@@ -104,6 +104,12 @@ export function CheckoutPanel() {
   const watchedPhone = watch('phone')
 
   // Financial calculations
+  const totalSavingsPaisa = items.reduce((sum, item) => {
+    if (item.mrp && item.mrp > item.price) {
+      return sum + (item.mrp - item.price) * item.quantity
+    }
+    return sum
+  }, 0)
   const deliveryCharge =
     totalPaisa >= FREE_DELIVERY_THRESHOLD ? 0 : STANDARD_DELIVERY_CHARGE
   const promoDiscount = appliedPromo?.discountPaisa ?? 0
@@ -623,29 +629,65 @@ export function CheckoutPanel() {
               <CardContent className="p-6 space-y-6">
                 {/* Items Summary Table */}
                 <div className="space-y-3">
-                  {items.map((item) => (
-                    <div
-                      key={item.variantId}
-                      className="flex items-center justify-between text-xs"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-foreground">
-                          {item.quantity}x
-                        </span>
-                        <div>
-                          <p className="font-medium text-foreground">
-                            {item.productName}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {item.variantName}
-                          </p>
+                  {items.map((item) => {
+                    const discountPercent =
+                      item.mrp && item.mrp > item.price
+                        ? Math.round(((item.mrp - item.price) / item.mrp) * 100)
+                        : null
+                    const discountLabel =
+                      item.customDiscountLabel?.trim() ||
+                      (discountPercent ? `${discountPercent}% off` : null)
+                    const badgeLabel = item.customBadge?.trim() || null
+
+                    return (
+                      <div
+                        key={item.variantId}
+                        className="flex items-center justify-between text-xs gap-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-foreground">
+                            {item.quantity}x
+                          </span>
+                          <div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="font-medium text-foreground">
+                                {item.productName}
+                              </p>
+                              {badgeLabel && (
+                                <Badge
+                                  variant="default"
+                                  className="text-[9px] px-1.5 py-0 h-4 font-medium leading-none"
+                                >
+                                  {badgeLabel}
+                                </Badge>
+                              )}
+                              {discountLabel && (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[9px] px-1.5 py-0 h-4 font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 leading-none"
+                                >
+                                  {discountLabel}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">
+                              {item.variantName}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-baseline gap-1.5 font-mono shrink-0">
+                          <span className="font-semibold text-foreground">
+                            {formatNPR(item.price * item.quantity)}
+                          </span>
+                          {item.mrp && item.mrp > item.price && (
+                            <span className="text-[10px] text-muted-foreground line-through">
+                              {formatNPR(item.mrp * item.quantity)}
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <span className="font-mono font-semibold text-foreground">
-                        {formatNPR(item.price * item.quantity)}
-                      </span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 <Separator />
@@ -658,6 +700,15 @@ export function CheckoutPanel() {
                       {formatNPR(totalPaisa)}
                     </span>
                   </div>
+
+                  {totalSavingsPaisa > 0 && (
+                    <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
+                      <span>Total Savings</span>
+                      <span className="font-mono font-medium">
+                        -{formatNPR(totalSavingsPaisa)}
+                      </span>
+                    </div>
+                  )}
 
                   {promoDiscount > 0 && (
                     <div className="flex justify-between text-success">

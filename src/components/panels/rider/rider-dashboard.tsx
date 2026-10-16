@@ -7,7 +7,11 @@ import {
   toggleRiderAvailabilityFn,
 } from '#/server/operations/operations.functions'
 import type { getRiderPortalFn } from '#/server/operations/operations.functions'
-import { queueOutboxAction, useRiderOutbox, flushOutboxQueue } from '#/lib/idb/outbox'
+import {
+  queueOutboxAction,
+  useRiderOutbox,
+  flushOutboxQueue,
+} from '#/lib/idb/outbox'
 import { useOnlineStatus, isNetworkError } from '#/hooks/use-online-status'
 import type { Rider, Order } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
@@ -36,6 +40,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { RiderDealerPickups } from './rider-dealer-pickups'
 
 type RiderPortalData = Awaited<ReturnType<typeof getRiderPortalFn>>
 
@@ -57,7 +62,9 @@ export interface RiderDashboardProps {
   }
 }
 
-export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}) {
+export function RiderDashboard({
+  data: _fallbackData,
+}: RiderDashboardProps = {}) {
   const queryClient = useQueryClient()
   const { data: portalData } = useSuspenseQuery(riderQueries.portal())
 
@@ -94,7 +101,9 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
 
   // Derive active and completed orders from the current cache
   const activeOrders = useMemo(() => {
-    return orders.filter((o) => ['assigned', 'out_for_delivery'].includes(o.status))
+    return orders.filter((o) =>
+      ['assigned', 'out_for_delivery'].includes(o.status),
+    )
   }, [orders])
 
   const completedOrders = useMemo(() => {
@@ -123,7 +132,9 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
   // Availability toggle with optimistic write, rollback, and honest feedback
   const handleToggleOnline = async () => {
     if (!isOnline) {
-      toast.error('Cannot change availability while offline. Connect to internet first.')
+      toast.error(
+        'Cannot change availability while offline. Connect to internet first.',
+      )
       return
     }
 
@@ -133,7 +144,9 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
     setIsTogglingAvail(true)
 
     // Cancel in-flight queries before optimistic write
-    await queryClient.cancelQueries({ queryKey: riderQueries.portal().queryKey })
+    await queryClient.cancelQueries({
+      queryKey: riderQueries.portal().queryKey,
+    })
 
     // Snapshot current cache state
     const previousData = queryClient.getQueryData<RiderPortalData>(
@@ -158,7 +171,9 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
 
     try {
       await toggleRiderAvailabilityFn({ data: { available: targetAvailable } })
-      toast.success(targetAvailable ? 'You are now ONLINE' : 'You are now OFFLINE')
+      toast.success(
+        targetAvailable ? 'You are now ONLINE' : 'You are now OFFLINE',
+      )
     } catch (err: unknown) {
       // Rollback to snapshot on failure
       if (previousData) {
@@ -192,7 +207,9 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
     if (pendingOrderIds.has(orderId)) return
 
     if (pendingDeliveryActionsMap.has(orderId)) {
-      toast.info('This delivery action is already saved on this device and waiting to sync.')
+      toast.info(
+        'This delivery action is already saved on this device and waiting to sync.',
+      )
       return
     }
 
@@ -200,16 +217,25 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
     if (!currentOrder) return
 
     // Guard against duplicate or invalid transitions
-    if (targetStatus === 'out_for_delivery' && currentOrder.status !== 'assigned') {
+    if (
+      targetStatus === 'out_for_delivery' &&
+      currentOrder.status !== 'assigned'
+    ) {
       return
     }
-    if (targetStatus === 'delivered' && currentOrder.status !== 'out_for_delivery') {
+    if (
+      targetStatus === 'delivered' &&
+      currentOrder.status !== 'out_for_delivery'
+    ) {
       return
     }
 
     // Offline queue branch
     if (!isOnline) {
-      await queueOutboxAction('delivery_status', { orderId, status: targetStatus })
+      await queueOutboxAction('delivery_status', {
+        orderId,
+        status: targetStatus,
+      })
       toast.info("Saved on this device. Will sync when you're online.")
       return
     }
@@ -217,7 +243,9 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
     // Online branch: optimistic update, server dispatch, rollback on error
     setPendingOrderIds((prev) => new Set(prev).add(orderId))
 
-    await queryClient.cancelQueries({ queryKey: riderQueries.portal().queryKey })
+    await queryClient.cancelQueries({
+      queryKey: riderQueries.portal().queryKey,
+    })
     const previousData = queryClient.getQueryData<RiderPortalData>(
       riderQueries.portal().queryKey,
     )
@@ -234,10 +262,10 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
           const updatedOrders = old.orders.map((o) =>
             o.id === orderId
               ? {
-                ...o,
-                status: 'out_for_delivery' as const,
-                updatedAt: new Date().toISOString(),
-              }
+                  ...o,
+                  status: 'out_for_delivery' as const,
+                  updatedAt: new Date().toISOString(),
+                }
               : o,
           )
           return {
@@ -268,18 +296,20 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
           const updatedOrders = old.orders.map((o) =>
             o.id === orderId
               ? {
-                ...o,
-                status: 'delivered' as const,
-                paymentStatus: isCOD ? ('paid' as const) : o.paymentStatus,
-                updatedAt: new Date().toISOString(),
-              }
+                  ...o,
+                  status: 'delivered' as const,
+                  paymentStatus: isCOD ? ('paid' as const) : o.paymentStatus,
+                  updatedAt: new Date().toISOString(),
+                }
               : o,
           )
 
           const newActive = updatedOrders.filter((o) =>
             ['assigned', 'out_for_delivery'].includes(o.status),
           )
-          const newCompleted = updatedOrders.filter((o) => o.status === 'delivered')
+          const newCompleted = updatedOrders.filter(
+            (o) => o.status === 'delivered',
+          )
 
           return {
             ...old,
@@ -320,7 +350,9 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
       })
 
       if (targetStatus === 'delivered') {
-        toast.success('Delivery completed. COD collected and earnings credited.')
+        toast.success(
+          'Delivery completed. COD collected and earnings credited.',
+        )
       } else {
         toast.success('Delivery started. Order is now out for delivery.')
       }
@@ -330,7 +362,10 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
         if (previousData) {
           queryClient.setQueryData(riderQueries.portal().queryKey, previousData)
         }
-        await queueOutboxAction('delivery_status', { orderId, status: targetStatus })
+        await queueOutboxAction('delivery_status', {
+          orderId,
+          status: targetStatus,
+        })
         toast.info("Saved on this device. Will sync when you're online.")
       } else {
         // Real validation / auth error: roll back and notify user with retry
@@ -373,7 +408,8 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
           <div className="flex items-center gap-2.5">
             <CloudOff className="h-4 w-4 shrink-0 text-warning" />
             <span>
-              No internet connection. Changes are saved on this device and will sync when you're back online.
+              No internet connection. Changes are saved on this device and will
+              sync when you're back online.
             </span>
           </div>
           {pendingActions.length > 0 && (
@@ -397,18 +433,20 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
 
       {/* Rider Status Card with Distinct Availability & Connectivity Signals */}
       <Card
-        className={`border transition-all duration-300 motion-reduce:transition-none ${rider.available
+        className={`border transition-all duration-300 motion-reduce:transition-none ${
+          rider.available
             ? 'border-emerald-300/60 bg-gradient-to-r from-emerald-100 to-emerald-50/30 dark:border-emerald-500/30 dark:from-emerald-950/70 dark:to-emerald-950/10'
             : 'border-border bg-card'
-          }`}
+        }`}
       >
         <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <div
-              className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 transition-colors ${rider.available
+              className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                rider.available
                   ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                   : 'bg-muted text-muted-foreground'
-                }`}
+              }`}
             >
               <Bike className="h-6 w-6" />
             </div>
@@ -421,16 +459,18 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
 
                 {/* Availability Badge: Always Dot + Text */}
                 <span
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${rider.available
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
+                    rider.available
                       ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25'
                       : 'bg-muted text-muted-foreground border-border'
-                    }`}
+                  }`}
                 >
                   <span
-                    className={`h-2 w-2 rounded-full shrink-0 ${rider.available
+                    className={`h-2 w-2 rounded-full shrink-0 ${
+                      rider.available
                         ? 'bg-emerald-500 animate-pulse'
                         : 'bg-muted-foreground/60'
-                      }`}
+                    }`}
                   />
                   <span>
                     {rider.available
@@ -490,8 +530,9 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
                     ? 'Switch off dispatch orders'
                     : 'Start receiving orders'
               }
-              className={`w-full sm:w-auto h-10 sm:h-9 min-h-[44px] sm:min-h-0 gap-2 text-xs font-medium transition-all ${!isOnline ? 'opacity-60 cursor-not-allowed' : ''
-                }`}
+              className={`w-full sm:w-auto h-10 sm:h-9 min-h-[44px] sm:min-h-0 gap-2 text-xs font-medium transition-all ${
+                !isOnline ? 'opacity-60 cursor-not-allowed' : ''
+              }`}
             >
               {isTogglingAvail ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -626,7 +667,8 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
                     No internet connection
                   </h4>
                   <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                    You are currently offline. Active deliveries may not be up to date until your device reconnects.
+                    You are currently offline. Active deliveries may not be up
+                    to date until your device reconnects.
                   </p>
                 </>
               ) : !rider.available ? (
@@ -636,7 +678,8 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
                     You are currently offline
                   </h4>
                   <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                    Turn on your availability above to start receiving delivery assignments in your zone.
+                    Turn on your availability above to start receiving delivery
+                    assignments in your zone.
                   </p>
                 </>
               ) : (
@@ -646,7 +689,9 @@ export function RiderDashboard({ data: _fallbackData }: RiderDashboardProps = {}
                     Waiting for dispatch
                   </h4>
                   <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                    You are online and ready for deliveries. Keep the app open and orders in your zone will appear here as soon as dispatch assigns them.
+                    You are online and ready for deliveries. Keep the app open
+                    and orders in your zone will appear here as soon as dispatch
+                    assigns them.
                   </p>
                 </>
               )}
@@ -711,12 +756,13 @@ function OrderDeliveryCard({
 
   return (
     <Card
-      className={`border bg-card flex flex-col justify-between transition-all duration-300 motion-reduce:transition-none hover:shadow-sm ${pendingSync
+      className={`border bg-card flex flex-col justify-between transition-all duration-300 motion-reduce:transition-none hover:shadow-sm ${
+        pendingSync
           ? 'border-warning/40 bg-warning/[0.02]'
           : isOut
             ? 'border-info/30'
             : 'border-border'
-        }`}
+      }`}
     >
       <CardHeader className="p-4 pb-2.5">
         <div className="flex items-start justify-between gap-3">
@@ -730,10 +776,11 @@ function OrderDeliveryCard({
               {/* Status Badge */}
               <Badge
                 variant={isOut ? 'default' : 'secondary'}
-                className={`text-[10px] uppercase tracking-wider font-semibold ${isOut
+                className={`text-[10px] uppercase tracking-wider font-semibold ${
+                  isOut
                     ? 'bg-info hover:bg-info/90 text-info-foreground'
                     : 'bg-muted text-muted-foreground'
-                  }`}
+                }`}
               >
                 {isOut ? (
                   <span className="flex items-center gap-1">
@@ -751,10 +798,11 @@ function OrderDeliveryCard({
               {/* Distinct Offline Queued Tag */}
               {pendingSync && (
                 <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${pendingSync.actionStatus === 'failed'
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                    pendingSync.actionStatus === 'failed'
                       ? 'bg-destructive/15 text-destructive border-destructive/30'
                       : 'bg-warning/15 text-warning border-warning/30'
-                    }`}
+                  }`}
                   title={
                     pendingSync.actionStatus === 'failed'
                       ? `Sync failed (${pendingSync.retries} retries). Tap to retry.`
@@ -805,23 +853,32 @@ function OrderDeliveryCard({
       </CardHeader>
 
       <CardContent className="p-4 pt-2 space-y-3.5">
-        {/* Address and Phone Block */}
-        <div className="p-3 rounded-lg bg-muted/40 border border-border/80 space-y-2 text-xs">
-          <div className="flex items-start gap-2.5 text-foreground">
-            <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
-            <span className="leading-snug">
-              {order.address}, {order.city}
-              {order.landmark ? ` (${order.landmark})` : ''}
-            </span>
+        {/* Dealer Pickup Stations */}
+        <RiderDealerPickups order={order} />
+
+        {/* Customer Drop-off Destination */}
+        <div className="space-y-1">
+          <div className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1">
+            <MapPin className="h-3 w-3 text-primary" />
+            <span>Customer Drop-off Destination:</span>
           </div>
-          <div className="flex items-center gap-2.5 text-muted-foreground">
-            <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <a
-              href={`tel:${order.customerPhone}`}
-              className="font-mono text-primary hover:underline font-medium"
-            >
-              {order.customerPhone}
-            </a>
+          <div className="p-3 rounded-lg bg-muted/40 border border-border/80 space-y-2 text-xs">
+            <div className="flex items-start gap-2.5 text-foreground">
+              <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+              <span className="leading-snug">
+                {order.address}, {order.city}
+                {order.landmark ? ` (${order.landmark})` : ''}
+              </span>
+            </div>
+            <div className="flex items-center gap-2.5 text-muted-foreground">
+              <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <a
+                href={`tel:${order.customerPhone}`}
+                className="font-mono text-primary hover:underline font-medium"
+              >
+                {order.customerPhone}
+              </a>
+            </div>
           </div>
         </div>
 
@@ -836,9 +893,7 @@ function OrderDeliveryCard({
                 className="text-primary hover:underline flex items-center gap-0.5 text-[11px] cursor-pointer"
               >
                 <span>
-                  {isExpanded
-                    ? 'Show less'
-                    : `+${order.items.length - 2} more`}
+                  {isExpanded ? 'Show less' : `+${order.items.length - 2} more`}
                 </span>
                 {isExpanded ? (
                   <ChevronUp className="h-3 w-3" />
@@ -917,10 +972,11 @@ function OrderDeliveryCard({
                     void flushOutboxQueue()
                   }
                 }}
-                className={`w-full h-11 min-h-[44px] text-xs font-semibold gap-1.5 cursor-not-allowed ${pendingSync.actionStatus === 'failed'
+                className={`w-full h-11 min-h-[44px] text-xs font-semibold gap-1.5 cursor-not-allowed ${
+                  pendingSync.actionStatus === 'failed'
                     ? 'bg-destructive/20 text-destructive border border-destructive/30 hover:bg-destructive/30 cursor-pointer'
                     : 'bg-muted text-muted-foreground'
-                  }`}
+                }`}
               >
                 {pendingSync.actionStatus === 'failed' ? (
                   <>
@@ -973,9 +1029,7 @@ function OrderDeliveryCard({
                   <>
                     <CheckCircle2 className="h-4 w-4 mr-1.5" />
                     {isCOD ? (
-                      <span>
-                        Delivered & Collect {formatNPR(order.total)}
-                      </span>
+                      <span>Delivered & Collect {formatNPR(order.total)}</span>
                     ) : (
                       'Mark Delivered'
                     )}

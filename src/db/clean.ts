@@ -21,6 +21,7 @@ import {
   campaigns,
   reviews,
   dealerStock,
+  dealerItems,
   stockMovements,
   dealers,
 } from './schema'
@@ -153,6 +154,7 @@ async function main() {
     await tx.delete(banners)
     await tx.delete(campaigns)
     await tx.delete(reviews)
+    await tx.delete(dealerItems)
     await tx.delete(dealerStock)
     await tx.delete(stockMovements)
     await tx.delete(dealers)

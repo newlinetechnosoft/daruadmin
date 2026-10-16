@@ -26,6 +26,8 @@ export interface ProductProps {
   slug: string
   description?: string | null
   isFeatured?: boolean
+  customBadge?: string | null
+  customDiscountLabel?: string | null
   categoryName?: string
   categorySlug?: string
   brandName?: string | null
@@ -50,6 +52,20 @@ function ProductCardComponent({ product }: { product: ProductProps }) {
   const isOutOfStock = !activeVariant || activeVariant.stock <= 0
   const isMaxStockReached = Boolean(activeVariant && qty >= activeVariant.stock)
 
+  const badgeLabel =
+    product.customBadge?.trim() || (product.isFeatured ? 'Popular' : null)
+
+  const discountPercent =
+    activeVariant?.mrp && activeVariant.mrp > activeVariant.price
+      ? Math.round(
+          ((activeVariant.mrp - activeVariant.price) / activeVariant.mrp) * 100,
+        )
+      : null
+
+  const discountLabel =
+    product.customDiscountLabel?.trim() ||
+    (discountPercent ? `${discountPercent}% off` : null)
+
   const handleAddToCart = () => {
     if (!activeVariant || isOutOfStock) return
     addItem({
@@ -63,6 +79,8 @@ function ProductCardComponent({ product }: { product: ProductProps }) {
       price: activeVariant.price,
       mrp: activeVariant.mrp,
       imageUrl: product.primaryImage,
+      customBadge: badgeLabel,
+      customDiscountLabel: discountLabel,
     })
   }
 
@@ -75,13 +93,6 @@ function ProductCardComponent({ product }: { product: ProductProps }) {
     if (!activeVariant || isMaxStockReached) return
     updateQuantity(activeVariant.id, qty + 1, activeVariant.stock)
   }
-
-  const discountPercent =
-    activeVariant?.mrp && activeVariant.mrp > activeVariant.price
-      ? Math.round(
-          ((activeVariant.mrp - activeVariant.price) / activeVariant.mrp) * 100,
-        )
-      : null
 
   const categoryLabel =
     product.categoryName ??
@@ -104,18 +115,18 @@ function ProductCardComponent({ product }: { product: ProductProps }) {
       {/* Product Image Container */}
       <div className="relative aspect-square w-full overflow-hidden bg-muted/40 p-4 flex items-center justify-center">
         {/* Badges */}
-        <div className="absolute left-3 top-3 z-10 flex flex-col gap-1">
-          {product.isFeatured && (
-            <Badge variant="default" className="text-[10px] px-1.5 py-0 h-5">
-              Popular
+        <div className="absolute left-3 top-3 z-10 flex flex-col gap-1 items-start">
+          {badgeLabel && (
+            <Badge variant="default" className="text-[10px] px-1.5 py-0 h-5 font-medium shadow-xs">
+              {badgeLabel}
             </Badge>
           )}
-          {discountPercent && (
+          {discountLabel && (
             <Badge
               variant="secondary"
-              className="text-[10px] px-1.5 py-0 h-5 font-semibold"
+              className="text-[10px] px-1.5 py-0 h-5 font-semibold text-emerald-600 dark:text-emerald-400 bg-background/90 backdrop-blur-xs border border-emerald-500/20 shadow-xs"
             >
-              {discountPercent}% off
+              {discountLabel}
             </Badge>
           )}
         </div>

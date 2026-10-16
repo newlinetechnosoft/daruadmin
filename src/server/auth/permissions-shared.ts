@@ -22,6 +22,7 @@ export const DEFAULT_GRANTS_BY_ROLE: Record<string, UserGrants> = {
     brands: ['view', 'create', 'edit'],
     products: ['view', 'create', 'edit'],
     inventory: ['view', 'create', 'edit'],
+    dealers: ['view', 'create', 'edit'],
     orders: ['view', 'edit', 'approve'],
     customers: ['view', 'edit'],
     riders: ['view', 'edit'],
@@ -67,20 +68,30 @@ export function can(
     return true
   }
 
-  // 3. Backward compatibility fallback: 'products' umbrella grant for catalog/inventory
+  // 3. Backward compatibility fallback: 'inventory' grant covers 'dealers'
+  if (
+    module === 'dealers' &&
+    Array.isArray(grants.inventory) &&
+    grants.inventory.includes(action)
+  ) {
+    return true
+  }
+
+  // 4. Backward compatibility fallback: 'products' umbrella grant for catalog/inventory/dealers
   if (
     (module === 'liquor' ||
       module === 'grocery' ||
       module === 'categories' ||
       module === 'brands' ||
-      module === 'inventory') &&
+      module === 'inventory' ||
+      module === 'dealers') &&
     Array.isArray(grants.products) &&
     grants.products.includes(action)
   ) {
     return true
   }
 
-  // 4. Backward compatibility fallback: 'staff' grant covers 'users'
+  // 5. Backward compatibility fallback: 'staff' grant covers 'users'
   if (
     module === 'users' &&
     Array.isArray(grants.staff) &&
@@ -89,14 +100,15 @@ export function can(
     return true
   }
 
-  // 5. Backward compatibility fallback: checking legacy 'products' with granular submodules
+  // 6. Backward compatibility fallback: checking legacy 'products' with granular submodules
   if (module === 'products') {
     return Boolean(
       grants.liquor?.includes(action) ||
         grants.grocery?.includes(action) ||
         grants.categories?.includes(action) ||
         grants.brands?.includes(action) ||
-        grants.inventory?.includes(action),
+        grants.inventory?.includes(action) ||
+        grants.dealers?.includes(action),
     )
   }
 

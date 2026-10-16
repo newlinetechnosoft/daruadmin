@@ -47,6 +47,7 @@ import {
   XCircle,
   Eye,
   Award,
+  Store,
 } from 'lucide-react'
 import { CreateStaffDialog } from './create-staff-dialog'
 import { toast } from 'sonner'
@@ -118,6 +119,7 @@ const MODULE_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
   orders: ClipboardList,
   customers: Users,
   inventory: Package,
+  dealers: Store,
   riders: Bike,
   staff: Shield,
   users: Users,
