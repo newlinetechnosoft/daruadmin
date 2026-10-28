@@ -18,7 +18,6 @@ import {
   Building2,
   CheckCircle2,
   Download,
-  FileSpreadsheet,
   Printer,
   Search,
   TrendingUp,
@@ -212,35 +211,61 @@ export function FinancialReportsTab({
 
   return (
     <div className="space-y-6">
-      {/* Banner Heading */}
-      <div className="flex flex-col gap-2 rounded-lg border border-border bg-gradient-to-r from-card to-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <FileSpreadsheet className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-foreground">
-                Financial Statements & ERP Desk
-              </h3>
-              <Badge variant="secondary" className="text-[10px]">
-                Frappe / ERPNext Standard
-              </Badge>
-              <Badge
-                variant="outline"
-                className="text-[10px] text-emerald-600 dark:text-emerald-400 border-emerald-500/40"
-              >
-                FY {fiscalYearName}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Official Double-Entry reports: Trial Balance validation, Profit &
-              Loss (Income Statement), and Balance Sheet.
-            </p>
-          </div>
-        </div>
+      {/* Sub-report selector tabs & Actions toolbar */}
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
+        <Tabs
+          value={reportSubTab}
+          onValueChange={(val) => setReportSubTab(val as any)}
+        >
+          <TabsList className="h-9">
+            <TabsTrigger
+              value="trial-balance"
+              className="flex items-center gap-2 text-xs font-medium"
+            >
+              <Scale className="h-3.5 w-3.5 text-primary" />
+              <span>Trial Balance</span>
+              {isTbBalanced ? (
+                <span className="ml-1 inline-flex items-center rounded-full bg-emerald-500/10 px-1.5 py-0.2 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
+                  Balanced
+                </span>
+              ) : (
+                <span className="ml-1 inline-flex items-center rounded-full bg-rose-500/10 px-1.5 py-0.2 text-[9px] font-semibold text-destructive">
+                  Variance
+                </span>
+              )}
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="profit-and-loss"
+              className="flex items-center gap-2 text-xs font-medium"
+            >
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span>Profit & Loss</span>
+              <span className="ml-1 text-[10px] text-muted-foreground font-mono">
+                {formatNPR(netOperatingProfit)}
+              </span>
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="balance-sheet"
+              className="flex items-center gap-2 text-xs font-medium"
+            >
+              <Building2 className="h-3.5 w-3.5" />
+              <span>Balance Sheet</span>
+              <span className="ml-1 text-[10px] text-muted-foreground font-mono">
+                {formatNPR(totalAssets)}
+              </span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         <div className="flex items-center gap-2">
+          <Badge
+            variant="outline"
+            className="text-[10px] text-emerald-600 dark:text-emerald-400 border-emerald-500/40"
+          >
+            FY {fiscalYearName}
+          </Badge>
           {reportSubTab === 'trial-balance' && (
             <Button
               variant="outline"
@@ -262,56 +287,6 @@ export function FinancialReportsTab({
             Print Statement
           </Button>
         </div>
-      </div>
-
-      {/* Sub-report selector tabs */}
-      <div className="flex rounded-lg border border-border bg-card p-1 shadow-xs">
-        <Tabs
-          value={reportSubTab}
-          onValueChange={(val) => setReportSubTab(val as any)}
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-3 h-9 bg-muted/60 p-1">
-            <TabsTrigger
-              value="trial-balance"
-              className="flex items-center gap-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-xs"
-            >
-              <Scale className="h-3.5 w-3.5 text-primary" />
-              <span>Trial Balance</span>
-              {isTbBalanced ? (
-                <span className="ml-1 inline-flex items-center rounded-full bg-emerald-500/10 px-1.5 py-0.2 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
-                  Balanced
-                </span>
-              ) : (
-                <span className="ml-1 inline-flex items-center rounded-full bg-rose-500/10 px-1.5 py-0.2 text-[9px] font-semibold text-destructive">
-                  Variance
-                </span>
-              )}
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="profit-and-loss"
-              className="flex items-center gap-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-xs"
-            >
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-              <span>Profit & Loss</span>
-              <span className="ml-1 text-[10px] text-muted-foreground font-mono">
-                {formatNPR(netOperatingProfit)}
-              </span>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="balance-sheet"
-              className="flex items-center gap-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-xs"
-            >
-              <Building2 className="h-3.5 w-3.5 text-indigo-500" />
-              <span>Balance Sheet</span>
-              <span className="ml-1 text-[10px] text-muted-foreground font-mono">
-                {formatNPR(totalAssets)}
-              </span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
       </div>
 
       {/* ==================================================== */}

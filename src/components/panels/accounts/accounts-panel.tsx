@@ -993,102 +993,82 @@ export function AccountsPanel() {
         }
       />
 
-      {/* Systematic Sub-Accounts Navigation Tabs */}
-      <div className="rounded-xl border border-border bg-card p-1 shadow-xs">
+      {/* Sub-Accounts Navigation Tabs */}
+      <div className="border-b border-border">
         <Tabs
           value={activeTab}
           onValueChange={(val) => setActiveTab(val as SubAccountTab)}
         >
-          <TabsList className="grid w-full grid-cols-2 h-auto gap-1 bg-muted/60 p-1 md:grid-cols-4 lg:grid-cols-7">
+          <TabsList className="flex h-10 w-full items-center justify-start gap-1 bg-transparent p-0 overflow-x-auto click-scroll border-none">
             <TabsTrigger
               value="ledger"
-              className="flex items-center gap-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-xs"
+              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
             >
-              <Receipt className="h-4 w-4 shrink-0 text-primary" />
-              <div className="text-left leading-tight">
-                <span className="block font-semibold">Ledger</span>
-                <span className="text-[10px] text-muted-foreground hidden lg:block">
-                  Double-Entry ({rawJournalEntries.length})
-                </span>
-              </div>
+              <Receipt className="h-3.5 w-3.5" />
+              <span>General Ledger</span>
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+                {rawJournalEntries.length}
+              </span>
             </TabsTrigger>
 
             <TabsTrigger
               value="transactions"
-              className="flex items-center gap-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-xs"
+              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
             >
-              <CreditCard className="h-4 w-4 shrink-0 text-blue-500" />
-              <div className="text-left leading-tight">
-                <span className="block font-semibold">Transaction</span>
-                <span className="text-[10px] text-muted-foreground hidden lg:block">
-                  Gateways ({rawPayments.length})
-                </span>
-              </div>
+              <CreditCard className="h-3.5 w-3.5" />
+              <span>Transactions</span>
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+                {rawPayments.length}
+              </span>
             </TabsTrigger>
 
             <TabsTrigger
               value="dealer-ledger"
-              className="flex items-center gap-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-xs"
+              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
             >
-              <Store className="h-4 w-4 shrink-0 text-amber-500" />
-              <div className="text-left leading-tight">
-                <span className="block font-semibold">Dealer Ledger</span>
-                <span className="text-[10px] text-muted-foreground hidden lg:block">
-                  Supplier Payables ({rawDealers.length})
-                </span>
-              </div>
+              <Store className="h-3.5 w-3.5" />
+              <span>Dealer Payables</span>
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+                {rawDealers.length}
+              </span>
             </TabsTrigger>
 
             <TabsTrigger
               value="sales-account"
-              className="flex items-center gap-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-xs"
+              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
             >
-              <TrendingUp className="h-4 w-4 shrink-0 text-emerald-500" />
-              <div className="text-left leading-tight">
-                <span className="block font-semibold">Sales Account</span>
-                <span className="text-[10px] text-muted-foreground hidden lg:block">
-                  Revenue & Catalog
-                </span>
-              </div>
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span>Sales Account</span>
             </TabsTrigger>
 
             <TabsTrigger
               value="salary-account"
-              className="flex items-center gap-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-xs"
+              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
             >
-              <Coins className="h-4 w-4 shrink-0 text-purple-500" />
-              <div className="text-left leading-tight">
-                <span className="block font-semibold">Salary Account</span>
-                <span className="text-[10px] text-muted-foreground hidden lg:block">
-                  Rider Settlements ({rawSettlements.length})
-                </span>
-              </div>
+              <Coins className="h-3.5 w-3.5" />
+              <span>Rider Payroll</span>
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+                {rawSettlements.length}
+              </span>
             </TabsTrigger>
 
             <TabsTrigger
               value="chart-of-accounts"
-              className="flex items-center gap-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-xs"
+              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
             >
-              <Building2 className="h-4 w-4 shrink-0 text-indigo-500" />
-              <div className="text-left leading-tight">
-                <span className="block font-semibold">Chart of Accounts</span>
-                <span className="text-[10px] text-muted-foreground hidden lg:block">
-                  Nepal Standard (39)
-                </span>
-              </div>
+              <Building2 className="h-3.5 w-3.5" />
+              <span>Chart of Accounts</span>
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+                39
+              </span>
             </TabsTrigger>
 
             <TabsTrigger
               value="financial-reports"
-              className="flex items-center gap-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-xs"
+              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
             >
-              <FileSpreadsheet className="h-4 w-4 shrink-0 text-emerald-500" />
-              <div className="text-left leading-tight">
-                <span className="block font-semibold">Reports</span>
-                <span className="text-[10px] text-muted-foreground hidden lg:block">
-                  Trial Balance & P&L
-                </span>
-              </div>
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              <span>Financial Reports</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -1099,40 +1079,6 @@ export function AccountsPanel() {
       {/* ==================================================== */}
       {activeTab === 'ledger' && (
         <div className="space-y-6">
-          {/* Sub-account Banner Heading */}
-          <div className="flex flex-col gap-2 rounded-lg border border-border bg-gradient-to-r from-card to-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Receipt className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    General Ledger Account
-                  </h3>
-                  <Badge variant="secondary" className="text-[10px]">
-                    Double-Entry Chart of Accounts
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Official financial book of accounts: debit/credit journal
-                  vouchers, liquidity balance, and balance sheet reconciliation.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsStatementModalOpen(true)}
-                className="h-8 gap-1.5 text-xs"
-              >
-                <Printer className="h-3.5 w-3.5" />
-                View Statements
-              </Button>
-            </div>
-          </div>
-
           {/* KPI Cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
@@ -1922,41 +1868,6 @@ export function AccountsPanel() {
       {/* ==================================================== */}
       {activeTab === 'transactions' && (
         <div className="space-y-6">
-          {/* Sub-account Banner Heading */}
-          <div className="flex flex-col gap-2 rounded-lg border border-border bg-gradient-to-r from-card to-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
-                <CreditCard className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Transaction Account
-                  </h3>
-                  <Badge variant="secondary" className="text-[10px]">
-                    Payment Gateways & Inflows
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Direct ledger of all customer payment transactions across
-                  eSewa, Khalti, Fonepay, ConnectIPS, and Cash on Delivery
-                  (COD).
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportCSV}
-                className="h-8 gap-1.5 text-xs"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Export Transactions
-              </Button>
-            </div>
-          </div>
-
           {/* KPI Cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
@@ -2136,53 +2047,6 @@ export function AccountsPanel() {
       {/* ==================================================== */}
       {activeTab === 'dealer-ledger' && (
         <div className="space-y-6">
-          {/* Sub-account Banner Heading */}
-          <div className="flex flex-col gap-2 rounded-lg border border-border bg-gradient-to-r from-card to-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
-                <Store className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Dealer Ledger Account
-                  </h3>
-                  <Badge variant="secondary" className="text-[10px]">
-                    Accounts Payable & Procurement
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Tracks procurement costs for customer order items assigned to
-                  specific dealers, accounts payable balances, and dealer
-                  settlements.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                onClick={() => {
-                  setBatchDealerId('')
-                  setIsBatchDealerSettlementOpen(true)
-                }}
-                className="h-8 gap-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                <Receipt className="h-3.5 w-3.5" />
-                Batch Settle Delivered Items
-              </Button>
-              <Link to="/admin/dealers">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 text-xs"
-                >
-                  <Building2 className="h-3.5 w-3.5" />
-                  Manage Dealers
-                </Button>
-              </Link>
-            </div>
-          </div>
-
           {/* KPI Cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
@@ -2215,13 +2079,38 @@ export function AccountsPanel() {
 
           {/* Dealer Balance Summary Cards */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                Dealer Accounts & Payables Overview
-              </h4>
-              <span className="text-xs text-muted-foreground">
-                Showing {dealerBalances.length} registered dealers
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Dealer Accounts &amp; Payables Overview
+                </h4>
+                <p className="text-[11px] text-muted-foreground">
+                  Showing {dealerBalances.length} registered dealers
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setBatchDealerId('')
+                    setIsBatchDealerSettlementOpen(true)
+                  }}
+                  className="h-8 gap-1.5 text-xs"
+                >
+                  <Receipt className="h-3.5 w-3.5" />
+                  Batch Settle Items
+                </Button>
+                <Link to="/admin/dealers">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs"
+                  >
+                    <Building2 className="h-3.5 w-3.5" />
+                    Dealers Directory
+                  </Button>
+                </Link>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -2558,41 +2447,6 @@ export function AccountsPanel() {
       {/* ==================================================== */}
       {activeTab === 'sales-account' && (
         <div className="space-y-6">
-          {/* Sub-account Banner Heading */}
-          <div className="flex flex-col gap-2 rounded-lg border border-border bg-gradient-to-r from-card to-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-                <TrendingUp className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Sales Account & Revenue Ledger
-                  </h3>
-                  <Badge variant="secondary" className="text-[10px]">
-                    Customer Billing & Category Sales
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Complete billing register: Gross order sales, Liquor vs
-                  Grocery catalog breakdown, discounts, delivery fees, and tax
-                  accounting.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportCSV}
-                className="h-8 gap-1.5 text-xs"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Export Sales
-              </Button>
-            </div>
-          </div>
-
           {/* KPI Cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
@@ -2917,58 +2771,6 @@ export function AccountsPanel() {
       {/* ==================================================== */}
       {activeTab === 'salary-account' && (
         <div className="space-y-6">
-          {/* Sub-account Banner Heading */}
-          <div className="flex flex-col gap-2 rounded-lg border border-border bg-gradient-to-r from-card to-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500">
-                <Coins className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Salary Account & Rider Payroll
-                  </h3>
-                  <Badge variant="secondary" className="text-[10px]">
-                    Delivery Commissions & Payroll
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Rider delivery compensation settlements, commission
-                  disbursements, cash-on-delivery reconciliation, and staff
-                  payroll records.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleOpenCashHandover()}
-                className="h-8 gap-1.5 text-xs"
-              >
-                <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-500" />
-                Receive Cash Handover
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleOpenSalaryDisbursement()}
-                className="h-8 gap-1.5 text-xs"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Manual Entry
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => setIsRiderPayrollRunOpen(true)}
-                className="h-8 gap-1.5 text-xs bg-primary"
-              >
-                <Calendar className="h-3.5 w-3.5" />
-                Run Monthly Payroll
-              </Button>
-            </div>
-          </div>
-
           {/* KPI Cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
@@ -3002,13 +2804,43 @@ export function AccountsPanel() {
           {/* Rider Fleet Accounts Overview */}
           {rawRiderAccounts.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                  Rider Accounts & COD Cash Balances
-                </h4>
-                <span className="text-xs text-muted-foreground">
-                  {rawRiderAccounts.length} active couriers
-                </span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Rider Accounts &amp; COD Cash Balances
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground">
+                    {rawRiderAccounts.length} active couriers
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenCashHandover()}
+                    className="h-8 gap-1.5 text-xs"
+                  >
+                    <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-500" />
+                    Receive Cash Handover
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenSalaryDisbursement()}
+                    className="h-8 gap-1.5 text-xs"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Manual Entry
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setIsRiderPayrollRunOpen(true)}
+                    className="h-8 gap-1.5 text-xs"
+                  >
+                    <Calendar className="h-3.5 w-3.5" />
+                    Run Monthly Payroll
+                  </Button>
+                </div>
               </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
                 {rawRiderAccounts.map((r: any) => (
@@ -3278,40 +3110,6 @@ export function AccountsPanel() {
       {/* ==================================================== */}
       {activeTab === 'chart-of-accounts' && (
         <div className="space-y-6">
-          {/* Sub-account Banner Heading */}
-          <div className="flex flex-col gap-2 rounded-lg border border-border bg-gradient-to-r from-card to-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-500">
-                <Building2 className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    Double-Entry Chart of Accounts
-                  </h3>
-                  <Badge variant="secondary" className="text-[10px]">
-                    Nepal Standard · 39 Accounts
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Hierarchical general ledger chart of accounts adapted for
-                  Nepal (NPR, 13% VAT, TDS, COD fleet, and dealer procurement).
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge
-                variant="outline"
-                className="text-xs py-1 px-2.5 gap-1.5 border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
-              >
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                Active FY:{' '}
-                {rawFiscalYears.find((fy: any) => !fy.isClosed)?.name ||
-                  '2083/84'}
-              </Badge>
-            </div>
-          </div>
-
           {/* Root Category KPI Cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <KpiCard
@@ -3397,6 +3195,16 @@ export function AccountsPanel() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant="outline"
+                className="text-xs py-1 px-2.5 gap-1.5 border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Active FY:{' '}
+                {rawFiscalYears.find((fy: any) => !fy.isClosed)?.name ||
+                  '2083/84'}
+              </Badge>
+
               <NativeSelect
                 value={coaCategoryFilter}
                 onChange={(e) => setCoaCategoryFilter(e.target.value)}
