@@ -756,6 +756,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
             <ChildTable<SourcingItemRow>
               columns={itemColumns}
               data={items}
+              maxHeight="420px"
               onRowChange={(idx, updated) => {
                 setItems((prev) => {
                   const copy = [...prev]

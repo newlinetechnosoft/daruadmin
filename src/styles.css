@@ -72,6 +72,11 @@
   --sidebar-accent-foreground: #f5f6f8;
   --sidebar-border: #2a2e33;
   --sidebar-ring: #d99a32;
+
+  --scrollbar-track: rgba(0, 0, 0, 0.05);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.22);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.42);
+  --scrollbar-thumb-active: rgba(0, 0, 0, 0.65);
 }
 
 /* Customer-facing pages: cream background in light mode, dark mode preserves midnight */
@@ -154,6 +159,11 @@
   --sidebar-accent-foreground: #f5f6f8;
   --sidebar-border: #202428;
   --sidebar-ring: #d99a32;
+
+  --scrollbar-track: rgba(255, 255, 255, 0.05);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.22);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.42);
+  --scrollbar-thumb-active: rgba(255, 255, 255, 0.65);
 }
 
 @theme inline {
@@ -254,5 +264,127 @@
   .tabular-nums,
   .font-mono {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* ==========================================================================
+     Click-Scrollable, High-Contrast Scrollbars for Admin Tables & Panels (PC)
+     ========================================================================== */
+  [data-slot='table-container'],
+  .click-scroll,
+  .table-scroll,
+  .custom-scrollbar {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    overflow: auto;
+    max-height: inherit;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  /* WebKit / Chromium / Safari / Edge / Electron scrollbar geometry & hover states */
+  [data-slot='table-container']::-webkit-scrollbar,
+  .click-scroll::-webkit-scrollbar,
+  .table-scroll::-webkit-scrollbar,
+  .custom-scrollbar::-webkit-scrollbar,
+  [data-slot='sidebar-inset'] .overflow-x-auto::-webkit-scrollbar,
+  [data-slot='sidebar-inset'] .overflow-y-auto::-webkit-scrollbar,
+  [data-slot='sidebar-inset'] .overflow-auto::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  [data-slot='table-container']::-webkit-scrollbar-track,
+  .click-scroll::-webkit-scrollbar-track,
+  .table-scroll::-webkit-scrollbar-track,
+  .custom-scrollbar::-webkit-scrollbar-track,
+  [data-slot='sidebar-inset'] .overflow-x-auto::-webkit-scrollbar-track,
+  [data-slot='sidebar-inset'] .overflow-y-auto::-webkit-scrollbar-track,
+  [data-slot='sidebar-inset'] .overflow-auto::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+    border-radius: 9999px;
+  }
+
+  [data-slot='table-container']::-webkit-scrollbar-thumb,
+  .click-scroll::-webkit-scrollbar-thumb,
+  .table-scroll::-webkit-scrollbar-thumb,
+  .custom-scrollbar::-webkit-scrollbar-thumb,
+  [data-slot='sidebar-inset'] .overflow-x-auto::-webkit-scrollbar-thumb,
+  [data-slot='sidebar-inset'] .overflow-y-auto::-webkit-scrollbar-thumb,
+  [data-slot='sidebar-inset'] .overflow-auto::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  [data-slot='table-container']::-webkit-scrollbar-thumb:hover,
+  .click-scroll::-webkit-scrollbar-thumb:hover,
+  .table-scroll::-webkit-scrollbar-thumb:hover,
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover,
+  [data-slot='sidebar-inset'] .overflow-x-auto::-webkit-scrollbar-thumb:hover,
+  [data-slot='sidebar-inset'] .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+  [data-slot='sidebar-inset'] .overflow-auto::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+    background-clip: padding-box;
+  }
+
+  [data-slot='table-container']::-webkit-scrollbar-thumb:active,
+  .click-scroll::-webkit-scrollbar-thumb:active,
+  .table-scroll::-webkit-scrollbar-thumb:active,
+  .custom-scrollbar::-webkit-scrollbar-thumb:active,
+  [data-slot='sidebar-inset'] .overflow-x-auto::-webkit-scrollbar-thumb:active,
+  [data-slot='sidebar-inset'] .overflow-y-auto::-webkit-scrollbar-thumb:active,
+  [data-slot='sidebar-inset'] .overflow-auto::-webkit-scrollbar-thumb:active {
+    background: var(--scrollbar-thumb-active);
+    background-clip: padding-box;
+  }
+
+  [data-slot='table-container']::-webkit-scrollbar-corner,
+  .click-scroll::-webkit-scrollbar-corner,
+  .table-scroll::-webkit-scrollbar-corner,
+  .custom-scrollbar::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Firefox scrollbar color for all admin scroll areas */
+  [data-slot='sidebar-inset'] .overflow-x-auto,
+  [data-slot='sidebar-inset'] .overflow-y-auto,
+  [data-slot='sidebar-inset'] .overflow-auto {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  /* Sticky headers remain solid and readable during vertical table scrolling */
+  [data-slot='table-container'] thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--card);
+  }
+
+  /* Responsive table baseline */
+  [data-slot='table'] {
+    width: 100%;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  /* Responsive modals: prevent outer horizontal scrollbars on modal dialogs */
+  [data-slot='dialog-content'] {
+    overflow-x: hidden;
+    max-width: calc(100vw - 2rem);
+  }
+
+  /* Scrollable modal bodies */
+  [data-slot='dialog-content'] .overflow-y-auto,
+  [data-slot='drawer-content'] .overflow-y-auto {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    overflow-x: hidden;
   }
 }

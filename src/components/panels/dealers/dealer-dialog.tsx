@@ -274,8 +274,8 @@ export function DealerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-3xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+        <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
               <Store className="h-5 w-5" />
@@ -292,407 +292,412 @@ export function DealerDialog({
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 pt-2">
-          {/* Basic Info Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="dealer-name" className="text-sm font-medium">
-                Dealer / Supplier Name{' '}
-                <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="dealer-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Butwal Spirits & Beverage Wholesale"
-                required
-                className="h-10"
-              />
-            </div>
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col flex-1 min-h-0 overflow-hidden"
+        >
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-6 click-scroll">
+            {/* Basic Info Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="dealer-name" className="text-sm font-medium">
+                  Dealer / Supplier Name{' '}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="dealer-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Butwal Spirits & Beverage Wholesale"
+                  required
+                  className="h-10"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label
-                htmlFor="dealer-pan"
-                className="text-sm font-medium flex items-center gap-1.5"
-              >
-                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                PAN or VAT Number
-              </Label>
-              <Input
-                id="dealer-pan"
-                value={pan}
-                onChange={(e) => setPan(e.target.value)}
-                placeholder="e.g. 601234567"
-                className="h-10 font-mono text-sm"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                9-digit Tax Identification or VAT certificate number
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label
-                htmlFor="dealer-contact"
-                className="text-sm font-medium flex items-center gap-1.5"
-              >
-                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                Contact Number <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="dealer-contact"
-                value={contact}
-                onChange={(e) => setContact(e.target.value)}
-                placeholder="e.g. +977-9841234567 / 01-4412345"
-                required
-                className="h-10"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Primary phone number for dispatch and order alerts
-              </p>
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <div className="flex items-center justify-between">
+              <div className="space-y-2">
                 <Label
-                  htmlFor="dealer-whatsapp"
+                  htmlFor="dealer-pan"
                   className="text-sm font-medium flex items-center gap-1.5"
                 >
-                  <MessageCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                  WhatsApp Number
-                </Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCopyContactToWhatsapp}
-                  className="h-7 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  <Copy className="h-3 w-3" />
-                  Same as Contact
-                </Button>
-              </div>
-              <Input
-                id="dealer-whatsapp"
-                value={whatsappNumber}
-                onChange={(e) => setWhatsappNumber(e.target.value)}
-                placeholder="e.g. +977-9841234567"
-                className="h-10"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                For instant dispatch notifications, bill images, and order
-                coordination
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label
-                htmlFor="dealer-address"
-                className="text-sm font-medium flex items-center gap-1.5"
-              >
-                <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                Address <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="dealer-address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g. Putalisadak Chowk, Ward 28"
-                required
-                className="h-10"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label
-                htmlFor="dealer-city"
-                className="text-sm font-medium flex items-center gap-1.5"
-              >
-                <Building className="h-3.5 w-3.5 text-muted-foreground" />
-                City
-              </Label>
-              <Input
-                id="dealer-city"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Butwal"
-                className="h-10"
-              />
-            </div>
-          </div>
-
-          {/* Tax, VAT & Credit Terms */}
-          <div className="space-y-3 pt-3 border-t border-border">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-              <Receipt className="h-4 w-4 text-primary" />
-              <span>Tax, Invoicing & Credit Terms (Nepal Sourcing)</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="dealer-vat" className="text-xs font-medium">
-                  VAT Registration No.
+                  <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                  PAN or VAT Number
                 </Label>
                 <Input
-                  id="dealer-vat"
-                  value={vatNumber}
-                  onChange={(e) => setVatNumber(e.target.value)}
+                  id="dealer-pan"
+                  value={pan}
+                  onChange={(e) => setPan(e.target.value)}
                   placeholder="e.g. 601234567"
-                  className="h-9 font-mono text-xs"
+                  className="h-10 font-mono text-sm"
                 />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="dealer-tds"
-                  className="text-xs font-medium flex items-center gap-1"
-                >
-                  <Percent className="h-3 w-3 text-muted-foreground" />
-                  TDS Rate (%)
-                </Label>
-                <Input
-                  id="dealer-tds"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="100"
-                  value={tdsRate}
-                  onChange={(e) => setTdsRate(e.target.value)}
-                  placeholder="0.0"
-                  className="h-9 font-mono text-xs"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="dealer-credit"
-                  className="text-xs font-medium flex items-center gap-1"
-                >
-                  <CreditCard className="h-3 w-3 text-muted-foreground" />
-                  Credit Limit (NPR)
-                </Label>
-                <Input
-                  id="dealer-credit"
-                  type="number"
-                  min="0"
-                  step="500"
-                  value={creditLimitNpr}
-                  onChange={(e) => setCreditLimitNpr(e.target.value)}
-                  placeholder="0"
-                  className="h-9 font-mono text-xs"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="dealer-terms" className="text-xs font-medium">
-                  Payment Terms (Days)
-                </Label>
-                <Input
-                  id="dealer-terms"
-                  type="number"
-                  min="0"
-                  value={paymentTermsDays}
-                  onChange={(e) => setPaymentTermsDays(e.target.value)}
-                  placeholder="0"
-                  className="h-9 font-mono text-xs"
-                />
-              </div>
-
-              <div className="sm:col-span-2 flex items-center space-x-2 pt-3">
-                <Checkbox
-                  id="dealer-vat-bill"
-                  checked={providesVatBill}
-                  onCheckedChange={(checked) =>
-                    setProvidesVatBill(Boolean(checked))
-                  }
-                />
-                <Label
-                  htmlFor="dealer-vat-bill"
-                  className="text-xs font-medium leading-none cursor-pointer"
-                >
-                  Provides 13% VAT Bill (Tax Invoice with PAN/VAT)
-                </Label>
-              </div>
-            </div>
-          </div>
-
-          {/* Active Status Switch */}
-          <div className="flex items-center space-x-2 pt-1 border-t border-border">
-            <Checkbox
-              id="dealer-active"
-              checked={isActive}
-              onCheckedChange={(checked) => setIsActive(Boolean(checked))}
-            />
-            <Label
-              htmlFor="dealer-active"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-            >
-              Active Dealer (Available for item assignment and order
-              fulfillment)
-            </Label>
-          </div>
-
-          {/* Item Assignment Section */}
-          <div className="space-y-3 pt-3 border-t border-border">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div>
-                <Label className="text-sm font-semibold flex items-center gap-1.5">
-                  <Store className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                  Assigned Catalog Items
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Select the specific liquor or grocery products supplied by
-                  this dealer.
+                <p className="text-[11px] text-muted-foreground">
+                  9-digit Tax Identification or VAT certificate number
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs font-medium">
-                  {selectedCounts.total} selected
-                  {selectedCounts.total > 0 &&
-                    ` (${selectedCounts.liquor} Liquor, ${selectedCounts.grocery} Grocery)`}
-                </Badge>
-                {selectedCounts.total > 0 && (
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="dealer-contact"
+                  className="text-sm font-medium flex items-center gap-1.5"
+                >
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                  Contact Number <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="dealer-contact"
+                  value={contact}
+                  onChange={(e) => setContact(e.target.value)}
+                  placeholder="e.g. +977-9841234567 / 01-4412345"
+                  required
+                  className="h-10"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Primary phone number for dispatch and order alerts
+                </p>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex items-center justify-between">
+                  <Label
+                    htmlFor="dealer-whatsapp"
+                    className="text-sm font-medium flex items-center gap-1.5"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    WhatsApp Number
+                  </Label>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={clearAllSelected}
-                    className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                    onClick={handleCopyContactToWhatsapp}
+                    className="h-7 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                   >
-                    Clear all
+                    <Copy className="h-3 w-3" />
+                    Same as Contact
+                  </Button>
+                </div>
+                <Input
+                  id="dealer-whatsapp"
+                  value={whatsappNumber}
+                  onChange={(e) => setWhatsappNumber(e.target.value)}
+                  placeholder="e.g. +977-9841234567"
+                  className="h-10"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  For instant dispatch notifications, bill images, and order
+                  coordination
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="dealer-address"
+                  className="text-sm font-medium flex items-center gap-1.5"
+                >
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                  Address <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="dealer-address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="e.g. Putalisadak Chowk, Ward 28"
+                  required
+                  className="h-10"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="dealer-city"
+                  className="text-sm font-medium flex items-center gap-1.5"
+                >
+                  <Building className="h-3.5 w-3.5 text-muted-foreground" />
+                  City
+                </Label>
+                <Input
+                  id="dealer-city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Butwal"
+                  className="h-10"
+                />
+              </div>
+            </div>
+
+            {/* Tax, VAT & Credit Terms */}
+            <div className="space-y-3 pt-3 border-t border-border">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                <Receipt className="h-4 w-4 text-primary" />
+                <span>Tax, Invoicing & Credit Terms (Nepal Sourcing)</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="dealer-vat" className="text-xs font-medium">
+                    VAT Registration No.
+                  </Label>
+                  <Input
+                    id="dealer-vat"
+                    value={vatNumber}
+                    onChange={(e) => setVatNumber(e.target.value)}
+                    placeholder="e.g. 601234567"
+                    className="h-9 font-mono text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="dealer-tds"
+                    className="text-xs font-medium flex items-center gap-1"
+                  >
+                    <Percent className="h-3 w-3 text-muted-foreground" />
+                    TDS Rate (%)
+                  </Label>
+                  <Input
+                    id="dealer-tds"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={tdsRate}
+                    onChange={(e) => setTdsRate(e.target.value)}
+                    placeholder="0.0"
+                    className="h-9 font-mono text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="dealer-credit"
+                    className="text-xs font-medium flex items-center gap-1"
+                  >
+                    <CreditCard className="h-3 w-3 text-muted-foreground" />
+                    Credit Limit (NPR)
+                  </Label>
+                  <Input
+                    id="dealer-credit"
+                    type="number"
+                    min="0"
+                    step="500"
+                    value={creditLimitNpr}
+                    onChange={(e) => setCreditLimitNpr(e.target.value)}
+                    placeholder="0"
+                    className="h-9 font-mono text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="dealer-terms" className="text-xs font-medium">
+                    Payment Terms (Days)
+                  </Label>
+                  <Input
+                    id="dealer-terms"
+                    type="number"
+                    min="0"
+                    value={paymentTermsDays}
+                    onChange={(e) => setPaymentTermsDays(e.target.value)}
+                    placeholder="0"
+                    className="h-9 font-mono text-xs"
+                  />
+                </div>
+
+                <div className="sm:col-span-2 flex items-center space-x-2 pt-3">
+                  <Checkbox
+                    id="dealer-vat-bill"
+                    checked={providesVatBill}
+                    onCheckedChange={(checked) =>
+                      setProvidesVatBill(Boolean(checked))
+                    }
+                  />
+                  <Label
+                    htmlFor="dealer-vat-bill"
+                    className="text-xs font-medium leading-none cursor-pointer"
+                  >
+                    Provides 13% VAT Bill (Tax Invoice with PAN/VAT)
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            {/* Active Status Switch */}
+            <div className="flex items-center space-x-2 pt-1 border-t border-border">
+              <Checkbox
+                id="dealer-active"
+                checked={isActive}
+                onCheckedChange={(checked) => setIsActive(Boolean(checked))}
+              />
+              <Label
+                htmlFor="dealer-active"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Active Dealer (Available for item assignment and order
+                fulfillment)
+              </Label>
+            </div>
+
+            {/* Item Assignment Section */}
+            <div className="space-y-3 pt-3 border-t border-border">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <Label className="text-sm font-semibold flex items-center gap-1.5">
+                    <Store className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    Assigned Catalog Items
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Select the specific liquor or grocery products supplied by
+                    this dealer.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs font-medium">
+                    {selectedCounts.total} selected
+                    {selectedCounts.total > 0 &&
+                      ` (${selectedCounts.liquor} Liquor, ${selectedCounts.grocery} Grocery)`}
+                  </Badge>
+                  {selectedCounts.total > 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearAllSelected}
+                      className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                    >
+                      Clear all
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Filter tabs and search */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <Tabs
+                  value={catalogTab}
+                  onValueChange={(val: any) => setCatalogTab(val)}
+                  className="w-full sm:w-auto"
+                >
+                  <TabsList className="h-9">
+                    <TabsTrigger value="all" className="text-xs px-2.5">
+                      All Items
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="liquor"
+                      className="text-xs px-2.5 flex items-center gap-1"
+                    >
+                      <Wine className="h-3 w-3" />
+                      Liquor
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="grocery"
+                      className="text-xs px-2.5 flex items-center gap-1"
+                    >
+                      <ShoppingBag className="h-3 w-3" />
+                      Grocery
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    value={itemSearch}
+                    onChange={(e) => setItemSearch(e.target.value)}
+                    placeholder="Filter items by name, category or brand..."
+                    className="h-9 pl-8 text-xs"
+                  />
+                  {itemSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setItemSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+
+                {filteredCatalogItems.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={selectAllFiltered}
+                    className="h-9 text-xs whitespace-nowrap"
+                  >
+                    Select Filtered ({filteredCatalogItems.length})
                   </Button>
                 )}
               </div>
-            </div>
 
-            {/* Filter tabs and search */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <Tabs
-                value={catalogTab}
-                onValueChange={(val: any) => setCatalogTab(val)}
-                className="w-full sm:w-auto"
-              >
-                <TabsList className="h-9">
-                  <TabsTrigger value="all" className="text-xs px-2.5">
-                    All Items
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="liquor"
-                    className="text-xs px-2.5 flex items-center gap-1"
-                  >
-                    <Wine className="h-3 w-3" />
-                    Liquor
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="grocery"
-                    className="text-xs px-2.5 flex items-center gap-1"
-                  >
-                    <ShoppingBag className="h-3 w-3" />
-                    Grocery
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+              {/* Item checklist scroll area */}
+              <div className="max-h-60 overflow-y-auto rounded-lg border border-border p-2 space-y-1 bg-muted/20">
+                {filteredCatalogItems.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-muted-foreground">
+                    No catalog items found matching your filter.
+                  </div>
+                ) : (
+                  filteredCatalogItems.map((item) => {
+                    const key = `${item.catalogType}:${item.id}`
+                    const isChecked = selectedItemKeys.has(key)
+                    return (
+                      <div
+                        key={key}
+                        onClick={() => toggleItem(item.catalogType, item.id)}
+                        className={`flex items-center justify-between p-2 rounded-md border text-xs cursor-pointer transition-colors ${
+                          isChecked
+                            ? 'border-amber-500/40 bg-amber-500/10 text-foreground'
+                            : 'border-transparent hover:bg-muted/60 text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                          <Checkbox
+                            checked={isChecked}
+                            onCheckedChange={() =>
+                              toggleItem(item.catalogType, item.id)
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {item.catalogType === 'liquor' ? (
+                              <Wine className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                            ) : (
+                              <ShoppingBag className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                            )}
+                            <span className="font-medium truncate text-foreground">
+                              {item.name}
+                            </span>
+                          </div>
+                        </div>
 
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  value={itemSearch}
-                  onChange={(e) => setItemSearch(e.target.value)}
-                  placeholder="Filter items by name, category or brand..."
-                  className="h-9 pl-8 text-xs"
-                />
-                {itemSearch && (
-                  <button
-                    type="button"
-                    onClick={() => setItemSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-
-              {filteredCatalogItems.length > 0 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={selectAllFiltered}
-                  className="h-9 text-xs whitespace-nowrap"
-                >
-                  Select Filtered ({filteredCatalogItems.length})
-                </Button>
-              )}
-            </div>
-
-            {/* Item checklist scroll area */}
-            <div className="max-h-60 overflow-y-auto rounded-lg border border-border p-2 space-y-1 bg-muted/20">
-              {filteredCatalogItems.length === 0 ? (
-                <div className="py-8 text-center text-xs text-muted-foreground">
-                  No catalog items found matching your filter.
-                </div>
-              ) : (
-                filteredCatalogItems.map((item) => {
-                  const key = `${item.catalogType}:${item.id}`
-                  const isChecked = selectedItemKeys.has(key)
-                  return (
-                    <div
-                      key={key}
-                      onClick={() => toggleItem(item.catalogType, item.id)}
-                      className={`flex items-center justify-between p-2 rounded-md border text-xs cursor-pointer transition-colors ${
-                        isChecked
-                          ? 'border-amber-500/40 bg-amber-500/10 text-foreground'
-                          : 'border-transparent hover:bg-muted/60 text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                        <Checkbox
-                          checked={isChecked}
-                          onCheckedChange={() =>
-                            toggleItem(item.catalogType, item.id)
-                          }
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          {item.catalogType === 'liquor' ? (
-                            <Wine className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                          ) : (
-                            <ShoppingBag className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {item.brandName && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] py-0 px-1.5 h-4 font-normal"
+                            >
+                              {item.brandName}
+                            </Badge>
                           )}
-                          <span className="font-medium truncate text-foreground">
-                            {item.name}
-                          </span>
+                          {item.categoryName && (
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] py-0 px-1.5 h-4 font-normal"
+                            >
+                              {item.categoryName}
+                            </Badge>
+                          )}
+                          {isChecked && (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 ml-1" />
+                          )}
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {item.brandName && (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] py-0 px-1.5 h-4 font-normal"
-                          >
-                            {item.brandName}
-                          </Badge>
-                        )}
-                        {item.categoryName && (
-                          <Badge
-                            variant="secondary"
-                            className="text-[10px] py-0 px-1.5 h-4 font-normal"
-                          >
-                            {item.categoryName}
-                          </Badge>
-                        )}
-                        {isChecked && (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 ml-1" />
-                        )}
-                      </div>
-                    </div>
-                  )
-                })
-              )}
+                    )
+                  })
+                )}
+              </div>
             </div>
           </div>
 
-          <DialogFooter className="pt-2">
+          <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0">
             <Button
               type="button"
               variant="outline"

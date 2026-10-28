@@ -42,6 +42,7 @@ export interface ChildTableProps<T> {
   ) => React.ReactNode
   emptyMessage?: string
   readOnly?: boolean
+  maxHeight?: string
   className?: string
 }
 
@@ -60,6 +61,7 @@ export function ChildTable<T extends Record<string, unknown>>({
   renderMobileCard,
   emptyMessage = 'No items added yet.',
   readOnly = false,
+  maxHeight,
   className,
 }: ChildTableProps<T>) {
   const isMobile = useIsMobile()
@@ -151,9 +153,12 @@ export function ChildTable<T extends Record<string, unknown>>({
   // Desktop layout: Compact table
   return (
     <div className={cn('space-y-2', className)}>
-      <div className="rounded-md border border-border overflow-hidden">
-        <Table>
-          <TableHeader className="bg-muted/40">
+      <div
+        className="rounded-md border border-border overflow-auto click-scroll shadow-xs"
+        style={maxHeight ? { maxHeight } : undefined}
+      >
+        <Table className="min-w-full">
+          <TableHeader className="bg-card sticky top-0 z-10 border-b border-border shadow-[0_1px_0_0_var(--color-border)]">
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-10 text-center text-[11px] font-medium text-muted-foreground">
                 #

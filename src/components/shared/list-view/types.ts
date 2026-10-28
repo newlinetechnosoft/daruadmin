@@ -1,4 +1,4 @@
-import type { ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef, RowData } from '@tanstack/react-table'
 
 export type ColumnPriority = 1 | 2 | 3 // 1 = always visible, 2 = tablet & desktop, 3 = desktop only
 
@@ -41,6 +41,14 @@ export interface MezmaniColumnMeta {
   className?: string
   headerClassName?: string
   align?: 'left' | 'center' | 'right'
+}
+
+declare module '@tanstack/react-table' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<
+    TData extends RowData,
+    TValue,
+  > extends MezmaniColumnMeta {}
 }
 
 export type ListViewColumnDef<TData, TValue = unknown> = ColumnDef<

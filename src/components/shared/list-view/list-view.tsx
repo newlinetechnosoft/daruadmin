@@ -65,6 +65,7 @@ export interface ListViewProps<TData> {
   onPaginationChange?: React.Dispatch<React.SetStateAction<PaginationState>>
   pageSizeOptions?: number[]
   renderFooterTotals?: () => React.ReactNode
+  maxHeight?: string
   className?: string
 }
 
@@ -86,6 +87,7 @@ export function ListView<TData extends Record<string, unknown>>({
   onPaginationChange: setExternalPagination,
   pageSizeOptions = [10, 20, 50, 100],
   renderFooterTotals,
+  maxHeight,
   className,
 }: ListViewProps<TData>) {
   const isMobile = useIsMobile()
@@ -169,10 +171,13 @@ export function ListView<TData extends Record<string, unknown>>({
         </div>
       ) : (
         /* Standard Table View */
-        <div className="rounded-md border border-border bg-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-muted/40 sticky top-0 z-10 border-b border-border">
+        <div className="rounded-md border border-border bg-card overflow-hidden shadow-xs">
+          <div
+            className="w-full overflow-auto click-scroll"
+            style={maxHeight ? { maxHeight } : undefined}
+          >
+            <Table className="min-w-full">
+              <TableHeader className="bg-card sticky top-0 z-10 border-b border-border shadow-[0_1px_0_0_var(--color-border)]">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow
                     key={headerGroup.id}

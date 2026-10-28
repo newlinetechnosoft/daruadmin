@@ -478,7 +478,7 @@ function AdminLayout() {
           <SidebarRail />
         </Sidebar>
 
-        <SidebarInset className="flex flex-1 flex-col">
+        <SidebarInset className="flex flex-1 flex-col min-w-0 overflow-x-clip">
           <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
@@ -635,7 +635,7 @@ function AdminLayout() {
             </div>
           </header>
 
-          <main className="flex-1 bg-muted/20 p-4 md:p-6">
+          <main className="flex-1 min-w-0 bg-muted/20 p-4 md:p-6 overflow-x-clip">
             <Outlet />
           </main>
         </SidebarInset>
