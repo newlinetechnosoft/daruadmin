@@ -16,6 +16,7 @@ import {
   getSettingsFn,
   getShippingFn,
   getStaffOpsFn,
+  getPublicDeliverySettingsFn,
 } from '#/server/operations/operations.functions'
 import {
   getAdminGroceryProductsFn,
@@ -182,5 +183,14 @@ export const adminQueries = {
       queryKey: ['admin', 'dealers'],
       queryFn: () => getAdminDealersFn(),
       staleTime: 1000 * 60 * 2,
+    }),
+}
+
+export const storeQueries = {
+  deliveryPricing: () =>
+    queryOptions({
+      queryKey: ['store', 'delivery-pricing'],
+      queryFn: () => getPublicDeliverySettingsFn(),
+      staleTime: 1000 * 60 * 5, // 5 min
     }),
 }

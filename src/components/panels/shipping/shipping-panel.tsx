@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { upsertZoneFn } from '#/server/operations/operations.functions'
 import type { Zone } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
@@ -50,6 +51,7 @@ const routeApi = getRouteApi('/admin/shipping')
 export function ShippingPanel() {
   const { ops } = routeApi.useLoaderData()
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   const [isAddZoneOpen, setIsAddZoneOpen] = useState(false)
   const [editingZone, setEditingZone] = useState<Zone | null>(null)
@@ -112,6 +114,9 @@ export function ShippingPanel() {
         etaMinutes: 45,
         active: true,
         courier: 'in-house',
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['store', 'delivery-pricing'],
       })
       await router.invalidate()
     } catch {

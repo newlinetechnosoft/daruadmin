@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { authClient } from '#/lib/auth-client'
 import { useCart } from '#/lib/cart-context'
 import { formatNPR } from '#/lib/money'
+import { storeQueries } from '#/queries/admin'
 import {
   checkoutFormSchema,
   normalizeNepaliPhone,
@@ -57,13 +59,16 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-const FREE_DELIVERY_THRESHOLD = 300000 // Rs. 3,000 in paisa
-const STANDARD_DELIVERY_CHARGE = 15000 // Rs. 150 in paisa
-
 export function CheckoutPanel() {
   const { data: session } = authClient.useSession()
   const { items, totalPaisa, clearCart } = useCart()
   const navigate = useNavigate()
+
+  // Dynamic delivery pricing from admin store configuration
+  const { data: deliverySettings } = useQuery(storeQueries.deliveryPricing())
+  const dynamicBaseFee = deliverySettings?.deliveryFee ?? 0
+  const dynamicFreeThresh = deliverySettings?.freeDeliveryThreshold ?? 0
+  const isGrowthFreeDelivery = dynamicBaseFee === 0
 
   // Profile phone check
   const rawProfilePhone =
@@ -130,7 +135,10 @@ export function CheckoutPanel() {
     return sum
   }, 0)
   const deliveryCharge =
-    totalPaisa >= FREE_DELIVERY_THRESHOLD ? 0 : STANDARD_DELIVERY_CHARGE
+    isGrowthFreeDelivery ||
+    (dynamicFreeThresh > 0 && totalPaisa >= dynamicFreeThresh)
+      ? 0
+      : dynamicBaseFee
   const promoDiscount = appliedPromo?.discountPaisa ?? 0
   const orderTotal = Math.max(0, totalPaisa - promoDiscount + deliveryCharge)
 
@@ -145,7 +153,7 @@ export function CheckoutPanel() {
         if (defaultAddr) {
           setSelectedAddressId(defaultAddr.id)
           setValue('address', defaultAddr.address, { shouldValidate: true })
-          setValue('city', defaultAddr.city === 'Kathmandu' ? 'Butwal' : defaultAddr.city)
+          setValue('city', defaultAddr.city || 'Butwal')
           if (
             defaultAddr.lat != null &&
             defaultAddr.lng != null &&
@@ -176,7 +184,7 @@ export function CheckoutPanel() {
     const addr = savedAddresses.find((a) => a.id === id)
     if (addr) {
       setValue('address', addr.address, { shouldValidate: true })
-      setValue('city', addr.city === 'Kathmandu' ? 'Butwal' : addr.city)
+      setValue('city', addr.city || 'Butwal')
       if (
         addr.lat != null &&
         addr.lng != null &&
@@ -1066,9 +1074,14 @@ export function CheckoutPanel() {
                   )}
 
                   <div className="flex justify-between">
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1.5">
                       <Bike className="h-3.5 w-3.5 text-primary" />
                       40-Min Express Delivery
+                      {isGrowthFreeDelivery && (
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
+                          Launch Free Offer
+                        </span>
+                      )}
                     </span>
                     <span className="font-mono font-medium text-foreground">
                       {deliveryCharge === 0 ? (

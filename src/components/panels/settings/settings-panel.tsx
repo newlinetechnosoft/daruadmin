@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   saveSettingsFn,
   resetOpsFn,
@@ -81,6 +82,7 @@ const routeApi = getRouteApi('/admin/settings')
 export function SettingsPanel() {
   const { ops, liquor, grocery } = routeApi.useLoaderData()
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   const [activeTab, setActiveTab] = useState<
     | 'general'
@@ -108,8 +110,8 @@ export function SettingsPanel() {
     notifyEmail: ops.settings?.notifyEmail ?? true,
     notifySms: ops.settings?.notifySms ?? false,
     riderCodLimit: ops.settings?.riderCodLimit ?? 2000000,
-    deliveryFee: ops.settings?.deliveryFee ?? 15000,
-    freeDeliveryThreshold: ops.settings?.freeDeliveryThreshold ?? 300000,
+    deliveryFee: ops.settings?.deliveryFee ?? 0,
+    freeDeliveryThreshold: ops.settings?.freeDeliveryThreshold ?? 0,
     gateways: ops.settings?.gateways ?? {
       cod: { enabled: true, merchantId: 'COD-CUSTODY', mode: 'live' },
       esewa: { enabled: true, merchantId: 'EPAYTEST', mode: 'sandbox' },
@@ -129,6 +131,10 @@ export function SettingsPanel() {
     setIsSaving(true)
     try {
       await saveSettingsFn({ data: form })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'settings'] })
+      await queryClient.invalidateQueries({
+        queryKey: ['store', 'delivery-pricing'],
+      })
       toast.success('Store settings updated and synced to Neon DB!')
       await router.invalidate()
     } catch (err: unknown) {
@@ -530,7 +536,7 @@ export function SettingsPanel() {
                           type="number"
                           min="0"
                           step="10"
-                          value={Math.round((form.deliveryFee ?? 15000) / 100)}
+                          value={Math.round((form.deliveryFee ?? 0) / 100)}
                           onChange={(e) =>
                             setForm({
                               ...form,
@@ -546,8 +552,7 @@ export function SettingsPanel() {
                         </span>
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        Flat launch fee applied to orders below free threshold
-                        (default Rs. 150).
+                        Set to 0 for free delivery during growth stage (default Rs. 0).
                       </p>
                     </div>
 
@@ -562,7 +567,7 @@ export function SettingsPanel() {
                           min="0"
                           step="100"
                           value={Math.round(
-                            (form.freeDeliveryThreshold ?? 300000) / 100,
+                            (form.freeDeliveryThreshold ?? 0) / 100,
                           )}
                           onChange={(e) =>
                             setForm({
@@ -579,13 +584,32 @@ export function SettingsPanel() {
                         </span>
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        Orders at or above this net merchandise value qualify
-                        for free delivery (default Rs. 3,000).
+                        Order total that qualifies for free delivery (0 = all orders qualify).
                       </p>
                     </div>
+                  </div>
 
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <Label htmlFor="rider-cod-limit-input">
+                  {form.deliveryFee === 0 && (
+                    <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold">
+                          🚀 Growth Stage Active — 100% Free Delivery
+                        </p>
+                        <p className="text-[11px] opacity-90">
+                          All customer orders across Butwal &amp; Tilottama enjoy zero delivery fees. Enter a fee above (e.g. Rs. 150) whenever you wish to resume delivery billing.
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-[10px]"
+                      >
+                        Free Delivery
+                      </Badge>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="rider-cod-limit-input">
                         Rider COD Cash Holding Limit (Rs.)
                       </Label>
                       <div className="relative">
@@ -619,7 +643,6 @@ export function SettingsPanel() {
                         exception.
                       </p>
                     </div>
-                  </div>
 
                   <div className="pt-4 flex justify-end border-t border-border">
                     <Button

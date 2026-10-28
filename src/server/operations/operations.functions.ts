@@ -1688,14 +1688,16 @@ export const createOrderFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const { user: actor } = await requirePermission('orders', 'create')
+    const settings = await getStoreSettingsQuery()
     const subtotal = data.items.reduce(
       (sum, item) => sum + item.unitPrice * item.qty,
       0,
     )
-    const deliveryCharge = subtotal > 300000 ? 0 : 15000
+    const baseFee = settings.deliveryFee ?? 0
+    const freeThresh = settings.freeDeliveryThreshold ?? 0
+    const deliveryCharge =
+      baseFee === 0 || (freeThresh > 0 && subtotal >= freeThresh) ? 0 : baseFee
     const total = subtotal + deliveryCharge
-
-    const settings = await getStoreSettingsQuery()
     const orderCountRes = await db.select({ count: count() }).from(orders)
     const orderSeq = (orderCountRes[0]?.count ?? 0) + 1
     const orderNumber = `${settings.invoicePrefix}-${String(10000 + orderSeq).padStart(5, '0')}`
@@ -2200,6 +2202,9 @@ export const saveSettingsFn = createServerFn({ method: 'POST' })
         notifyEmail: z.boolean().optional(),
         notifySms: z.boolean().optional(),
         gateways: z.record(z.string(), z.any()).optional(),
+        riderCodLimit: z.number().int().min(0).optional(),
+        deliveryFee: z.number().int().min(0).optional(),
+        freeDeliveryThreshold: z.number().int().min(0).optional(),
       })
       .parse(d),
   )
@@ -2209,6 +2214,19 @@ export const saveSettingsFn = createServerFn({ method: 'POST' })
     await logAudit(user.name, 'settings', 'edit', 'Updated store configuration')
     return true
   })
+
+export const getPublicDeliverySettingsFn = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  const settings = await getStoreSettingsQuery()
+  const deliveryFee = settings.deliveryFee ?? 0
+  const freeDeliveryThreshold = settings.freeDeliveryThreshold ?? 0
+  return {
+    deliveryFee, // in paisa (0 = free delivery for growth stage)
+    freeDeliveryThreshold, // in paisa
+    isGrowthFreeDelivery: deliveryFee === 0,
+  }
+})
 
 export const savePermissionsFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>

@@ -157,15 +157,23 @@ export interface CouponValidationResult {
 }
 
 export interface DeliveryPricingSettings {
-  defaultDeliveryFeePaisa: number // default 15000 (Rs. 150)
-  freeDeliveryThresholdPaisa: number // default 300000 (Rs. 3,000)
+  defaultDeliveryFeePaisa: number // 0 for growth stage (free delivery), or configurable e.g. 15000 (Rs. 150)
+  freeDeliveryThresholdPaisa: number // 0 for all free, or configurable e.g. 300000 (Rs. 3,000)
   zoneDeliveryChargePaisa?: number | null
 }
 
-export const DEFAULT_DELIVERY_SETTINGS: DeliveryPricingSettings = {
-  defaultDeliveryFeePaisa: 15000, // Rs. 150
-  freeDeliveryThresholdPaisa: 300000, // Rs. 3,000
+export const STANDARD_DELIVERY_SETTINGS: DeliveryPricingSettings = {
+  defaultDeliveryFeePaisa: 15000, // Rs. 150 standard
+  freeDeliveryThresholdPaisa: 300000, // Rs. 3,000 standard
 }
+
+export const GROWTH_STAGE_DELIVERY_SETTINGS: DeliveryPricingSettings = {
+  defaultDeliveryFeePaisa: 0, // Rs. 0 (Growth stage: 100% free delivery across Butwal)
+  freeDeliveryThresholdPaisa: 0,
+}
+
+export const DEFAULT_DELIVERY_SETTINGS: DeliveryPricingSettings =
+  GROWTH_STAGE_DELIVERY_SETTINGS
 
 /**
  * Validates a coupon against cart subtotal, global limits, per-customer limits, and first-order rules.
@@ -245,7 +253,13 @@ export function calculateDeliveryCharge(
   merchandiseValuePaisa: number,
   settings: DeliveryPricingSettings = DEFAULT_DELIVERY_SETTINGS,
 ): number {
-  if (merchandiseValuePaisa >= settings.freeDeliveryThresholdPaisa) {
+  if (settings.defaultDeliveryFeePaisa === 0) {
+    return 0
+  }
+  if (
+    settings.freeDeliveryThresholdPaisa > 0 &&
+    merchandiseValuePaisa >= settings.freeDeliveryThresholdPaisa
+  ) {
     return 0
   }
   return settings.zoneDeliveryChargePaisa ?? settings.defaultDeliveryFeePaisa

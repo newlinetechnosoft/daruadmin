@@ -4,6 +4,8 @@ import {
   validateCoupon,
   calculateDeliveryCharge,
   calculateOrderTotals,
+  STANDARD_DELIVERY_SETTINGS,
+  GROWTH_STAGE_DELIVERY_SETTINGS,
 } from './pricing'
 
 describe('Nepal VAT & Tax Utilities', () => {
@@ -24,14 +26,20 @@ describe('Nepal VAT & Tax Utilities', () => {
 })
 
 describe('Delivery Charge Engine', () => {
-  it('charges flat Rs. 150 (15,000 paisa) when subtotal is below Rs. 3,000 (300,000 paisa)', () => {
-    const fee = calculateDeliveryCharge(299900)
+  it('defaults to free delivery (0 paisa) during growth stage across all order values', () => {
+    expect(calculateDeliveryCharge(50000)).toBe(0)
+    expect(calculateDeliveryCharge(299900, GROWTH_STAGE_DELIVERY_SETTINGS)).toBe(0)
+    expect(calculateDeliveryCharge(0)).toBe(0)
+  })
+
+  it('charges configured delivery fee when admin enables standard delivery rates below threshold', () => {
+    const fee = calculateDeliveryCharge(299900, STANDARD_DELIVERY_SETTINGS)
     expect(fee).toBe(15000)
   })
 
-  it('grants free delivery at exactly or above Rs. 3,000 (300,000 paisa)', () => {
-    expect(calculateDeliveryCharge(300000)).toBe(0)
-    expect(calculateDeliveryCharge(450000)).toBe(0)
+  it('grants free delivery at exactly or above configured free delivery threshold', () => {
+    expect(calculateDeliveryCharge(300000, STANDARD_DELIVERY_SETTINGS)).toBe(0)
+    expect(calculateDeliveryCharge(450000, STANDARD_DELIVERY_SETTINGS)).toBe(0)
   })
 
   it('allows zone override delivery charge below threshold', () => {
@@ -124,6 +132,7 @@ describe('Order Totals Calculation', () => {
     const totals = calculateOrderTotals({
       items,
       discountPaisa: 30000, // Rs. 300 discount
+      deliverySettings: STANDARD_DELIVERY_SETTINGS,
     })
 
     expect(totals.subtotalPaisa).toBe(300000)

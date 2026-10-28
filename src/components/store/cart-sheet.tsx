@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Sheet,
   SheetContent,
@@ -13,6 +14,7 @@ import { Progress } from '#/components/ui/progress'
 import { useCart } from '#/lib/cart-context'
 import { useNavigate } from '@tanstack/react-router'
 import { formatNPR } from '#/lib/money'
+import { storeQueries } from '#/queries/admin'
 import {
   ShoppingBag,
   Plus,
@@ -23,8 +25,6 @@ import {
   ShieldCheck,
   Package,
 } from 'lucide-react'
-
-const FREE_DELIVERY_THRESHOLD = 300000 // Rs. 3,000 in paisa
 
 export function CartSheet() {
   const {
@@ -38,6 +38,11 @@ export function CartSheet() {
   } = useCart()
   const navigate = useNavigate()
 
+  const { data: deliverySettings } = useQuery(storeQueries.deliveryPricing())
+  const deliveryFeePaisa = deliverySettings?.deliveryFee ?? 0
+  const freeThresholdPaisa = deliverySettings?.freeDeliveryThreshold ?? 0
+  const isGrowthFreeDelivery = deliveryFeePaisa === 0
+
   const totalSavingsPaisa = useMemo(() => {
     return items.reduce((sum, item) => {
       if (item.mrp && item.mrp > item.price) {
@@ -47,11 +52,21 @@ export function CartSheet() {
     }, 0)
   }, [items])
 
-  const freeDeliveryProgress = Math.min(
-    100,
-    Math.round((totalPaisa / FREE_DELIVERY_THRESHOLD) * 100),
-  )
-  const remainingForFree = Math.max(0, FREE_DELIVERY_THRESHOLD - totalPaisa)
+  const remainingForFree =
+    isGrowthFreeDelivery || freeThresholdPaisa === 0
+      ? 0
+      : Math.max(0, freeThresholdPaisa - totalPaisa)
+
+  const freeDeliveryProgress =
+    isGrowthFreeDelivery || remainingForFree === 0
+      ? 100
+      : Math.min(
+          100,
+          Math.round((totalPaisa / freeThresholdPaisa) * 100),
+        )
+
+  const currentDeliveryFee =
+    isGrowthFreeDelivery || remainingForFree === 0 ? 0 : deliveryFeePaisa
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -96,9 +111,11 @@ export function CartSheet() {
               <div className="flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1.5 font-medium text-foreground">
                   <Bike className="h-3.5 w-3.5 text-primary" />
-                  {remainingForFree === 0
-                    ? 'Free 40-minute express delivery unlocked'
-                    : `Add ${formatNPR(remainingForFree)} more for free delivery`}
+                  {isGrowthFreeDelivery
+                    ? '🎉 Free express delivery unlocked (Growth Stage Offer)'
+                    : remainingForFree === 0
+                      ? 'Free 40-minute express delivery unlocked'
+                      : `Add ${formatNPR(remainingForFree)} more for free delivery`}
                 </span>
                 <span className="text-[11px] font-mono text-muted-foreground">
                   {freeDeliveryProgress}%
@@ -279,10 +296,10 @@ export function CartSheet() {
                 <div className="flex justify-between">
                   <span>Express delivery (Butwal & Tilottama)</span>
                   <span className="font-medium text-foreground font-mono">
-                    {remainingForFree === 0 ? (
+                    {currentDeliveryFee === 0 ? (
                       <span className="text-success font-semibold">Free</span>
                     ) : (
-                      formatNPR(15000)
+                      formatNPR(currentDeliveryFee)
                     )}
                   </span>
                 </div>
@@ -300,9 +317,7 @@ export function CartSheet() {
                     Estimated total
                   </span>
                   <span className="text-base font-bold text-foreground font-mono">
-                    {formatNPR(
-                      totalPaisa + (remainingForFree === 0 ? 0 : 15000),
-                    )}
+                    {formatNPR(totalPaisa + currentDeliveryFee)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground">

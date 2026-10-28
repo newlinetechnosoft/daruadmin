@@ -58,8 +58,8 @@ export function defaultStoreSettings(): StoreSettings {
       connectips: { enabled: false, merchantId: '', mode: 'sandbox' },
     },
     riderCodLimit: 2000000, // Rs. 20,000 in paisa
-    deliveryFee: 15000, // Rs. 150 in paisa
-    freeDeliveryThreshold: 300000, // Rs. 3,000 in paisa
+    deliveryFee: 0, // Rs. 0 in paisa (Growth stage: 100% free delivery across Butwal & Tilottama)
+    freeDeliveryThreshold: 0, // Rs. 0 in paisa (all orders qualify for free delivery)
   }
 }
 

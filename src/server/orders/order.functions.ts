@@ -318,9 +318,8 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
       items: verifiedOrderItems,
       discountPaisa,
       deliverySettings: {
-        defaultDeliveryFeePaisa: (settings as any).deliveryFee ?? 15000,
-        freeDeliveryThresholdPaisa:
-          (settings as any).freeDeliveryThreshold ?? 300000,
+        defaultDeliveryFeePaisa: settings.deliveryFee ?? 0,
+        freeDeliveryThresholdPaisa: settings.freeDeliveryThreshold ?? 0,
       },
       vatRate: settings.taxRate ?? 13,
     })
