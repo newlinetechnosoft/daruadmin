@@ -60,10 +60,7 @@ export function CartSheet() {
   const freeDeliveryProgress =
     isGrowthFreeDelivery || remainingForFree === 0
       ? 100
-      : Math.min(
-          100,
-          Math.round((totalPaisa / freeThresholdPaisa) * 100),
-        )
+      : Math.min(100, Math.round((totalPaisa / freeThresholdPaisa) * 100))
 
   const currentDeliveryFee =
     isGrowthFreeDelivery || remainingForFree === 0 ? 0 : deliveryFeePaisa

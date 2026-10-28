@@ -101,12 +101,16 @@ export function DeliveryProofDialog({
 
   const handleComplete = async () => {
     if (hasLiquor && !ageVerified) {
-      toast.error('Age verification (18+) is legally mandatory for liquor orders.')
+      toast.error(
+        'Age verification (18+) is legally mandatory for liquor orders.',
+      )
       return
     }
 
     if (!otpCode.trim() && !photoUrl) {
-      toast.error('Please enter the customer 4-digit OTP or attach a delivery proof photo.')
+      toast.error(
+        'Please enter the customer 4-digit OTP or attach a delivery proof photo.',
+      )
       return
     }
 
@@ -153,8 +157,12 @@ export function DeliveryProofDialog({
             <div className="flex items-center gap-2">
               <Coins className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
               <div>
-                <span className="text-xs font-bold block">Cash on Delivery</span>
-                <span className="text-[11px] opacity-80">Collect cash from customer</span>
+                <span className="text-xs font-bold block">
+                  Cash on Delivery
+                </span>
+                <span className="text-[11px] opacity-80">
+                  Collect cash from customer
+                </span>
               </div>
             </div>
             <div className="text-right">
@@ -169,7 +177,10 @@ export function DeliveryProofDialog({
               <CreditCard className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span className="text-xs font-semibold">Paid Online (eSewa)</span>
             </div>
-            <Badge variant="outline" className="text-[11px] bg-emerald-500/20 border-emerald-500/40 text-emerald-700 dark:text-emerald-300">
+            <Badge
+              variant="outline"
+              className="text-[11px] bg-emerald-500/20 border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
+            >
               No Cash Collection
             </Badge>
           </div>
@@ -183,7 +194,10 @@ export function DeliveryProofDialog({
                 <AlertCircle className="h-3.5 w-3.5" />
                 Age Verification Required (18+)
               </span>
-              <Badge variant="destructive" className="text-[10px] uppercase font-bold py-0">
+              <Badge
+                variant="destructive"
+                className="text-[10px] uppercase font-bold py-0"
+              >
                 Mandatory
               </Badge>
             </div>
@@ -198,7 +212,8 @@ export function DeliveryProofDialog({
                 htmlFor="age-verification-check"
                 className="text-xs text-foreground cursor-pointer font-medium leading-tight"
               >
-                I confirm that I have verified the recipient is 18 years or older.
+                I confirm that I have verified the recipient is 18 years or
+                older.
               </Label>
             </div>
           </div>
@@ -254,7 +269,8 @@ export function DeliveryProofDialog({
                 className="h-10 text-center font-mono text-lg font-bold tracking-widest"
               />
               <p className="text-[11px] text-muted-foreground">
-                Ask the customer for the PIN displayed on their live tracking page.
+                Ask the customer for the PIN displayed on their live tracking
+                page.
               </p>
             </div>
           )}
@@ -315,7 +331,10 @@ export function DeliveryProofDialog({
 
           {/* Optional Rider Notes */}
           <div className="space-y-1 pt-1">
-            <Label htmlFor="rider-notes" className="text-xs font-medium text-muted-foreground">
+            <Label
+              htmlFor="rider-notes"
+              className="text-xs font-medium text-muted-foreground"
+            >
               Delivery Notes (Optional)
             </Label>
             <Input

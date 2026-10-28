@@ -9,15 +9,14 @@ import {
   useRouter,
 } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import {
-  globalSearchFn,
-  markNotificationsFn,
-} from '#/server/operations/operations.functions'
+import { markNotificationsFn } from '#/server/operations/operations.functions'
 import { adminQueries } from '#/queries/admin'
 import { can } from '#/server/auth/permissions-shared'
 import type { ModuleKey } from '#/server/operations/types'
 import { authClient } from '#/lib/auth-client'
 import { clearAllLocalData } from '#/lib/idb'
+import { Awesomebar } from '#/components/shared/awesomebar'
+import { ShortcutsHelp } from '#/components/shared/shortcuts-help'
 import {
   LayoutDashboard,
   Wine,
@@ -28,7 +27,6 @@ import {
   LogOut,
   Search,
   Bell,
-  Package,
   Bike,
   Shield,
   Wallet,
@@ -65,14 +63,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '#/components/ui/breadcrumb'
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '#/components/ui/command'
 import {
   Sidebar,
   SidebarContent,
@@ -149,14 +139,55 @@ type NavItem = {
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
-    label: 'Overview',
+    label: 'Home',
     items: [
       {
-        label: 'Dashboard',
+        label: 'Workspace',
         to: '/admin',
         exact: true,
         icon: LayoutDashboard,
         module: 'dashboard',
+      },
+    ],
+  },
+  {
+    label: 'Sales',
+    items: [
+      {
+        label: 'Orders',
+        to: '/admin/orders',
+        icon: ClipboardList,
+        module: 'orders',
+      },
+      {
+        label: 'Customers',
+        to: '/admin/customers',
+        icon: Users,
+        module: 'customers',
+      },
+      {
+        label: 'Marketing',
+        to: '/admin/marketing',
+        icon: Megaphone,
+        module: 'marketing',
+      },
+    ],
+  },
+  {
+    label: 'Sourcing and delivery',
+    items: [
+      {
+        label: 'Dealers',
+        to: '/admin/dealers',
+        icon: Store,
+        module: 'dealers',
+      },
+      { label: 'Riders', to: '/admin/riders', icon: Bike, module: 'riders' },
+      {
+        label: 'Shipping',
+        to: '/admin/shipping',
+        icon: Truck,
+        module: 'shipping',
       },
     ],
   },
@@ -181,49 +212,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         to: '/admin/brands',
         icon: Award,
         module: 'brands',
-      },
-    ],
-  },
-  {
-    label: 'Commerce',
-    items: [
-      {
-        label: 'Orders',
-        to: '/admin/orders',
-        icon: ClipboardList,
-        module: 'orders',
-      },
-      {
-        label: 'Customers',
-        to: '/admin/customers',
-        icon: Users,
-        module: 'customers',
-      },
-      {
-        label: 'Inventory',
-        to: '/admin/inventory',
-        icon: Package,
-        module: 'inventory',
-      },
-      {
-        label: 'Dealers',
-        to: '/admin/dealers',
-        icon: Store,
-        module: 'dealers',
-      },
-    ],
-  },
-  {
-    label: 'Operations',
-    items: [
-      { label: 'Riders', to: '/admin/riders', icon: Bike, module: 'riders' },
-      { label: 'Staff', to: '/admin/staff', icon: Shield, module: 'staff' },
-      { label: 'Users', to: '/admin/users', icon: Users, module: 'users' },
-      {
-        label: 'Shipping',
-        to: '/admin/shipping',
-        icon: Truck,
-        module: 'shipping',
       },
     ],
   },
@@ -274,17 +262,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         icon: CreditCard,
         module: 'payments',
       },
-    ],
-  },
-  {
-    label: 'Growth',
-    items: [
-      {
-        label: 'Marketing',
-        to: '/admin/marketing',
-        icon: Megaphone,
-        module: 'marketing',
-      },
       {
         label: 'Reports',
         to: '/admin/reports',
@@ -294,8 +271,14 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
-    label: 'System',
+    label: 'People and system',
     items: [
+      {
+        label: 'Staff & Users',
+        to: '/admin/staff',
+        icon: Shield,
+        module: 'staff',
+      },
       {
         label: 'Settings',
         to: '/admin/settings',
@@ -309,7 +292,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
 const ALL_NAV = NAV_GROUPS.flatMap((g) => g.items)
 
 function crumbLabel(path: string) {
-  if (path === '/admin') return 'Dashboard'
+  if (path === '/admin') return 'Workspace'
   const item = ALL_NAV.find((n) => n.to !== '/admin' && path.startsWith(n.to))
   if (item) return item.label
   const last = path.split('/').filter(Boolean).pop() ?? 'Admin'
@@ -324,13 +307,6 @@ function AdminLayout() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [searchOpen, setSearchOpen] = useState(false)
-  const [globalQ, setGlobalQ] = useState('')
-  const [results, setResults] = useState<{
-    products: { id: string; name: string; href: string }[]
-    orders: { id: string; name: string; href: string }[]
-    customers: { id: string; name: string; href: string }[]
-    riders: { id: string; name: string; href: string }[]
-  } | null>(null)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [notificationsRead, setNotificationsRead] = useState(false)
 
@@ -347,19 +323,6 @@ function AdminLayout() {
     document.addEventListener('keydown', down)
     return () => document.removeEventListener('keydown', down)
   }, [])
-
-  // Debounced search query
-  useEffect(() => {
-    if (globalQ.trim().length < 2) {
-      setResults(null)
-      return
-    }
-    const t = setTimeout(async () => {
-      const data = await globalSearchFn({ data: { q: globalQ } })
-      setResults(data)
-    }, 220)
-    return () => clearTimeout(t)
-  }, [globalQ])
 
   const isCurrent = (item: NavItem) => {
     if (item.exact) return currentPath === item.to
@@ -677,96 +640,8 @@ function AdminLayout() {
           </main>
         </SidebarInset>
 
-        <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
-          <CommandInput
-            placeholder="Type a command or search..."
-            value={globalQ}
-            onValueChange={setGlobalQ}
-          />
-          <CommandList>
-            <CommandEmpty>
-              {globalQ.trim().length < 2
-                ? 'Type at least 2 characters to search...'
-                : 'No results found.'}
-            </CommandEmpty>
-
-            {can(grants, 'products', 'view') &&
-              results?.products &&
-              results.products.length > 0 && (
-                <CommandGroup heading="Products">
-                  {results.products.map((p) => (
-                    <CommandItem
-                      key={p.id}
-                      onSelect={() => {
-                        setSearchOpen(false)
-                        window.location.href = p.href
-                      }}
-                    >
-                      <Wine className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <span>{p.name}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-            {can(grants, 'orders', 'view') &&
-              results?.orders &&
-              results.orders.length > 0 && (
-                <CommandGroup heading="Orders">
-                  {results.orders.map((o) => (
-                    <CommandItem
-                      key={o.id}
-                      onSelect={() => {
-                        setSearchOpen(false)
-                        window.location.href = o.href
-                      }}
-                    >
-                      <ClipboardList className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <span>{o.name}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-            {can(grants, 'customers', 'view') &&
-              results?.customers &&
-              results.customers.length > 0 && (
-                <CommandGroup heading="Customers">
-                  {results.customers.map((c) => (
-                    <CommandItem
-                      key={c.id}
-                      onSelect={() => {
-                        setSearchOpen(false)
-                        window.location.href = c.href
-                      }}
-                    >
-                      <Users className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <span>{c.name}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-
-            {can(grants, 'riders', 'view') &&
-              results?.riders &&
-              results.riders.length > 0 && (
-                <CommandGroup heading="Riders">
-                  {results.riders.map((r) => (
-                    <CommandItem
-                      key={r.id}
-                      onSelect={() => {
-                        setSearchOpen(false)
-                        window.location.href = r.href
-                      }}
-                    >
-                      <Bike className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <span>{r.name}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-          </CommandList>
-        </CommandDialog>
+        <Awesomebar open={searchOpen} onOpenChange={setSearchOpen} />
+        <ShortcutsHelp />
       </div>
     </SidebarProvider>
   )

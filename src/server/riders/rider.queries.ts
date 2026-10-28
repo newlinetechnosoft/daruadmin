@@ -213,4 +213,3 @@ export async function getRiderAttendanceStatsQuery(
     activeShiftSince: activeShift ? activeShift.startedAt.toISOString() : null,
   }
 }
-

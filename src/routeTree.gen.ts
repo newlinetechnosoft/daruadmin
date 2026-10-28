@@ -48,6 +48,9 @@ import { Route as RiderProfileRouteImport } from './routes/rider/profile'
 import { Route as TrackIndexRouteImport } from './routes/track.index'
 import { Route as TrackCodeRouteImport } from './routes/track.$code'
 import { Route as VoucherSlugRouteImport } from './routes/voucher.$slug'
+import { Route as AdminDealersIndexRouteImport } from './routes/admin/dealers/index'
+import { Route as AdminDealersIdRouteImport } from './routes/admin/dealers/$id'
+import { Route as AdminDealersNewRouteImport } from './routes/admin/dealers/new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as CheckoutPaymentEsewaFailureRouteImport } from './routes/checkout.payment.esewa.failure'
 import { Route as CheckoutPaymentEsewaSuccessRouteImport } from './routes/checkout.payment.esewa.success'
@@ -248,6 +251,21 @@ const VoucherSlugRoute = VoucherSlugRouteImport.update({
   path: '/voucher/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminDealersIndexRoute = AdminDealersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminDealersRoute,
+} as any)
+const AdminDealersIdRoute = AdminDealersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AdminDealersRoute,
+} as any)
+const AdminDealersNewRoute = AdminDealersNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AdminDealersRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -280,7 +298,7 @@ export interface FileRoutesByFullPath {
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
-  '/admin/dealers': typeof AdminDealersRoute
+  '/admin/dealers': typeof AdminDealersRouteWithChildren
   '/admin/forbidden': typeof AdminForbiddenRoute
   '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
@@ -306,7 +324,10 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/rider/': typeof RiderIndexRoute
   '/track/': typeof TrackIndexRoute
+  '/admin/dealers/$id': typeof AdminDealersIdRoute
+  '/admin/dealers/new': typeof AdminDealersNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/admin/dealers/': typeof AdminDealersIndexRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
 }
@@ -322,7 +343,6 @@ export interface FileRoutesByTo {
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
-  '/admin/dealers': typeof AdminDealersRoute
   '/admin/forbidden': typeof AdminForbiddenRoute
   '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
@@ -348,7 +368,10 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/rider': typeof RiderIndexRoute
   '/track': typeof TrackIndexRoute
+  '/admin/dealers/$id': typeof AdminDealersIdRoute
+  '/admin/dealers/new': typeof AdminDealersNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/admin/dealers': typeof AdminDealersIndexRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
 }
@@ -367,7 +390,7 @@ export interface FileRoutesById {
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
-  '/admin/dealers': typeof AdminDealersRoute
+  '/admin/dealers': typeof AdminDealersRouteWithChildren
   '/admin/forbidden': typeof AdminForbiddenRoute
   '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
@@ -393,7 +416,10 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/rider/': typeof RiderIndexRoute
   '/track/': typeof TrackIndexRoute
+  '/admin/dealers/$id': typeof AdminDealersIdRoute
+  '/admin/dealers/new': typeof AdminDealersNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/admin/dealers/': typeof AdminDealersIndexRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
 }
@@ -439,7 +465,10 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/rider/'
     | '/track/'
+    | '/admin/dealers/$id'
+    | '/admin/dealers/new'
     | '/api/auth/$'
+    | '/admin/dealers/'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
   fileRoutesByTo: FileRoutesByTo
@@ -455,7 +484,6 @@ export interface FileRouteTypes {
     | '/admin/accounts'
     | '/admin/brands'
     | '/admin/customers'
-    | '/admin/dealers'
     | '/admin/forbidden'
     | '/admin/grocery'
     | '/admin/inventory'
@@ -481,7 +509,10 @@ export interface FileRouteTypes {
     | '/admin'
     | '/rider'
     | '/track'
+    | '/admin/dealers/$id'
+    | '/admin/dealers/new'
     | '/api/auth/$'
+    | '/admin/dealers'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
   id:
@@ -525,7 +556,10 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/rider/'
     | '/track/'
+    | '/admin/dealers/$id'
+    | '/admin/dealers/new'
     | '/api/auth/$'
+    | '/admin/dealers/'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
   fileRoutesById: FileRoutesById
@@ -825,6 +859,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VoucherSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/dealers/': {
+      id: '/admin/dealers/'
+      path: '/'
+      fullPath: '/admin/dealers/'
+      preLoaderRoute: typeof AdminDealersIndexRouteImport
+      parentRoute: typeof AdminDealersRoute
+    }
+    '/admin/dealers/$id': {
+      id: '/admin/dealers/$id'
+      path: '/$id'
+      fullPath: '/admin/dealers/$id'
+      preLoaderRoute: typeof AdminDealersIdRouteImport
+      parentRoute: typeof AdminDealersRoute
+    }
+    '/admin/dealers/new': {
+      id: '/admin/dealers/new'
+      path: '/new'
+      fullPath: '/admin/dealers/new'
+      preLoaderRoute: typeof AdminDealersNewRouteImport
+      parentRoute: typeof AdminDealersRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -849,11 +904,27 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminDealersRouteChildren {
+  AdminDealersIdRoute: typeof AdminDealersIdRoute
+  AdminDealersNewRoute: typeof AdminDealersNewRoute
+  AdminDealersIndexRoute: typeof AdminDealersIndexRoute
+}
+
+const AdminDealersRouteChildren: AdminDealersRouteChildren = {
+  AdminDealersIdRoute: AdminDealersIdRoute,
+  AdminDealersNewRoute: AdminDealersNewRoute,
+  AdminDealersIndexRoute: AdminDealersIndexRoute,
+}
+
+const AdminDealersRouteWithChildren = AdminDealersRoute._addFileChildren(
+  AdminDealersRouteChildren,
+)
+
 interface AdminRouteRouteChildren {
   AdminAccountsRoute: typeof AdminAccountsRoute
   AdminBrandsRoute: typeof AdminBrandsRoute
   AdminCustomersRoute: typeof AdminCustomersRoute
-  AdminDealersRoute: typeof AdminDealersRoute
+  AdminDealersRoute: typeof AdminDealersRouteWithChildren
   AdminForbiddenRoute: typeof AdminForbiddenRoute
   AdminGroceryRoute: typeof AdminGroceryRoute
   AdminInventoryRoute: typeof AdminInventoryRoute
@@ -875,7 +946,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAccountsRoute: AdminAccountsRoute,
   AdminBrandsRoute: AdminBrandsRoute,
   AdminCustomersRoute: AdminCustomersRoute,
-  AdminDealersRoute: AdminDealersRoute,
+  AdminDealersRoute: AdminDealersRouteWithChildren,
   AdminForbiddenRoute: AdminForbiddenRoute,
   AdminGroceryRoute: AdminGroceryRoute,
   AdminInventoryRoute: AdminInventoryRoute,

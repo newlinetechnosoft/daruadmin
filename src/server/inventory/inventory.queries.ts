@@ -182,7 +182,8 @@ export async function getAllDealersQuery(): Promise<DealerDto[]> {
       totalAssigned === 0
         ? 100
         : Math.round(
-            (fulfilledCount / Math.max(1, fulfilledCount + rejectedCount)) * 100,
+            (fulfilledCount / Math.max(1, fulfilledCount + rejectedCount)) *
+              100,
           )
 
     const performance: DealerPerformance = {

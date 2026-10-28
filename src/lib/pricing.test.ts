@@ -28,7 +28,9 @@ describe('Nepal VAT & Tax Utilities', () => {
 describe('Delivery Charge Engine', () => {
   it('defaults to free delivery (0 paisa) during growth stage across all order values', () => {
     expect(calculateDeliveryCharge(50000)).toBe(0)
-    expect(calculateDeliveryCharge(299900, GROWTH_STAGE_DELIVERY_SETTINGS)).toBe(0)
+    expect(
+      calculateDeliveryCharge(299900, GROWTH_STAGE_DELIVERY_SETTINGS),
+    ).toBe(0)
     expect(calculateDeliveryCharge(0)).toBe(0)
   })
 

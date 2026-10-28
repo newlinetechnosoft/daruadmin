@@ -44,8 +44,14 @@ export const Route = createFileRoute('/offers/$slug')({
       ])
 
       const allProducts: ProductProps[] = [
-        ...liquorProducts.map((p: any) => ({ ...p, catalogType: 'liquor' as const })),
-        ...groceryProducts.map((p: any) => ({ ...p, catalogType: 'grocery' as const })),
+        ...liquorProducts.map((p: any) => ({
+          ...p,
+          catalogType: 'liquor' as const,
+        })),
+        ...groceryProducts.map((p: any) => ({
+          ...p,
+          catalogType: 'grocery' as const,
+        })),
       ]
 
       // Filter products based on offer scope

@@ -552,7 +552,8 @@ export function SettingsPanel() {
                         </span>
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        Set to 0 for free delivery during growth stage (default Rs. 0).
+                        Set to 0 for free delivery during growth stage (default
+                        Rs. 0).
                       </p>
                     </div>
 
@@ -584,7 +585,8 @@ export function SettingsPanel() {
                         </span>
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        Order total that qualifies for free delivery (0 = all orders qualify).
+                        Order total that qualifies for free delivery (0 = all
+                        orders qualify).
                       </p>
                     </div>
                   </div>
@@ -596,7 +598,9 @@ export function SettingsPanel() {
                           🚀 Growth Stage Active — 100% Free Delivery
                         </p>
                         <p className="text-[11px] opacity-90">
-                          All customer orders across Butwal &amp; Tilottama enjoy zero delivery fees. Enter a fee above (e.g. Rs. 150) whenever you wish to resume delivery billing.
+                          All customer orders across Butwal &amp; Tilottama
+                          enjoy zero delivery fees. Enter a fee above (e.g. Rs.
+                          150) whenever you wish to resume delivery billing.
                         </p>
                       </div>
                       <Badge
@@ -610,39 +614,39 @@ export function SettingsPanel() {
 
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label htmlFor="rider-cod-limit-input">
-                        Rider COD Cash Holding Limit (Rs.)
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          id="rider-cod-limit-input"
-                          type="number"
-                          min="1000"
-                          step="1000"
-                          value={Math.round(
-                            (form.riderCodLimit ?? 2000000) / 100,
-                          )}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              riderCodLimit: Math.round(
-                                (parseFloat(e.target.value) || 0) * 100,
-                              ),
-                            })
-                          }
-                          required
-                        />
-                        <span className="absolute top-1/2 -translate-y-1/2 right-3 text-xs font-semibold text-muted-foreground">
-                          NPR
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        When a rider's outstanding collected cash reaches or
-                        exceeds this limit (default Rs. 20,000), new COD
-                        assignments are automatically blocked until a cash
-                        handover is verified, unless a manager authorizes an
-                        exception.
-                      </p>
+                      Rider COD Cash Holding Limit (Rs.)
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="rider-cod-limit-input"
+                        type="number"
+                        min="1000"
+                        step="1000"
+                        value={Math.round(
+                          (form.riderCodLimit ?? 2000000) / 100,
+                        )}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            riderCodLimit: Math.round(
+                              (parseFloat(e.target.value) || 0) * 100,
+                            ),
+                          })
+                        }
+                        required
+                      />
+                      <span className="absolute top-1/2 -translate-y-1/2 right-3 text-xs font-semibold text-muted-foreground">
+                        NPR
+                      </span>
                     </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      When a rider's outstanding collected cash reaches or
+                      exceeds this limit (default Rs. 20,000), new COD
+                      assignments are automatically blocked until a cash
+                      handover is verified, unless a manager authorizes an
+                      exception.
+                    </p>
+                  </div>
 
                   <div className="pt-4 flex justify-end border-t border-border">
                     <Button

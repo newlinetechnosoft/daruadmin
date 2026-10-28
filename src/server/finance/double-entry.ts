@@ -683,7 +683,11 @@ export async function postRiderPayoutTx(
   const gross = params.grossAmount ?? params.amount ?? 0
   const shortage = params.cashShortageDeducted ?? 0
   const advances = params.advancesDeducted ?? 0
-  const net = params.netPaid ?? (params.amount ? params.amount - shortage - advances : gross - shortage - advances)
+  const net =
+    params.netPaid ??
+    (params.amount
+      ? params.amount - shortage - advances
+      : gross - shortage - advances)
 
   if (gross <= 0) {
     throw new Error('Payout gross amount must be greater than zero.')
@@ -753,4 +757,3 @@ export async function postRiderPayoutTx(
     lines,
   })
 }
-

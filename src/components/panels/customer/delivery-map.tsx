@@ -143,7 +143,9 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
       <div className="space-y-2">
         <div className="h-64 sm:h-72 w-full rounded-lg border border-border bg-muted/30 flex flex-col items-center justify-center gap-2 text-muted-foreground animate-pulse">
           <MapPin className="h-6 w-6 text-primary/60" />
-          <span className="text-xs font-medium">Loading Butwal delivery map...</span>
+          <span className="text-xs font-medium">
+            Loading Butwal delivery map...
+          </span>
         </div>
       </div>
     )
@@ -201,26 +203,26 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
             draggable={!disabled}
             ref={markerRef}
             eventHandlers={{
-                dragend() {
-                  const marker = markerRef.current
-                  if (marker) {
-                    const latlng = marker.getLatLng()
-                    if (isWithinButwalArea(latlng.lat, latlng.lng)) {
-                      onChange({ lat: latlng.lat, lng: latlng.lng })
-                    } else {
-                      toast.warning(
-                        'Delivery pin was dragged outside Butwal. Resetting to Butwal center.',
-                      )
-                      marker.setLatLng(DEFAULT_MAP_CENTER)
-                      onChange({
-                        lat: DEFAULT_MAP_CENTER[0],
-                        lng: DEFAULT_MAP_CENTER[1],
-                      })
-                    }
+              dragend() {
+                const marker = markerRef.current
+                if (marker) {
+                  const latlng = marker.getLatLng()
+                  if (isWithinButwalArea(latlng.lat, latlng.lng)) {
+                    onChange({ lat: latlng.lat, lng: latlng.lng })
+                  } else {
+                    toast.warning(
+                      'Delivery pin was dragged outside Butwal. Resetting to Butwal center.',
+                    )
+                    marker.setLatLng(DEFAULT_MAP_CENTER)
+                    onChange({
+                      lat: DEFAULT_MAP_CENTER[0],
+                      lng: DEFAULT_MAP_CENTER[1],
+                    })
                   }
-                },
-              }}
-            />
+                }
+              },
+            }}
+          />
         </MapContainer>
       </div>
 
@@ -236,7 +238,8 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
           </span>
         ) : (
           <span className="text-primary font-semibold">
-            {DEFAULT_MAP_CENTER[0].toFixed(6)}° N, {DEFAULT_MAP_CENTER[1].toFixed(6)}° E (Traffic Chowk)
+            {DEFAULT_MAP_CENTER[0].toFixed(6)}° N,{' '}
+            {DEFAULT_MAP_CENTER[1].toFixed(6)}° E (Traffic Chowk)
           </span>
         )}
       </div>

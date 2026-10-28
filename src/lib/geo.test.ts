@@ -22,7 +22,9 @@ describe('Geospatial & Sourcing Distance Utilities', () => {
 
   it('validates Butwal delivery area bounds correctly', () => {
     // Default center (Traffic Chowk) should be within Butwal area
-    expect(isWithinButwalArea(DEFAULT_MAP_CENTER[0], DEFAULT_MAP_CENTER[1])).toBe(true)
+    expect(
+      isWithinButwalArea(DEFAULT_MAP_CENTER[0], DEFAULT_MAP_CENTER[1]),
+    ).toBe(true)
     expect(isWithinButwalArea(butwal.lat, butwal.lng)).toBe(true)
     expect(isWithinButwalArea(tilottama.lat, tilottama.lng)).toBe(true)
 
