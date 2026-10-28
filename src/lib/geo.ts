@@ -15,6 +15,29 @@ export const DEFAULT_MAP_CENTER: [number, number] = [27.7006, 83.4484]
 export const DEFAULT_MAP_ZOOM = 14
 
 /**
+ * Bounding box for Butwal Metropolitan & Tilottama / Rupandehi delivery zone.
+ * Southwest: [27.5500, 83.3500] (Tilottama / Bhairahawa boundary)
+ * Northeast: [27.8000, 83.5500] (Tinau / Golpark / Hill Park)
+ */
+export const BUTWAL_MAP_BOUNDS: [[number, number], [number, number]] = [
+  [27.55, 83.35],
+  [27.8, 83.55],
+]
+
+/**
+ * Checks if coordinates fall within the Butwal & Tilottama delivery service corridor.
+ */
+export function isWithinButwalArea(
+  lat: number | null | undefined,
+  lng: number | null | undefined,
+): boolean {
+  if (lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng)) {
+    return false
+  }
+  return lat >= 27.55 && lat <= 27.8 && lng >= 83.35 && lng <= 83.55
+}
+
+/**
  * Calculates great-circle distance between two coordinates in kilometers using Haversine formula.
  */
 export function calculateHaversineDistanceKm(

@@ -5,6 +5,9 @@ import {
   isPointWithinRadius,
   sortLocationsByDistance,
   getDealerWhatsAppConfirmationUrl,
+  isWithinButwalArea,
+  BUTWAL_MAP_BOUNDS,
+  DEFAULT_MAP_CENTER,
 } from './geo'
 
 describe('Geospatial & Sourcing Distance Utilities', () => {
@@ -14,6 +17,26 @@ describe('Geospatial & Sourcing Distance Utilities', () => {
   const tilottama = { lat: 27.6333, lng: 83.4667 }
   // Siddharthanagar / Bhairahawa (approx ~20 km south)
   const bhairahawa = { lat: 27.5065, lng: 83.4542 }
+  // Kathmandu center (approx ~200 km east)
+  const kathmandu = { lat: 27.7172, lng: 85.324 }
+
+  it('validates Butwal delivery area bounds correctly', () => {
+    // Default center (Traffic Chowk) should be within Butwal area
+    expect(isWithinButwalArea(DEFAULT_MAP_CENTER[0], DEFAULT_MAP_CENTER[1])).toBe(true)
+    expect(isWithinButwalArea(butwal.lat, butwal.lng)).toBe(true)
+    expect(isWithinButwalArea(tilottama.lat, tilottama.lng)).toBe(true)
+
+    // Kathmandu must NEVER be recognized as inside Butwal
+    expect(isWithinButwalArea(kathmandu.lat, kathmandu.lng)).toBe(false)
+    expect(isWithinButwalArea(null, null)).toBe(false)
+    expect(isWithinButwalArea(NaN, NaN)).toBe(false)
+
+    // Check bounds
+    expect(BUTWAL_MAP_BOUNDS[0][0]).toBeLessThan(DEFAULT_MAP_CENTER[0])
+    expect(BUTWAL_MAP_BOUNDS[1][0]).toBeGreaterThan(DEFAULT_MAP_CENTER[0])
+    expect(BUTWAL_MAP_BOUNDS[0][1]).toBeLessThan(DEFAULT_MAP_CENTER[1])
+    expect(BUTWAL_MAP_BOUNDS[1][1]).toBeGreaterThan(DEFAULT_MAP_CENTER[1])
+  })
 
   it('calculates accurate Haversine distance between Butwal and Tilottama', () => {
     const dist = calculateHaversineDistanceKm(

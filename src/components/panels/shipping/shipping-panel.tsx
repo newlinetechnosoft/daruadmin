@@ -388,7 +388,7 @@ export function ShippingPanel() {
                 onChange={(e) =>
                   setZoneForm({ ...zoneForm, name: e.target.value })
                 }
-                placeholder="e.g. Lalitpur Inner Ring"
+                placeholder="e.g. Traffic Chowk, Butwal"
                 className="h-8 text-xs"
               />
             </div>

@@ -1,6 +1,8 @@
 export {
   DEFAULT_MAP_CENTER,
   DEFAULT_MAP_ZOOM,
+  BUTWAL_MAP_BOUNDS,
+  isWithinButwalArea,
   type GeoPoint,
   calculateHaversineDistanceKm,
   formatDistanceKm,

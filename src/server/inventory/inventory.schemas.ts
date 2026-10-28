@@ -20,7 +20,7 @@ export const upsertDealerSchema = z.object({
   contact: z.string().min(5, 'Contact number is required').max(30),
   whatsappNumber: z.string().max(30).optional().nullable(),
   address: z.string().min(2, 'Address is required').max(300),
-  city: z.string().default('Kathmandu'),
+  city: z.string().default('Butwal'),
   lat: z.number().optional().nullable(),
   lng: z.number().optional().nullable(),
   isActive: z.boolean().default(true),

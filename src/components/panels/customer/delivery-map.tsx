@@ -10,7 +10,12 @@ import {
 import 'leaflet/dist/leaflet.css'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM } from '#/lib/map-config'
+import {
+  DEFAULT_MAP_CENTER,
+  DEFAULT_MAP_ZOOM,
+  BUTWAL_MAP_BOUNDS,
+  isWithinButwalArea,
+} from '#/lib/map-config'
 import type { GeoPoint } from '#/lib/map-config'
 import { Button } from '#/components/ui/button'
 import { MapPin, Navigation, Compass } from 'lucide-react'
@@ -41,7 +46,13 @@ function MapClickHandler({
 }) {
   useMapEvents({
     click(e) {
-      onSelect({ lat: e.latlng.lat, lng: e.latlng.lng })
+      if (isWithinButwalArea(e.latlng.lat, e.latlng.lng)) {
+        onSelect({ lat: e.latlng.lat, lng: e.latlng.lng })
+      } else {
+        toast.warning(
+          'Please select a location within the Butwal & Tilottama delivery zone.',
+        )
+      }
     },
   })
   return null
@@ -68,26 +79,28 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
     if (
       value &&
       typeof value.lat === 'number' &&
-      typeof value.lng === 'number'
+      typeof value.lng === 'number' &&
+      isWithinButwalArea(value.lat, value.lng)
     ) {
       return [value.lat, value.lng]
     }
     return DEFAULT_MAP_CENTER
   }, [value])
 
-  const markerPosition: [number, number] | null = useMemo(() => {
+  const markerPosition: [number, number] = useMemo(() => {
     if (
       value &&
       typeof value.lat === 'number' &&
-      typeof value.lng === 'number'
+      typeof value.lng === 'number' &&
+      isWithinButwalArea(value.lat, value.lng)
     ) {
       return [value.lat, value.lng]
     }
-    return null
+    return DEFAULT_MAP_CENTER
   }, [value])
 
   const handleLocateMe = () => {
-    if (typeof window === 'undefined' || !navigator.geolocation) {
+    if (!('geolocation' in navigator)) {
       toast.error('Geolocation is not supported by your browser')
       return
     }
@@ -99,9 +112,19 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
         }
-        onChange(point)
         setIsLocating(false)
-        toast.success('Found your current location!')
+        if (!isWithinButwalArea(point.lat, point.lng)) {
+          toast.warning(
+            'Your device location is outside Butwal. Centering on Butwal — please tap the map to place your delivery pin.',
+          )
+          onChange({
+            lat: DEFAULT_MAP_CENTER[0],
+            lng: DEFAULT_MAP_CENTER[1],
+          })
+          return
+        }
+        onChange(point)
+        toast.success('Found your current location in Butwal!')
       },
       (err) => {
         setIsLocating(false)
@@ -120,7 +143,7 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
       <div className="space-y-2">
         <div className="h-64 sm:h-72 w-full rounded-lg border border-border bg-muted/30 flex flex-col items-center justify-center gap-2 text-muted-foreground animate-pulse">
           <MapPin className="h-6 w-6 text-primary/60" />
-          <span className="text-xs font-medium">Loading delivery map...</span>
+          <span className="text-xs font-medium">Loading Butwal delivery map...</span>
         </div>
       </div>
     )
@@ -132,7 +155,10 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
       <div className="flex items-center justify-between text-xs">
         <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
           <Compass className="h-3.5 w-3.5 text-primary" />
-          Tap map or drag pin to your delivery address
+          Tap map or drag pin to your address in Butwal
+          <span className="hidden sm:inline text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+            Butwal Hub
+          </span>
         </span>
 
         <Button
@@ -155,6 +181,10 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
         <MapContainer
           center={currentCenter}
           zoom={DEFAULT_MAP_ZOOM}
+          minZoom={12}
+          maxZoom={18}
+          maxBounds={BUTWAL_MAP_BOUNDS}
+          maxBoundsViscosity={1.0}
           scrollWheelZoom={false}
           className="h-full w-full"
         >
@@ -164,24 +194,33 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
           />
 
           <MapClickHandler onSelect={onChange} />
-          {markerPosition && <MapPanTo position={markerPosition} />}
+          <MapPanTo position={markerPosition} />
 
-          {markerPosition && (
-            <Marker
-              position={markerPosition}
-              draggable={!disabled}
-              ref={markerRef}
-              eventHandlers={{
+          <Marker
+            position={markerPosition}
+            draggable={!disabled}
+            ref={markerRef}
+            eventHandlers={{
                 dragend() {
                   const marker = markerRef.current
                   if (marker) {
                     const latlng = marker.getLatLng()
-                    onChange({ lat: latlng.lat, lng: latlng.lng })
+                    if (isWithinButwalArea(latlng.lat, latlng.lng)) {
+                      onChange({ lat: latlng.lat, lng: latlng.lng })
+                    } else {
+                      toast.warning(
+                        'Delivery pin was dragged outside Butwal. Resetting to Butwal center.',
+                      )
+                      marker.setLatLng(DEFAULT_MAP_CENTER)
+                      onChange({
+                        lat: DEFAULT_MAP_CENTER[0],
+                        lng: DEFAULT_MAP_CENTER[1],
+                      })
+                    }
                   }
                 },
               }}
             />
-          )}
         </MapContainer>
       </div>
 
@@ -189,15 +228,15 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
       <div className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-1.5 text-[11px] font-mono text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <MapPin className="h-3.5 w-3.5 text-primary" />
-          <span>Coordinates:</span>
+          <span>Coordinates (Butwal):</span>
         </span>
-        {value ? (
+        {value && isWithinButwalArea(value.lat, value.lng) ? (
           <span className="text-foreground font-semibold">
             {value.lat.toFixed(6)}° N, {value.lng.toFixed(6)}° E
           </span>
         ) : (
-          <span className="text-destructive font-semibold">
-            No pin selected (Click map above)
+          <span className="text-primary font-semibold">
+            {DEFAULT_MAP_CENTER[0].toFixed(6)}° N, {DEFAULT_MAP_CENTER[1].toFixed(6)}° E (Traffic Chowk)
           </span>
         )}
       </div>

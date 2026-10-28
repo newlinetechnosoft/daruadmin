@@ -22,7 +22,7 @@ import type { CustomerAddress } from '#/server/operations/types'
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { DeliveryMap } from './delivery-map'
-import { DEFAULT_MAP_CENTER } from '#/lib/map-config'
+import { DEFAULT_MAP_CENTER, isWithinButwalArea } from '#/lib/map-config'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -145,10 +145,17 @@ export function CheckoutPanel() {
         if (defaultAddr) {
           setSelectedAddressId(defaultAddr.id)
           setValue('address', defaultAddr.address, { shouldValidate: true })
-          setValue('city', defaultAddr.city)
-          if (defaultAddr.lat && defaultAddr.lng) {
-            setValue('lat', defaultAddr.lat, { shouldValidate: true })
-            setValue('lng', defaultAddr.lng, { shouldValidate: true })
+          setValue('city', defaultAddr.city === 'Kathmandu' ? 'Butwal' : defaultAddr.city)
+          if (
+            defaultAddr.lat != null &&
+            defaultAddr.lng != null &&
+            isWithinButwalArea(Number(defaultAddr.lat), Number(defaultAddr.lng))
+          ) {
+            setValue('lat', Number(defaultAddr.lat), { shouldValidate: true })
+            setValue('lng', Number(defaultAddr.lng), { shouldValidate: true })
+          } else {
+            setValue('lat', DEFAULT_MAP_CENTER[0], { shouldValidate: true })
+            setValue('lng', DEFAULT_MAP_CENTER[1], { shouldValidate: true })
           }
         }
       })
@@ -169,10 +176,17 @@ export function CheckoutPanel() {
     const addr = savedAddresses.find((a) => a.id === id)
     if (addr) {
       setValue('address', addr.address, { shouldValidate: true })
-      setValue('city', addr.city)
-      if (addr.lat && addr.lng) {
-        setValue('lat', addr.lat, { shouldValidate: true })
-        setValue('lng', addr.lng, { shouldValidate: true })
+      setValue('city', addr.city === 'Kathmandu' ? 'Butwal' : addr.city)
+      if (
+        addr.lat != null &&
+        addr.lng != null &&
+        isWithinButwalArea(Number(addr.lat), Number(addr.lng))
+      ) {
+        setValue('lat', Number(addr.lat), { shouldValidate: true })
+        setValue('lng', Number(addr.lng), { shouldValidate: true })
+      } else {
+        setValue('lat', DEFAULT_MAP_CENTER[0], { shouldValidate: true })
+        setValue('lng', DEFAULT_MAP_CENTER[1], { shouldValidate: true })
       }
     }
   }

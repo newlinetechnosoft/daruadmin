@@ -104,7 +104,7 @@ export function CreateStaffDialog({
           password: form.password,
           role: form.role,
           vehicle: form.vehicle,
-          licenseNo: form.licenseNo.trim() || 'BA-2-PA-1001',
+          licenseNo: form.licenseNo.trim() || 'LU-2-PA-1001',
           zone: form.zone,
           commissionRate: Number(form.commissionRate),
         },
@@ -318,7 +318,7 @@ export function CreateStaffDialog({
                     onChange={(e) =>
                       setForm({ ...form, licenseNo: e.target.value })
                     }
-                    placeholder="BA-2-PA-8899"
+                    placeholder="LU-2-PA-8899"
                     className="h-8 font-mono text-xs"
                   />
                 </div>

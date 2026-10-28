@@ -28,7 +28,7 @@ export const dealers = pgTable(
     paymentTermsDays: integer('payment_terms_days').notNull().default(0),
     openingBalance: integer('opening_balance').notNull().default(0), // paisa
     address: text('address').notNull(),
-    city: text('city').notNull().default('Kathmandu'),
+    city: text('city').notNull().default('Butwal'),
     lat: numeric('lat', { precision: 10, scale: 7 }),
     lng: numeric('lng', { precision: 10, scale: 7 }),
     isActive: boolean('is_active').notNull().default(true),

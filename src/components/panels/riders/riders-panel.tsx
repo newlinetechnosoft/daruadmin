@@ -188,7 +188,7 @@ export function RidersPanel() {
           phone: riderForm.phone.trim(),
           password: riderForm.password,
           vehicle: riderForm.vehicle,
-          licenseNo: riderForm.licenseNo || 'BA-2-PA-1234',
+          licenseNo: riderForm.licenseNo || 'LU-2-PA-1234',
           zone: riderForm.zone,
           commissionRate: Number(riderForm.commissionRate),
           verified: true,
@@ -434,7 +434,7 @@ export function RidersPanel() {
                       {rider.zone}
                     </div>
                     <span className="text-[11px] text-muted-foreground capitalize">
-                      {rider.vehicle} · Plate: {rider.licenseNo || 'BA-2-PA'}
+                      {rider.vehicle} · Plate: {rider.licenseNo || 'LU-2-PA'}
                     </span>
                   </TableCell>
 
@@ -660,7 +660,7 @@ export function RidersPanel() {
                   onChange={(e) =>
                     setRiderForm({ ...riderForm, licenseNo: e.target.value })
                   }
-                  placeholder="BA-2-PA-8899"
+                  placeholder="LU-2-PA-8899"
                   className="h-8 font-mono text-xs"
                 />
               </div>

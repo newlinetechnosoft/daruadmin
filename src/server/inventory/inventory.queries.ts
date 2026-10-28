@@ -335,7 +335,7 @@ export async function upsertDealerQuery(
     paymentTermsDays: input.paymentTermsDays,
     openingBalance: input.openingBalance,
     address: input.address.trim(),
-    city: input.city.trim() || 'Kathmandu',
+    city: input.city.trim() || 'Butwal',
     lat:
       input.lat !== undefined && input.lat !== null ? String(input.lat) : null,
     lng:

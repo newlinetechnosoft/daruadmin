@@ -26,9 +26,9 @@ export const riders = pgTable(
     verified: boolean('verified').notNull().default(false),
     available: boolean('available').notNull().default(true),
     status: text('status').notNull().default('offline'), // 'offline' | 'available' | 'busy'
-    lat: numeric('lat', { precision: 10, scale: 7 }).default('27.7172'),
-    lng: numeric('lng', { precision: 10, scale: 7 }).default('85.3240'),
-    zone: text('zone').notNull().default('Kathmandu'),
+    lat: numeric('lat', { precision: 10, scale: 7 }).default('27.7006'),
+    lng: numeric('lng', { precision: 10, scale: 7 }).default('83.4484'),
+    zone: text('zone').notNull().default('Butwal Core'),
     baseSalary: integer('base_salary').notNull().default(0), // paisa
     perDropRate: integer('per_drop_rate').notNull().default(5000), // paisa (default Rs. 50)
     commissionRate: integer('commission_rate').notNull().default(10), // percent
