@@ -71,7 +71,7 @@ export function RidersPanel() {
     password: '',
     vehicle: 'bike' as 'bike' | 'scooter' | 'car',
     licenseNo: '',
-    zone: 'Kathmandu Central',
+    zone: 'Butwal Core',
     commissionRate: 150,
   })
 
@@ -204,7 +204,7 @@ export function RidersPanel() {
         password: '',
         vehicle: 'bike',
         licenseNo: '',
-        zone: 'Kathmandu Central',
+        zone: 'Butwal Core',
         commissionRate: 150,
       })
       await router.invalidate()
@@ -238,7 +238,7 @@ export function RidersPanel() {
       <PageHeader
         kicker="Operations"
         title="Rider and fleet logistics"
-        description="Live Kathmandu Valley delivery radar, courier telemetry, and COD cash remittance settlement."
+        description="Live Butwal & Tilottama delivery radar, courier telemetry, and COD cash remittance settlement."
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -298,7 +298,7 @@ export function RidersPanel() {
           <div className="flex items-center gap-2">
             <Navigation className="h-4 w-4 text-foreground animate-pulse" />
             <CardTitle className="text-xs font-semibold">
-              Live fleet telemetry radar (Kathmandu Valley Hub)
+              Live fleet telemetry radar (Butwal & Tilottama Hub)
             </CardTitle>
           </div>
           <span className="text-[11px] text-muted-foreground font-mono">
@@ -312,16 +312,16 @@ export function RidersPanel() {
 
           {/* Sectors */}
           <div className="absolute top-3 left-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
-            Sector A: Thamel / Balaju
+            Sector A: Traffic Chowk / Golpark
           </div>
           <div className="absolute top-3 right-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
-            Sector B: New Road / Durbar Marg
+            Sector B: Kalikanagar / Devinagar
           </div>
           <div className="absolute bottom-3 left-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
-            Sector C: Jhamsikhel / Patan
+            Sector C: Tilottama / Drivertole
           </div>
           <div className="absolute bottom-3 right-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
-            Sector D: Baneshwor / Koteshwor
+            Sector D: Manigram / Mangalapur
           </div>
 
           {/* Concentric Radar Circles */}
@@ -381,14 +381,14 @@ export function RidersPanel() {
           <NativeSelectOption value="all">
             All delivery zones
           </NativeSelectOption>
-          <NativeSelectOption value="Kathmandu Central">
-            Kathmandu Central
+          <NativeSelectOption value="Butwal Core">
+            Butwal Core
           </NativeSelectOption>
-          <NativeSelectOption value="Patan / Lalitpur">
-            Patan / Lalitpur
+          <NativeSelectOption value="Tilottama / Manigram">
+            Tilottama / Manigram
           </NativeSelectOption>
-          <NativeSelectOption value="Bhaktapur Core">
-            Bhaktapur Core
+          <NativeSelectOption value="Siddharthanagar / Bhairahawa">
+            Siddharthanagar / Bhairahawa
           </NativeSelectOption>
         </NativeSelect>
       </div>
@@ -488,28 +488,45 @@ export function RidersPanel() {
 
                   <TableCell>
                     <span
-                      className={`font-mono text-xs font-medium block tabular-nums ${
-                        rider.cashOnHand > 0
-                          ? 'text-warning'
-                          : 'text-foreground'
+                      className={`font-mono text-xs font-semibold block tabular-nums ${
+                        rider.cashOnHand >= 2000000
+                          ? 'text-destructive font-bold'
+                          : rider.cashOnHand > 0
+                            ? 'text-warning'
+                            : 'text-foreground'
                       }`}
                     >
                       {formatNPR(rider.cashOnHand)}
                     </span>
-                    {rider.cashOnHand > 0 && (
+                    {rider.cashOnHand >= 2000000 ? (
+                      <span className="text-[10px] text-destructive font-medium block">
+                        ⚠️ Limit exceeded (&gt;20k)
+                      </span>
+                    ) : rider.cashOnHand > 0 ? (
                       <span className="text-[10px] text-muted-foreground">
                         Pending handover
                       </span>
-                    )}
+                    ) : null}
                   </TableCell>
 
                   <TableCell className="text-right">
                     <Button
-                      variant={rider.cashOnHand > 0 ? 'default' : 'outline'}
+                      variant={
+                        rider.cashOnHand >= 2000000
+                          ? 'destructive'
+                          : rider.cashOnHand > 0
+                            ? 'default'
+                            : 'outline'
+                      }
                       size="sm"
                       disabled={rider.cashOnHand === 0 || isSubmitting}
                       onClick={() => handleSettleRiderCash(rider)}
                       className="h-7 gap-1 px-2 text-xs"
+                      title={
+                        rider.cashOnHand >= 2000000
+                          ? 'Settle COD Cash Handover (Over Limit)'
+                          : 'Settle COD Cash'
+                      }
                     >
                       <Coins className="h-3 w-3" />
                       {rider.cashOnHand > 0 ? 'Settle COD' : 'Settled'}
@@ -660,22 +677,20 @@ export function RidersPanel() {
                   size="sm"
                   className="w-full text-xs"
                 >
-                  <NativeSelectOption value="Kathmandu Central">
-                    Kathmandu Central
+                  <NativeSelectOption value="Butwal Core">
+                    Butwal Core
                   </NativeSelectOption>
-                  <NativeSelectOption value="Patan / Lalitpur">
-                    Patan / Lalitpur
+                  <NativeSelectOption value="Tilottama / Manigram">
+                    Tilottama / Manigram
                   </NativeSelectOption>
-                  <NativeSelectOption value="Bhaktapur Core">
-                    Bhaktapur Core
+                  <NativeSelectOption value="Siddharthanagar / Bhairahawa">
+                    Siddharthanagar / Bhairahawa
                   </NativeSelectOption>
                 </NativeSelect>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs">
-                  Per-delivery commission (NPR)
-                </Label>
+                <Label className="text-xs">Per-delivery commission (NPR)</Label>
                 <Input
                   type="number"
                   min="0"

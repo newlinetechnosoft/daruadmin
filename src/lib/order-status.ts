@@ -30,6 +30,8 @@ export interface TransitionOptions {
   riderCashOverrideReason?: string
   riderCashOnHand?: number
   riderCodLimit?: number
+  proofPhotoUrl?: string | null
+  deliveryOtp?: string | null
   metadata?: Record<string, unknown>
 }
 
@@ -46,7 +48,9 @@ export class OrderTransitionError extends Error {
       | 'UNPAID_ONLINE_ORDER'
       | 'MISSING_AGE_VERIFICATION'
       | 'MISSING_REASON'
-      | 'RIDER_CASH_LIMIT_EXCEEDED',
+      | 'RIDER_CASH_LIMIT_EXCEEDED'
+      | 'INVALID_DELIVERY_OTP'
+      | 'MISSING_DELIVERY_PROOF',
   ) {
     super(message)
     this.name = 'OrderTransitionError'
@@ -67,6 +71,7 @@ export function validateOrderTransition(
     | 'paymentMethod'
     | 'paymentStatus'
     | 'isLegacy'
+    | 'deliveryOtp'
   > & {
     items?: Array<Pick<OrderItem, 'id' | 'dealerId' | 'catalogType'>>
   },
@@ -295,6 +300,16 @@ export function validateOrderTransition(
           'Liquor orders strictly require age verification (18+) confirmation upon delivery.',
           'MISSING_AGE_VERIFICATION',
         )
+      }
+
+      // Verify delivery OTP if supplied and order has an OTP
+      if (options.deliveryOtp && order.deliveryOtp) {
+        if (options.deliveryOtp.trim() !== order.deliveryOtp.trim()) {
+          throw new OrderTransitionError(
+            'Invalid delivery verification OTP. Please verify the 4-digit code with the customer or upload photo proof.',
+            'INVALID_DELIVERY_OTP',
+          )
+        }
       }
       break
     }

@@ -12,6 +12,7 @@ export interface Variant {
   name: string
   price: number // in paisa
   mrp?: number | null
+  compareAtPrice?: number | null
   volumeMl?: number | null
   unit?: string | null
   quantity?: string | null
@@ -117,7 +118,10 @@ function ProductCardComponent({ product }: { product: ProductProps }) {
         {/* Badges */}
         <div className="absolute left-3 top-3 z-10 flex flex-col gap-1 items-start">
           {badgeLabel && (
-            <Badge variant="default" className="text-[10px] px-1.5 py-0 h-5 font-medium shadow-xs">
+            <Badge
+              variant="default"
+              className="text-[10px] px-1.5 py-0 h-5 font-medium shadow-xs"
+            >
               {badgeLabel}
             </Badge>
           )}
@@ -187,6 +191,15 @@ function ProductCardComponent({ product }: { product: ProductProps }) {
             <p className="text-[11px] text-muted-foreground">{metaText}</p>
           )}
 
+          {product.description && (
+            <p
+              className="text-[10px] text-muted-foreground/80 line-clamp-1 italic"
+              title={product.description}
+            >
+              {product.description}
+            </p>
+          )}
+
           {/* Volume variants selector (if multiple) */}
           {product.variants.length > 1 && (
             <div className="pt-1.5 flex flex-wrap gap-1">
@@ -218,11 +231,15 @@ function ProductCardComponent({ product }: { product: ProductProps }) {
             <span className="text-xs font-semibold text-foreground font-mono">
               {activeVariant ? formatNPR(activeVariant.price) : '—'}
             </span>
-            {activeVariant?.mrp && activeVariant.mrp > activeVariant.price && (
-              <span className="text-[10px] text-muted-foreground line-through font-mono">
-                {formatNPR(activeVariant.mrp)}
-              </span>
-            )}
+            {(activeVariant?.compareAtPrice || activeVariant?.mrp) &&
+              (activeVariant.compareAtPrice || activeVariant.mrp)! >
+                activeVariant.price && (
+                <span className="text-[10px] text-muted-foreground line-through font-mono">
+                  {formatNPR(
+                    activeVariant.compareAtPrice || activeVariant.mrp!,
+                  )}
+                </span>
+              )}
           </div>
 
           {/* In-place Stepper or Add button with matching dimensions */}

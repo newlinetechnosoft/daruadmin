@@ -15,14 +15,7 @@ import { Label } from '#/components/ui/label'
 import { Textarea } from '#/components/ui/textarea'
 import { Checkbox } from '#/components/ui/checkbox'
 import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
-import {
-  Award,
-  UploadCloud,
-  X,
-  Loader2,
-  Wine,
-  ShoppingBag,
-} from 'lucide-react'
+import { Award, UploadCloud, X, Loader2, Wine, ShoppingBag } from 'lucide-react'
 import { toast } from 'sonner'
 import { compressImage } from '#/lib/image-compression'
 import {
@@ -47,7 +40,11 @@ export interface BrandDialogProps {
   catalogType: 'liquor' | 'grocery'
   brand?: BrandData | null
   allowTypeSwitch?: boolean
-  onSuccess?: (savedBrand: { id: string; name: string; catalogType: 'liquor' | 'grocery' }) => void
+  onSuccess?: (savedBrand: {
+    id: string
+    name: string
+    catalogType: 'liquor' | 'grocery'
+  }) => void
 }
 
 export function BrandDialog({
@@ -165,7 +162,9 @@ export function BrandDialog({
 
       const brandId = (res as any)?.brand?.id || brand?.id || ''
       toast.success(
-        brand ? `Brand "${name.trim()}" updated` : `Brand "${name.trim()}" created`,
+        brand
+          ? `Brand "${name.trim()}" updated`
+          : `Brand "${name.trim()}" created`,
       )
 
       await Promise.all([
@@ -221,11 +220,17 @@ export function BrandDialog({
             className="w-full mt-2"
           >
             <TabsList className="grid w-full grid-cols-2 h-8">
-              <TabsTrigger value="liquor" className="text-xs flex items-center gap-1.5">
+              <TabsTrigger
+                value="liquor"
+                className="text-xs flex items-center gap-1.5"
+              >
                 <Wine className="h-3.5 w-3.5" />
                 Liquor Brand
               </TabsTrigger>
-              <TabsTrigger value="grocery" className="text-xs flex items-center gap-1.5">
+              <TabsTrigger
+                value="grocery"
+                className="text-xs flex items-center gap-1.5"
+              >
                 <ShoppingBag className="h-3.5 w-3.5" />
                 Grocery Brand
               </TabsTrigger>
@@ -251,8 +256,8 @@ export function BrandDialog({
               }}
               placeholder={
                 catalogType === 'liquor'
-                  ? 'e.g. Old Durbar, Carlsberg, Jack Daniel\'s'
-                  : 'e.g. Lay\'s, Red Bull, Schweppes, Wai Wai'
+                  ? "e.g. Old Durbar, Carlsberg, Jack Daniel's"
+                  : "e.g. Lay's, Red Bull, Schweppes, Wai Wai"
               }
               className="h-8 text-xs"
             />

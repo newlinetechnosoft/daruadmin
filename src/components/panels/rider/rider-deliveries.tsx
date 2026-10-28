@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { Package, Phone, MapPin, CheckCircle2, Truck } from 'lucide-react'
 import { toast } from 'sonner'
 import { RiderDealerPickups } from './rider-dealer-pickups'
+import { DeliveryProofDialog } from './delivery-proof-dialog'
 
 interface RiderDeliveriesProps {
   orders: Order[]
@@ -21,6 +22,7 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
   const router = useRouter()
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('active')
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
+  const [deliveringOrder, setDeliveringOrder] = useState<Order | null>(null)
 
   const activeOrders = orders.filter((o) =>
     ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status),
@@ -84,6 +86,51 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
       } else {
         toast.error(err?.message || 'Failed to update order status')
       }
+    } finally {
+      setUpdatingOrderId(null)
+    }
+  }
+
+  const handleConfirmDelivery = async ({
+    orderId,
+    ageVerifiedAtDelivery,
+    deliveryOtp,
+    proofPhotoUrl,
+    notes,
+  }: {
+    orderId: string
+    ageVerifiedAtDelivery: boolean
+    deliveryOtp?: string
+    proofPhotoUrl?: string
+    notes?: string
+  }) => {
+    try {
+      setUpdatingOrderId(orderId)
+
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await queueOutboxAction('delivery_status', {
+          orderId,
+          status: 'delivered',
+        })
+        toast.info('Saved offline! Status & cash queued.')
+        return
+      }
+
+      await updateRiderDeliveryStatusFn({
+        data: {
+          orderId,
+          status: 'delivered',
+          ageVerifiedAtDelivery,
+          deliveryOtp,
+          proofPhotoUrl,
+          notes,
+        },
+      })
+      toast.success('Delivery completed with proof! Cash on hand updated.')
+      await router.invalidate()
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to complete delivery')
+      throw err
     } finally {
       setUpdatingOrderId(null)
     }
@@ -314,9 +361,7 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                         {isOut && (
                           <Button
                             size="sm"
-                            onClick={() =>
-                              handleUpdateStatus(order.id, 'delivered')
-                            }
+                            onClick={() => setDeliveringOrder(order)}
                             disabled={isUpdating}
                             className="h-8 text-xs flex-1 bg-success hover:bg-success/90 text-success-foreground"
                           >
@@ -360,6 +405,16 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
           })}
         </div>
       )}
+
+      <DeliveryProofDialog
+        order={deliveringOrder}
+        isOpen={Boolean(deliveringOrder)}
+        onClose={() => setDeliveringOrder(null)}
+        onConfirmDelivery={handleConfirmDelivery}
+        isSubmitting={Boolean(
+          updatingOrderId && deliveringOrder?.id === updatingOrderId,
+        )}
+      />
     </div>
   )
 }

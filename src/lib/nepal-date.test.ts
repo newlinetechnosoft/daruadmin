@@ -25,8 +25,12 @@ describe('Nepal Date & Fiscal Year Utilities', () => {
     const fy = getNepalFiscalYear(new Date('2026-10-16T00:00:00Z'))
     expect(fy.id).toBe('fy-2083-84')
     expect(fy.name).toBe('2083/84')
-    expect(fy.startDate.getTime()).toBeLessThan(new Date('2026-10-16').getTime())
-    expect(fy.endDate.getTime()).toBeGreaterThan(new Date('2026-10-16').getTime())
+    expect(fy.startDate.getTime()).toBeLessThan(
+      new Date('2026-10-16').getTime(),
+    )
+    expect(fy.endDate.getTime()).toBeGreaterThan(
+      new Date('2026-10-16').getTime(),
+    )
   })
 
   it('determines Nepal Fiscal Year 2081/82 correctly for 2024-08-01', () => {

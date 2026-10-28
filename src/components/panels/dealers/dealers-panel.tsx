@@ -38,7 +38,18 @@ import {
   CheckCircle2,
   XCircle,
   Check,
+  TrendingUp,
+  BarChart3,
+  Clock,
+  Download,
 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
+import { cn } from '#/lib/utils'
 import { toast } from 'sonner'
 import type { DealerDto } from '#/server/inventory/inventory.queries'
 
@@ -70,6 +81,35 @@ export function DealersPanel() {
   // Delete State
   const [deleteTarget, setDeleteTarget] = useState<DealerDto | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isScorecardOpen, setIsScorecardOpen] = useState(false)
+
+  // Overall Sourcing SLA / Fulfilment Rate
+  const avgFulfilmentRate = useMemo(() => {
+    if (dealersList.length === 0) return 100
+    const total = dealersList.reduce(
+      (sum, d) => sum + (d.performance?.fulfilmentRatePercent ?? 100),
+      0,
+    )
+    return Math.round(total / dealersList.length)
+  }, [dealersList])
+
+  const handleExportDealerPerformanceCSV = () => {
+    const headers =
+      'DealerName,City,PAN_VAT,TotalAssignedItems,FulfilledItems,RejectedItems,FulfilmentRatePercent,AvgPrepTimeMin\n'
+    const rows = dealersList
+      .map(
+        (d) =>
+          `"${d.name}","${d.city}","${d.pan || 'N/A'}",${d.performance?.totalAssignedItems ?? 0},${d.performance?.fulfilledItems ?? 0},${d.performance?.rejectedItems ?? 0},"${d.performance?.fulfilmentRatePercent ?? 100}%",${d.performance?.avgPrepTimeMinutes ?? 15}`,
+      )
+      .join('\n')
+    const blob = new Blob([headers + rows], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `dealer-performance-sla-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    toast.success('Dealer performance SLA scorecard CSV downloaded')
+  }
 
   // Copy PAN/VAT to clipboard
   const handleCopyPan = (dealerId: string, pan: string) => {
@@ -202,20 +242,31 @@ export function DealersPanel() {
         title="Dealer & Supplier Management"
         description="Maintain verified supplier directories, PAN/VAT tax numbers, contact and WhatsApp lines, and product supply mappings."
         actions={
-          canCreate ? (
+          <div className="flex items-center gap-2">
             <Button
-              onClick={handleOpenCreate}
-              className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm flex items-center gap-2"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsScorecardOpen(true)}
+              className="text-xs h-9 flex items-center gap-1.5"
             >
-              <Plus className="h-4 w-4" />
-              Register Dealer
+              <BarChart3 className="h-3.5 w-3.5 text-primary" />
+              SLA &amp; Performance
             </Button>
-          ) : undefined
+            {canCreate && (
+              <Button
+                onClick={handleOpenCreate}
+                className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm flex items-center gap-2 text-xs h-9"
+              >
+                <Plus className="h-4 w-4" />
+                Register Dealer
+              </Button>
+            )}
+          </div>
         }
       />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
         <KpiCard
           label="Total Dealers"
           value={totalDealers}
@@ -227,6 +278,12 @@ export function DealersPanel() {
           value={activeDealers}
           note="Ready for fulfillment"
           icon={CheckCircle2}
+        />
+        <KpiCard
+          label="Sourcing SLA"
+          value={`${avgFulfilmentRate}%`}
+          note="Network fulfilment rate"
+          icon={TrendingUp}
         />
         <KpiCard
           label="Liquor Dealers"
@@ -390,14 +447,15 @@ export function DealersPanel() {
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow>
-                <TableHead className="w-[260px]">
+                <TableHead className="w-[240px]">
                   Dealer Name & Location
                 </TableHead>
-                <TableHead className="w-[150px]">PAN / VAT Number</TableHead>
-                <TableHead className="w-[210px]">Contact & WhatsApp</TableHead>
+                <TableHead className="w-[140px]">PAN / VAT Number</TableHead>
+                <TableHead className="w-[180px]">Contact & WhatsApp</TableHead>
                 <TableHead>Assigned Items</TableHead>
-                <TableHead className="w-[100px] text-center">Status</TableHead>
-                <TableHead className="w-[110px] text-right">Actions</TableHead>
+                <TableHead className="w-[130px] text-center">Fulfilment &amp; SLA</TableHead>
+                <TableHead className="w-[90px] text-center">Status</TableHead>
+                <TableHead className="w-[100px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -542,6 +600,34 @@ export function DealersPanel() {
                       </div>
                     </TableCell>
 
+                    {/* Sourcing SLA & Performance */}
+                    <TableCell className="text-center">
+                      <div className="flex flex-col items-center gap-0.5">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-[10px] font-mono font-semibold px-1.5 py-0',
+                            (dealer.performance?.fulfilmentRatePercent ?? 100) >= 90
+                              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                              : (dealer.performance?.fulfilmentRatePercent ?? 100) >= 75
+                                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                                : 'bg-destructive/10 text-destructive border-destructive/30',
+                          )}
+                        >
+                          {dealer.performance?.fulfilmentRatePercent ?? 100}% SLA
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-2.5 w-2.5" />
+                          {dealer.performance?.avgPrepTimeMinutes ?? 15}m prep
+                        </span>
+                        {(dealer.performance?.rejectedItems ?? 0) > 0 && (
+                          <span className="text-[9px] text-destructive font-medium">
+                            {dealer.performance?.rejectedItems} rejected
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+
                     {/* Status */}
                     <TableCell className="text-center">
                       {dealer.isActive ? (
@@ -616,6 +702,138 @@ export function DealersPanel() {
         tone="destructive"
         onConfirm={handleDelete}
       />
+
+      {/* Dealer Performance & SLA Scorecard Modal */}
+      <Dialog open={isScorecardOpen} onOpenChange={setIsScorecardOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
+            <div>
+              <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                Dealer Sourcing SLA &amp; Performance Scorecard
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Item-level fulfilment rate, prep duration, and out-of-stock rejection tracking across Butwal suppliers.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleExportDealerPerformanceCSV}
+              className="h-8 gap-1.5 text-xs"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </Button>
+          </DialogHeader>
+
+          <div className="p-4 overflow-y-auto space-y-4">
+            {/* Quick KPI Overview */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-muted/30 p-3 rounded-lg border border-border">
+              <div>
+                <span className="text-[11px] text-muted-foreground block">
+                  Network Fulfilment SLA:
+                </span>
+                <span className="text-sm font-bold font-mono text-emerald-600">
+                  {avgFulfilmentRate}%
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-muted-foreground block">
+                  Avg Preparation Time:
+                </span>
+                <span className="text-sm font-bold font-mono text-foreground">
+                  15 mins
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-muted-foreground block">
+                  Total Sourcing Assignments:
+                </span>
+                <span className="text-sm font-bold font-mono text-foreground">
+                  {dealersList.reduce(
+                    (sum, d) => sum + (d.performance?.totalAssignedItems ?? 0),
+                    0,
+                  )}{' '}
+                  items
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-muted-foreground block">
+                  Unavailable / Rejected:
+                </span>
+                <span className="text-sm font-bold font-mono text-destructive">
+                  {dealersList.reduce(
+                    (sum, d) => sum + (d.performance?.rejectedItems ?? 0),
+                    0,
+                  )}{' '}
+                  rejections
+                </span>
+              </div>
+            </div>
+
+            {/* Scorecard Table */}
+            <div className="border border-border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader className="bg-muted/40">
+                  <TableRow>
+                    <TableHead className="text-xs">Dealer Name</TableHead>
+                    <TableHead className="text-xs">Location / City</TableHead>
+                    <TableHead className="text-right text-xs">Total Assigned</TableHead>
+                    <TableHead className="text-right text-xs">Fulfilled</TableHead>
+                    <TableHead className="text-right text-xs">Rejected</TableHead>
+                    <TableHead className="text-right text-xs">Fulfilment Rate</TableHead>
+                    <TableHead className="text-right text-xs">Avg Prep Time</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dealersList.map((d) => {
+                    const perf = d.performance
+                    const rate = perf?.fulfilmentRatePercent ?? 100
+                    return (
+                      <TableRow key={d.id}>
+                        <TableCell className="font-semibold text-xs text-foreground">
+                          {d.name}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {d.city}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs">
+                          {perf?.totalAssignedItems ?? 0}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs text-emerald-600 font-semibold">
+                          {perf?.fulfilledItems ?? 0}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs text-destructive">
+                          {perf?.rejectedItems ?? 0}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'text-[10px] font-mono font-semibold',
+                              rate >= 90
+                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                                : rate >= 75
+                                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                                  : 'bg-destructive/10 text-destructive border-destructive/30',
+                            )}
+                          >
+                            {rate}% SLA
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                          {perf?.avgPrepTimeMinutes ?? 15} mins
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -4,6 +4,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   text,
   timestamp,
@@ -279,6 +280,80 @@ export const couponRedemptionsRelations = relations(
     }),
     customer: one(user, {
       fields: [couponRedemptions.customerId],
+      references: [user.id],
+    }),
+  }),
+)
+
+export const offers = pgTable(
+  'offers',
+  {
+    id: text('id').primaryKey(),
+    title: text('title').notNull(),
+    slug: text('slug').notNull().unique(),
+    type: text('type').notNull().default('percent'), // 'bogo' | 'percent' | 'fixed' | 'free_delivery' | 'bundle'
+    scope: text('scope').notNull().default('all'), // 'all' | 'category' | 'brand' | 'product' | 'variant'
+    scopeId: text('scope_id'),
+    discountValue: integer('discount_value').notNull().default(0), // percentage or paisa
+    minOrderAmount: integer('min_order_amount').notNull().default(0), // paisa
+    bannerUrl: text('banner_url'),
+    heading: text('heading'),
+    description: text('description'),
+    priority: integer('priority').notNull().default(0),
+    stackable: boolean('stackable').notNull().default(false),
+    active: boolean('active').notNull().default(true),
+    startsAt: timestamp('starts_at', { withTimezone: true }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('offers_slug_idx').on(table.slug),
+    index('offers_active_idx').on(table.active),
+    index('offers_type_idx').on(table.type),
+    index('offers_scope_idx').on(table.scope, table.scopeId),
+  ],
+)
+
+export const customerAddresses = pgTable(
+  'customer_addresses',
+  {
+    id: text('id').primaryKey(),
+    customerId: text('customer_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    label: text('label').notNull().default('Home'), // 'Home' | 'Work' | 'Other'
+    address: text('address').notNull(),
+    city: text('city').notNull().default('Butwal'),
+    landmark: text('landmark'),
+    lat: numeric('lat', { precision: 10, scale: 7 }),
+    lng: numeric('lng', { precision: 10, scale: 7 }),
+    isDefault: boolean('is_default').notNull().default(false),
+    contactPhone: text('contact_phone'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('customer_addresses_customer_id_idx').on(table.customerId),
+    index('customer_addresses_is_default_idx').on(table.isDefault),
+  ],
+)
+
+export const customerAddressesRelations = relations(
+  customerAddresses,
+  ({ one }) => ({
+    customer: one(user, {
+      fields: [customerAddresses.customerId],
       references: [user.id],
     }),
   }),

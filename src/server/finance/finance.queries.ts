@@ -284,7 +284,10 @@ export async function getGeneralLedgerQuery(params?: {
       credit: journalLines.credit,
     })
     .from(journalLines)
-    .innerJoin(journalEntries, eq(journalLines.journalEntryId, journalEntries.id))
+    .innerJoin(
+      journalEntries,
+      eq(journalLines.journalEntryId, journalEntries.id),
+    )
     .innerJoin(ledgerAccounts, eq(journalLines.accountId, ledgerAccounts.id))
     .orderBy(
       asc(journalEntries.postingDate),
@@ -559,7 +562,9 @@ export async function getPublicVoucherBySlugQuery(
   if (ds[0]) {
     const row = ds[0]
     const dateToFormat = row.paidAt || row.createdAt
-    const proofs = Array.isArray(row.proofUrls) ? (row.proofUrls as string[]) : []
+    const proofs = Array.isArray(row.proofUrls)
+      ? (row.proofUrls as string[])
+      : []
     return {
       type: 'dealer',
       voucherNo: row.voucherNo,
@@ -594,7 +599,9 @@ export async function getPublicVoucherBySlugQuery(
   if (rs[0]) {
     const row = rs[0]
     const dateToFormat = row.paidAt || row.createdAt
-    const proofs = Array.isArray(row.proofUrls) ? (row.proofUrls as string[]) : []
+    const proofs = Array.isArray(row.proofUrls)
+      ? (row.proofUrls as string[])
+      : []
     return {
       type: 'rider',
       voucherNo: row.voucherNo || `SV-${row.id.slice(-6).toUpperCase()}`,
@@ -690,4 +697,3 @@ export async function getAllDealerSettlementsQuery() {
     createdAt: r.createdAt.toISOString(),
   }))
 }
-

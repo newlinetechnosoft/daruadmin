@@ -30,9 +30,9 @@ const HERO_SLIDES = [
 ]
 
 const FEATURES = [
-  { title: '40 minute delivery', body: 'Fast delivery whenever you need it.' },
+  { title: '30 minute delivery', body: 'Fast delivery whenever you need it.' },
   { title: 'Secure payments', body: 'Safe and convenient payment options.' },
-  { title: '24/7 customer service', body: "We're always here to help." },
+  { title: '5-12pm customer service', body: "We're always here to help." },
 ]
 
 const REVIEWS = [
@@ -269,7 +269,7 @@ export function HomePage() {
 
             {/* SPEED FOOTER */}
             <p className="mt-5 sm:mt-6 text-xs sm:text-sm font-bold tracking-[0.18em] text-amber-300 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
-              ALCOHOL, BEVERAGES &amp; FOOD DELIVERY WITHIN 45 MINS
+              ALCOHOL, BEVERAGES &amp; FOOD DELIVERY WITHIN 30 MINS
             </p>
 
             {/* 5-SLIDE LOOP INDICATORS */}
@@ -299,11 +299,11 @@ export function HomePage() {
               </div>
               <div className="flex items-center gap-2">
                 <Clock size={16} className="text-cyan-400" />
-                <span>45 Min Express Delivery</span>
+                <span>30 Min Express Delivery</span>
               </div>
               <div className="flex items-center gap-2">
                 <Award size={16} className="text-primary" />
-                <span>24/7 Late-Night Delivery</span>
+                <span>5-12pm Night Delivery</span>
               </div>
             </div>
           </div>

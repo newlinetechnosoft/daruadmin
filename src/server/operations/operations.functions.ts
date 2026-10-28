@@ -13,7 +13,10 @@ import {
   complaints,
   reviews,
   dealerItems,
+  dealers,
+  notifications,
   user,
+  riderShifts,
 } from '#/db/schema'
 import { auth } from '#/lib/auth'
 import { and, count, eq, isNull, or } from 'drizzle-orm'
@@ -35,12 +38,20 @@ import {
   getAllOrdersQuery,
   getOrderByIdQuery,
   assignOrderItemDealerQuery,
+  suggestDealersForItemQuery,
+  suggestRidersForOrderQuery,
+  calculateOrderMargins,
 } from '#/server/orders/order.queries'
+import { calculateOrderTotals } from '#/lib/pricing'
 import { getAllDealersQuery } from '#/server/inventory/inventory.queries'
 import {
   getAllRidersQuery,
   getRiderByUserIdQuery,
   getAllSettlementsQuery,
+  getSettlementsByRiderIdQuery,
+  getActiveRiderShiftQuery,
+  getAllRiderShiftsQuery,
+  getRiderAttendanceStatsQuery,
 } from '#/server/riders/rider.queries'
 import {
   getAllLedgerEntriesQuery,
@@ -63,9 +74,12 @@ import {
   saveUserPermissionsQuery,
   resetUserPermissionsQuery,
   getAllCouponsQuery,
+  getCouponRedemptionsQuery,
   upsertCouponQuery,
   deleteCouponQuery,
   getAllComplaintsQuery,
+  getCustomerComplaintsQuery,
+  createComplaintQuery,
   updateComplaintStatusQuery,
   getAllBannersQuery,
   upsertBannerQuery,
@@ -75,7 +89,16 @@ import {
   updateReviewStatusQuery,
   getAllShippingZonesQuery,
   upsertShippingZoneQuery,
+  getAllOffersQuery,
+  getOfferBySlugQuery,
+  upsertOfferQuery,
+  deleteOfferQuery,
+  getCustomerAddressesQuery,
+  upsertCustomerAddressQuery,
+  deleteCustomerAddressQuery,
+  setDefaultCustomerAddressQuery,
 } from '#/server/platform/platform.queries'
+import { getProductVelocityAndSourcingIntelligenceQuery } from './sourcing-intelligence.queries'
 import type { DateRangeKey, OpsState, ModuleKey, OrderStatus } from './types'
 import { ACTIONS, MODULES } from './types'
 import {
@@ -85,6 +108,7 @@ import {
 import {
   postCashHandoverTx,
   postRiderPayoutTx,
+  postRiderSalaryAccrualTx,
 } from '#/server/finance/double-entry'
 
 export { ACTIONS, MODULES }
@@ -98,7 +122,9 @@ function rangeBounds(range: DateRangeKey, from?: string, to?: string) {
   end.setHours(23, 59, 59, 999)
   const start = from ? new Date(from) : new Date(end)
   if (!from) {
-    if (range === '7d') start.setDate(end.getDate() - 6)
+    if (range === 'today') {
+      start.setDate(end.getDate())
+    } else if (range === '7d') start.setDate(end.getDate() - 6)
     else if (range === '30d') start.setDate(end.getDate() - 29)
     else if (range === '90d') start.setDate(end.getDate() - 89)
     else if (range === 'ytd') {
@@ -333,7 +359,9 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
   .validator((d: unknown) =>
     z
       .object({
-        range: z.enum(['7d', '30d', '90d', 'ytd', 'custom']).default('30d'),
+        range: z
+          .enum(['today', '7d', '30d', '90d', 'ytd', 'custom'])
+          .default('30d'),
         from: z.string().optional(),
         to: z.string().optional(),
       })
@@ -350,6 +378,7 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
       riderList,
       auditList,
       notifs,
+      dealerList,
     ] = await Promise.all([
       getAdminStatsQuery(),
       getAdminLiquorProductsQuery(),
@@ -359,6 +388,7 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
       getAllRidersQuery(),
       getAllAuditLogsQuery(),
       getAllNotificationsQuery(),
+      getAllDealersQuery(),
     ])
 
     const { start, end } = rangeBounds(data.range, data.from, data.to)
@@ -439,6 +469,8 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
         profit,
         customers: customers.length,
         riders: riderList.length,
+        dealers: dealerList.length,
+        activeDealers: dealerList.filter((d) => d.isActive).length,
         inventory: stats.totalStockUnits,
         lowStock: stats.lowStockCount,
       },
@@ -505,6 +537,8 @@ export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
       dealerPayablesList,
       riderAccountsList,
       dealerSettlementsList,
+      offersList,
+      riderShiftsList,
     ] = await Promise.all([
       getAllLedgerEntriesQuery(),
       getAllSettlementsQuery(),
@@ -521,6 +555,8 @@ export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
       getDealerPayablesSummaryQuery(),
       getRiderAccountsSummaryQuery(),
       getAllDealerSettlementsQuery(),
+      getAllOffersQuery(),
+      getAllRiderShiftsQuery(undefined, 50),
     ])
     return {
       ops: {
@@ -538,6 +574,8 @@ export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
         dealerPayables: dealerPayablesList,
         dealerSettlements: dealerSettlementsList,
         riderAccounts: riderAccountsList,
+        offers: offersList,
+        riderShifts: riderShiftsList,
       },
       ledger,
       settlements: settlementsList,
@@ -554,6 +592,8 @@ export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
       dealerPayables: dealerPayablesList,
       dealerSettlements: dealerSettlementsList,
       riderAccounts: riderAccountsList,
+      offers: offersList,
+      riderShifts: riderShiftsList,
     }
   },
 )
@@ -620,21 +660,29 @@ export const getShippingFn = createServerFn({ method: 'GET' }).handler(
 export const getMarketingFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('marketing', 'view')
-    const [couponsList, bannersList, campaignsList, reviewsList] =
-      await Promise.all([
-        getAllCouponsQuery(),
-        getAllBannersQuery(),
-        getAllCampaignsQuery(),
-        getAllReviewsQuery(),
-      ])
+    const [
+      couponsList,
+      bannersList,
+      campaignsList,
+      reviewsList,
+      redemptionsList,
+    ] = await Promise.all([
+      getAllCouponsQuery(),
+      getAllBannersQuery(),
+      getAllCampaignsQuery(),
+      getAllReviewsQuery(),
+      getCouponRedemptionsQuery(200),
+    ])
     return {
       ops: {
         coupons: couponsList,
+        couponRedemptions: redemptionsList,
         banners: bannersList,
         campaigns: campaignsList,
         reviews: reviewsList,
       },
       coupons: couponsList,
+      couponRedemptions: redemptionsList,
       banners: bannersList,
       campaigns: campaignsList,
       reviews: reviewsList,
@@ -744,15 +792,23 @@ export const getStaffOpsFn = createServerFn({ method: 'GET' }).handler(
 export const getReportsOpsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('reports', 'view')
-    const [orderList, ledgerList, paymentsList, riderList, settings, stats] =
-      await Promise.all([
-        getAllOrdersQuery(),
-        getAllLedgerEntriesQuery(),
-        getAllPaymentsQuery(),
-        getAllRidersQuery(),
-        getStoreSettingsQuery(),
-        getAdminStatsQuery(),
-      ])
+    const [
+      orderList,
+      ledgerList,
+      paymentsList,
+      riderList,
+      settings,
+      stats,
+      sourcingIntelligence,
+    ] = await Promise.all([
+      getAllOrdersQuery(),
+      getAllLedgerEntriesQuery(),
+      getAllPaymentsQuery(),
+      getAllRidersQuery(),
+      getStoreSettingsQuery(),
+      getAdminStatsQuery(),
+      getProductVelocityAndSourcingIntelligenceQuery(),
+    ])
     return {
       ops: {
         orders: orderList,
@@ -760,6 +816,7 @@ export const getReportsOpsFn = createServerFn({ method: 'GET' }).handler(
         payments: paymentsList,
         riders: riderList,
         settings,
+        sourcingIntelligence,
       },
       orders: orderList,
       ledger: ledgerList,
@@ -767,9 +824,25 @@ export const getReportsOpsFn = createServerFn({ method: 'GET' }).handler(
       liquor: [] as any[],
       grocery: [] as any[],
       stats,
+      sourcingIntelligence,
     }
   },
 )
+
+export const getProductVelocityAndSourcingIntelligenceFn = createServerFn({
+  method: 'GET',
+})
+  .validator((d: unknown) =>
+    z
+      .object({
+        days: z.number().int().positive().nullable().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requirePermission('reports', 'view')
+    return getProductVelocityAndSourcingIntelligenceQuery(data.days ?? null)
+  })
 
 export const getOpsBundleFn = createServerFn({ method: 'GET' }).handler(
   async () => {
@@ -1132,6 +1205,456 @@ export const recordRiderDealerPickupBillFn = createServerFn({ method: 'POST' })
     return { success: true }
   })
 
+export const suggestDealersForItemFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) => z.object({ orderItemId: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    await requirePermission('orders', 'view')
+    return suggestDealersForItemQuery(data.orderItemId)
+  })
+
+export const suggestRidersForOrderFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) => z.object({ orderId: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    await requirePermission('orders', 'view')
+    return suggestRidersForOrderQuery(data.orderId)
+  })
+
+export const autoAssignNearestDealersForOrderFn = createServerFn({
+  method: 'POST',
+})
+  .validator((d: unknown) => z.object({ orderId: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    const { user: actor } = await requirePermission('orders', 'edit')
+    const order = await getOrderByIdQuery(data.orderId)
+    if (!order) throw new Error('Order not found')
+
+    let updatedCount = 0
+
+    await dbTx.transaction(async (tx) => {
+      for (const item of order.items) {
+        if (item.dealerId && item.sourcingStatus !== 'unavailable') continue
+
+        const suggestions = await suggestDealersForItemQuery(item.id)
+        const bestDealer = suggestions.suggestions[0]
+        if (!bestDealer) continue
+
+        await tx
+          .update(orderItems)
+          .set({
+            dealerId: bestDealer.dealerId,
+            dealerCostPrice: bestDealer.costPrice,
+            sourcingStatus: 'assigned',
+          })
+          .where(eq(orderItems.id, item.id))
+
+        updatedCount++
+      }
+
+      if (updatedCount > 0) {
+        await tx.insert(orderStatusHistory).values({
+          id: nid('ev'),
+          orderId: data.orderId,
+          fromStatus: order.status,
+          toStatus: order.status,
+          status: order.status,
+          note: `Auto-assigned nearest available dealers to ${updatedCount} items by ${actor.name}`,
+          actor: actor.name,
+          actorId: actor.id,
+          actorRole: actor.role,
+        })
+      }
+    })
+
+    const freshOrder = await getOrderByIdQuery(data.orderId)
+    const allAssigned = freshOrder?.items.every(
+      (it) => it.dealerId && it.sourcingStatus === 'assigned',
+    )
+    if (freshOrder && freshOrder.status === 'confirmed' && allAssigned) {
+      await transitionOrder({
+        orderId: freshOrder.id,
+        toStatus: 'dealer_assigned',
+        user: { id: actor.id, name: actor.name, role: actor.role as any },
+        options: { note: `All items assigned to dealers by ${actor.name}` },
+      })
+    }
+
+    await logAudit(
+      actor.name,
+      'orders',
+      'edit',
+      `Auto-assigned nearest dealers to ${updatedCount} items on order ${order.number}`,
+    )
+
+    return { success: true, updatedCount }
+  })
+
+export const substituteOrderItemDealerFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        orderId: z.string(),
+        orderItemId: z.string(),
+        newDealerId: z.string(),
+        reason: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user: actor } = await requirePermission('orders', 'edit')
+    const order = await getOrderByIdQuery(data.orderId)
+    if (!order) throw new Error('Order not found')
+
+    const item = order.items.find((it) => it.id === data.orderItemId)
+    if (!item) throw new Error('Order item not found')
+
+    const newDealerRow = await db
+      .select()
+      .from(dealers)
+      .where(eq(dealers.id, data.newDealerId))
+      .limit(1)
+    if (!newDealerRow[0]) throw new Error('New dealer not found')
+    const newDealer = newDealerRow[0]
+
+    const dItem = await db
+      .select({ costPrice: dealerItems.costPrice })
+      .from(dealerItems)
+      .where(
+        and(
+          eq(dealerItems.dealerId, data.newDealerId),
+          eq(dealerItems.productId, item.productId),
+          eq(dealerItems.catalogType, item.catalogType),
+        ),
+      )
+      .limit(1)
+
+    const snapshottedCost =
+      dItem[0]?.costPrice && dItem[0].costPrice > 0
+        ? dItem[0].costPrice
+        : Math.round(item.unitPrice * 0.85)
+
+    const now = new Date()
+
+    await dbTx.transaction(async (tx) => {
+      await tx
+        .update(orderItems)
+        .set({
+          dealerId: data.newDealerId,
+          dealerCostPrice: snapshottedCost,
+          sourcingStatus: 'assigned',
+        })
+        .where(eq(orderItems.id, data.orderItemId))
+
+      await tx.insert(orderStatusHistory).values({
+        id: nid('ev'),
+        orderId: data.orderId,
+        fromStatus: order.status,
+        toStatus: order.status,
+        status: order.status,
+        note: `Item "${item.name}" reassigned to dealer ${newDealer.name}. ${data.reason ? `Reason: ${data.reason}` : ''}`,
+        actor: actor.name,
+        actorId: actor.id,
+        actorRole: actor.role,
+        createdAt: now,
+      })
+
+      if (order.riderId) {
+        const riderRows = await tx
+          .select({ userId: riders.userId })
+          .from(riders)
+          .where(eq(riders.id, order.riderId))
+          .limit(1)
+        if (riderRows[0]?.userId) {
+          await tx.insert(notifications).values({
+            id: nid('notif'),
+            userId: riderRows[0].userId,
+            type: 'rider',
+            title: `Pickup Dealer Updated for Order #${order.number}`,
+            body: `Item "${item.name}" reassigned to ${newDealer.name} (${newDealer.address}).`,
+            href: '/rider/deliveries',
+            read: false,
+            createdAt: now,
+          })
+        }
+      }
+    })
+
+    await logAudit(
+      actor.name,
+      'orders',
+      'edit',
+      `Substituted dealer for item ${item.name} to ${newDealer.name} on order ${order.number}`,
+    )
+
+    return { success: true }
+  })
+
+export const removeOrderItemFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        orderId: z.string(),
+        orderItemId: z.string(),
+        reason: z.string().min(1, 'Reason for removing item is required'),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user: actor } = await requirePermission('orders', 'edit')
+    const order = await getOrderByIdQuery(data.orderId)
+    if (!order) throw new Error('Order not found')
+
+    if (
+      [
+        'picked_up',
+        'out_for_delivery',
+        'delivered',
+        'returned',
+        'cancelled',
+      ].includes(order.status)
+    ) {
+      throw new Error(
+        `Cannot remove item from order in status '${order.status}'. Only allowed before dispatch.`,
+      )
+    }
+
+    if (order.items.length <= 1) {
+      throw new Error(
+        'Cannot remove the only item in an order. Please cancel the order instead.',
+      )
+    }
+
+    const itemToRemove = order.items.find((it) => it.id === data.orderItemId)
+    if (!itemToRemove) throw new Error('Order item not found')
+
+    const remainingItems = order.items.filter(
+      (it) => it.id !== data.orderItemId,
+    )
+
+    const settings = await getStoreSettingsQuery()
+    const totals = calculateOrderTotals({
+      items: remainingItems.map((it) => ({
+        catalogType: it.catalogType,
+        productId: it.productId,
+        variantId: it.variantId,
+        name: it.name,
+        variantName: it.variantName,
+        sku: it.sku,
+        qty: it.qty,
+        unitPrice: it.unitPrice,
+      })),
+      discountPaisa: order.discount,
+      deliverySettings: {
+        defaultDeliveryFeePaisa: (settings as any).deliveryFee ?? 15000,
+        freeDeliveryThresholdPaisa:
+          (settings as any).freeDeliveryThreshold ?? 300000,
+      },
+      vatRate: settings.taxRate ?? 13,
+    })
+
+    const now = new Date()
+
+    await dbTx.transaction(async (tx) => {
+      await tx.delete(orderItems).where(eq(orderItems.id, data.orderItemId))
+
+      await tx
+        .update(orders)
+        .set({
+          subtotal: totals.subtotalPaisa,
+          discount: totals.discountPaisa,
+          deliveryCharge: totals.deliveryChargePaisa,
+          tax: totals.vatPaisa,
+          total: totals.totalPaisa,
+          updatedAt: now,
+        })
+        .where(eq(orders.id, data.orderId))
+
+      await tx.insert(orderStatusHistory).values({
+        id: nid('ev'),
+        orderId: data.orderId,
+        fromStatus: order.status,
+        toStatus: order.status,
+        status: order.status,
+        note: `Removed item "${itemToRemove.name}" (${itemToRemove.variantName}). Reason: ${data.reason}. Order total adjusted to Rs. ${(totals.totalPaisa / 100).toFixed(2)}.`,
+        actor: actor.name,
+        actorId: actor.id,
+        actorRole: actor.role,
+        createdAt: now,
+      })
+
+      if (order.customerId) {
+        await tx.insert(notifications).values({
+          id: nid('notif'),
+          userId: order.customerId,
+          type: 'order',
+          title: `Item removed from Order #${order.number}`,
+          body: `"${itemToRemove.name}" was removed due to dealer unavailability (${data.reason}). Your new order total is Rs. ${(totals.totalPaisa / 100).toFixed(2)}.`,
+          href: `/orders`,
+          read: false,
+          createdAt: now,
+        })
+      }
+    })
+
+    await logAudit(
+      actor.name,
+      'orders',
+      'edit',
+      `Removed item ${itemToRemove.name} from order ${order.number}. Reason: ${data.reason}`,
+    )
+
+    return {
+      success: true,
+      newTotal: totals.totalPaisa,
+    }
+  })
+
+export const editOrderItemsBeforeDispatchFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        orderId: z.string(),
+        items: z
+          .array(
+            z.object({
+              catalogType: z.enum(['liquor', 'grocery']),
+              productId: z.string(),
+              variantId: z.string(),
+              name: z.string(),
+              variantName: z.string(),
+              sku: z.string(),
+              qty: z.number().int().positive(),
+              unitPrice: z.number().int().nonnegative(),
+              dealerId: z.string().nullable().optional(),
+            }),
+          )
+          .min(1, 'Order must contain at least 1 item'),
+        note: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user: actor } = await requirePermission('orders', 'edit')
+    const order = await getOrderByIdQuery(data.orderId)
+    if (!order) throw new Error('Order not found')
+
+    if (
+      [
+        'picked_up',
+        'out_for_delivery',
+        'delivered',
+        'returned',
+        'cancelled',
+      ].includes(order.status)
+    ) {
+      throw new Error(
+        `Cannot modify items on order in status '${order.status}'. Dispatch has already started.`,
+      )
+    }
+
+    const settings = await getStoreSettingsQuery()
+    const totals = calculateOrderTotals({
+      items: data.items,
+      discountPaisa: order.discount,
+      deliverySettings: {
+        defaultDeliveryFeePaisa: (settings as any).deliveryFee ?? 15000,
+        freeDeliveryThresholdPaisa:
+          (settings as any).freeDeliveryThreshold ?? 300000,
+      },
+      vatRate: settings.taxRate ?? 13,
+    })
+
+    const now = new Date()
+
+    await dbTx.transaction(async (tx) => {
+      await tx.delete(orderItems).where(eq(orderItems.orderId, data.orderId))
+
+      for (const it of data.items) {
+        let snapshottedCost: number | null = null
+        if (it.dealerId) {
+          const dItem = await tx
+            .select({ costPrice: dealerItems.costPrice })
+            .from(dealerItems)
+            .where(
+              and(
+                eq(dealerItems.dealerId, it.dealerId),
+                eq(dealerItems.catalogType, it.catalogType),
+                eq(dealerItems.productId, it.productId),
+              ),
+            )
+            .limit(1)
+
+          snapshottedCost =
+            dItem[0]?.costPrice && dItem[0].costPrice > 0
+              ? dItem[0].costPrice
+              : Math.round(it.unitPrice * 0.85)
+        }
+
+        await tx.insert(orderItems).values({
+          id: nid('oi'),
+          orderId: data.orderId,
+          catalogType: it.catalogType,
+          productId: it.productId,
+          variantId: it.variantId,
+          name: it.name,
+          variantName: it.variantName,
+          sku: it.sku,
+          qty: it.qty,
+          unitPrice: it.unitPrice,
+          lineTotal: it.unitPrice * it.qty,
+          dealerId: it.dealerId || null,
+          dealerCostPrice: snapshottedCost,
+          sourcingStatus: it.dealerId ? 'assigned' : 'pending',
+        })
+      }
+
+      await tx
+        .update(orders)
+        .set({
+          subtotal: totals.subtotalPaisa,
+          discount: totals.discountPaisa,
+          deliveryCharge: totals.deliveryChargePaisa,
+          tax: totals.vatPaisa,
+          total: totals.totalPaisa,
+          updatedAt: now,
+        })
+        .where(eq(orders.id, data.orderId))
+
+      await tx.insert(orderStatusHistory).values({
+        id: nid('ev'),
+        orderId: data.orderId,
+        fromStatus: order.status,
+        toStatus: order.status,
+        status: order.status,
+        note: `Order items modified before dispatch by ${actor.name}. Total: Rs. ${(totals.totalPaisa / 100).toFixed(2)}. ${data.note || ''}`,
+        actor: actor.name,
+        actorId: actor.id,
+        actorRole: actor.role,
+        createdAt: now,
+      })
+    })
+
+    await logAudit(
+      actor.name,
+      'orders',
+      'edit',
+      `Modified items on order ${order.number} before dispatch (new total: Rs. ${(totals.totalPaisa / 100).toFixed(2)})`,
+    )
+
+    return {
+      success: true,
+      newTotal: totals.totalPaisa,
+    }
+  })
+
+export const getOrderMarginsFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) => z.object({ orderId: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    await requirePermission('orders', 'view')
+    const order = await getOrderByIdQuery(data.orderId)
+    if (!order) throw new Error('Order not found')
+    return calculateOrderMargins(order)
+  })
+
 export const createOrderFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>
     z
@@ -1179,6 +1702,7 @@ export const createOrderFn = createServerFn({ method: 'POST' })
 
     const orderId = nid('ord')
     const trackingCode = `TRK${Math.floor(100000 + Math.random() * 900000)}`
+    const deliveryOtp = String(Math.floor(1000 + Math.random() * 9000))
     const now = new Date()
 
     await dbTx.transaction(async (tx) => {
@@ -1199,6 +1723,7 @@ export const createOrderFn = createServerFn({ method: 'POST' })
         tax: 0,
         total,
         trackingCode,
+        deliveryOtp,
         notes: data.notes || '',
       })
 
@@ -1828,8 +2353,71 @@ export const updateComplaintFn = createServerFn({ method: 'POST' })
     return true
   })
 
+export const getCustomerComplaintsFn = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  const user = await getSessionUser()
+  if (!user.isActive || user.banned) {
+    throw new Error('Forbidden: Account suspended')
+  }
+  return getCustomerComplaintsQuery(user.id)
+})
+
+export const createCustomerComplaintFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        orderId: z.string().optional().nullable(),
+        subject: z.string().min(3).max(150),
+        body: z.string().min(5).max(2000),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const user = await getSessionUser()
+    if (!user.isActive || user.banned) {
+      throw new Error('Forbidden: Account suspended')
+    }
+
+    const id = await createComplaintQuery({
+      customerId: user.id,
+      customerName: user.name || 'Customer',
+      orderId: data.orderId || null,
+      subject: data.subject,
+      body: data.body,
+    })
+
+    try {
+      await db.insert(notifications).values({
+        id: `notif_${crypto.randomUUID().slice(0, 10)}`,
+        title: 'New Support Ticket Filed',
+        body: `${user.name || 'Customer'} filed ticket: "${data.subject}"`,
+        type: 'system',
+        read: false,
+        href: '/admin/customers',
+      })
+    } catch (notifErr) {
+      console.error('Failed to create complaint notification:', notifErr)
+    }
+
+    return { id, success: true }
+  })
+
 export const approveSettlementFn = createServerFn({ method: 'POST' })
-  .validator((d: unknown) => z.object({ id: z.string() }).parse(d))
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.string(),
+        paymentMethod: z
+          .enum(['cash', 'bank_transfer', 'esewa', 'khalti', 'cheque'])
+          .default('cash'),
+        paymentAccount: z.enum(['cash', 'bank']).default('cash'),
+        paymentReference: z.string().optional(),
+        proofUrls: z.array(z.string()).optional(),
+        notes: z.string().optional(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data }) => {
     const { user } = await requirePermission('accounts', 'approve')
     const row = await db
@@ -1844,15 +2432,42 @@ export const approveSettlementFn = createServerFn({ method: 'POST' })
       row[0].slug || `vch_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`
     const now = new Date()
 
+    const grossAmount =
+      row[0].grossEarnings || row[0].payout || row[0].netPayout
+    const netPayout = row[0].netPayout || row[0].payout
+    const cashShortageDeducted = row[0].cashShortageDeducted || 0
+    const advancesDeducted = row[0].advancesDeducted || 0
+
     const result = await dbTx.transaction(async (tx) => {
+      // If base salary was included, accrue it first to Rider Payable
+      if (row[0].baseSalaryAmount && row[0].baseSalaryAmount > 0) {
+        await postRiderSalaryAccrualTx(tx, {
+          settlementId: row[0].id,
+          riderId: row[0].riderId,
+          riderName: row[0].riderName,
+          baseSalaryAmount: row[0].baseSalaryAmount,
+          actor: user,
+        })
+      }
+
       const posting = await postRiderPayoutTx(tx, {
         settlementId: row[0].id,
         riderId: row[0].riderId,
         riderName: row[0].riderName,
-        amount: row[0].payout || row[0].netPayout,
-        paymentAccount: 'cash',
+        grossAmount,
+        netPaid: netPayout,
+        cashShortageDeducted,
+        advancesDeducted,
+        paymentAccount: data.paymentAccount,
         actor: user,
       })
+
+      const proofList =
+        data.proofUrls && data.proofUrls.length > 0
+          ? data.proofUrls
+          : Array.isArray(row[0].proofUrls)
+            ? row[0].proofUrls
+            : []
 
       await tx
         .update(settlements)
@@ -1861,6 +2476,10 @@ export const approveSettlementFn = createServerFn({ method: 'POST' })
           voucherNo: posting.voucherNo,
           slug,
           journalEntryId: posting.journalEntryId,
+          paymentMethod: data.paymentMethod,
+          paymentReference: data.paymentReference || row[0].paymentReference,
+          proofUrls: proofList,
+          notes: data.notes || row[0].notes,
           paidAt: now,
           paidBy: user.id,
           updatedAt: now,
@@ -1874,7 +2493,7 @@ export const approveSettlementFn = createServerFn({ method: 'POST' })
         category: 'settlement',
         account: 'Fleet settlement payable',
         memo: `Settlement approved for ${row[0].riderName} (${posting.voucherNo})`,
-        amount: row[0].payout || row[0].netPayout,
+        amount: netPayout,
         refType: 'settlement',
         refId: row[0].id,
       })
@@ -1893,6 +2512,127 @@ export const approveSettlementFn = createServerFn({ method: 'POST' })
     )
 
     return result
+  })
+
+export const generateMonthlyRiderPayrollRunFn = createServerFn({
+  method: 'POST',
+})
+  .validator((d: unknown) =>
+    z
+      .object({
+        periodStart: z.string(), // ISO date or YYYY-MM-DD
+        periodEnd: z.string(), // ISO date or YYYY-MM-DD
+        riderId: z.string().optional(),
+        includeBaseSalary: z.boolean().default(true),
+        deductCashShortages: z.boolean().default(true),
+        deductAdvances: z.boolean().default(true),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('accounts', 'create')
+    const start = new Date(data.periodStart)
+    const end = new Date(data.periodEnd)
+
+    let targetRiders = await getAllRidersQuery()
+    if (data.riderId) {
+      targetRiders = targetRiders.filter((r) => r.id === data.riderId)
+    }
+
+    if (targetRiders.length === 0) {
+      throw new Error('No couriers found for payroll run')
+    }
+
+    const allOrders = await getAllOrdersQuery()
+    const createdDraftSettlements = []
+
+    for (const rider of targetRiders) {
+      const deliveredOrders = allOrders.filter(
+        (o) =>
+          o.riderId === rider.id &&
+          o.status === 'delivered' &&
+          new Date(o.createdAt) >= start &&
+          new Date(o.createdAt) <= end,
+      )
+
+      const deliveriesCount = deliveredOrders.length
+      const cashCollected = deliveredOrders
+        .filter((o) => o.paymentMethod === 'cod')
+        .reduce((sum, o) => sum + o.total, 0)
+
+      const baseSalaryAmount = data.includeBaseSalary
+        ? rider.baseSalary || 0
+        : 0
+      const perDropRate = rider.perDropRate || 5000 // paisa
+      const perDropAmount = deliveriesCount * perDropRate
+
+      const commissionRate = rider.commissionRate ?? 10
+      const commissionAmount = Math.round(
+        deliveredOrders.reduce(
+          (sum, o) => sum + (o.deliveryCharge * commissionRate) / 100,
+          0,
+        ),
+      )
+
+      const grossEarnings = baseSalaryAmount + perDropAmount + commissionAmount
+
+      const cashShortageDeducted = 0
+      const advancesDeducted = 0
+
+      const netPayout = Math.max(
+        0,
+        grossEarnings - cashShortageDeducted - advancesDeducted,
+      )
+
+      const slug = `vch_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`
+      const voucherNo = `VCH-SET-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
+      const settlementId = nid('set')
+
+      await db.insert(settlements).values({
+        id: settlementId,
+        riderId: rider.id,
+        riderName: rider.name,
+        voucherNo,
+        slug,
+        periodStart: start,
+        periodEnd: end,
+        deliveries: deliveriesCount,
+        cashCollected,
+        baseSalaryAmount,
+        perDropAmount,
+        commissionAmount,
+        commission: perDropAmount + commissionAmount,
+        grossEarnings,
+        advancesDeducted,
+        cashShortageDeducted,
+        cashHeldDeducted: 0,
+        netPayout,
+        payout: netPayout,
+        status: 'draft',
+        notes: `Payroll run for period ${start.toISOString().slice(0, 10)} to ${end.toISOString().slice(0, 10)} (${deliveriesCount} drops)`,
+        proofUrls: [],
+      })
+
+      createdDraftSettlements.push({
+        id: settlementId,
+        riderId: rider.id,
+        riderName: rider.name,
+        voucherNo,
+        slug,
+        deliveries: deliveriesCount,
+        grossEarnings,
+        netPayout,
+      })
+    }
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'create',
+      `Generated monthly payroll run for ${createdDraftSettlements.length} couriers`,
+    )
+
+    return createdDraftSettlements
   })
 
 export const reconcilePaymentFn = createServerFn({ method: 'POST' })
@@ -2010,17 +2750,28 @@ export const getRiderPortalFn = createServerFn({ method: 'GET' }).handler(
     )
 
     const activeOrders = assignedOrders.filter((o) =>
-      ['assigned', 'out_for_delivery'].includes(o.status),
+      ['assigned', 'rider_assigned', 'picked_up', 'out_for_delivery'].includes(
+        o.status,
+      ),
     )
     const completedOrders = assignedOrders.filter(
       (o) => o.status === 'delivered',
     )
+
+    const [activeShift, attendanceStats, riderSettlements] = await Promise.all([
+      getActiveRiderShiftQuery(currentRider.id),
+      getRiderAttendanceStatsQuery(currentRider.id),
+      getSettlementsByRiderIdQuery(currentRider.id),
+    ])
 
     return {
       rider: currentRider,
       orders: assignedOrders,
       activeOrders,
       completedOrders,
+      activeShift,
+      attendanceStats,
+      settlements: riderSettlements,
       stats: {
         totalAssigned: assignedOrders.length,
         activeCount: activeOrders.length,
@@ -2047,6 +2798,8 @@ export const updateRiderDeliveryStatusFn = createServerFn({ method: 'POST' })
         ]),
         deliveryFailureReason: z.string().optional(),
         ageVerifiedAtDelivery: z.boolean().optional(),
+        deliveryOtp: z.string().optional(),
+        proofPhotoUrl: z.string().optional(),
         notes: z.string().optional(),
       })
       .parse(d),
@@ -2083,11 +2836,35 @@ export const updateRiderDeliveryStatusFn = createServerFn({ method: 'POST' })
           note: data.notes,
           deliveryFailureReason: data.deliveryFailureReason,
           ageVerifiedAtDelivery: data.ageVerifiedAtDelivery,
+          deliveryOtp: data.deliveryOtp,
+          proofPhotoUrl: data.proofPhotoUrl,
         },
       })
     })
 
     return true
+  })
+
+export const createDeliveryProofUploadFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        filename: z.string(),
+        contentType: z.string(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const user = await getSessionUser()
+    if (!user.isActive || user.banned) {
+      throw new Error('Forbidden: Account suspended')
+    }
+    const { presignPut, getPublicUrl } = await import('#/lib/storage')
+    const ext = data.filename.split('.').pop() || 'jpg'
+    const key = `delivery-proof/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const uploadUrl = await presignPut(key, data.contentType)
+    const publicUrl = getPublicUrl(key)
+    return { uploadUrl, publicUrl, key }
   })
 
 export const transitionOrderFn = createServerFn({ method: 'POST' })
@@ -2155,14 +2932,50 @@ export const toggleRiderAvailabilityFn = createServerFn({ method: 'POST' })
     const rider = await getRiderByUserIdQuery(user.id)
     if (!rider) throw new Error('Rider profile not found')
 
+    const now = new Date()
+
     await db
       .update(riders)
       .set({
         available: data.available,
         status: data.available ? 'available' : 'offline',
-        updatedAt: new Date(),
+        updatedAt: now,
       })
       .where(eq(riders.id, rider.id))
+
+    // Handle shift attendance tracking
+    if (data.available) {
+      // Starting shift: check if already active
+      const activeShift = await getActiveRiderShiftQuery(rider.id)
+      if (!activeShift) {
+        await db.insert(riderShifts).values({
+          id: nid('shf'),
+          riderId: rider.id,
+          status: 'active',
+          startedAt: now,
+          durationMinutes: 0,
+        })
+      }
+    } else {
+      // Ending shift: mark completed and compute duration
+      const activeShift = await getActiveRiderShiftQuery(rider.id)
+      if (activeShift) {
+        const start = new Date(activeShift.startedAt)
+        const durationMinutes = Math.max(
+          0,
+          Math.round((now.getTime() - start.getTime()) / (1000 * 60)),
+        )
+        await db
+          .update(riderShifts)
+          .set({
+            status: 'completed',
+            endedAt: now,
+            durationMinutes,
+            updatedAt: now,
+          })
+          .where(eq(riderShifts.id, activeShift.id))
+      }
+    }
 
     return true
   })
@@ -2239,5 +3052,204 @@ export const depositRiderCashFn = createServerFn({ method: 'POST' })
       `Rider ${rider.name} submitted cash handover Rs. ${(data.amount / 100).toFixed(2)}`,
     )
 
+    return true
+  })
+
+// -------------------------------------------------------------
+// RIDER SHIFTS & ATTENDANCE (B6)
+// -------------------------------------------------------------
+
+export const getRiderShiftsFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        riderId: z.string().optional(),
+        limit: z.number().default(50),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const user = await getSessionUser()
+    let riderId = data.riderId
+
+    if (user.role === 'rider') {
+      const rider = await getRiderByUserIdQuery(user.id)
+      if (!rider) throw new Error('Rider profile not found')
+      riderId = rider.id
+    } else {
+      await requirePermission('riders', 'view')
+    }
+
+    return getAllRiderShiftsQuery(riderId, data.limit)
+  })
+
+export const getRiderAttendanceStatsFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        riderId: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const user = await getSessionUser()
+    let riderId = data.riderId
+
+    if (user.role === 'rider') {
+      const rider = await getRiderByUserIdQuery(user.id)
+      if (!rider) throw new Error('Rider profile not found')
+      riderId = rider.id
+    } else {
+      await requirePermission('riders', 'view')
+      if (!riderId) throw new Error('riderId is required for manager view')
+    }
+
+    return getRiderAttendanceStatsQuery(riderId)
+  })
+
+// -------------------------------------------------------------
+// OFFERS & PROMOTIONS (A3 & B10)
+// -------------------------------------------------------------
+
+export const getOffersListFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        onlyActive: z.boolean().default(false),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    return getAllOffersQuery(data.onlyActive)
+  })
+
+export const getOfferBySlugFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        slug: z.string(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const offer = await getOfferBySlugQuery(data.slug)
+    if (!offer) throw new Error('Offer not found')
+    return offer
+  })
+
+export const upsertOfferFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.string().optional(),
+        title: z.string().min(2),
+        slug: z.string().min(2),
+        type: z
+          .enum(['bogo', 'percent', 'fixed', 'free_delivery', 'bundle'])
+          .default('percent'),
+        scope: z
+          .enum(['all', 'category', 'brand', 'product', 'variant'])
+          .default('all'),
+        scopeId: z.string().optional().nullable(),
+        discountValue: z.number().default(0),
+        minOrderAmount: z.number().default(0),
+        bannerUrl: z.string().optional().nullable(),
+        heading: z.string().optional().nullable(),
+        description: z.string().optional().nullable(),
+        priority: z.number().default(0),
+        stackable: z.boolean().default(false),
+        active: z.boolean().default(true),
+        startsAt: z.string().optional().nullable(),
+        expiresAt: z.string().optional().nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission(
+      'marketing',
+      data.id ? 'edit' : 'create',
+    )
+    const id = await upsertOfferQuery({
+      ...data,
+      startsAt: data.startsAt ? new Date(data.startsAt) : null,
+      expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+    })
+
+    await logAudit(
+      user.name,
+      'marketing',
+      data.id ? 'edit' : 'create',
+      `${data.id ? 'Updated' : 'Created'} offer ${data.title} (${data.slug})`,
+    )
+
+    return { id }
+  })
+
+export const deleteOfferFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => z.object({ id: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('marketing', 'delete')
+    await deleteOfferQuery(data.id)
+    await logAudit(user.name, 'marketing', 'delete', `Deleted offer ${data.id}`)
+    return true
+  })
+
+// -------------------------------------------------------------
+// CUSTOMER SAVED ADDRESSES (B11)
+// -------------------------------------------------------------
+
+export const getCustomerAddressesFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const user = await getSessionUser()
+    if (!user.isActive || user.banned) {
+      throw new Error('Forbidden: Account suspended')
+    }
+    return getCustomerAddressesQuery(user.id)
+  },
+)
+
+export const upsertCustomerAddressFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.string().optional(),
+        label: z.string().default('Home'),
+        address: z.string().min(3),
+        city: z.string().default('Butwal'),
+        landmark: z.string().optional().nullable(),
+        lat: z.number().optional().nullable(),
+        lng: z.number().optional().nullable(),
+        isDefault: z.boolean().default(false),
+        contactPhone: z.string().optional().nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const user = await getSessionUser()
+    if (!user.isActive || user.banned) {
+      throw new Error('Forbidden: Account suspended')
+    }
+
+    const id = await upsertCustomerAddressQuery({
+      ...data,
+      customerId: user.id,
+    })
+
+    return { id }
+  })
+
+export const deleteCustomerAddressFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => z.object({ id: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    const user = await getSessionUser()
+    await deleteCustomerAddressQuery(data.id, user.id)
+    return true
+  })
+
+export const setDefaultCustomerAddressFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => z.object({ id: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    const user = await getSessionUser()
+    await setDefaultCustomerAddressQuery(data.id, user.id)
     return true
   })

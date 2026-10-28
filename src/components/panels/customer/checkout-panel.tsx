@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -14,6 +14,11 @@ import {
   validatePromoFn,
   createCustomerOrderFn,
 } from '#/server/orders/order.functions'
+import {
+  getCustomerAddressesFn,
+  upsertCustomerAddressFn,
+} from '#/server/operations/operations.functions'
+import type { CustomerAddress } from '#/server/operations/types'
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { DeliveryMap } from './delivery-map'
@@ -32,6 +37,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '#/components/ui/radio-group'
 import { Separator } from '#/components/ui/separator'
 import { Badge } from '#/components/ui/badge'
+import { cn } from '#/lib/utils'
 import {
   MapPin,
   Phone,
@@ -44,6 +50,10 @@ import {
   CheckCircle2,
   AlertCircle,
   ShoppingBag,
+  Home,
+  Briefcase,
+  Check,
+  Clock,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -70,6 +80,12 @@ export function CheckoutPanel() {
   const [isValidatingPromo, setIsValidatingPromo] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Saved Addresses
+  const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([])
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('custom')
+  const [saveAddressForLater, setSaveAddressForLater] = useState(false)
+  const [addressLabel, setAddressLabel] = useState('Home')
+
   // Initialize checkout form
   const {
     register,
@@ -89,6 +105,8 @@ export function CheckoutPanel() {
       city: 'Butwal',
       phone: normalizedProfilePhone || '',
       savePhoneAsDefault: false,
+      deliverySlot: 'express',
+      deliveryNotes: '',
       items: items.map((i) => ({
         variantId: i.variantId,
         quantity: i.quantity,
@@ -115,6 +133,49 @@ export function CheckoutPanel() {
     totalPaisa >= FREE_DELIVERY_THRESHOLD ? 0 : STANDARD_DELIVERY_CHARGE
   const promoDiscount = appliedPromo?.discountPaisa ?? 0
   const orderTotal = Math.max(0, totalPaisa - promoDiscount + deliveryCharge)
+
+  // Load saved delivery addresses
+  useEffect(() => {
+    let isMounted = true
+    void getCustomerAddressesFn()
+      .then((addrs) => {
+        if (!isMounted || !addrs || addrs.length === 0) return
+        setSavedAddresses(addrs)
+        const defaultAddr = addrs.find((a) => a.isDefault) || addrs[0]
+        if (defaultAddr) {
+          setSelectedAddressId(defaultAddr.id)
+          setValue('address', defaultAddr.address, { shouldValidate: true })
+          setValue('city', defaultAddr.city)
+          if (defaultAddr.lat && defaultAddr.lng) {
+            setValue('lat', defaultAddr.lat, { shouldValidate: true })
+            setValue('lng', defaultAddr.lng, { shouldValidate: true })
+          }
+        }
+      })
+      .catch(() => {
+        // Guest or unauthenticated
+      })
+    return () => {
+      isMounted = false
+    }
+  }, [setValue])
+
+  const handleSelectSavedAddress = (id: string) => {
+    setSelectedAddressId(id)
+    if (id === 'custom') {
+      setValue('address', '')
+      return
+    }
+    const addr = savedAddresses.find((a) => a.id === id)
+    if (addr) {
+      setValue('address', addr.address, { shouldValidate: true })
+      setValue('city', addr.city)
+      if (addr.lat && addr.lng) {
+        setValue('lat', addr.lat, { shouldValidate: true })
+        setValue('lng', addr.lng, { shouldValidate: true })
+      }
+    }
+  }
 
   // Handle Promo Validation
   const handleApplyPromo = async () => {
@@ -189,6 +250,24 @@ export function CheckoutPanel() {
         toast.error('Failed to create order. Please try again.')
         setIsSubmitting(false)
         return
+      }
+
+      // If user opted to save this address for later, persist it
+      if (saveAddressForLater && session?.user) {
+        try {
+          await upsertCustomerAddressFn({
+            data: {
+              label: addressLabel,
+              address: data.address,
+              city: data.city || 'Butwal',
+              lat: data.lat,
+              lng: data.lng,
+              isDefault: savedAddresses.length === 0,
+            },
+          })
+        } catch (addrErr) {
+          console.error('Failed to save customer address:', addrErr)
+        }
       }
 
       // Clear cart ONLY after server confirms success
@@ -303,6 +382,109 @@ export function CheckoutPanel() {
               </CardHeader>
 
               <CardContent className="space-y-4 pt-0">
+                {/* Saved Addresses Picker */}
+                {savedAddresses.length > 0 && (
+                  <div className="space-y-2 pb-2 border-b border-border/60">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Select Saved Address
+                      </Label>
+                      <span className="text-[10px] text-muted-foreground">
+                        {savedAddresses.length} saved
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {savedAddresses.map((addr) => {
+                        const isSelected = selectedAddressId === addr.id
+                        const isWork = addr.label.toLowerCase() === 'work'
+                        return (
+                          <button
+                            key={addr.id}
+                            type="button"
+                            onClick={() => handleSelectSavedAddress(addr.id)}
+                            className={cn(
+                              'flex items-start gap-2.5 p-2.5 rounded-lg border text-left transition-all cursor-pointer',
+                              isSelected
+                                ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary'
+                                : 'border-border bg-card hover:bg-muted/30 text-muted-foreground',
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                'flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold mt-0.5',
+                                isSelected
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-muted text-muted-foreground',
+                              )}
+                            >
+                              {isWork ? (
+                                <Briefcase className="h-3.5 w-3.5" />
+                              ) : (
+                                <Home className="h-3.5 w-3.5" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-foreground capitalize">
+                                  {addr.label || 'Saved Address'}
+                                </span>
+                                {addr.isDefault && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[9px] px-1 py-0 h-4 border-primary/40 text-primary"
+                                  >
+                                    Default
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-[11px] truncate text-muted-foreground mt-0.5">
+                                {addr.address}
+                              </p>
+                            </div>
+                            {isSelected && (
+                              <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                            )}
+                          </button>
+                        )
+                      })}
+
+                      <button
+                        type="button"
+                        onClick={() => handleSelectSavedAddress('custom')}
+                        className={cn(
+                          'flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-all cursor-pointer',
+                          selectedAddressId === 'custom'
+                            ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary'
+                            : 'border-border bg-card hover:bg-muted/30 text-muted-foreground',
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            'flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold',
+                            selectedAddressId === 'custom'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted text-muted-foreground',
+                          )}
+                        >
+                          <MapPin className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs font-bold text-foreground">
+                            + Pin New Location
+                          </span>
+                          <p className="text-[11px] text-muted-foreground truncate">
+                            Drop a custom pin on the map
+                          </p>
+                        </div>
+                        {selectedAddressId === 'custom' && (
+                          <Check className="h-4 w-4 text-primary shrink-0" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <Controller
                   name="lat"
                   control={control}
@@ -350,6 +532,52 @@ export function CheckoutPanel() {
                     notable gates or shops.
                   </p>
                 </div>
+
+                {/* Save Address for Later (For Authenticated Users) */}
+                {session?.user && (
+                  <div className="pt-2 border-t border-border/50 space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="save-address"
+                        checked={saveAddressForLater}
+                        onChange={(e) =>
+                          setSaveAddressForLater(e.target.checked)
+                        }
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                      />
+                      <Label
+                        htmlFor="save-address"
+                        className="text-xs font-medium cursor-pointer"
+                      >
+                        Save this address to my account for future orders
+                      </Label>
+                    </div>
+
+                    {saveAddressForLater && (
+                      <div className="flex items-center gap-2 pl-6 pt-1">
+                        <span className="text-[11px] text-muted-foreground font-medium">
+                          Save as:
+                        </span>
+                        {(['Home', 'Work', 'Other'] as const).map((lbl) => (
+                          <button
+                            key={lbl}
+                            type="button"
+                            onClick={() => setAddressLabel(lbl)}
+                            className={cn(
+                              'px-2.5 py-0.5 text-[11px] font-semibold rounded-md border transition-all cursor-pointer',
+                              addressLabel === lbl
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-muted/40 text-muted-foreground border-border hover:bg-muted',
+                            )}
+                          >
+                            {lbl}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -463,7 +691,110 @@ export function CheckoutPanel() {
               </CardContent>
             </Card>
 
-            {/* 3. PAYMENT METHOD SECTION (ONLY COD & ESEWA) */}
+            {/* 3. DELIVERY TIME SLOT & SCHEDULE */}
+            <Card className="border-border shadow-xs">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                    <Clock className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-bold">
+                      3. Delivery Schedule & Slot
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Choose when you want your items dispatched.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4 pt-0">
+                <Controller
+                  name="deliverySlot"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {[
+                        {
+                          id: 'express',
+                          title: '⚡ Express Delivery',
+                          time: 'Within 30–45 mins',
+                          desc: 'Immediate rider dispatch from nearest dealer partner',
+                        },
+                        {
+                          id: 'evening',
+                          title: '🌙 Evening Slot',
+                          time: '6:00 PM – 8:00 PM',
+                          desc: 'Convenient post-work delivery window',
+                        },
+                        {
+                          id: 'late_night',
+                          title: '✨ Late Night Slot',
+                          time: '8:00 PM – 10:00 PM',
+                          desc: 'Prime party & weekend social gathering time',
+                        },
+                      ].map((slot) => {
+                        const isSelected = field.value === slot.id
+                        return (
+                          <div
+                            key={slot.id}
+                            onClick={() => field.onChange(slot.id)}
+                            className={cn(
+                              'p-3 rounded-lg border cursor-pointer transition-all flex flex-col justify-between space-y-2',
+                              isSelected
+                                ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                                : 'border-border bg-card hover:border-muted-foreground/30 hover:bg-accent/40',
+                            )}
+                          >
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-xs flex items-center gap-1.5">
+                                  {slot.title}
+                                </span>
+                                {isSelected && (
+                                  <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                                )}
+                              </div>
+                              <span className="inline-block text-[11px] font-mono font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                {slot.time}
+                              </span>
+                              <p className="text-[11px] text-muted-foreground pt-1 leading-snug">
+                                {slot.desc}
+                              </p>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                />
+
+                {/* Delivery Notes / Rider Instructions */}
+                <div className="space-y-1.5 pt-1">
+                  <Label
+                    htmlFor="delivery-notes"
+                    className="text-xs font-semibold"
+                  >
+                    Delivery Instructions for Rider (Optional)
+                  </Label>
+                  <Input
+                    id="delivery-notes"
+                    {...register('deliveryNotes')}
+                    placeholder="e.g., Ring doorbell twice, leave with guard, call when near gate"
+                    className="h-9 text-xs"
+                    disabled={isSubmitting}
+                  />
+                  {errors.deliveryNotes && (
+                    <p className="text-xs text-destructive">
+                      {errors.deliveryNotes.message}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 4. PAYMENT METHOD SECTION (ONLY COD & ESEWA) */}
             <Card className="border-border shadow-xs">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-2.5">
@@ -472,7 +803,7 @@ export function CheckoutPanel() {
                   </div>
                   <div>
                     <CardTitle className="text-base font-bold">
-                      3. Payment Method
+                      4. Payment Method
                     </CardTitle>
                     <CardDescription className="text-xs">
                       Choose between instant cash at your doorstep or eSewa

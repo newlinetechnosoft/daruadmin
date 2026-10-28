@@ -16,7 +16,7 @@ export function Footer() {
                 On-demand 40-minute delivery
               </h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Rapid doorstep service across Kathmandu Valley.
+                Rapid doorstep service across Butwal & Tilottama.
               </p>
             </div>
           </div>
@@ -66,7 +66,7 @@ export function Footer() {
               <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">
                 Licensed food and beverage delivery platform. Genuine spirits,
                 cold beer, wine, and groceries delivered straight to your door
-                across Kathmandu Valley.
+                across Butwal & Tilottama.
               </p>
             </div>
 

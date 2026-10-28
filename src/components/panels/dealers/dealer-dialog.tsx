@@ -70,7 +70,7 @@ export function DealerDialog({
   const [contact, setContact] = useState('')
   const [whatsappNumber, setWhatsappNumber] = useState('')
   const [address, setAddress] = useState('')
-  const [city, setCity] = useState('Kathmandu')
+  const [city, setCity] = useState('Butwal')
   const [isActive, setIsActive] = useState(true)
   const [selectedItemKeys, setSelectedItemKeys] = useState<Set<string>>(
     new Set(),
@@ -109,7 +109,7 @@ export function DealerDialog({
         setContact(dealer.contact || '')
         setWhatsappNumber(dealer.whatsappNumber || '')
         setAddress(dealer.address || '')
-        setCity(dealer.city || 'Kathmandu')
+        setCity(dealer.city || 'Butwal')
         setIsActive(dealer.isActive !== false)
 
         const initialKeys = new Set(
@@ -129,7 +129,7 @@ export function DealerDialog({
         setContact('')
         setWhatsappNumber('')
         setAddress('')
-        setCity('Kathmandu')
+        setCity('Butwal')
         setIsActive(true)
         setSelectedItemKeys(new Set())
       }
@@ -242,7 +242,7 @@ export function DealerDialog({
           contact: contact.trim(),
           whatsappNumber: whatsappNumber.trim() || null,
           address: address.trim(),
-          city: city.trim() || 'Kathmandu',
+          city: city.trim() || 'Butwal',
           isActive,
           assignedItems,
         },
@@ -304,7 +304,7 @@ export function DealerDialog({
                 id="dealer-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Kathmandu Spirits & Beverage Wholesale"
+                placeholder="e.g. Butwal Spirits & Beverage Wholesale"
                 required
                 className="h-10"
               />
@@ -414,7 +414,7 @@ export function DealerDialog({
                 id="dealer-city"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                placeholder="Kathmandu"
+                placeholder="Butwal"
                 className="h-10"
               />
             </div>

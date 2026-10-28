@@ -601,9 +601,61 @@ export async function postDealerSettlementTx(
 }
 
 /**
- * Standard Posting 4: Rider Salary / Commission Payout.
- * Dr. Rider Payable (acc_2031)
- * Cr. Cash in Hand (acc_1011) / Bank (acc_1012)
+ * Standard Posting: Rider Monthly Fixed Base Salary Accrual.
+ * Dr. Rider Compensation Expense (acc_5111)
+ * Cr. Rider Payable (acc_2031)
+ */
+export async function postRiderSalaryAccrualTx(
+  tx: any,
+  params: {
+    settlementId: string
+    riderId: string
+    riderName: string
+    baseSalaryAmount: number // paisa
+    actor: SessionUser | { id: string; name: string; role: string }
+  },
+): Promise<PostJournalResult> {
+  const { settlementId, riderId, riderName, baseSalaryAmount, actor } = params
+  if (baseSalaryAmount <= 0) {
+    throw new Error('Base salary accrual must be greater than zero.')
+  }
+
+  return postJournalTx(tx, {
+    voucherType: 'JV',
+    postingDate: new Date(),
+    narration: `Monthly base salary accrued for courier ${riderName}`,
+    refType: 'payroll',
+    refId: settlementId,
+    event: 'rider_salary_accrual',
+    createdBy: actor.name,
+    metadata: { riderId, riderName, baseSalaryAmount },
+    lines: [
+      {
+        accountId: 'acc_5111', // Rider Compensation Expense
+        debit: baseSalaryAmount,
+        partyType: 'rider',
+        partyId: riderId,
+        costCenter: 'delivery',
+        narration: `Monthly fixed base salary for rider ${riderName}`,
+      },
+      {
+        accountId: 'acc_2031', // Rider Payable (Liability)
+        credit: baseSalaryAmount,
+        partyType: 'rider',
+        partyId: riderId,
+        costCenter: 'delivery',
+        narration: `Monthly base salary payable to rider ${riderName}`,
+      },
+    ],
+  })
+}
+
+/**
+ * Standard Posting 4: Rider Salary / Commission Payout & Deductions.
+ * Dr. Rider Payable (acc_2031) [Gross Amount]
+ * Cr. Cash in Hand (acc_1011) / Bank (acc_1012) [Net Payout]
+ * Cr. Rider Undeposited COD Cash (acc_1031) [Cash Shortage Deducted]
+ * Cr. Staff & Rider Advances (acc_1042) [Advances Deducted]
  */
 export async function postRiderPayoutTx(
   tx: any,
@@ -611,7 +663,11 @@ export async function postRiderPayoutTx(
     settlementId: string
     riderId: string
     riderName: string
-    amount: number // paisa
+    amount?: number // paisa (backward compatibility)
+    grossAmount?: number // paisa
+    netPaid?: number // paisa
+    cashShortageDeducted?: number // paisa
+    advancesDeducted?: number // paisa
     paymentAccount?: 'bank' | 'cash'
     actor: SessionUser | { id: string; name: string; role: string }
   },
@@ -620,14 +676,62 @@ export async function postRiderPayoutTx(
     settlementId,
     riderId,
     riderName,
-    amount,
     paymentAccount = 'cash',
     actor,
   } = params
-  if (amount <= 0) {
-    throw new Error('Payout amount must be greater than zero.')
+
+  const gross = params.grossAmount ?? params.amount ?? 0
+  const shortage = params.cashShortageDeducted ?? 0
+  const advances = params.advancesDeducted ?? 0
+  const net = params.netPaid ?? (params.amount ? params.amount - shortage - advances : gross - shortage - advances)
+
+  if (gross <= 0) {
+    throw new Error('Payout gross amount must be greater than zero.')
   }
+
   const payoutAccountId = paymentAccount === 'cash' ? 'acc_1011' : 'acc_1012'
+
+  const lines: JournalLineInput[] = [
+    {
+      accountId: 'acc_2031', // Rider Payable
+      debit: gross,
+      partyType: 'rider',
+      partyId: riderId,
+      costCenter: 'delivery',
+      narration: `Settlement gross payable cleared for rider ${riderName}`,
+    },
+  ]
+
+  if (net > 0) {
+    lines.push({
+      accountId: payoutAccountId,
+      credit: net,
+      costCenter: 'delivery',
+      narration: `Payout disbursed to rider ${riderName} via ${paymentAccount}`,
+    })
+  }
+
+  if (shortage > 0) {
+    lines.push({
+      accountId: 'acc_1031', // Rider Undeposited COD Cash
+      credit: shortage,
+      partyType: 'rider',
+      partyId: riderId,
+      costCenter: 'delivery',
+      narration: `COD cash shortage deducted from payroll for rider ${riderName}`,
+    })
+  }
+
+  if (advances > 0) {
+    lines.push({
+      accountId: 'acc_1042', // Staff & Rider Advances
+      credit: advances,
+      partyType: 'rider',
+      partyId: riderId,
+      costCenter: 'delivery',
+      narration: `Advance recovery deducted from payroll for rider ${riderName}`,
+    })
+  }
 
   return postJournalTx(tx, {
     voucherType: 'PV', // Payment Voucher
@@ -637,22 +741,16 @@ export async function postRiderPayoutTx(
     refId: settlementId,
     event: 'rider_payout',
     createdBy: actor.name,
-    metadata: { riderId, riderName, amount, paymentAccount },
-    lines: [
-      {
-        accountId: 'acc_2031', // Rider Payable
-        debit: amount,
-        partyType: 'rider',
-        partyId: riderId,
-        costCenter: 'delivery',
-        narration: `Settlement payout cleared for rider ${riderName}`,
-      },
-      {
-        accountId: payoutAccountId,
-        credit: amount,
-        costCenter: 'delivery',
-        narration: `Payout disbursed to rider ${riderName} via ${paymentAccount}`,
-      },
-    ],
+    metadata: {
+      riderId,
+      riderName,
+      grossAmount: gross,
+      netPaid: net,
+      shortageDeducted: shortage,
+      advancesDeducted: advances,
+      paymentAccount,
+    },
+    lines,
   })
 }
+

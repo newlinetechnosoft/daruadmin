@@ -3,16 +3,26 @@ import { getRouteApi } from '@tanstack/react-router'
 import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
+import { calculateOrderMargins } from '#/server/orders/order.queries'
 import {
   Download,
   Printer,
   DollarSign,
   Truck,
   Building,
-  Package,
+  TrendingUp,
+  Store,
+  Eye,
+  Flame,
 } from 'lucide-react'
+import {
+  ProductVelocityDialog,
+  exportProductVelocityCSV,
+} from './product-velocity-dialog'
 import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
+import { Badge } from '#/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '#/components/ui/tabs'
 import {
   Card,
   CardDescription,
@@ -38,9 +48,13 @@ import {
 const routeApi = getRouteApi('/admin/reports')
 
 export function ReportsPanel() {
-  const { ops, liquor, grocery } = routeApi.useLoaderData()
+  const { ops } = routeApi.useLoaderData()
 
   const [isIrdModalOpen, setIsIrdModalOpen] = useState(false)
+  const [isMarginModalOpen, setIsMarginModalOpen] = useState(false)
+  const [isFleetModalOpen, setIsFleetModalOpen] = useState(false)
+  const [isVelocityModalOpen, setIsVelocityModalOpen] = useState(false)
+  const [marginTab, setMarginTab] = useState<'product' | 'dealer'>('product')
 
   // Aggregate Metrics
   const grossSalesTotal = ops.orders.reduce((sum, o) => sum + o.total, 0)
@@ -51,6 +65,110 @@ export function ReportsPanel() {
   const estimatedVatCollected = Math.round(
     ops.orders.reduce((sum, o) => sum + o.tax, 0),
   )
+
+  // Order Margin & Profitability Aggregations
+  const marginSummaries = ops.orders.map(calculateOrderMargins)
+  const totalMerchandiseRevenue = marginSummaries.reduce(
+    (sum, m) => sum + m.netMerchandiseRevenue,
+    0,
+  )
+  const totalDealerCost = marginSummaries.reduce(
+    (sum, m) => sum + m.totalDealerCost,
+    0,
+  )
+  const totalGrossProfit = totalMerchandiseRevenue - totalDealerCost
+  const overallMarginPercent =
+    totalMerchandiseRevenue > 0
+      ? Number(((totalGrossProfit / totalMerchandiseRevenue) * 100).toFixed(1))
+      : 0
+
+  // Aggregate by Product
+  const productMarginsMap = new Map<
+    string,
+    {
+      name: string
+      catalogType: string
+      totalQty: number
+      totalRevenue: number
+      totalDealerCost: number
+      grossProfit: number
+    }
+  >()
+
+  // Aggregate by Dealer
+  const dealerMarginsMap = new Map<
+    string,
+    {
+      dealerId: string
+      linesCount: number
+      totalQty: number
+      totalRevenue: number
+      totalDealerCost: number
+      grossProfit: number
+    }
+  >()
+
+  ops.orders.forEach((order) => {
+    order.items.forEach((item) => {
+      const unitCost = item.dealerCostPrice ?? 0
+      const itemCost = unitCost * item.qty
+      const itemRev = item.lineTotal
+      const itemProfit = itemRev - itemCost
+
+      // Product grouping
+      const prodKey = item.name
+      const existingProd = productMarginsMap.get(prodKey) || {
+        name: item.name,
+        catalogType: item.catalogType,
+        totalQty: 0,
+        totalRevenue: 0,
+        totalDealerCost: 0,
+        grossProfit: 0,
+      }
+      existingProd.totalQty += item.qty
+      existingProd.totalRevenue += itemRev
+      existingProd.totalDealerCost += itemCost
+      existingProd.grossProfit += itemProfit
+      productMarginsMap.set(prodKey, existingProd)
+
+      // Dealer grouping
+      const dealerKey = item.dealerId || 'Unassigned'
+      const existingDealer = dealerMarginsMap.get(dealerKey) || {
+        dealerId: dealerKey,
+        linesCount: 0,
+        totalQty: 0,
+        totalRevenue: 0,
+        totalDealerCost: 0,
+        grossProfit: 0,
+      }
+      existingDealer.linesCount += 1
+      existingDealer.totalQty += item.qty
+      existingDealer.totalRevenue += itemRev
+      existingDealer.totalDealerCost += itemCost
+      existingDealer.grossProfit += itemProfit
+      dealerMarginsMap.set(dealerKey, existingDealer)
+    })
+  })
+
+  const productMarginsList = Array.from(productMarginsMap.values())
+    .map((p) => ({
+      ...p,
+      marginPercent:
+        p.totalRevenue > 0
+          ? Number(((p.grossProfit / p.totalRevenue) * 100).toFixed(1))
+          : 0,
+    }))
+    .sort((a, b) => b.grossProfit - a.grossProfit)
+
+  const dealerMarginsList = Array.from(dealerMarginsMap.values())
+    .map((d) => ({
+      ...d,
+      marginPercent:
+        d.totalRevenue > 0
+          ? Number(((d.grossProfit / d.totalRevenue) * 100).toFixed(1))
+          : 0,
+    }))
+    .sort((a, b) => b.totalDealerCost - a.totalDealerCost)
 
   const handleExportSalesCSV = () => {
     const headers =
@@ -107,33 +225,30 @@ export function ReportsPanel() {
     toast.success('Nepal IRD VAT Annex 13 CSV downloaded')
   }
 
-  const handleExportInventoryCSV = () => {
+  const handleExportProfitMarginCSV = () => {
     const headers =
-      'CatalogType,SKU,ProductName,Brand,Category,Variant,StockOnHand,RetailPriceNPR\n'
-    const liquorRows = (liquor || []).flatMap((l: any) =>
-      (l.variants || []).map(
-        (v: any) =>
-          `"Liquor","${v.sku}","${l.name}","${l.brandName || ''}","${l.categoryName || ''}","${v.name || `${v.volumeMl}ml`}",${v.stock ?? 25},${v.price}`,
-      ),
-    )
-    const groceryRows = (grocery || []).flatMap((g: any) =>
-      (g.variants || []).map(
-        (v: any) =>
-          `"Grocery","${v.sku}","${g.name}","","${g.categoryName || ''}","${v.name || `${v.quantity} ${v.unit}`}",${v.stock ?? 30},${v.price}`,
-      ),
-    )
-    const blob = new Blob(
-      [headers + [...liquorRows, ...groceryRows].join('\n')],
-      {
-        type: 'text/csv',
-      },
-    )
+      'ProductName,CatalogType,UnitsSold,GrossRevenueNPR,DealerCostNPR,GrossProfitNPR,GrossMarginPercent\n'
+    const rows = productMarginsList
+      .map(
+        (p) =>
+          `"${p.name}","${p.catalogType}",${p.totalQty},${p.totalRevenue},${p.totalDealerCost},${p.grossProfit},"${p.marginPercent}%"`,
+      )
+      .join('\n')
+    const blob = new Blob([headers + rows], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `inventory-valuation-report-${new Date().toISOString().slice(0, 10)}.csv`
+    a.download = `profit-margin-audit-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
-    toast.success('Inventory valuation CSV downloaded')
+    toast.success('Profit & Margin audit CSV downloaded')
+  }
+
+  const handleExportProductVelocityCSV = () => {
+    if (ops.sourcingIntelligence) {
+      exportProductVelocityCSV(ops.sourcingIntelligence, null)
+    } else {
+      toast.error('Sourcing intelligence data not loaded yet')
+    }
   }
 
   return (
@@ -145,7 +260,7 @@ export function ReportsPanel() {
       />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           label="Cumulative sales audit"
           value={formatNPR(grossSalesTotal)}
@@ -153,17 +268,23 @@ export function ReportsPanel() {
           icon={DollarSign}
         />
         <KpiCard
-          label="Fleet logistics deliveries"
-          value={totalDeliveriesCount}
-          note="Parcels completed in Kathmandu"
-          icon={Truck}
+          label="Realized gross profit"
+          value={`${formatNPR(totalGrossProfit)} (${overallMarginPercent}%)`}
+          note="Revenue minus dealer snapshot cost"
+          icon={TrendingUp}
           tone="success"
         />
         <KpiCard
-          label="Nepal IRD VAT remittance"
-          value={formatNPR(estimatedVatCollected)}
-          note="13% VAT accrued for IRD"
-          icon={Building}
+          label="Dealer sourcing cost (COGS)"
+          value={formatNPR(totalDealerCost)}
+          note="Payable to partner merchant shops"
+          icon={Store}
+        />
+        <KpiCard
+          label="Fleet logistics deliveries"
+          value={totalDeliveriesCount}
+          note="Parcels completed in Butwal hub"
+          icon={Truck}
         />
       </div>
 
@@ -191,7 +312,7 @@ export function ReportsPanel() {
             <Button
               size="sm"
               onClick={handleExportSalesCSV}
-              className="h-8 gap-1.5 text-xs"
+              className="h-8 gap-1.5 text-xs cursor-pointer"
             >
               <Download className="h-3.5 w-3.5" />
               Download CSV
@@ -199,7 +320,48 @@ export function ReportsPanel() {
           </CardFooter>
         </Card>
 
-        {/* Report 2: Fleet Performance */}
+        {/* Report 2: Profit & Margin Sourcing Intelligence */}
+        <Card className="flex flex-col justify-between">
+          <CardHeader>
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 mb-2">
+              <TrendingUp className="h-4 w-4" />
+            </div>
+            <CardTitle className="text-sm font-semibold">
+              Profit & margin sourcing intelligence
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Item-level margins, dealer snapshot costs, net retail realization,
+              and gross profit percentage across liquor &amp; grocery catalog
+              lines.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
+            <span className="font-mono text-xs font-semibold text-emerald-600 tabular-nums">
+              {formatNPR(totalGrossProfit)} ({overallMarginPercent}%)
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsMarginModalOpen(true)}
+                className="h-8 gap-1.5 text-xs cursor-pointer"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Preview &amp; Breakdown
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleExportProfitMarginCSV}
+                className="h-8 gap-1.5 text-xs cursor-pointer"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download CSV
+              </Button>
+            </div>
+          </CardFooter>
+        </Card>
+
+        {/* Report 3: Fleet Performance */}
         <Card className="flex flex-col justify-between">
           <CardHeader>
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
@@ -210,26 +372,37 @@ export function ReportsPanel() {
             </CardTitle>
             <CardDescription className="text-xs">
               Courier-wise completion metrics, active COD floats in transit,
-              star ratings, and commission disbursements for Kathmandu Valley
-              corridors.
+              star ratings, and commission disbursements for Butwal, Tilottama
+              &amp; Siddharthanagar corridors.
             </CardDescription>
           </CardHeader>
           <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
             <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
               {totalDeliveriesCount} parcels
             </span>
-            <Button
-              size="sm"
-              onClick={handleExportFleetCSV}
-              className="h-8 gap-1.5 text-xs"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Download CSV
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsFleetModalOpen(true)}
+                className="h-8 gap-1.5 text-xs cursor-pointer"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Preview Fleet SLA
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleExportFleetCSV}
+                className="h-8 gap-1.5 text-xs cursor-pointer"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download CSV
+              </Button>
+            </div>
           </CardFooter>
         </Card>
 
-        {/* Report 3: IRD VAT Annex 13 */}
+        {/* Report 4: IRD VAT Annex 13 */}
         <Card className="flex flex-col justify-between">
           <CardHeader>
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
@@ -252,7 +425,7 @@ export function ReportsPanel() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsIrdModalOpen(true)}
-                className="h-8 gap-1.5 text-xs"
+                className="h-8 gap-1.5 text-xs cursor-pointer"
               >
                 <Printer className="h-3.5 w-3.5" />
                 Preview
@@ -260,7 +433,7 @@ export function ReportsPanel() {
               <Button
                 size="sm"
                 onClick={handleExportIrdVatCSV}
-                className="h-8 gap-1.5 text-xs"
+                className="h-8 gap-1.5 text-xs cursor-pointer"
               >
                 <Download className="h-3.5 w-3.5" />
                 Download CSV
@@ -269,35 +442,410 @@ export function ReportsPanel() {
           </CardFooter>
         </Card>
 
-        {/* Report 4: Inventory Valuation */}
+        {/* Report 5: Product Velocity & Sourcing Intelligence */}
         <Card className="flex flex-col justify-between">
           <CardHeader>
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
-              <Package className="h-4 w-4" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-amber-500/10 text-amber-500 mb-2">
+              <Flame className="h-4 w-4" />
             </div>
             <CardTitle className="text-sm font-semibold">
-              Stock valuation and asset audit
+              Product velocity &amp; sourcing intelligence
             </CardTitle>
             <CardDescription className="text-xs">
-              Combined catalog inventory units on hand across Liquor and Grocery
-              lines with cost evaluation basis and retail turnover potential.
+              Top products, slow movers &amp; dead stock risks, most-unavailable
+              catalog items, and merchant substitution rates across Butwal
+              operations.
             </CardDescription>
           </CardHeader>
           <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
-            <span className="font-mono text-xs text-muted-foreground">
-              {liquor.length + grocery.length} catalog items
+            <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+              {ops.sourcingIntelligence?.summary
+                .networkSubstitutionRatePercent ?? 0}
+              % substitution &middot;{' '}
+              {ops.sourcingIntelligence?.topProducts.length ?? 0} active lines
             </span>
-            <Button
-              size="sm"
-              onClick={handleExportInventoryCSV}
-              className="h-8 gap-1.5 text-xs"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Download CSV
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsVelocityModalOpen(true)}
+                className="h-8 gap-1.5 text-xs cursor-pointer"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Preview Intelligence
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleExportProductVelocityCSV}
+                className="h-8 gap-1.5 text-xs cursor-pointer"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download CSV
+              </Button>
+            </div>
           </CardFooter>
         </Card>
       </div>
+
+      {/* Profit & Margin Analytics Preview Dialog */}
+      <Dialog open={isMarginModalOpen} onOpenChange={setIsMarginModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
+            <div>
+              <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-emerald-500" />
+                Profit &amp; Margin Breakdown (Dealer Sourcing)
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Item-level retail revenue vs dealer snapshot costs across Butwal
+                operations.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleExportProfitMarginCSV}
+              className="h-7 gap-1 text-xs cursor-pointer"
+            >
+              <Download className="h-3 w-3" />
+              Download CSV
+            </Button>
+          </DialogHeader>
+
+          <div className="p-6 overflow-y-auto space-y-4 text-xs">
+            {/* Summary Highlights */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-muted/40 p-3 rounded-lg border border-border">
+              <div>
+                <span className="text-[11px] text-muted-foreground block">
+                  Net Merchandise Turnover:
+                </span>
+                <span className="text-sm font-bold font-mono text-foreground">
+                  {formatNPR(totalMerchandiseRevenue)}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-muted-foreground block">
+                  Dealer Sourcing Cost (COGS):
+                </span>
+                <span className="text-sm font-bold font-mono text-foreground">
+                  {formatNPR(totalDealerCost)}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-muted-foreground block">
+                  Realized Gross Margin:
+                </span>
+                <span className="text-sm font-bold font-mono text-emerald-600">
+                  {formatNPR(totalGrossProfit)} ({overallMarginPercent}%)
+                </span>
+              </div>
+            </div>
+
+            {/* Tabs: By Product vs By Dealer */}
+            <Tabs
+              value={marginTab}
+              onValueChange={(v) => setMarginTab(v as 'product' | 'dealer')}
+              className="w-full"
+            >
+              <TabsList className="h-8 mb-3">
+                <TabsTrigger
+                  value="product"
+                  className="text-xs gap-1.5 cursor-pointer"
+                >
+                  <span>Product Margins ({productMarginsList.length})</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="dealer"
+                  className="text-xs gap-1.5 cursor-pointer"
+                >
+                  <span>Dealer Performance ({dealerMarginsList.length})</span>
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="product" className="space-y-3 m-0">
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Product Name</TableHead>
+                        <TableHead className="text-xs">Category</TableHead>
+                        <TableHead className="text-right text-xs">
+                          Units
+                        </TableHead>
+                        <TableHead className="text-right text-xs">
+                          Gross Revenue
+                        </TableHead>
+                        <TableHead className="text-right text-xs">
+                          Dealer Cost
+                        </TableHead>
+                        <TableHead className="text-right text-xs">
+                          Gross Profit
+                        </TableHead>
+                        <TableHead className="text-right text-xs">
+                          Margin %
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {productMarginsList.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={7}
+                            className="text-center py-6 text-muted-foreground"
+                          >
+                            No product sales recorded yet.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        productMarginsList.map((p) => (
+                          <TableRow key={p.name}>
+                            <TableCell className="font-medium text-xs text-foreground">
+                              {p.name}
+                            </TableCell>
+                            <TableCell className="text-xs capitalize text-muted-foreground">
+                              {p.catalogType}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs">
+                              {p.totalQty}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs">
+                              {formatNPR(p.totalRevenue)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                              {formatNPR(p.totalDealerCost)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-emerald-600">
+                              {formatNPR(p.grossProfit)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge
+                                variant="outline"
+                                className={
+                                  p.marginPercent >= 20
+                                    ? 'border-emerald-500 text-emerald-500 bg-emerald-500/10 text-[10px]'
+                                    : 'border-amber-500 text-amber-500 bg-amber-500/10 text-[10px]'
+                                }
+                              >
+                                {p.marginPercent}%
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="dealer" className="space-y-3 m-0">
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">
+                          Dealer Identification
+                        </TableHead>
+                        <TableHead className="text-right text-xs">
+                          Lines Sourced
+                        </TableHead>
+                        <TableHead className="text-right text-xs">
+                          Total Units
+                        </TableHead>
+                        <TableHead className="text-right text-xs">
+                          Retail Turnover
+                        </TableHead>
+                        <TableHead className="text-right text-xs">
+                          Dealer Payable (Cost)
+                        </TableHead>
+                        <TableHead className="text-right text-xs">
+                          Gross Margin
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dealerMarginsList.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            className="text-center py-6 text-muted-foreground"
+                          >
+                            No dealer sourcing lines recorded yet.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        dealerMarginsList.map((d) => (
+                          <TableRow key={d.dealerId}>
+                            <TableCell className="font-mono text-xs text-foreground">
+                              {d.dealerId}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs">
+                              {d.linesCount}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs">
+                              {d.totalQty}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs">
+                              {formatNPR(d.totalRevenue)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-foreground">
+                              {formatNPR(d.totalDealerCost)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-emerald-600">
+                              {formatNPR(d.grossProfit)} ({d.marginPercent}%)
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Fleet Delivery Logistics & COD Floats Modal */}
+      <Dialog open={isFleetModalOpen} onOpenChange={setIsFleetModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
+            <div>
+              <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+                <Truck className="h-4 w-4 text-primary" />
+                Fleet Logistics, COD Floats &amp; Corridor SLA
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Rider completion volume, live COD cash holdings, and corridor
+                coverage.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleExportFleetCSV}
+              className="h-7 gap-1 text-xs cursor-pointer"
+            >
+              <Download className="h-3 w-3" />
+              Download CSV
+            </Button>
+          </DialogHeader>
+
+          <div className="p-6 overflow-y-auto space-y-4 text-xs">
+            {/* Highlights */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-muted/40 p-3 rounded-lg border border-border">
+              <div>
+                <span className="text-[11px] text-muted-foreground block">
+                  Active Couriers:
+                </span>
+                <span className="text-sm font-bold font-mono text-foreground">
+                  {ops.riders.length} registered (
+                  {ops.riders.filter((r) => r.available).length} online)
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-muted-foreground block">
+                  Total Completed Parcels:
+                </span>
+                <span className="text-sm font-bold font-mono text-foreground">
+                  {totalDeliveriesCount} drop-offs
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] text-muted-foreground block">
+                  Total Outstanding COD Float:
+                </span>
+                <span className="text-sm font-bold font-mono text-foreground">
+                  {formatNPR(
+                    ops.riders.reduce((sum, r) => sum + r.cashOnHand, 0),
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <div className="border border-border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Courier Name</TableHead>
+                    <TableHead className="text-xs">Contact</TableHead>
+                    <TableHead className="text-xs">Corridor / Zone</TableHead>
+                    <TableHead className="text-xs">Vehicle</TableHead>
+                    <TableHead className="text-right text-xs">
+                      Deliveries
+                    </TableHead>
+                    <TableHead className="text-right text-xs">Rating</TableHead>
+                    <TableHead className="text-right text-xs">
+                      COD Float Held
+                    </TableHead>
+                    <TableHead className="text-right text-xs">
+                      Earnings
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ops.riders.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        className="text-center py-6 text-muted-foreground"
+                      >
+                        No registered riders found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    ops.riders.map((r) => {
+                      const limit = ops.settings.riderCodLimit || 2000000
+                      const isHighFloat = r.cashOnHand >= limit * 0.8
+                      return (
+                        <TableRow key={r.id}>
+                          <TableCell className="font-semibold text-xs text-foreground">
+                            {r.name}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">
+                            {r.phone}
+                          </TableCell>
+                          <TableCell className="text-xs capitalize text-muted-foreground">
+                            {r.zone || 'Butwal Hub'}
+                          </TableCell>
+                          <TableCell className="text-xs capitalize text-muted-foreground">
+                            {r.vehicle}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs">
+                            {r.deliveries}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-warning">
+                            ★ {r.rating.toFixed(1)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs">
+                            <span
+                              className={
+                                isHighFloat
+                                  ? 'text-destructive font-bold'
+                                  : 'text-foreground'
+                              }
+                            >
+                              {formatNPR(r.cashOnHand)}
+                            </span>
+                            {isHighFloat && (
+                              <Badge
+                                variant="outline"
+                                className="ml-1.5 text-[9px] border-destructive text-destructive"
+                              >
+                                Near Limit
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-semibold text-emerald-600">
+                            {formatNPR(r.earnings)}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* IRD VAT Annex 13 Preview Dialog */}
       <Dialog open={isIrdModalOpen} onOpenChange={setIsIrdModalOpen}>
@@ -410,6 +958,13 @@ export function ReportsPanel() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Product Velocity & Sourcing Intelligence Preview Dialog */}
+      <ProductVelocityDialog
+        open={isVelocityModalOpen}
+        onOpenChange={setIsVelocityModalOpen}
+        initialData={ops.sourcingIntelligence}
+      />
     </div>
   )
 }

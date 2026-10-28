@@ -110,7 +110,10 @@ function areGrantsEqual(a: UserGrants, b: UserGrants): boolean {
   return true
 }
 
-const MODULE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+const MODULE_ICONS: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
   dashboard: LayoutDashboard,
   liquor: Wine,
   grocery: ShoppingBag,
@@ -131,7 +134,10 @@ const MODULE_ICONS: Record<string, React.ComponentType<{ className?: string }>> 
   settings: Settings,
 }
 
-const SECTION_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+const SECTION_ICONS: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
   Overview: LayoutDashboard,
   Catalog: Wine,
   Commerce: ShoppingBag,
@@ -157,7 +163,9 @@ export function StaffPanel() {
   const { data } = useSuspenseQuery(adminQueries.staff())
   const { ops, users, currentUserId } = data
 
-  const [activeTab, setActiveTab] = useState<'users' | 'matrix' | 'audit'>('users')
+  const [activeTab, setActiveTab] = useState<'users' | 'matrix' | 'audit'>(
+    'users',
+  )
   const [searchQuery, setSearchQuery] = useState('')
 
   // Filter staff users (admin, manager, or rider) - excluding pure customers
@@ -180,7 +188,9 @@ export function StaffPanel() {
   }, [staffUsers, selectedStaffId])
 
   // Per-user drafts for the permission matrix to allow non-destructive user switching
-  const [drafts, setDrafts] = useState<Record<string, UserGrants | undefined>>({})
+  const [drafts, setDrafts] = useState<Record<string, UserGrants | undefined>>(
+    {},
+  )
 
   // Per-action loading states
   const [isSavingMatrix, setIsSavingMatrix] = useState(false)
@@ -578,9 +588,15 @@ export function StaffPanel() {
       }
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: adminQueries.staff().queryKey }),
-        queryClient.invalidateQueries({ queryKey: adminQueries.users().queryKey }),
-        queryClient.invalidateQueries({ queryKey: adminQueries.chrome().queryKey }),
+        queryClient.invalidateQueries({
+          queryKey: adminQueries.staff().queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: adminQueries.users().queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: adminQueries.chrome().queryKey,
+        }),
       ])
     } catch (err: unknown) {
       toast.error(getErrorMessage(err, 'Failed to update role'))
@@ -595,15 +611,10 @@ export function StaffPanel() {
   }
 
   const handleExportAuditCSV = () => {
-    const headers = [
-      'Timestamp',
-      'Operator',
-      'Module',
-      'Action',
-      'Audit summary',
-    ]
-      .map(escapeCsvCell)
-      .join(',') + '\n'
+    const headers =
+      ['Timestamp', 'Operator', 'Module', 'Action', 'Audit summary']
+        .map(escapeCsvCell)
+        .join(',') + '\n'
 
     const rows = filteredAudit
       .map((a) =>
@@ -672,7 +683,9 @@ export function StaffPanel() {
       {/* Tabs */}
       <Tabs
         value={activeTab}
-        onValueChange={(val) => setActiveTab(val as 'users' | 'matrix' | 'audit')}
+        onValueChange={(val) =>
+          setActiveTab(val as 'users' | 'matrix' | 'audit')
+        }
       >
         <TabsList className="h-9">
           <TabsTrigger value="users" className="gap-2 text-xs">
@@ -1445,10 +1458,7 @@ export function StaffPanel() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <CreateStaffDialog
-        open={isCreateOpen}
-        onOpenChange={setIsCreateOpen}
-      />
+      <CreateStaffDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
     </div>
   )
 }

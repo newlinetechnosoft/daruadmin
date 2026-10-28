@@ -349,11 +349,15 @@ export function CustomersPanel() {
                       <div className="font-medium text-xs text-foreground">
                         {comp.customerName}
                       </div>
-                      {comp.orderId && (
-                        <span className="font-mono text-[11px] text-muted-foreground">
+                      {comp.orderNumber ? (
+                        <span className="font-mono text-[11px] text-primary block font-semibold">
+                          Order #{comp.orderNumber}
+                        </span>
+                      ) : comp.orderId ? (
+                        <span className="font-mono text-[11px] text-muted-foreground block">
                           Ref: {comp.orderId}
                         </span>
-                      )}
+                      ) : null}
                     </TableCell>
 
                     <TableCell>
@@ -491,6 +495,8 @@ export function CustomersPanel() {
               </DialogTitle>
               <DialogDescription className="text-xs">
                 From {selectedComplaint.customerName}
+                {selectedComplaint.orderNumber &&
+                  ` • Linked to Order #${selectedComplaint.orderNumber}`}
               </DialogDescription>
             </DialogHeader>
 

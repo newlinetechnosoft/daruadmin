@@ -41,11 +41,17 @@ function PublicVoucherPage() {
       <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
         <Card className="max-w-md w-full text-center p-8">
           <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-          <h1 className="text-xl font-bold tracking-tight mb-2">Voucher Not Found</h1>
+          <h1 className="text-xl font-bold tracking-tight mb-2">
+            Voucher Not Found
+          </h1>
           <p className="text-sm text-muted-foreground mb-6">
-            The requested settlement voucher could not be found or the link may have expired.
+            The requested settlement voucher could not be found or the link may
+            have expired.
           </p>
-          <Button variant="outline" onClick={() => (window.location.href = '/')}>
+          <Button
+            variant="outline"
+            onClick={() => (window.location.href = '/')}
+          >
             Return to Store
           </Button>
         </Card>
@@ -77,14 +83,28 @@ function PublicVoucherPage() {
           Verified Settlement Voucher &bull; Nepal Double-Entry ERP
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleShareWhatsApp} className="h-8 gap-1.5 text-xs text-[#25D366] border-[#25D366]/40 hover:bg-[#25D366]/10">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleShareWhatsApp}
+            className="h-8 gap-1.5 text-xs text-[#25D366] border-[#25D366]/40 hover:bg-[#25D366]/10"
+          >
             <Share2 className="h-3.5 w-3.5" />
             WhatsApp
           </Button>
-          <Button variant="outline" size="sm" onClick={handleCopyLink} className="h-8 gap-1.5 text-xs">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyLink}
+            className="h-8 gap-1.5 text-xs"
+          >
             Copy Link
           </Button>
-          <Button size="sm" onClick={handlePrint} className="h-8 gap-1.5 text-xs">
+          <Button
+            size="sm"
+            onClick={handlePrint}
+            className="h-8 gap-1.5 text-xs"
+          >
             <Printer className="h-3.5 w-3.5" />
             Print Voucher
           </Button>
@@ -98,7 +118,9 @@ function PublicVoucherPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-bold tracking-tight text-primary">MEZMANI</span>
+                <span className="text-xl font-bold tracking-tight text-primary">
+                  MEZMANI
+                </span>
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                   Liquor &amp; Delivery ERP
                 </span>
@@ -132,7 +154,9 @@ function PublicVoucherPage() {
             <div className="text-xs font-semibold uppercase text-muted-foreground tracking-wider mb-1">
               Disbursed To ({voucher.partyType})
             </div>
-            <div className="text-base font-bold text-foreground">{voucher.partyName}</div>
+            <div className="text-base font-bold text-foreground">
+              {voucher.partyName}
+            </div>
             <div className="text-xs text-muted-foreground mt-0.5">
               Verified Party Account &bull; Butwal Logistics Region
             </div>
@@ -144,7 +168,9 @@ function PublicVoucherPage() {
             </div>
             <div className="text-sm font-semibold text-foreground flex items-center gap-1.5">
               <CreditCard className="h-4 w-4 text-muted-foreground" />
-              {voucher.paymentMethod ? voucher.paymentMethod.replace(/_/g, ' ').toUpperCase() : 'CASH / BANK'}
+              {voucher.paymentMethod
+                ? voucher.paymentMethod.replace(/_/g, ' ').toUpperCase()
+                : 'CASH / BANK'}
             </div>
             {voucher.paymentReference && (
               <div className="text-xs font-mono text-muted-foreground mt-0.5">
@@ -164,9 +190,15 @@ function PublicVoucherPage() {
             <table className="w-full text-sm">
               <thead className="bg-muted/30 text-xs text-muted-foreground border-b">
                 <tr>
-                  <th className="text-left py-2.5 px-4 font-medium">Description</th>
-                  <th className="text-right py-2.5 px-4 font-medium">Rate / Units</th>
-                  <th className="text-right py-2.5 px-4 font-medium">Amount (NPR)</th>
+                  <th className="text-left py-2.5 px-4 font-medium">
+                    Description
+                  </th>
+                  <th className="text-right py-2.5 px-4 font-medium">
+                    Rate / Units
+                  </th>
+                  <th className="text-right py-2.5 px-4 font-medium">
+                    Amount (NPR)
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -199,9 +231,12 @@ function PublicVoucherPage() {
                   </>
                 ) : (
                   <>
-                    {voucher.baseSalaryAmount && voucher.baseSalaryAmount > 0 ? (
+                    {voucher.baseSalaryAmount &&
+                    voucher.baseSalaryAmount > 0 ? (
                       <tr>
-                        <td className="py-3 px-4 font-medium">Base Salary Component</td>
+                        <td className="py-3 px-4 font-medium">
+                          Base Salary Component
+                        </td>
                         <td className="py-3 px-4 text-right text-muted-foreground font-mono text-xs">
                           Contractual Base
                         </td>
@@ -212,7 +247,9 @@ function PublicVoucherPage() {
                     ) : null}
                     {voucher.perDropAmount && voucher.perDropAmount > 0 ? (
                       <tr>
-                        <td className="py-3 px-4 font-medium">Per-Drop Delivery Fee Earnings</td>
+                        <td className="py-3 px-4 font-medium">
+                          Per-Drop Delivery Fee Earnings
+                        </td>
                         <td className="py-3 px-4 text-right text-muted-foreground font-mono text-xs">
                           Completed Drops
                         </td>
@@ -221,9 +258,12 @@ function PublicVoucherPage() {
                         </td>
                       </tr>
                     ) : null}
-                    {voucher.commissionAmount && voucher.commissionAmount > 0 ? (
+                    {voucher.commissionAmount &&
+                    voucher.commissionAmount > 0 ? (
                       <tr>
-                        <td className="py-3 px-4 font-medium">Commission Component</td>
+                        <td className="py-3 px-4 font-medium">
+                          Commission Component
+                        </td>
                         <td className="py-3 px-4 text-right text-muted-foreground font-mono text-xs">
                           Commission Rate
                         </td>
@@ -232,19 +272,29 @@ function PublicVoucherPage() {
                         </td>
                       </tr>
                     ) : null}
-                    {voucher.advancesDeducted && voucher.advancesDeducted > 0 ? (
+                    {voucher.advancesDeducted &&
+                    voucher.advancesDeducted > 0 ? (
                       <tr className="text-destructive">
-                        <td className="py-3 px-4 font-medium">Less: Prior Advances Deducted</td>
-                        <td className="py-3 px-4 text-right font-mono text-xs">Advance Recovery</td>
+                        <td className="py-3 px-4 font-medium">
+                          Less: Prior Advances Deducted
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono text-xs">
+                          Advance Recovery
+                        </td>
                         <td className="py-3 px-4 text-right font-mono font-medium">
                           - {formatNPR(voucher.advancesDeducted)}
                         </td>
                       </tr>
                     ) : null}
-                    {voucher.cashShortageDeducted && voucher.cashShortageDeducted > 0 ? (
+                    {voucher.cashShortageDeducted &&
+                    voucher.cashShortageDeducted > 0 ? (
                       <tr className="text-destructive">
-                        <td className="py-3 px-4 font-medium">Less: Cash Shortage Deducted</td>
-                        <td className="py-3 px-4 text-right font-mono text-xs">Reconciliation</td>
+                        <td className="py-3 px-4 font-medium">
+                          Less: Cash Shortage Deducted
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono text-xs">
+                          Reconciliation
+                        </td>
                         <td className="py-3 px-4 text-right font-mono font-medium">
                           - {formatNPR(voucher.cashShortageDeducted)}
                         </td>
@@ -269,7 +319,10 @@ function PublicVoucherPage() {
           {/* Notes */}
           {voucher.notes && (
             <div className="mt-4 p-3 bg-muted/20 rounded-md text-xs text-muted-foreground">
-              <span className="font-semibold text-foreground">Narration / Memo:</span> {voucher.notes}
+              <span className="font-semibold text-foreground">
+                Narration / Memo:
+              </span>{' '}
+              {voucher.notes}
             </div>
           )}
 
@@ -302,19 +355,24 @@ function PublicVoucherPage() {
             <div>
               <div className="h-10 border-b border-dashed border-border/80 mb-2"></div>
               <div>Prepared By / Authorized Signature</div>
-              <div className="font-semibold text-foreground mt-0.5">Mezmani Finance Operations</div>
+              <div className="font-semibold text-foreground mt-0.5">
+                Mezmani Finance Operations
+              </div>
             </div>
             <div>
               <div className="h-10 border-b border-dashed border-border/80 mb-2"></div>
               <div>Received By / Party Signature</div>
-              <div className="font-semibold text-foreground mt-0.5">{voucher.partyName}</div>
+              <div className="font-semibold text-foreground mt-0.5">
+                {voucher.partyName}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
         <div className="p-4 bg-muted/10 border-t text-center text-[11px] text-muted-foreground">
-          Computer-generated official settlement receipt &bull; Secured with cryptographic tamper-evident slug &bull; Mezmani ERP Nepal
+          Computer-generated official settlement receipt &bull; Secured with
+          cryptographic tamper-evident slug &bull; Mezmani ERP Nepal
         </div>
       </div>
     </div>

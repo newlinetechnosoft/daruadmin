@@ -94,7 +94,9 @@ export const settlements = pgTable(
     commission: integer('commission').notNull().default(0), // legacy backwards compatibility
     grossEarnings: integer('gross_earnings').notNull().default(0), // paisa
     advancesDeducted: integer('advances_deducted').notNull().default(0), // paisa
-    cashShortageDeducted: integer('cash_shortage_deducted').notNull().default(0), // paisa
+    cashShortageDeducted: integer('cash_shortage_deducted')
+      .notNull()
+      .default(0), // paisa
     cashHeldDeducted: integer('cash_held_deducted').notNull().default(0), // paisa
     netPayout: integer('net_payout').notNull().default(0), // paisa
     payout: integer('payout').notNull().default(0), // legacy backwards compatibility (paisa)
@@ -122,6 +124,35 @@ export const settlements = pgTable(
   ],
 )
 
+export const riderShifts = pgTable(
+  'rider_shifts',
+  {
+    id: text('id').primaryKey(),
+    riderId: text('rider_id')
+      .notNull()
+      .references(() => riders.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('active'), // 'active' | 'completed'
+    startedAt: timestamp('started_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+    durationMinutes: integer('duration_minutes').notNull().default(0),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('rider_shifts_rider_id_idx').on(table.riderId),
+    index('rider_shifts_status_idx').on(table.status),
+    index('rider_shifts_started_at_idx').on(table.startedAt),
+  ],
+)
+
 export const ridersRelations = relations(riders, ({ one, many }) => ({
   user: one(user, {
     fields: [riders.userId],
@@ -129,6 +160,7 @@ export const ridersRelations = relations(riders, ({ one, many }) => ({
   }),
   handovers: many(riderCashHandovers),
   settlements: many(settlements),
+  shifts: many(riderShifts),
 }))
 
 export const riderCashHandoversRelations = relations(
@@ -144,6 +176,13 @@ export const riderCashHandoversRelations = relations(
 export const settlementsRelations = relations(settlements, ({ one }) => ({
   rider: one(riders, {
     fields: [settlements.riderId],
+    references: [riders.id],
+  }),
+}))
+
+export const riderShiftsRelations = relations(riderShifts, ({ one }) => ({
+  rider: one(riders, {
+    fields: [riderShifts.riderId],
     references: [riders.id],
   }),
 }))

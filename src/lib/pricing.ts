@@ -9,6 +9,125 @@ export interface PricingItemInput {
   sku: string
   qty: number
   unitPrice: number // in paisa
+  categoryId?: string | null
+  brandId?: string | null
+}
+
+export interface ActiveOffer {
+  id: string
+  title: string
+  slug: string
+  type: 'bogo' | 'percent' | 'fixed' | 'free_delivery' | 'bundle'
+  scope: 'all' | 'category' | 'brand' | 'product' | 'variant'
+  scopeId?: string | null
+  discountValue: number // percentage or paisa
+  minOrderAmount: number // paisa
+  priority: number
+  stackable: boolean
+  active: boolean
+  startsAt?: Date | string | null
+  expiresAt?: Date | string | null
+}
+
+export interface OfferEvaluationResult {
+  offerDiscountPaisa: number
+  freeDeliveryGranted: boolean
+  appliedOffers: {
+    id: string
+    title: string
+    type: string
+    discountPaisa: number
+  }[]
+}
+
+export function evaluateOffers(params: {
+  items: PricingItemInput[]
+  offers: ActiveOffer[]
+  subtotalPaisa: number
+}): OfferEvaluationResult {
+  const { items, offers, subtotalPaisa } = params
+  const now = new Date()
+
+  // Filter valid offers
+  const validOffers = offers
+    .filter((o) => {
+      if (!o.active) return false
+      if (o.startsAt && new Date(o.startsAt) > now) return false
+      if (o.expiresAt && new Date(o.expiresAt) < now) return false
+      if (subtotalPaisa < o.minOrderAmount) return false
+      return true
+    })
+    .sort((a, b) => b.priority - a.priority)
+
+  let totalOfferDiscountPaisa = 0
+  let freeDeliveryGranted = false
+  const appliedOffers: {
+    id: string
+    title: string
+    type: string
+    discountPaisa: number
+  }[] = []
+
+  for (const offer of validOffers) {
+    // Check which items match scope
+    const matchingItems = items.filter((item) => {
+      if (offer.scope === 'all') return true
+      if (offer.scope === 'category') return item.categoryId === offer.scopeId
+      if (offer.scope === 'brand') return item.brandId === offer.scopeId
+      if (offer.scope === 'product') return item.productId === offer.scopeId
+      if (offer.scope === 'variant') return item.variantId === offer.scopeId
+      return false
+    })
+
+    if (matchingItems.length === 0 && offer.scope !== 'all') {
+      continue
+    }
+
+    const matchingSubtotal = matchingItems.reduce(
+      (sum, it) => sum + it.unitPrice * it.qty,
+      0,
+    )
+
+    let discountPaisa = 0
+
+    if (offer.type === 'bogo') {
+      // Buy 1 Get 1 free: for every 2 items of matching line, 1 is free
+      for (const item of matchingItems) {
+        if (item.qty >= 2) {
+          const freeCount = Math.floor(item.qty / 2)
+          discountPaisa += freeCount * item.unitPrice
+        }
+      }
+    } else if (offer.type === 'percent') {
+      discountPaisa = Math.round(matchingSubtotal * (offer.discountValue / 100))
+    } else if (offer.type === 'fixed') {
+      discountPaisa = Math.min(matchingSubtotal, offer.discountValue)
+    } else if (offer.type === 'free_delivery') {
+      freeDeliveryGranted = true
+    } else if (offer.type === 'bundle') {
+      discountPaisa = Math.min(matchingSubtotal, offer.discountValue)
+    }
+
+    if (discountPaisa > 0 || offer.type === 'free_delivery') {
+      totalOfferDiscountPaisa += discountPaisa
+      appliedOffers.push({
+        id: offer.id,
+        title: offer.title,
+        type: offer.type,
+        discountPaisa,
+      })
+
+      if (!offer.stackable) {
+        break
+      }
+    }
+  }
+
+  return {
+    offerDiscountPaisa: totalOfferDiscountPaisa,
+    freeDeliveryGranted,
+    appliedOffers,
+  }
 }
 
 export interface CouponValidationInput {
@@ -54,7 +173,12 @@ export const DEFAULT_DELIVERY_SETTINGS: DeliveryPricingSettings = {
 export function validateCoupon(
   input: CouponValidationInput,
 ): CouponValidationResult {
-  const { coupon, subtotalPaisa, customerOrderCount = 0, customerRedemptionCount = 0 } = input
+  const {
+    coupon,
+    subtotalPaisa,
+    customerOrderCount = 0,
+    customerRedemptionCount = 0,
+  } = input
 
   if (!coupon.active) {
     return { valid: false, discountPaisa: 0, errorReason: 'Coupon is inactive' }
@@ -134,12 +258,14 @@ export function calculateDeliveryCharge(
 export function calculateOrderTotals(params: {
   items: PricingItemInput[]
   discountPaisa?: number
+  offers?: ActiveOffer[]
   deliverySettings?: DeliveryPricingSettings
   vatRate?: number
 }) {
   const {
     items,
     discountPaisa = 0,
+    offers = [],
     deliverySettings = DEFAULT_DELIVERY_SETTINGS,
     vatRate = DEFAULT_NEPAL_VAT_RATE,
   } = params
@@ -149,13 +275,23 @@ export function calculateOrderTotals(params: {
     0,
   )
 
-  const effectiveDiscountPaisa = Math.min(subtotalPaisa, Math.max(0, discountPaisa))
+  const offerEvaluation = evaluateOffers({ items, offers, subtotalPaisa })
+  const totalDiscountPaisa = discountPaisa + offerEvaluation.offerDiscountPaisa
+
+  const effectiveDiscountPaisa = Math.min(
+    subtotalPaisa,
+    Math.max(0, totalDiscountPaisa),
+  )
   const discountedSubtotalPaisa = subtotalPaisa - effectiveDiscountPaisa
 
-  const deliveryChargePaisa = calculateDeliveryCharge(
+  let deliveryChargePaisa = calculateDeliveryCharge(
     discountedSubtotalPaisa,
     deliverySettings,
   )
+
+  if (offerEvaluation.freeDeliveryGranted) {
+    deliveryChargePaisa = 0
+  }
 
   const totalPaisa = discountedSubtotalPaisa + deliveryChargePaisa
 
@@ -166,6 +302,10 @@ export function calculateOrderTotals(params: {
   return {
     subtotalPaisa,
     discountPaisa: effectiveDiscountPaisa,
+    couponDiscountPaisa: discountPaisa,
+    offerDiscountPaisa: offerEvaluation.offerDiscountPaisa,
+    appliedOffers: offerEvaluation.appliedOffers,
+    freeDeliveryGranted: offerEvaluation.freeDeliveryGranted,
     discountedSubtotalPaisa,
     deliveryChargePaisa,
     taxableNetPaisa,

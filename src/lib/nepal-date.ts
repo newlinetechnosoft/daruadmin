@@ -87,7 +87,11 @@ const BS_YEARS: Partial<Record<number, YearData>> = (() => {
  */
 export function adToBs(dateInput: Date | string | number): BikramSambatDate {
   const d = new Date(dateInput)
-  const targetUtc = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+  const targetUtc = Date.UTC(
+    d.getUTCFullYear(),
+    d.getUTCMonth(),
+    d.getUTCDate(),
+  )
 
   for (let yr = 2075; yr <= 2088; yr++) {
     const info = BS_YEARS[yr]
@@ -168,7 +172,9 @@ export interface FiscalYearInfo {
 /**
  * Determines the Nepal Fiscal Year (Shrawan 1 to Ashadh end) for any given date.
  */
-export function getNepalFiscalYear(dateInput: Date | string | number): FiscalYearInfo {
+export function getNepalFiscalYear(
+  dateInput: Date | string | number,
+): FiscalYearInfo {
   const bs = adToBs(dateInput)
   let fyStartBsYear: number
   let fyEndBsYear: number
@@ -205,7 +211,9 @@ export function getNepalFiscalYear(dateInput: Date | string | number): FiscalYea
     // Ashadh end is day before Shrawan 1 of end year
     const daysToShrawanNext =
       endYearInfo.days[0] + endYearInfo.days[1] + endYearInfo.days[2]
-    endDate = new Date(endYearInfo.startUtc + daysToShrawanNext * 86_400_000 - 1)
+    endDate = new Date(
+      endYearInfo.startUtc + daysToShrawanNext * 86_400_000 - 1,
+    )
   } else {
     endDate = new Date(Date.UTC(fyEndBsYear - 57, 6, 15, 23, 59, 59, 999))
   }

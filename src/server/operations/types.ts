@@ -219,7 +219,7 @@ export const PERMISSION_SECTIONS: PermissionSection[] = [
   },
 ]
 
-export type DateRangeKey = '7d' | '30d' | '90d' | 'ytd' | 'custom'
+export type DateRangeKey = 'today' | '7d' | '30d' | '90d' | 'ytd' | 'custom'
 
 export type OrderStatus =
   | 'pending'
@@ -314,6 +314,8 @@ export interface Order {
   couponCode: string | null
   idempotencyKey?: string | null
   isLegacy?: boolean
+  deliveryOtp?: string | null
+  deliveryProofPhotoUrl?: string | null
   cancellationReason?: string | null
   deliveryFailureReason?: string | null
   items: OrderItem[]
@@ -351,6 +353,7 @@ export interface Complaint {
   customerId: string
   customerName: string
   orderId: string | null
+  orderNumber?: string | null
   subject: string
   body: string
   status: 'open' | 'in_progress' | 'resolved'
@@ -545,6 +548,7 @@ export interface OpsState {
   settlements: Settlement[]
   payments: PaymentTxn[]
   coupons: Coupon[]
+  couponRedemptions?: CouponRedemption[]
   banners: Banner[]
   campaigns: Campaign[]
   reviews: Review[]
@@ -560,4 +564,64 @@ export interface OpsState {
   dealerPayables?: any[]
   dealerSettlements?: any[]
   riderAccounts?: any[]
+  offers?: Offer[]
+  riderShifts?: RiderShift[]
+  sourcingIntelligence?: import('./sourcing-intelligence.queries').ProductSourcingIntelligenceReport
 }
+
+export interface RiderShift {
+  id: string
+  riderId: string
+  riderName?: string
+  status: 'active' | 'completed'
+  startedAt: string
+  endedAt?: string | null
+  durationMinutes: number
+  notes?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Offer {
+  id: string
+  title: string
+  slug: string
+  type: 'bogo' | 'percent' | 'fixed' | 'free_delivery' | 'bundle'
+  scope: 'all' | 'category' | 'brand' | 'product' | 'variant'
+  scopeId?: string | null
+  discountValue: number // percentage or paisa
+  minOrderAmount: number // paisa
+  bannerUrl?: string | null
+  heading?: string | null
+  description?: string | null
+  priority: number
+  stackable: boolean
+  active: boolean
+  startsAt?: string | null
+  expiresAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CustomerAddress {
+  id: string
+  customerId: string
+  label: string
+  address: string
+  city: string
+  landmark?: string | null
+  lat?: number | null
+  lng?: number | null
+  isDefault: boolean
+  contactPhone?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type {
+  TopProductMetric,
+  SlowMoverMetric,
+  MostUnavailableMetric,
+  DealerSubstitutionMetric,
+  ProductSourcingIntelligenceReport,
+} from './sourcing-intelligence.queries'

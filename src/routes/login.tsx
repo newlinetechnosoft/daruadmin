@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  Link,
+  useNavigate,
+  useRouter,
+} from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import { authClient } from '#/lib/auth-client'
@@ -78,13 +83,17 @@ function LoginPage() {
       const userRole = (res.data as any)?.user?.role
       if (userRole === 'rider') {
         navigate({
-          to: search.redirect?.startsWith('/rider') ? search.redirect : '/rider',
+          to: search.redirect?.startsWith('/rider')
+            ? search.redirect
+            : '/rider',
         })
         return
       }
       if (userRole === 'admin' || userRole === 'manager') {
         navigate({
-          to: search.redirect?.startsWith('/admin') ? search.redirect : '/admin',
+          to: search.redirect?.startsWith('/admin')
+            ? search.redirect
+            : '/admin',
         })
         return
       }

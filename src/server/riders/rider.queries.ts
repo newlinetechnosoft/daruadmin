@@ -1,7 +1,7 @@
 import { db } from '#/db'
-import { riders, settlements, user } from '#/db/schema'
-import { and, desc, eq, isNull, or } from 'drizzle-orm'
-import type { Rider, Settlement } from '#/server/operations/types'
+import { riders, riderShifts, settlements, user } from '#/db/schema'
+import { and, desc, eq, gte, isNull, lte, or } from 'drizzle-orm'
+import type { Rider, RiderShift, Settlement } from '#/server/operations/types'
 
 function mapRiderRecord(r: typeof riders.$inferSelect): Rider {
   return {
@@ -119,3 +119,98 @@ export async function getSettlementsByRiderIdQuery(
     .orderBy(desc(settlements.createdAt))
   return rows.map(mapSettlementRecord)
 }
+
+function mapShiftRecord(
+  s: typeof riderShifts.$inferSelect,
+  riderName?: string,
+): RiderShift {
+  return {
+    id: s.id,
+    riderId: s.riderId,
+    riderName: riderName,
+    status: s.status as 'active' | 'completed',
+    startedAt: s.startedAt.toISOString(),
+    endedAt: s.endedAt ? s.endedAt.toISOString() : null,
+    durationMinutes: s.durationMinutes,
+    notes: s.notes,
+    createdAt: s.createdAt.toISOString(),
+    updatedAt: s.updatedAt.toISOString(),
+  }
+}
+
+export async function getAllRiderShiftsQuery(
+  riderId?: string,
+  limit = 100,
+): Promise<RiderShift[]> {
+  if (riderId) {
+    const rows = await db
+      .select({
+        shift: riderShifts,
+        riderName: riders.name,
+      })
+      .from(riderShifts)
+      .leftJoin(riders, eq(riderShifts.riderId, riders.id))
+      .where(eq(riderShifts.riderId, riderId))
+      .orderBy(desc(riderShifts.startedAt))
+      .limit(limit)
+    return rows.map((r) => mapShiftRecord(r.shift, r.riderName || undefined))
+  }
+
+  const rows = await db
+    .select({
+      shift: riderShifts,
+      riderName: riders.name,
+    })
+    .from(riderShifts)
+    .leftJoin(riders, eq(riderShifts.riderId, riders.id))
+    .orderBy(desc(riderShifts.startedAt))
+    .limit(limit)
+  return rows.map((r) => mapShiftRecord(r.shift, r.riderName || undefined))
+}
+
+export async function getActiveRiderShiftQuery(
+  riderId: string,
+): Promise<RiderShift | null> {
+  const rows = await db
+    .select()
+    .from(riderShifts)
+    .where(
+      and(eq(riderShifts.riderId, riderId), eq(riderShifts.status, 'active')),
+    )
+    .orderBy(desc(riderShifts.startedAt))
+    .limit(1)
+
+  return rows[0] ? mapShiftRecord(rows[0]) : null
+}
+
+export async function getRiderAttendanceStatsQuery(
+  riderId: string,
+  startDate?: Date,
+  endDate?: Date,
+) {
+  const conditions = [eq(riderShifts.riderId, riderId)]
+  if (startDate) {
+    conditions.push(gte(riderShifts.startedAt, startDate))
+  }
+  if (endDate) {
+    conditions.push(lte(riderShifts.startedAt, endDate))
+  }
+
+  const shifts = await db
+    .select()
+    .from(riderShifts)
+    .where(and(...conditions))
+
+  const totalShifts = shifts.length
+  const totalMinutes = shifts.reduce((acc, s) => acc + s.durationMinutes, 0)
+  const activeShift = shifts.find((s) => s.status === 'active')
+
+  return {
+    totalShifts,
+    totalMinutes,
+    totalHours: Number((totalMinutes / 60).toFixed(1)),
+    hasActiveShift: Boolean(activeShift),
+    activeShiftSince: activeShift ? activeShift.startedAt.toISOString() : null,
+  }
+}
+

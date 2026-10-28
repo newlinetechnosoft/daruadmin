@@ -11,6 +11,7 @@ import {
   getOrdersFn,
   getPaymentsFn,
   getReportsOpsFn,
+  getProductVelocityAndSourcingIntelligenceFn,
   getRidersFn,
   getSettingsFn,
   getShippingFn,
@@ -128,6 +129,16 @@ export const adminQueries = {
     queryOptions({
       queryKey: ['admin', 'reports'],
       queryFn: () => getReportsOpsFn(),
+      staleTime: 1000 * 60 * 2,
+    }),
+
+  sourcingIntelligence: (days?: number | null) =>
+    queryOptions({
+      queryKey: ['admin', 'reports', 'sourcing-intelligence', days ?? 'all'],
+      queryFn: () =>
+        getProductVelocityAndSourcingIntelligenceFn({
+          data: { days: days ?? null },
+        }),
       staleTime: 1000 * 60 * 2,
     }),
 

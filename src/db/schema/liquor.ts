@@ -96,6 +96,7 @@ export const liquorVariants = pgTable(
     sku: text('sku').notNull().unique(),
     price: integer('price').notNull(), // in paisa
     mrp: integer('mrp'), // in paisa
+    compareAtPrice: integer('compare_at_price'), // in paisa
     abv: numeric('abv', { precision: 4, scale: 2 }), // alcohol by volume percentage
     stock: integer('stock').default(0).notNull(),
     isActive: boolean('is_active').default(true).notNull(),

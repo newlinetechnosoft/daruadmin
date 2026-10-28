@@ -46,6 +46,8 @@ export const orders = pgTable(
       .notNull()
       .default(false),
     isLegacy: boolean('is_legacy').notNull().default(false),
+    deliveryOtp: text('delivery_otp'),
+    deliveryProofPhotoUrl: text('delivery_proof_photo_url'),
     cancellationReason: text('cancellation_reason'),
     deliveryFailureReason: text('delivery_failure_reason'),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -64,6 +66,7 @@ export const orders = pgTable(
     index('orders_created_at_idx').on(table.createdAt),
     index('orders_number_idx').on(table.number),
     index('orders_idempotency_idx').on(table.idempotencyKey),
+    index('orders_delivery_otp_idx').on(table.deliveryOtp),
   ],
 )
 

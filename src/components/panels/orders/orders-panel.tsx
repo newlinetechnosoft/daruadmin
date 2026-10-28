@@ -4,6 +4,8 @@ import {
   updateOrderFn,
   createOrderFn,
   assignOrderItemDealerFn,
+  autoAssignNearestDealersForOrderFn,
+  removeOrderItemFn,
 } from '#/server/operations/operations.functions'
 import type {
   Order,
@@ -12,6 +14,11 @@ import type {
 } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
 import { getGoogleMapsUrl } from '#/lib/map-config'
+import {
+  calculateHaversineDistanceKm,
+  formatDistanceKm,
+  getDealerWhatsAppConfirmationUrl,
+} from '#/lib/geo'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
 import { StatusBadge } from '#/components/shared/status-badge'
@@ -56,13 +63,14 @@ import {
   Trash2,
   Store,
   MessageCircle,
+  Sparkles,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 const routeApi = getRouteApi('/admin/orders')
 
 const ORDER_STATUSES: { value: string; label: string }[] = [
-  { value: 'all', label: 'All Statuses' },
+  { value: 'all', label: 'All Orders' },
   { value: 'pending', label: 'Pending' },
   { value: 'confirmed', label: 'Confirmed' },
   { value: 'dealer_assigned', label: 'Dealer Assigned' },
@@ -85,6 +93,7 @@ export function OrdersPanel() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false)
+  const [invoiceMode, setInvoiceMode] = useState<'a4' | 'thermal'>('a4')
   const [isUpdating, setIsUpdating] = useState(false)
 
   // Create order form state
@@ -93,7 +102,7 @@ export function OrdersPanel() {
     customerEmail: '',
     customerPhone: '',
     address: '',
-    city: 'Kathmandu',
+    city: 'Butwal',
     paymentMethod: 'cod' as PaymentMethod,
     notes: '',
     items: [] as {
@@ -171,6 +180,15 @@ export function OrdersPanel() {
     })
   }, [ops.orders, statusFilter, searchQuery])
 
+  // Status counts for interactive filter pills
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: ops.orders.length }
+    for (const o of ops.orders) {
+      counts[o.status] = (counts[o.status] || 0) + 1
+    }
+    return counts
+  }, [ops.orders])
+
   // KPIs
   const totalOrdersCount = ops.orders.length
   const pendingCount = ops.orders.filter(
@@ -195,8 +213,8 @@ export function OrdersPanel() {
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder({ ...selectedOrder, status })
       }
-    } catch {
-      toast.error('Failed to update order status')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update order status')
     } finally {
       setIsUpdating(false)
     }
@@ -234,8 +252,8 @@ export function OrdersPanel() {
           ...(targetStatus ? { status: targetStatus as OrderStatus } : {}),
         })
       }
-    } catch {
-      toast.error('Failed to assign rider')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to assign rider')
     } finally {
       setIsUpdating(false)
     }
@@ -289,6 +307,51 @@ export function OrdersPanel() {
       }
     } catch (err: any) {
       toast.error(err?.message || 'Failed to update item dealer')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleAutoAssignNearestDealers = async (orderId: string) => {
+    try {
+      setIsUpdating(true)
+      const res = await autoAssignNearestDealersForOrderFn({
+        data: { orderId },
+      })
+      toast.success(
+        `Auto-assigned closest available dealers to ${res.updatedCount} items`,
+      )
+      await router.invalidate()
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to auto-assign dealers')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleRemoveOrderItem = async (
+    orderId: string,
+    orderItemId: string,
+    itemName: string,
+  ) => {
+    const reason = window.prompt(
+      `Please enter a reason for removing "${itemName}" from this order (e.g., unavailable at dealer, customer requested):`,
+    )
+    if (!reason || !reason.trim()) return
+
+    try {
+      setIsUpdating(true)
+      await removeOrderItemFn({
+        data: {
+          orderId,
+          orderItemId,
+          reason: reason.trim(),
+        },
+      })
+      toast.success(`Removed "${itemName}" and recalculated order totals`)
+      await router.invalidate()
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to remove item')
     } finally {
       setIsUpdating(false)
     }
@@ -377,14 +440,14 @@ export function OrdersPanel() {
         customerEmail: '',
         customerPhone: '',
         address: '',
-        city: 'Kathmandu',
+        city: 'Butwal',
         paymentMethod: 'cod',
         notes: '',
         items: [],
       })
       await router.invalidate()
-    } catch {
-      toast.error('Failed to create order')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create order')
     } finally {
       setIsUpdating(false)
     }
@@ -413,7 +476,7 @@ export function OrdersPanel() {
       <PageHeader
         kicker="Commerce"
         title="Order Management"
-        description="Monitor lifecycle transitions, assign Kathmandu Valley fleet couriers, and generate government-compliant VAT invoices."
+        description="Monitor lifecycle transitions, assign Butwal & Tilottama fleet couriers, and generate government-compliant VAT invoices or thermal dispatch slips."
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -460,6 +523,37 @@ export function OrdersPanel() {
           icon={CreditCard}
           tone="success"
         />
+      </div>
+
+      {/* Quick Status Navigation Bar */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        {ORDER_STATUSES.map((st) => {
+          const count = statusCounts[st.value] || 0
+          const isActive = statusFilter === st.value
+          return (
+            <button
+              key={st.value}
+              type="button"
+              onClick={() => setStatusFilter(st.value)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all border cursor-pointer ${
+                isActive
+                  ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                  : 'bg-card text-muted-foreground border-border hover:bg-muted/60 hover:text-foreground'
+              }`}
+            >
+              <span>{st.label}</span>
+              <span
+                className={`inline-flex items-center justify-center px-1.5 py-0.2 rounded-full text-[10px] font-mono font-semibold ${
+                  isActive
+                    ? 'bg-primary-foreground/20 text-primary-foreground'
+                    : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Search and Filters */}
@@ -539,8 +633,35 @@ export function OrdersPanel() {
                         <div className="font-medium text-foreground">
                           {order.customerName}
                         </div>
-                        <div className="text-xs text-muted-foreground font-mono">
-                          {order.customerPhone}
+                        <div className="flex items-center gap-2 pt-1 text-xs">
+                          <a
+                            href={`tel:${order.customerPhone}`}
+                            className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline font-mono"
+                            title={`Call ${order.customerPhone}`}
+                          >
+                            <Phone className="h-3 w-3" />
+                            <span>{order.customerPhone}</span>
+                          </a>
+                          {order.customerPhone && (
+                            <a
+                              href={`https://wa.me/${order.customerPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Namaste ${order.customerName}, this is regarding your order ${order.number} from Mezmani.`)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-0.5 text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline"
+                              title="WhatsApp Customer"
+                            >
+                              <MessageCircle className="h-3 w-3" />
+                            </a>
+                          )}
+                          <a
+                            href={getGoogleMapsUrl(order)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground"
+                            title={`${order.address}, ${order.city}`}
+                          >
+                            <MapPin className="h-3 w-3 text-amber-500" />
+                          </a>
                         </div>
                       </TableCell>
 
@@ -575,9 +696,24 @@ export function OrdersPanel() {
 
                       <TableCell>
                         {assignedRider ? (
-                          <div className="flex items-center gap-1.5 text-xs text-foreground font-medium">
-                            <Bike className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                            <span>{assignedRider.name}</span>
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5 text-xs text-foreground font-medium">
+                              <Bike className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <span>{assignedRider.name}</span>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground font-mono flex items-center gap-1">
+                              <span>
+                                Float: {formatNPR(assignedRider.cashOnHand)}
+                              </span>
+                              {assignedRider.cashOnHand >= 2000000 && (
+                                <span
+                                  className="text-destructive font-semibold"
+                                  title="COD cash limit exceeded (Rs. 20,000)"
+                                >
+                                  ⚠️ Limit
+                                </span>
+                              )}
+                            </div>
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground italic block">
@@ -728,29 +864,171 @@ export function OrdersPanel() {
 
                 <Card>
                   <CardContent className="p-3.5 space-y-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
-                      Fleet Dispatch
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                        Fleet Dispatch
+                      </span>
+                      {(() => {
+                        const oLat = selectedOrder.lat
+                          ? Number(selectedOrder.lat)
+                          : 27.7006
+                        const oLng = selectedOrder.lng
+                          ? Number(selectedOrder.lng)
+                          : 83.4484
+                        const isCod =
+                          selectedOrder.paymentMethod === 'cod' &&
+                          selectedOrder.paymentStatus !== 'paid'
+
+                        const ranked = [...ops.riders]
+                          .map((r) => {
+                            const dist =
+                              r.lat != null && r.lng != null
+                                ? calculateHaversineDistanceKm(
+                                    oLat,
+                                    oLng,
+                                    Number(r.lat),
+                                    Number(r.lng),
+                                  )
+                                : null
+                            const isOver = isCod && r.cashOnHand >= 2000000
+                            let score = 100
+                            if (r.status === 'available') score += 100
+                            else if (r.status === 'busy') score -= 50
+                            else score -= 100
+                            if (dist != null) score -= Math.round(dist * 5)
+                            if (isOver) score -= 1000
+                            return { ...r, distanceKm: dist, isOver, score }
+                          })
+                          .sort((a, b) => b.score - a.score)
+
+                        const best = ranked.find(
+                          (r) => !r.isOver && r.status === 'available',
+                        )
+                        if (best && selectedOrder.riderId !== best.id) {
+                          return (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-6 text-[10px] px-2 text-primary border-primary/30 hover:bg-primary/5"
+                              onClick={() =>
+                                handleAssignRider(selectedOrder.id, best.id)
+                              }
+                              disabled={isUpdating}
+                            >
+                              ⭐ Auto-Assign: {best.name.split(' ')[0]} (
+                              {formatDistanceKm(best.distanceKm)})
+                            </Button>
+                          )
+                        }
+                        return null
+                      })()}
+                    </div>
                     <div className="space-y-1">
                       <Label htmlFor="courier-select" className="text-xs">
                         Assigned Courier
                       </Label>
-                      <NativeSelect
-                        id="courier-select"
-                        value={selectedOrder.riderId || ''}
-                        onChange={(e) =>
-                          handleAssignRider(selectedOrder.id, e.target.value)
+                      {(() => {
+                        const oLat = selectedOrder.lat
+                          ? Number(selectedOrder.lat)
+                          : 27.7006
+                        const oLng = selectedOrder.lng
+                          ? Number(selectedOrder.lng)
+                          : 83.4484
+                        const isCod =
+                          selectedOrder.paymentMethod === 'cod' &&
+                          selectedOrder.paymentStatus !== 'paid'
+
+                        const ranked = [...ops.riders]
+                          .map((r) => {
+                            const dist =
+                              r.lat != null && r.lng != null
+                                ? calculateHaversineDistanceKm(
+                                    oLat,
+                                    oLng,
+                                    Number(r.lat),
+                                    Number(r.lng),
+                                  )
+                                : null
+                            const isOver = isCod && r.cashOnHand >= 2000000
+                            let score = 100
+                            if (r.status === 'available') score += 100
+                            else if (r.status === 'busy') score -= 50
+                            else score -= 100
+                            if (dist != null) score -= Math.round(dist * 5)
+                            if (isOver) score -= 1000
+                            return { ...r, distanceKm: dist, isOver, score }
+                          })
+                          .sort((a, b) => b.score - a.score)
+
+                        const recommended = ranked.filter(
+                          (r) => !r.isOver && r.status === 'available',
+                        )
+                        const others = ranked.filter(
+                          (r) => r.isOver || r.status !== 'available',
+                        )
+
+                        return (
+                          <NativeSelect
+                            id="courier-select"
+                            value={selectedOrder.riderId || ''}
+                            onChange={(e) =>
+                              handleAssignRider(
+                                selectedOrder.id,
+                                e.target.value,
+                              )
+                            }
+                            disabled={isUpdating}
+                            className="text-xs"
+                          >
+                            <option value="">No Rider Assigned</option>
+                            {recommended.length > 0 && (
+                              <optgroup label="⭐ Recommended & Available (Proximity Sorted)">
+                                {recommended.map((r, idx) => (
+                                  <option key={r.id} value={r.id}>
+                                    {idx === 0 ? '⭐ [BEST] ' : ''}
+                                    {r.name} ({r.zone} •{' '}
+                                    {formatDistanceKm(r.distanceKm)}) — Float:{' '}
+                                    {formatNPR(r.cashOnHand)}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {others.length > 0 && (
+                              <optgroup label="Other Couriers (Busy / Offline / High Float)">
+                                {others.map((r) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.name} ({r.zone} • {r.status} •{' '}
+                                    {formatDistanceKm(r.distanceKm)}) — Float:{' '}
+                                    {formatNPR(r.cashOnHand)}{' '}
+                                    {r.isOver ? '⚠️ COD LIMIT' : ''}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </NativeSelect>
+                        )
+                      })()}
+                      {(() => {
+                        const r = ops.riders.find(
+                          (x) => x.id === selectedOrder.riderId,
+                        )
+                        if (!r) return null
+                        if (r.cashOnHand >= 2000000) {
+                          return (
+                            <div className="p-2 rounded bg-destructive/10 border border-destructive/20 text-destructive text-[11px] font-medium flex items-center gap-1.5 mt-1.5">
+                              <span>⚠️</span>
+                              <span>
+                                Courier holds{' '}
+                                <strong>{formatNPR(r.cashOnHand)}</strong>{' '}
+                                unremitted COD float (exceeds Rs. 20,000
+                                threshold).
+                              </span>
+                            </div>
+                          )
                         }
-                        disabled={isUpdating}
-                        className="text-xs"
-                      >
-                        <option value="">No Rider Assigned</option>
-                        {ops.riders.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.name} ({r.zone} &bull; {r.status})
-                          </option>
-                        ))}
-                      </NativeSelect>
+                        return null
+                      })()}
                     </div>
                     <div className="text-muted-foreground pt-1">
                       Payment Mode:{' '}
@@ -763,159 +1041,266 @@ export function OrdersPanel() {
               </div>
 
               {/* Items List with per-item Dealer Assignment */}
-              <div className="rounded-lg border border-border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Item</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead className="text-center">Qty</TableHead>
-                      <TableHead className="text-right">Unit Price</TableHead>
-                      <TableHead className="w-[260px]">
-                        Assigned Dealer (Pickup)
-                      </TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedOrder.items.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-medium text-foreground">
-                              {item.name}
-                            </span>
-                            {item.sourcingStatus && (
-                              <Badge
-                                variant="outline"
-                                className={`text-[9px] px-1 py-0 uppercase font-mono ${
-                                  item.sourcingStatus === 'picked_up'
-                                    ? 'border-emerald-500/30 text-emerald-600 bg-emerald-500/10'
-                                    : item.sourcingStatus === 'unavailable'
-                                      ? 'border-destructive/30 text-destructive bg-destructive/10'
-                                      : item.sourcingStatus === 'assigned'
-                                        ? 'border-amber-500/30 text-amber-600 bg-amber-500/10'
-                                        : 'border-muted-foreground/30 text-muted-foreground'
-                                }`}
-                              >
-                                {item.sourcingStatus.replace('_', ' ')}
-                              </Badge>
-                            )}
-                          </div>
-                          <span className="block text-[11px] text-muted-foreground">
-                            {item.variantName}
-                          </span>
-                        </TableCell>
-                        <TableCell className="font-mono text-muted-foreground">
-                          {item.sku}
-                        </TableCell>
-                        <TableCell className="text-center font-semibold text-foreground">
-                          {item.qty}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {formatNPR(item.unitPrice)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <NativeSelect
-                              value={item.dealerId || ''}
-                              onChange={(e) =>
-                                handleAssignItemDealer(
-                                  selectedOrder.id,
-                                  item.id,
-                                  e.target.value,
-                                )
-                              }
-                              disabled={isUpdating}
-                              className="text-xs h-8"
-                            >
-                              <option value="">-- No Dealer Assigned --</option>
-                              {item.availableDealers &&
-                                item.availableDealers.length > 0 && (
-                                  <optgroup label="⭐ Registered Suppliers of this Item">
-                                    {item.availableDealers.map((d) => (
-                                      <option key={d.id} value={d.id}>
-                                        ⭐ {d.name} ({d.city})
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                )}
-                              <optgroup label="Other Active Dealers">
-                                {dealersList
-                                  .filter(
-                                    (d: any) =>
-                                      d.isActive &&
-                                      !item.availableDealers?.some(
-                                        (ad) => ad.id === d.id,
-                                      ),
-                                  )
-                                  .map((d: any) => (
-                                    <option key={d.id} value={d.id}>
-                                      {d.name} ({d.city})
-                                    </option>
-                                  ))}
-                              </optgroup>
-                            </NativeSelect>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-semibold text-foreground">
+                      Ordered Items & Sourcing Stations
+                    </h4>
+                    <p className="text-[10px] text-muted-foreground">
+                      Assign nearest verified dealers to each order line
+                    </p>
+                  </div>
+                  {selectedOrder.items.some(
+                    (it) => !it.dealerId || it.sourcingStatus === 'unavailable',
+                  ) &&
+                    ['pending', 'confirmed'].includes(selectedOrder.status) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/5"
+                        onClick={() =>
+                          handleAutoAssignNearestDealers(selectedOrder.id)
+                        }
+                        disabled={isUpdating}
+                      >
+                        <Sparkles className="h-3 w-3" />
+                        <span>Auto-Assign Nearest Dealers</span>
+                      </Button>
+                    )}
+                </div>
 
-                            {item.dealer ? (
-                              <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground pt-0.5">
-                                <a
-                                  href={`tel:${item.dealer.contact}`}
-                                  className="flex items-center gap-0.5 text-primary hover:underline font-mono"
-                                  title="Call dealer"
-                                >
-                                  <Phone className="h-3 w-3" />
-                                  <span>{item.dealer.contact}</span>
-                                </a>
-                                {(item.dealer.whatsappNumber ||
-                                  item.dealer.contact) && (
-                                  <a
-                                    href={`https://wa.me/${(item.dealer.whatsappNumber || item.dealer.contact).replace(/[^0-9]/g, '')}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400 hover:underline"
-                                    title="WhatsApp dealer"
-                                  >
-                                    <MessageCircle className="h-3 w-3" />
-                                    <span>WhatsApp</span>
-                                  </a>
-                                )}
-                                <a
-                                  href={
-                                    item.dealer.lat && item.dealer.lng
-                                      ? `https://www.google.com/maps/search/?api=1&query=${item.dealer.lat},${item.dealer.lng}`
-                                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${item.dealer.name}, ${item.dealer.address}, ${item.dealer.city}`)}`
-                                  }
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400 hover:underline"
-                                  title="Dealer Map Location"
-                                >
-                                  <MapPin className="h-3 w-3" />
-                                  <span className="truncate max-w-[90px]">
-                                    {item.dealer.address}
-                                  </span>
-                                </a>
-                                {item.dealerCostPrice ? (
-                                  <span className="font-mono text-emerald-600 dark:text-emerald-400 font-medium">
-                                    Cost: {formatNPR(item.dealerCostPrice)}
-                                  </span>
-                                ) : null}
-                              </div>
-                            ) : (
-                              <span className="text-[10px] text-amber-600 dark:text-amber-400 block">
-                                ⚠️ Needs dealer for rider pickup
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right font-mono font-semibold text-foreground">
-                          {formatNPR(item.lineTotal)}
-                        </TableCell>
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item</TableHead>
+                        <TableHead>SKU</TableHead>
+                        <TableHead className="text-center">Qty</TableHead>
+                        <TableHead className="text-right">Unit Price</TableHead>
+                        <TableHead className="w-[280px]">
+                          Assigned Dealer (Pickup)
+                        </TableHead>
+                        <TableHead className="text-right">
+                          Cost / Margin
+                        </TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        {['pending', 'confirmed', 'dealer_assigned'].includes(
+                          selectedOrder.status,
+                        ) &&
+                          selectedOrder.items.length > 1 && (
+                            <TableHead className="w-[40px]"></TableHead>
+                          )}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedOrder.items.map((item) => {
+                        const totalCost = (item.dealerCostPrice || 0) * item.qty
+                        const profit = item.lineTotal - totalCost
+                        const marginPct =
+                          item.lineTotal > 0
+                            ? ((profit / item.lineTotal) * 100).toFixed(1)
+                            : '0.0'
+
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-medium text-foreground">
+                                  {item.name}
+                                </span>
+                                {item.sourcingStatus && (
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-[9px] px-1 py-0 uppercase font-mono ${
+                                      item.sourcingStatus === 'picked_up'
+                                        ? 'border-emerald-500/30 text-emerald-600 bg-emerald-500/10'
+                                        : item.sourcingStatus === 'unavailable'
+                                          ? 'border-destructive/30 text-destructive bg-destructive/10'
+                                          : item.sourcingStatus === 'assigned'
+                                            ? 'border-amber-500/30 text-amber-600 bg-amber-500/10'
+                                            : 'border-muted-foreground/30 text-muted-foreground'
+                                    }`}
+                                  >
+                                    {item.sourcingStatus.replace('_', ' ')}
+                                  </Badge>
+                                )}
+                              </div>
+                              <span className="block text-[11px] text-muted-foreground">
+                                {item.variantName}
+                              </span>
+                            </TableCell>
+                            <TableCell className="font-mono text-muted-foreground">
+                              {item.sku}
+                            </TableCell>
+                            <TableCell className="text-center font-semibold text-foreground">
+                              {item.qty}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {formatNPR(item.unitPrice)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <NativeSelect
+                                  value={item.dealerId || ''}
+                                  onChange={(e) =>
+                                    handleAssignItemDealer(
+                                      selectedOrder.id,
+                                      item.id,
+                                      e.target.value,
+                                    )
+                                  }
+                                  disabled={isUpdating}
+                                  className="text-xs h-8"
+                                >
+                                  <option value="">
+                                    -- No Dealer Assigned --
+                                  </option>
+                                  {item.availableDealers &&
+                                    item.availableDealers.length > 0 && (
+                                      <optgroup label="⭐ Registered Suppliers (Nearest First)">
+                                        {item.availableDealers.map((d) => (
+                                          <option key={d.id} value={d.id}>
+                                            ⭐ {d.name} (
+                                            {d.distanceKm != null
+                                              ? `${d.distanceKm} km`
+                                              : d.city}
+                                            ) · Cost:{' '}
+                                            {formatNPR(d.costPrice || 0)}
+                                          </option>
+                                        ))}
+                                      </optgroup>
+                                    )}
+                                  <optgroup label="Other Active Dealers">
+                                    {dealersList
+                                      .filter(
+                                        (d: any) =>
+                                          d.isActive &&
+                                          !item.availableDealers?.some(
+                                            (ad) => ad.id === d.id,
+                                          ),
+                                      )
+                                      .map((d: any) => (
+                                        <option key={d.id} value={d.id}>
+                                          {d.name} ({d.city})
+                                        </option>
+                                      ))}
+                                  </optgroup>
+                                </NativeSelect>
+
+                                {item.dealer ? (
+                                  <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground pt-0.5">
+                                    <a
+                                      href={`tel:${item.dealer.contact}`}
+                                      className="flex items-center gap-0.5 text-primary hover:underline font-mono"
+                                      title="Call dealer"
+                                    >
+                                      <Phone className="h-3 w-3" />
+                                      <span>{item.dealer.contact}</span>
+                                    </a>
+                                    {(item.dealer.whatsappNumber ||
+                                      item.dealer.contact) && (
+                                      <a
+                                        href={getDealerWhatsAppConfirmationUrl({
+                                          dealerName: item.dealer.name,
+                                          dealerPhone:
+                                            item.dealer.whatsappNumber ||
+                                            item.dealer.contact,
+                                          orderNumber: selectedOrder.number,
+                                          items: [
+                                            {
+                                              name: item.name,
+                                              qty: item.qty,
+                                              variantName: item.variantName,
+                                            },
+                                          ],
+                                          pickupAddress: item.dealer.address,
+                                        })}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400 hover:underline"
+                                        title="Send WhatsApp confirmation to dealer"
+                                      >
+                                        <MessageCircle className="h-3 w-3" />
+                                        <span>WhatsApp</span>
+                                      </a>
+                                    )}
+                                    <a
+                                      href={
+                                        item.dealer.lat && item.dealer.lng
+                                          ? `https://www.google.com/maps/search/?api=1&query=${item.dealer.lat},${item.dealer.lng}`
+                                          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${item.dealer.name}, ${item.dealer.address}, ${item.dealer.city}`)}`
+                                      }
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400 hover:underline"
+                                      title="Dealer Map Location"
+                                    >
+                                      <MapPin className="h-3 w-3" />
+                                      <span className="truncate max-w-[90px]">
+                                        {item.dealer.address}
+                                      </span>
+                                    </a>
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px] text-amber-600 dark:text-amber-400 block">
+                                    ⚠️ Needs dealer for rider pickup
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs">
+                              {item.dealerCostPrice ? (
+                                <div className="space-y-0.5">
+                                  <div className="text-muted-foreground text-[11px]">
+                                    {formatNPR(totalCost)}
+                                  </div>
+                                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                    +{formatNPR(profit)} ({marginPct}%)
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-[10px]">
+                                  Pending
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-semibold text-foreground">
+                              {formatNPR(item.lineTotal)}
+                            </TableCell>
+                            {[
+                              'pending',
+                              'confirmed',
+                              'dealer_assigned',
+                            ].includes(selectedOrder.status) &&
+                              selectedOrder.items.length > 1 && (
+                                <TableCell className="text-center p-1">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                    title={`Remove "${item.name}" from order`}
+                                    onClick={() =>
+                                      handleRemoveOrderItem(
+                                        selectedOrder.id,
+                                        item.id,
+                                        item.name,
+                                      )
+                                    }
+                                    disabled={isUpdating}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TableCell>
+                              )}
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
 
               {/* Dealer Fulfillment & Pickup Stations Summary */}
@@ -1059,39 +1444,141 @@ export function OrdersPanel() {
                 </div>
               </div>
 
-              {/* Price Calculation Summary */}
-              <div className="rounded-lg border border-border bg-muted/20 p-3.5 space-y-1.5 text-xs text-right max-w-xs ml-auto">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Subtotal:</span>
-                  <span className="font-mono">
-                    {formatNPR(selectedOrder.subtotal)}
+              {/* Order Lifecycle History & Audit Trail */}
+              <div className="rounded-lg border border-border bg-card p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <h4 className="text-xs font-semibold text-foreground">
+                      Order Lifecycle History & Audit Trail
+                    </h4>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {selectedOrder.events?.length ?? 0} events recorded
                   </span>
                 </div>
-                {selectedOrder.discount > 0 && (
-                  <div className="flex justify-between text-success">
-                    <span>Discount:</span>
+
+                <div className="space-y-2 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-border/60">
+                  {selectedOrder.events && selectedOrder.events.length > 0 ? (
+                    selectedOrder.events.map((evt) => (
+                      <div
+                        key={evt.id}
+                        className="relative pl-6 text-xs space-y-0.5"
+                      >
+                        <div className="absolute left-2 top-1.5 h-2 w-2 rounded-full border border-background bg-primary -translate-x-1/2" />
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-foreground font-mono uppercase text-[11px]">
+                            {evt.toStatus || evt.status}
+                          </span>
+                          {evt.fromStatus && (
+                            <span className="text-[10px] text-muted-foreground">
+                              (from {evt.fromStatus})
+                            </span>
+                          )}
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            &bull; {new Date(evt.at).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-muted-foreground text-[11px]">
+                          {evt.note}
+                        </p>
+                        <div className="text-[10px] text-muted-foreground/80">
+                          By:{' '}
+                          <span className="font-medium text-foreground">
+                            {evt.actor}
+                          </span>{' '}
+                          {evt.actorRole && (
+                            <span className="capitalize">
+                              ({evt.actorRole})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground text-xs pl-6">
+                      No state transition history logged.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Price Calculation & Margin Analysis */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl ml-auto">
+                {(() => {
+                  let totalDealerCost = 0
+                  for (const it of selectedOrder.items) {
+                    if (it.dealerCostPrice) {
+                      totalDealerCost += it.dealerCostPrice * it.qty
+                    }
+                  }
+                  const netRevenue = Math.max(
+                    0,
+                    selectedOrder.subtotal - selectedOrder.discount,
+                  )
+                  const grossProfit = netRevenue - totalDealerCost
+                  const marginPct =
+                    netRevenue > 0
+                      ? ((grossProfit / netRevenue) * 100).toFixed(1)
+                      : '0.0'
+
+                  return (
+                    <div className="rounded-lg border border-border bg-emerald-500/5 p-3 space-y-1.5 text-xs text-right">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-left flex items-center justify-between pb-1 border-b border-border/50">
+                        <span>Sourcing Margin</span>
+                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                          {marginPct}% Margin
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Dealer Cost (COGS):</span>
+                        <span className="font-mono">
+                          {formatNPR(totalDealerCost)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <span>Gross Profit:</span>
+                        <span className="font-mono">
+                          {formatNPR(grossProfit)}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1.5 text-xs text-right">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Subtotal:</span>
                     <span className="font-mono">
-                      -{formatNPR(selectedOrder.discount)}
+                      {formatNPR(selectedOrder.subtotal)}
                     </span>
                   </div>
-                )}
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Delivery Charge:</span>
-                  <span className="font-mono">
-                    {formatNPR(selectedOrder.deliveryCharge)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>VAT ({ops.settings.taxRate}%):</span>
-                  <span className="font-mono">
-                    {formatNPR(selectedOrder.tax)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm font-semibold text-foreground border-t border-border pt-1.5">
-                  <span>Grand Total:</span>
-                  <span className="font-mono">
-                    {formatNPR(selectedOrder.total)}
-                  </span>
+                  {selectedOrder.discount > 0 && (
+                    <div className="flex justify-between text-success">
+                      <span>Discount:</span>
+                      <span className="font-mono">
+                        -{formatNPR(selectedOrder.discount)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Delivery Charge:</span>
+                    <span className="font-mono">
+                      {formatNPR(selectedOrder.deliveryCharge)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>VAT ({ops.settings.taxRate}%):</span>
+                    <span className="font-mono">
+                      {formatNPR(selectedOrder.tax)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold text-foreground border-t border-border pt-1.5">
+                    <span>Grand Total:</span>
+                    <span className="font-mono">
+                      {formatNPR(selectedOrder.total)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1122,173 +1609,443 @@ export function OrdersPanel() {
         {selectedOrder && (
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader className="no-print border-b border-border pb-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <DialogTitle>Tax Invoice Preview</DialogTitle>
+                  <DialogTitle>
+                    {invoiceMode === 'a4'
+                      ? 'Tax Invoice Preview'
+                      : '80mm POS Thermal Slip'}
+                  </DialogTitle>
                   <DialogDescription className="font-mono">
-                    {selectedOrder.number}
+                    Order {selectedOrder.number} &bull;{' '}
+                    {selectedOrder.customerName}
                   </DialogDescription>
                 </div>
-                <Button
-                  onClick={() => window.print()}
-                  className="gap-1.5"
-                  size="sm"
-                >
-                  <Printer className="h-4 w-4" />
-                  Print / Save PDF
-                </Button>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-muted p-0.5 rounded-lg border border-border">
+                    <button
+                      type="button"
+                      onClick={() => setInvoiceMode('a4')}
+                      className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                        invoiceMode === 'a4'
+                          ? 'bg-background text-foreground shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      A4 VAT Invoice
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInvoiceMode('thermal')}
+                      className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                        invoiceMode === 'thermal'
+                          ? 'bg-background text-foreground shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      80mm Thermal Slip
+                    </button>
+                  </div>
+
+                  <Button
+                    onClick={() => window.print()}
+                    className="gap-1.5"
+                    size="sm"
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print / Save PDF
+                  </Button>
+                </div>
               </div>
             </DialogHeader>
 
-            <div className="p-4 space-y-6 text-xs text-foreground font-sans">
-              {/* Header */}
-              <div className="flex items-start justify-between border-b pb-4 border-border">
-                <div>
-                  <h2 className="text-base font-bold text-foreground uppercase tracking-tight">
-                    {ops.settings.legalName ||
-                      'MEZMANI LIQUOR & GROCERY PVT. LTD.'}
-                  </h2>
-                  <p className="text-muted-foreground">
-                    {ops.settings.address || 'Kathmandu, Nepal'}
-                  </p>
-                  <p className="text-muted-foreground font-mono">
-                    PAN / VAT Reg:{' '}
-                    <strong>{ops.settings.pan || '609823415'}</strong>
-                  </p>
-                  <p className="text-muted-foreground">
-                    Contact: {ops.settings.phone || '+977-1-4229988'}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="text-sm font-semibold text-primary block">
-                    TAX INVOICE
-                  </span>
-                  <div className="font-mono font-bold text-foreground mt-1">
-                    {ops.settings.invoicePrefix || 'MEZ-INV-'}
-                    {selectedOrder.number.replace(/[^0-9]/g, '')}
+            {invoiceMode === 'thermal' ? (
+              <div className="p-4 flex justify-center bg-muted/20">
+                <div className="w-[80mm] max-w-full bg-card text-foreground border border-dashed border-border p-4 rounded shadow-sm text-xs font-mono space-y-3 leading-relaxed">
+                  {/* Store Header */}
+                  <div className="text-center space-y-0.5 pb-2 border-b border-dashed border-border">
+                    <div className="font-bold text-sm tracking-tight">
+                      {ops.settings.legalName || 'MEZMANI LIQUOR & GROCERY'}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {ops.settings.address || 'Traffic Chowk, Butwal, Nepal'}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      PAN / VAT:{' '}
+                      <strong>{ops.settings.pan || '609823415'}</strong>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      Tel: {ops.settings.phone || '+977-71-540000'}
+                    </div>
                   </div>
-                  <div className="text-muted-foreground font-mono">
-                    Date:{' '}
-                    {new Date(selectedOrder.createdAt).toLocaleDateString()}
-                  </div>
-                  <div className="text-muted-foreground uppercase font-semibold">
-                    Payment: {selectedOrder.paymentMethod}
-                  </div>
-                </div>
-              </div>
 
-              {/* Billed to */}
-              <div className="grid grid-cols-2 gap-4 bg-muted/30 p-3.5 rounded-lg border border-border">
-                <div>
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
-                    Billed To Customer:
-                  </span>
-                  <div className="font-semibold text-foreground">
-                    {selectedOrder.customerName}
-                  </div>
-                  <div className="text-muted-foreground font-mono">
-                    {selectedOrder.customerPhone}
-                  </div>
-                  <div className="text-muted-foreground">
-                    {selectedOrder.customerEmail}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
-                    Delivery Destination:
-                  </span>
-                  <div className="font-medium text-foreground">
-                    {selectedOrder.address}
-                  </div>
-                  <div className="text-muted-foreground">
-                    {selectedOrder.city}
-                  </div>
-                </div>
-              </div>
-
-              {/* Items */}
-              <div className="border border-border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10">#</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead className="text-right">Rate</TableHead>
-                      <TableHead className="text-center">Qty</TableHead>
-                      <TableHead className="text-right">Amount (NPR)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedOrder.items.map((i, idx) => (
-                      <TableRow key={i.id}>
-                        <TableCell className="text-muted-foreground font-mono">
-                          {idx + 1}
-                        </TableCell>
-                        <TableCell className="font-medium text-foreground">
-                          {i.name}
-                        </TableCell>
-                        <TableCell className="font-mono text-muted-foreground">
-                          {i.sku}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {formatNPR(i.unitPrice)}
-                        </TableCell>
-                        <TableCell className="text-center font-semibold">
-                          {i.qty}
-                        </TableCell>
-                        <TableCell className="text-right font-mono font-semibold text-foreground">
-                          {formatNPR(i.lineTotal)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Totals */}
-              <div className="flex justify-between items-start pt-2">
-                <div className="max-w-xs space-y-1 text-[11px] text-muted-foreground">
-                  <p>Covered under manufacturer genuine warranty.</p>
-                  <p>Subject to Kathmandu jurisdiction.</p>
-                </div>
-
-                <div className="w-56 space-y-1.5 text-xs text-right">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Subtotal:</span>
-                    <span className="font-mono">
-                      {formatNPR(selectedOrder.subtotal)}
-                    </span>
-                  </div>
-                  {selectedOrder.discount > 0 && (
-                    <div className="flex justify-between text-success">
-                      <span>Discount:</span>
-                      <span className="font-mono">
-                        -{formatNPR(selectedOrder.discount)}
+                  {/* Slip Meta */}
+                  <div className="space-y-1 text-[11px] pb-2 border-b border-dashed border-border">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Slip Type:</span>
+                      <strong className="uppercase">Rider Dispatch Slip</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Order #:</span>
+                      <strong className="font-bold">
+                        {selectedOrder.number}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Date:</span>
+                      <span>
+                        {new Date(selectedOrder.createdAt).toLocaleString()}
                       </span>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Payment:</span>
+                      <strong className="uppercase">
+                        {selectedOrder.paymentMethod}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Customer Information */}
+                  <div className="space-y-1 text-[11px] pb-2 border-b border-dashed border-border">
+                    <div className="font-bold uppercase text-[10px] text-muted-foreground">
+                      Deliver To Customer:
+                    </div>
+                    <div className="font-bold text-sm text-foreground">
+                      {selectedOrder.customerName}
+                    </div>
+                    <div className="font-bold">
+                      Phone: {selectedOrder.customerPhone}
+                    </div>
+                    <div>
+                      Address: {selectedOrder.address}, {selectedOrder.city}
+                    </div>
+                    {selectedOrder.notes && (
+                      <div className="text-[10px] italic text-muted-foreground pt-0.5">
+                        Note: &ldquo;{selectedOrder.notes}&rdquo;
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dealer Pickup Checklist */}
+                  <div className="space-y-2 pb-2 border-b border-dashed border-border">
+                    <div className="font-bold uppercase text-[10px] text-muted-foreground">
+                      Dealer Pickups (Rider Route):
+                    </div>
+                    {(() => {
+                      const dealerGroups = new Map<
+                        string,
+                        {
+                          name: string
+                          phone?: string
+                          address?: string
+                          items: typeof selectedOrder.items
+                        }
+                      >()
+                      for (const it of selectedOrder.items) {
+                        const dKey = it.dealerId || 'unassigned'
+                        const dName =
+                          it.dealer?.name ||
+                          (it.dealerId
+                            ? 'Assigned Dealer'
+                            : '⚠️ Sourcing Required')
+                        const existing = dealerGroups.get(dKey) || {
+                          name: dName,
+                          phone: it.dealer?.contact,
+                          address: it.dealer?.address,
+                          items: [],
+                        }
+                        existing.items.push(it)
+                        dealerGroups.set(dKey, existing)
+                      }
+                      return Array.from(dealerGroups.entries()).map(
+                        ([key, group], idx) => (
+                          <div
+                            key={key}
+                            className="bg-muted/40 p-2 rounded border border-border/50 text-[11px] space-y-1"
+                          >
+                            <div className="font-bold flex items-center justify-between">
+                              <span>
+                                #{idx + 1} {group.name}
+                              </span>
+                              {group.phone && (
+                                <span className="text-[10px] font-normal">
+                                  {group.phone}
+                                </span>
+                              )}
+                            </div>
+                            {group.address && (
+                              <div className="text-[10px] text-muted-foreground truncate">
+                                {group.address}
+                              </div>
+                            )}
+                            <div className="pl-1 pt-0.5 space-y-0.5">
+                              {group.items.map((it) => (
+                                <div
+                                  key={it.id}
+                                  className="flex justify-between items-center text-[11px]"
+                                >
+                                  <span>
+                                    [ ] {it.qty}x {it.name}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {it.variantName}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ),
+                      )
+                    })()}
+                  </div>
+
+                  {/* Items List */}
+                  <div className="space-y-1 text-[11px] pb-2 border-b border-dashed border-border">
+                    <div className="font-bold uppercase text-[10px] text-muted-foreground">
+                      Ordered Items:
+                    </div>
+                    {selectedOrder.items.map((it) => (
+                      <div
+                        key={it.id}
+                        className="flex justify-between items-start"
+                      >
+                        <div className="pr-2">
+                          <div>
+                            {it.qty}x {it.name}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {it.variantName}
+                          </div>
+                        </div>
+                        <div className="font-mono text-right whitespace-nowrap">
+                          {formatNPR(it.lineTotal)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Financial Breakdown */}
+                  <div className="space-y-1 text-[11px] pb-2 border-b border-dashed border-border">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal:</span>
+                      <span className="font-mono">
+                        {formatNPR(selectedOrder.subtotal)}
+                      </span>
+                    </div>
+                    {selectedOrder.discount > 0 && (
+                      <div className="flex justify-between text-emerald-600">
+                        <span>Discount:</span>
+                        <span className="font-mono">
+                          -{formatNPR(selectedOrder.discount)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Delivery:</span>
+                      <span className="font-mono">
+                        {formatNPR(selectedOrder.deliveryCharge)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        VAT ({ops.settings.taxRate}%):
+                      </span>
+                      <span className="font-mono">
+                        {formatNPR(selectedOrder.tax)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Big Callout: Cash to Collect / Paid Online */}
+                  {selectedOrder.paymentMethod === 'cod' ? (
+                    <div className="border-2 border-foreground p-2 rounded text-center my-2 space-y-0.5">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        CASH TO COLLECT (COD)
+                      </div>
+                      <div className="text-lg font-bold font-mono">
+                        {formatNPR(selectedOrder.total)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border border-emerald-600 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 p-2 rounded text-center my-2 space-y-0.5 font-bold">
+                      <div className="text-[10px] uppercase tracking-wider">
+                        PREPAID ORDER (
+                        {selectedOrder.paymentMethod.toUpperCase()})
+                      </div>
+                      <div className="text-xs">
+                        DO NOT COLLECT CASH FROM CUSTOMER
+                      </div>
+                    </div>
                   )}
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Shipping:</span>
-                    <span className="font-mono">
-                      {formatNPR(selectedOrder.deliveryCharge)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>VAT ({ops.settings.taxRate}%):</span>
-                    <span className="font-mono">
-                      {formatNPR(selectedOrder.tax)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm font-semibold text-foreground border-t border-border pt-1.5">
-                    <span>Grand Total:</span>
-                    <span className="font-mono">
-                      {formatNPR(selectedOrder.total)}
-                    </span>
+
+                  {/* Rider Assignment & Footer */}
+                  <div className="text-center pt-1 text-[10px] text-muted-foreground space-y-1">
+                    <div>
+                      Assigned Rider:{' '}
+                      <strong className="text-foreground">
+                        {ops.riders.find((r) => r.id === selectedOrder.riderId)
+                          ?.name || 'Unassigned'}
+                      </strong>
+                    </div>
+                    <div>Quality & Genuine Warranty Guaranteed</div>
+                    <div>Thank you for choosing Mezmani!</div>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-4 space-y-6 text-xs text-foreground font-sans">
+                {/* Header */}
+                <div className="flex items-start justify-between border-b pb-4 border-border">
+                  <div>
+                    <h2 className="text-base font-bold text-foreground uppercase tracking-tight">
+                      {ops.settings.legalName ||
+                        'MEZMANI LIQUOR & GROCERY PVT. LTD.'}
+                    </h2>
+                    <p className="text-muted-foreground">
+                      {ops.settings.address || 'Traffic Chowk, Butwal, Nepal'}
+                    </p>
+                    <p className="text-muted-foreground font-mono">
+                      PAN / VAT Reg:{' '}
+                      <strong>{ops.settings.pan || '609823415'}</strong>
+                    </p>
+                    <p className="text-muted-foreground">
+                      Contact: {ops.settings.phone || '+977-71-540000'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-semibold text-primary block">
+                      TAX INVOICE
+                    </span>
+                    <div className="font-mono font-bold text-foreground mt-1">
+                      {ops.settings.invoicePrefix || 'MEZ-INV-'}
+                      {selectedOrder.number.replace(/[^0-9]/g, '')}
+                    </div>
+                    <div className="text-muted-foreground font-mono">
+                      Date:{' '}
+                      {new Date(selectedOrder.createdAt).toLocaleDateString()}
+                    </div>
+                    <div className="text-muted-foreground uppercase font-semibold">
+                      Payment: {selectedOrder.paymentMethod}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Billed to */}
+                <div className="grid grid-cols-2 gap-4 bg-muted/30 p-3.5 rounded-lg border border-border">
+                  <div>
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
+                      Billed To Customer:
+                    </span>
+                    <div className="font-semibold text-foreground">
+                      {selectedOrder.customerName}
+                    </div>
+                    <div className="text-muted-foreground font-mono">
+                      {selectedOrder.customerPhone}
+                    </div>
+                    <div className="text-muted-foreground">
+                      {selectedOrder.customerEmail}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
+                      Delivery Destination:
+                    </span>
+                    <div className="font-medium text-foreground">
+                      {selectedOrder.address}
+                    </div>
+                    <div className="text-muted-foreground">
+                      {selectedOrder.city}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Items */}
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">#</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>SKU</TableHead>
+                        <TableHead className="text-right">Rate</TableHead>
+                        <TableHead className="text-center">Qty</TableHead>
+                        <TableHead className="text-right">
+                          Amount (NPR)
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedOrder.items.map((i, idx) => (
+                        <TableRow key={i.id}>
+                          <TableCell className="text-muted-foreground font-mono">
+                            {idx + 1}
+                          </TableCell>
+                          <TableCell className="font-medium text-foreground">
+                            {i.name}
+                          </TableCell>
+                          <TableCell className="font-mono text-muted-foreground">
+                            {i.sku}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatNPR(i.unitPrice)}
+                          </TableCell>
+                          <TableCell className="text-center font-semibold">
+                            {i.qty}
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-semibold text-foreground">
+                            {formatNPR(i.lineTotal)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Totals */}
+                <div className="flex justify-between items-start pt-2">
+                  <div className="max-w-xs space-y-1 text-[11px] text-muted-foreground">
+                    <p>Covered under manufacturer genuine warranty.</p>
+                    <p>Subject to Butwal jurisdiction.</p>
+                  </div>
+
+                  <div className="w-56 space-y-1.5 text-xs text-right">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Subtotal:</span>
+                      <span className="font-mono">
+                        {formatNPR(selectedOrder.subtotal)}
+                      </span>
+                    </div>
+                    {selectedOrder.discount > 0 && (
+                      <div className="flex justify-between text-success">
+                        <span>Discount:</span>
+                        <span className="font-mono">
+                          -{formatNPR(selectedOrder.discount)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Shipping:</span>
+                      <span className="font-mono">
+                        {formatNPR(selectedOrder.deliveryCharge)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>VAT ({ops.settings.taxRate}%):</span>
+                      <span className="font-mono">
+                        {formatNPR(selectedOrder.tax)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm font-semibold text-foreground border-t border-border pt-1.5">
+                      <span>Grand Total:</span>
+                      <span className="font-mono">
+                        {formatNPR(selectedOrder.total)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </DialogContent>
         )}
       </Dialog>

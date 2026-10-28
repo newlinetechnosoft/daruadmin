@@ -307,10 +307,7 @@ export function UsersPanel() {
         </Table>
       </div>
 
-      <CreateStaffDialog
-        open={isCreateOpen}
-        onOpenChange={setIsCreateOpen}
-      />
+      <CreateStaffDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
     </div>
   )
 }

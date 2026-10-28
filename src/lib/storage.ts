@@ -7,8 +7,7 @@ import {
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
-const endpoint =
-  process.env.AWS_ENDPOINT_URL_S3 || process.env.S3_ENDPOINT
+const endpoint = process.env.AWS_ENDPOINT_URL_S3 || process.env.S3_ENDPOINT
 const region =
   process.env.AWS_REGION || process.env.S3_REGION || 'ap-southeast-1'
 const accessKeyId =

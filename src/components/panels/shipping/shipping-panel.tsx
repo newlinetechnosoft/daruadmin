@@ -157,7 +157,7 @@ export function ShippingPanel() {
       <PageHeader
         kicker="Operations"
         title="Delivery zones and shipping rates"
-        description="Configure Kathmandu Valley express dispatch corridors, courier SLA windows, and parcel rate calculations."
+        description="Configure Butwal, Tilottama & Rupandehi express dispatch corridors, courier SLA windows, and parcel rate calculations."
         actions={
           <div className="flex items-center gap-2">
             <Button

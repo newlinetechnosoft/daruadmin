@@ -144,7 +144,8 @@ export async function compressImage(
     ) {
       const dataUrl = canvas.toDataURL(outputFormat, quality)
       const ext = outputFormat === 'image/webp' ? 'webp' : 'jpg'
-      const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name
+      const baseName =
+        file.name.substring(0, file.name.lastIndexOf('.')) || file.name
       const newFileName = `${baseName}.${ext}`
 
       const compressedFile = new File([blob], newFileName, {

@@ -127,7 +127,9 @@ export const postManualJournalVoucherFn = createServerFn({ method: 'POST' })
       throw new Error('Journal entry cannot be zero.')
     }
 
-    const postingDate = data.postingDate ? new Date(data.postingDate) : new Date()
+    const postingDate = data.postingDate
+      ? new Date(data.postingDate)
+      : new Date()
 
     const result = await dbTx.transaction(async (tx) => {
       return postJournalTx(tx, {
@@ -215,7 +217,8 @@ export const recordDealerDisbursementFn = createServerFn({ method: 'POST' })
         paymentReference: data.paymentReference || null,
         paidAt: now,
         paidBy: user.id,
-        notes: data.memo || `Direct dealer disbursement to ${dealerRow[0].name}`,
+        notes:
+          data.memo || `Direct dealer disbursement to ${dealerRow[0].name}`,
         proofUrls: data.proofUrls,
         journalEntryId: posting.journalEntryId,
         createdAt: now,
@@ -285,7 +288,9 @@ export const createDealerSettlementBatchFn = createServerFn({ method: 'POST' })
       )
 
     if (items.length === 0) {
-      throw new Error('No unsettled items found matching the selection for this dealer')
+      throw new Error(
+        'No unsettled items found matching the selection for this dealer',
+      )
     }
 
     // Gross amount = sum of snapshotted dealer unit cost * quantity
@@ -330,7 +335,9 @@ export const createDealerSettlementBatchFn = createServerFn({ method: 'POST' })
         paymentReference: data.paymentReference || null,
         paidAt: now,
         paidBy: user.id,
-        notes: data.memo || `Settled ${items.length} delivered line items for ${dealerRow[0].name}`,
+        notes:
+          data.memo ||
+          `Settled ${items.length} delivered line items for ${dealerRow[0].name}`,
         proofUrls: data.proofUrls,
         journalEntryId: posting.journalEntryId,
         createdAt: now,
@@ -407,7 +414,11 @@ export const recordManagerCashHandoverFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { user } = await requirePermission('accounts', 'create')
 
-    const riderRow = await dbTx.select().from(riders).where(eq(riders.id, data.riderId)).limit(1)
+    const riderRow = await dbTx
+      .select()
+      .from(riders)
+      .where(eq(riders.id, data.riderId))
+      .limit(1)
     if (!riderRow[0]) throw new Error('Rider profile not found')
 
     const amount = Math.round(data.amountInRs * 100) // to paisa

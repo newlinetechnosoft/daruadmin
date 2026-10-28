@@ -108,7 +108,7 @@ export function BatchDealerSettlementDialog({
     getUnsettledDealerItemsFn({ data: { dealerId: selectedDealerId } })
       .then((data) => {
         if (!isMounted) return
-        setItems(data as UnsettledItem[])
+        setItems(data)
         // Select all by default
         setSelectedItemIds(new Set(data.map((d: any) => d.id)))
       })

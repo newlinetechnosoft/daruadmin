@@ -1,24 +1,22 @@
-import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
 import {
-  compressImage,
-  formatFileSize,
-  type CompressedImageResult,
-} from '#/lib/image-compression'
+  useState,
+  useEffect,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+} from 'react'
+import { compressImage, formatFileSize } from '#/lib/image-compression'
+import type { CompressedImageResult } from '#/lib/image-compression'
 import {
   saveDraftImage,
   getDraftImages,
   removeDraftImage,
   clearDraftImages,
-  type DraftImageItem,
 } from '#/lib/idb/image-drafts'
+import type { DraftImageItem } from '#/lib/idb/image-drafts'
 import { createImageUploadFn } from '#/server/catalog/catalog.functions'
 import { Badge } from '#/components/ui/badge'
-import {
-  UploadCloud,
-  Trash2,
-  Star,
-  Loader2,
-} from 'lucide-react'
+import { UploadCloud, Trash2, Star, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export interface ExistingImageItem {
@@ -173,7 +171,10 @@ export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(
     }
 
     // Set primary cover photo
-    const handleSetPrimary = async (type: 'persisted' | 'staged', id: string) => {
+    const handleSetPrimary = async (
+      type: 'persisted' | 'staged',
+      id: string,
+    ) => {
       if (type === 'persisted') {
         setPersistedImages((prev) =>
           prev.map((img) => ({
@@ -315,7 +316,10 @@ export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(
         }
 
         // Ensure at least one image is marked primary if any exist
-        if (finalImages.length > 0 && !finalImages.some((img) => img.isPrimary)) {
+        if (
+          finalImages.length > 0 &&
+          !finalImages.some((img) => img.isPrimary)
+        ) {
           finalImages[0].isPrimary = true
         }
 

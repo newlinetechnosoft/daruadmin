@@ -256,7 +256,8 @@ export function CartSheet() {
             <div className="w-full space-y-3">
               {totalSavingsPaisa > 0 && (
                 <div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 text-center text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  🎉 You are saving {formatNPR(totalSavingsPaisa)} on this order!
+                  🎉 You are saving {formatNPR(totalSavingsPaisa)} on this
+                  order!
                 </div>
               )}
 
@@ -276,7 +277,7 @@ export function CartSheet() {
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span>Kathmandu Valley 40m delivery</span>
+                  <span>Express delivery (Butwal & Tilottama)</span>
                   <span className="font-medium text-foreground font-mono">
                     {remainingForFree === 0 ? (
                       <span className="text-success font-semibold">Free</span>

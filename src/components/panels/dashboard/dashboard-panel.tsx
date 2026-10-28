@@ -11,7 +11,7 @@ import {
   Users,
   Bike,
   Boxes,
-  AlertTriangle,
+  Store,
   Plus,
 } from 'lucide-react'
 import { Button } from '#/components/ui/button'
@@ -54,9 +54,9 @@ export function DashboardPanel() {
       icon: ShoppingCart,
     },
     {
-      label: 'Profit',
+      label: 'Realized Profit',
       value: formatNPR(data.kpis.profit),
-      note: 'After estimated COGS & refunds',
+      note: 'After COGS & dealer payouts',
       icon: TrendingUp,
       tone: 'success' as const,
     },
@@ -67,23 +67,24 @@ export function DashboardPanel() {
       icon: Users,
     },
     {
-      label: 'Riders',
-      value: data.kpis.riders,
-      note: `${data.ridersOnline} currently active`,
+      label: 'Partner Dealers',
+      value: data.kpis.dealers ?? 0,
+      note: `${data.kpis.activeDealers ?? 0} active sourcing hubs`,
+      icon: Store,
+    },
+    {
+      label: 'Active Fleet',
+      value: `${data.ridersOnline} / ${data.kpis.riders}`,
+      note: 'Couriers on duty (Butwal)',
       icon: Bike,
+      tone: data.ridersOnline > 0 ? ('success' as const) : ('default' as const),
     },
     {
-      label: 'Inventory units',
-      value: data.kpis.inventory,
-      note: formatNPR(data.inventoryValue) + ' on hand',
+      label: 'Catalog Items',
+      value:
+        data.catalog.totalLiquorProducts + data.catalog.totalGroceryProducts,
+      note: 'Zero-inventory on demand',
       icon: Boxes,
-    },
-    {
-      label: 'Low stock',
-      value: data.kpis.lowStock,
-      note: `≤ 20 units remaining`,
-      icon: AlertTriangle,
-      tone: data.kpis.lowStock > 0 ? ('danger' as const) : ('default' as const),
     },
   ]
 
@@ -92,7 +93,7 @@ export function DashboardPanel() {
       <PageHeader
         kicker="Overview"
         title="Operations dashboard"
-        description="Live catalog inventory plus order, rider, and ledger activity for the Kathmandu hub."
+        description="Live order dispatch, dealer sourcing, fleet telemetry, and financial overview for the Butwal hub."
         actions={
           <div className="flex items-center gap-2">
             <Select
@@ -103,14 +104,15 @@ export function DashboardPanel() {
                 })
               }
             >
-              <SelectTrigger className="h-8 w-[130px] text-xs">
+              <SelectTrigger className="h-8 w-[145px] text-xs">
                 <SelectValue placeholder="Date range" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-                <SelectItem value="90d">Last 90 days</SelectItem>
-                <SelectItem value="ytd">Year to date</SelectItem>
+                <SelectItem value="today">Today (Daily)</SelectItem>
+                <SelectItem value="7d">Last 7 days (Weekly)</SelectItem>
+                <SelectItem value="30d">Last 30 days (Monthly)</SelectItem>
+                <SelectItem value="90d">Last 90 days (Quarterly)</SelectItem>
+                <SelectItem value="ytd">Year to date (Yearly)</SelectItem>
               </SelectContent>
             </Select>
             <Button asChild size="sm" className="h-8 gap-1.5 text-xs">

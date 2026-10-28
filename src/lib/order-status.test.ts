@@ -15,6 +15,7 @@ type MockOrder = Pick<
   | 'paymentMethod'
   | 'paymentStatus'
   | 'isLegacy'
+  | 'deliveryOtp'
 > & {
   items: Array<{
     id: string
@@ -32,6 +33,7 @@ function createOrder(overrides: Partial<MockOrder> = {}): MockOrder {
     paymentMethod: 'cod',
     paymentStatus: 'pending',
     isLegacy: false,
+    deliveryOtp: '4821',
     items: [
       { id: 'item_1', dealerId: 'dlr_01', catalogType: 'liquor' },
       { id: 'item_2', dealerId: 'dlr_02', catalogType: 'grocery' },
@@ -392,6 +394,51 @@ describe('Order State Machine (Module 1)', () => {
             'Rush hour dispatch authorized by duty manager',
         }),
       ).toEqual({ ok: true, noop: false })
+    })
+  })
+
+  describe('Proof of Delivery & Customer OTP Verification', () => {
+    it('accepts delivery transition when customer OTP matches', () => {
+      const order = createOrder({
+        status: 'out_for_delivery',
+        riderId: 'rider_1',
+        deliveryOtp: '4821',
+      })
+
+      const res = validateOrderTransition(order, 'delivered', riderUser, {
+        ageVerifiedAtDelivery: true,
+        deliveryOtp: '4821',
+      })
+      expect(res).toEqual({ ok: true, noop: false })
+    })
+
+    it('rejects delivery transition when customer OTP does not match', () => {
+      const order = createOrder({
+        status: 'out_for_delivery',
+        riderId: 'rider_1',
+        deliveryOtp: '4821',
+      })
+
+      expect(() =>
+        validateOrderTransition(order, 'delivered', riderUser, {
+          ageVerifiedAtDelivery: true,
+          deliveryOtp: '9999',
+        }),
+      ).toThrow(OrderTransitionError)
+    })
+
+    it('allows delivery transition with photo proof', () => {
+      const order = createOrder({
+        status: 'out_for_delivery',
+        riderId: 'rider_1',
+        deliveryOtp: '4821',
+      })
+
+      const res = validateOrderTransition(order, 'delivered', riderUser, {
+        ageVerifiedAtDelivery: true,
+        proofPhotoUrl: 'https://storage.mezmani.com/delivery-proof/test.jpg',
+      })
+      expect(res).toEqual({ ok: true, noop: false })
     })
   })
 

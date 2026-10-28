@@ -140,7 +140,9 @@ export const journalEntries = pgTable(
     index('journal_entries_ref_idx').on(table.refType, table.refId),
     uniqueIndex('journal_entries_ref_event_uniq_idx')
       .on(table.refType, table.refId, table.event)
-      .where(sql`ref_type IS NOT NULL AND ref_id IS NOT NULL AND event IS NOT NULL`),
+      .where(
+        sql`ref_type IS NOT NULL AND ref_id IS NOT NULL AND event IS NOT NULL`,
+      ),
     check(
       'journal_entries_status_check',
       sql`posting_status IN ('draft', 'submitted', 'cancelled')`,
@@ -199,8 +201,9 @@ export const legacyLedgerArchive = pgTable('legacy_ledger_archive', {
   archivedAt: timestamp('archived_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
-  originalCreatedAt: timestamp('original_created_at', { withTimezone: true })
-    .notNull(),
+  originalCreatedAt: timestamp('original_created_at', {
+    withTimezone: true,
+  }).notNull(),
 })
 
 /**
@@ -265,33 +268,42 @@ export const fiscalYearsRelations = relations(fiscalYears, ({ many }) => ({
   journalEntries: many(journalEntries),
 }))
 
-export const voucherSequencesRelations = relations(voucherSequences, ({ one }) => ({
-  fiscalYear: one(fiscalYears, {
-    fields: [voucherSequences.fiscalYearId],
-    references: [fiscalYears.id],
+export const voucherSequencesRelations = relations(
+  voucherSequences,
+  ({ one }) => ({
+    fiscalYear: one(fiscalYears, {
+      fields: [voucherSequences.fiscalYearId],
+      references: [fiscalYears.id],
+    }),
   }),
-}))
+)
 
-export const ledgerAccountsRelations = relations(ledgerAccounts, ({ one, many }) => ({
-  parent: one(ledgerAccounts, {
-    fields: [ledgerAccounts.parentId],
-    references: [ledgerAccounts.id],
+export const ledgerAccountsRelations = relations(
+  ledgerAccounts,
+  ({ one, many }) => ({
+    parent: one(ledgerAccounts, {
+      fields: [ledgerAccounts.parentId],
+      references: [ledgerAccounts.id],
+    }),
+    children: many(ledgerAccounts),
+    lines: many(journalLines),
   }),
-  children: many(ledgerAccounts),
-  lines: many(journalLines),
-}))
+)
 
-export const journalEntriesRelations = relations(journalEntries, ({ one, many }) => ({
-  fiscalYear: one(fiscalYears, {
-    fields: [journalEntries.fiscalYearId],
-    references: [fiscalYears.id],
+export const journalEntriesRelations = relations(
+  journalEntries,
+  ({ one, many }) => ({
+    fiscalYear: one(fiscalYears, {
+      fields: [journalEntries.fiscalYearId],
+      references: [fiscalYears.id],
+    }),
+    lines: many(journalLines),
+    reversalEntry: one(journalEntries, {
+      fields: [journalEntries.reversalOf],
+      references: [journalEntries.id],
+    }),
   }),
-  lines: many(journalLines),
-  reversalEntry: one(journalEntries, {
-    fields: [journalEntries.reversalOf],
-    references: [journalEntries.id],
-  }),
-}))
+)
 
 export const journalLinesRelations = relations(journalLines, ({ one }) => ({
   entry: one(journalEntries, {
@@ -329,9 +341,12 @@ export const dealerSettlements = pgTable(
     paidBy: text('paid_by'),
     notes: text('notes'),
     proofUrls: jsonb('proof_urls').notNull().default([]),
-    journalEntryId: text('journal_entry_id').references(() => journalEntries.id, {
-      onDelete: 'set null',
-    }),
+    journalEntryId: text('journal_entry_id').references(
+      () => journalEntries.id,
+      {
+        onDelete: 'set null',
+      },
+    ),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),

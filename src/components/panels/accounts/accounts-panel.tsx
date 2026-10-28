@@ -1,14 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   getRouteApi,
   useNavigate,
   useRouter,
   Link,
 } from '@tanstack/react-router'
-import {
-  addLedgerFn,
-  approveSettlementFn,
-} from '#/server/operations/operations.functions'
+import { addLedgerFn } from '#/server/operations/operations.functions'
 import {
   postManualJournalVoucherFn,
   recordDealerDisbursementFn,
@@ -43,6 +40,10 @@ import {
   CheckCircle2,
   FileText,
   ExternalLink,
+  FileSpreadsheet,
+  ArrowRight,
+  X,
+  Calendar,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
@@ -71,6 +72,11 @@ import {
 import { EmptyState } from '#/components/shared/empty-state'
 import { Progress } from '#/components/ui/progress'
 import { BatchDealerSettlementDialog } from './batch-dealer-settlement-dialog'
+import { RiderPayrollRunDialog } from './rider-payroll-run-dialog'
+import { RiderSettlementApprovalDialog } from './rider-settlement-approval-dialog'
+import { VoucherDetailsDialog } from './voucher-details-dialog'
+import { FinancialReportsTab } from './financial-reports-tab'
+import type { DetailedJournalEntry } from '#/server/finance/finance.queries'
 
 const routeApi = getRouteApi('/admin/accounts')
 
@@ -81,6 +87,7 @@ type SubAccountTab =
   | 'sales-account'
   | 'salary-account'
   | 'chart-of-accounts'
+  | 'financial-reports'
 
 export function AccountsPanel() {
   const { ops } = routeApi.useLoaderData()
@@ -93,14 +100,49 @@ export function AccountsPanel() {
   const setActiveTab = (tab: SubAccountTab) => {
     navigate({
       to: '/admin/accounts',
-      search: { tab },
+      search: (prev) => ({ ...prev, tab }),
     })
   }
 
   // General Ledger state
   const [ledgerSearch, setLedgerSearch] = useState('')
-  const [accountFilter, setAccountFilter] = useState('all')
+  const [accountFilter, setAccountFilter] = useState(search.account || 'all')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [glPartyTypeFilter, setGlPartyTypeFilter] = useState(
+    search.partyType || 'all',
+  )
+  const [glPartyIdFilter, setGlPartyIdFilter] = useState(
+    search.partyId || 'all',
+  )
+  const [glVoucherTypeFilter, setGlVoucherTypeFilter] = useState(
+    search.voucherType || 'all',
+  )
+
+  // Double-Entry State
+  const [ledgerSubView, setLedgerSubView] = useState<
+    'vouchers' | 'general-ledger' | 'legacy'
+  >('vouchers')
+  const [expandedVoucherId, setExpandedVoucherId] = useState<string | null>(
+    null,
+  )
+  const [coaCategoryFilter, setCoaCategoryFilter] = useState('all')
+  const [coaSearch, setCoaSearch] = useState('')
+  const [voucherTypeFilter, setVoucherTypeFilter] = useState('all')
+
+  // Voucher Inspector Modal State
+  const [isVoucherDetailsOpen, setIsVoucherDetailsOpen] = useState(false)
+  const [selectedVoucherEntry, setSelectedVoucherEntry] =
+    useState<DetailedJournalEntry | null>(null)
+  const [selectedVoucherSlug, setSelectedVoucherSlug] = useState<string | null>(
+    null,
+  )
+
+  useEffect(() => {
+    if (search.account) {
+      setAccountFilter(search.account)
+      setLedgerSubView('general-ledger')
+    }
+  }, [search.account])
 
   // Transactions state
   const [txSearch, setTxSearch] = useState('')
@@ -126,19 +168,13 @@ export function AccountsPanel() {
     useState(false)
   const [batchDealerId, setBatchDealerId] = useState<string>('')
   const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false)
+  const [isRiderPayrollRunOpen, setIsRiderPayrollRunOpen] = useState(false)
+  const [isRiderApprovalModalOpen, setIsRiderApprovalModalOpen] =
+    useState(false)
+  const [selectedRiderSettlement, setSelectedRiderSettlement] =
+    useState<any>(null)
   const [isStatementModalOpen, setIsStatementModalOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  // Double-Entry State
-  const [ledgerSubView, setLedgerSubView] = useState<
-    'vouchers' | 'general-ledger' | 'legacy'
-  >('vouchers')
-  const [expandedVoucherId, setExpandedVoucherId] = useState<string | null>(
-    null,
-  )
-  const [coaCategoryFilter, setCoaCategoryFilter] = useState('all')
-  const [coaSearch, setCoaSearch] = useState('')
-  const [voucherTypeFilter, setVoucherTypeFilter] = useState('all')
 
   // Double-entry manual voucher form
   const [manualVoucherForm, setManualVoucherForm] = useState({
@@ -230,11 +266,23 @@ export function AccountsPanel() {
   }, [rawJournalEntries, voucherTypeFilter, ledgerSearch])
 
   const filteredGeneralLedger = useMemo(() => {
-    return rawGeneralLedger.filter((row) => {
+    return rawGeneralLedger.filter((row: any) => {
       if (
         accountFilter !== 'all' &&
         row.accountId !== accountFilter &&
         row.accountCode !== accountFilter
+      ) {
+        return false
+      }
+      if (glPartyTypeFilter !== 'all' && row.partyType !== glPartyTypeFilter) {
+        return false
+      }
+      if (glPartyIdFilter !== 'all' && row.partyId !== glPartyIdFilter) {
+        return false
+      }
+      if (
+        glVoucherTypeFilter !== 'all' &&
+        row.voucherType !== glVoucherTypeFilter
       ) {
         return false
       }
@@ -243,12 +291,40 @@ export function AccountsPanel() {
         return (
           row.voucherNo.toLowerCase().includes(q) ||
           row.accountName.toLowerCase().includes(q) ||
+          row.accountCode.toLowerCase().includes(q) ||
+          (row.partyId || '').toLowerCase().includes(q) ||
           (row.narration || '').toLowerCase().includes(q)
         )
       }
       return true
     })
-  }, [rawGeneralLedger, accountFilter, ledgerSearch])
+  }, [
+    rawGeneralLedger,
+    accountFilter,
+    glPartyTypeFilter,
+    glPartyIdFilter,
+    glVoucherTypeFilter,
+    ledgerSearch,
+  ])
+
+  const totalGlDebit = useMemo(() => {
+    return filteredGeneralLedger.reduce(
+      (sum: number, r: any) => sum + r.debit,
+      0,
+    )
+  }, [filteredGeneralLedger])
+
+  const totalGlCredit = useMemo(() => {
+    return filteredGeneralLedger.reduce(
+      (sum: number, r: any) => sum + r.credit,
+      0,
+    )
+  }, [filteredGeneralLedger])
+
+  const netGlClosingBalance = useMemo(() => {
+    if (filteredGeneralLedger.length === 0) return 0
+    return filteredGeneralLedger[filteredGeneralLedger.length - 1].balance
+  }, [filteredGeneralLedger])
 
   const filteredChartOfAccounts = useMemo(() => {
     return rawChartOfAccounts.filter((acc) => {
@@ -735,22 +811,6 @@ export function AccountsPanel() {
     }
   }
 
-  const handleApproveSettlement = async (
-    id: string,
-    status: 'approved' | 'paid',
-  ) => {
-    try {
-      setIsSubmitting(true)
-      await approveSettlementFn({ data: { id, status } })
-      toast.success(`Settlement marked as ${status}`)
-      await router.invalidate()
-    } catch {
-      toast.error('Failed to update settlement')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   const handleExportCSV = () => {
     const headers =
       'ID,Date,Type,Category,Account,AmountNPR,Memo,RefType,RefID\n'
@@ -767,6 +827,131 @@ export function AccountsPanel() {
     a.download = `financial-ledger-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
     toast.success('Ledger exported to CSV')
+  }
+
+  const handleOpenVoucherDetails = (
+    voucherNo: string,
+    slug?: string | null,
+  ) => {
+    const matchedEntry = rawJournalEntries.find(
+      (e: any) => e.voucherNo === voucherNo || e.id === voucherNo,
+    )
+    let publicSlug = slug || null
+    if (!publicSlug) {
+      const ds = (ops.dealerSettlements || []).find(
+        (s: any) => s.voucherNo === voucherNo,
+      )
+      if (ds?.slug) publicSlug = ds.slug
+      const rs = (ops.settlements || []).find(
+        (s: any) => s.voucherNo === voucherNo || s.id === voucherNo,
+      )
+      if (rs?.slug) publicSlug = rs.slug
+    }
+
+    if (matchedEntry) {
+      setSelectedVoucherEntry(matchedEntry)
+      setSelectedVoucherSlug(publicSlug)
+      setIsVoucherDetailsOpen(true)
+    } else {
+      const matchingGlRows = rawGeneralLedger.filter(
+        (r: any) => r.voucherNo === voucherNo,
+      )
+      if (matchingGlRows.length > 0) {
+        const first = matchingGlRows[0]
+        const totalDebit = matchingGlRows.reduce(
+          (s: number, r: any) => s + r.debit,
+          0,
+        )
+        const totalCredit = matchingGlRows.reduce(
+          (s: number, r: any) => s + r.credit,
+          0,
+        )
+        const fallbackEntry: DetailedJournalEntry = {
+          id: first.entryId || voucherNo,
+          voucherNo: first.voucherNo,
+          voucherType: first.voucherType,
+          fiscalYearId: '',
+          postingDate: first.postingDate,
+          bsDate: first.bsDate,
+          dualDate: first.dualDate,
+          narration: first.narration || '',
+          refType: null,
+          refId: null,
+          event: null,
+          postingStatus: 'posted',
+          reversalOf: null,
+          metadata: null,
+          createdBy: 'system',
+          totalDebit,
+          totalCredit,
+          lines: matchingGlRows.map((r: any) => ({
+            id: r.lineId,
+            accountId: r.accountId,
+            accountCode: r.accountCode,
+            accountName: r.accountName,
+            accountRootType: r.accountRootType,
+            debit: r.debit,
+            credit: r.credit,
+            partyType: r.partyType,
+            partyId: r.partyId,
+            costCenter: r.costCenter,
+            narration: r.narration,
+          })),
+        }
+        setSelectedVoucherEntry(fallbackEntry)
+        setSelectedVoucherSlug(publicSlug)
+        setIsVoucherDetailsOpen(true)
+      } else {
+        toast.info(`Voucher ${voucherNo} details not found`)
+      }
+    }
+  }
+
+  const handleDrillDownToLedger = (accountIdOrCode: string) => {
+    setAccountFilter(accountIdOrCode)
+    setLedgerSubView('general-ledger')
+    setActiveTab('ledger')
+    navigate({
+      to: '/admin/accounts',
+      search: (prev) => ({ ...prev, tab: 'ledger', account: accountIdOrCode }),
+    })
+  }
+
+  const handleResetGlFilters = () => {
+    setAccountFilter('all')
+    setGlPartyTypeFilter('all')
+    setGlPartyIdFilter('all')
+    setGlVoucherTypeFilter('all')
+    setLedgerSearch('')
+    navigate({
+      to: '/admin/accounts',
+      search: (prev) => ({
+        ...prev,
+        tab: 'ledger',
+        account: undefined,
+        partyType: undefined,
+        partyId: undefined,
+        voucherType: undefined,
+      }),
+    })
+  }
+
+  const handleExportGeneralLedgerCSV = () => {
+    const headers =
+      'Posting Date BS,Posting Date AD,Voucher No,Voucher Type,Account Code,Account Name,Party Type,Party ID,Narration,Debit (NPR),Credit (NPR),Running Balance (NPR)\n'
+    const rows = filteredGeneralLedger
+      .map(
+        (r: any) =>
+          `"${r.bsDate}","${r.postingDate.slice(0, 10)}","${r.voucherNo}","${r.voucherType}","${r.accountCode}","${r.accountName.replace(/"/g, '""')}","${r.partyType || ''}","${r.partyId || ''}","${(r.narration || '').replace(/"/g, '""')}",${(r.debit / 100).toFixed(2)},${(r.credit / 100).toFixed(2)},${(r.balance / 100).toFixed(2)}`,
+      )
+      .join('\n')
+    const blob = new Blob([headers + rows], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `general-ledger-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    toast.success('General Ledger exported to CSV')
   }
 
   return (
@@ -814,7 +999,7 @@ export function AccountsPanel() {
           value={activeTab}
           onValueChange={(val) => setActiveTab(val as SubAccountTab)}
         >
-          <TabsList className="grid w-full grid-cols-2 h-auto gap-1 bg-muted/60 p-1 md:grid-cols-3 lg:grid-cols-6">
+          <TabsList className="grid w-full grid-cols-2 h-auto gap-1 bg-muted/60 p-1 md:grid-cols-4 lg:grid-cols-7">
             <TabsTrigger
               value="ledger"
               className="flex items-center gap-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-xs"
@@ -889,6 +1074,19 @@ export function AccountsPanel() {
                 <span className="block font-semibold">Chart of Accounts</span>
                 <span className="text-[10px] text-muted-foreground hidden lg:block">
                   Nepal Standard (39)
+                </span>
+              </div>
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="financial-reports"
+              className="flex items-center gap-2 py-2 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-xs"
+            >
+              <FileSpreadsheet className="h-4 w-4 shrink-0 text-emerald-500" />
+              <div className="text-left leading-tight">
+                <span className="block font-semibold">Reports</span>
+                <span className="text-[10px] text-muted-foreground hidden lg:block">
+                  Trial Balance & P&L
                 </span>
               </div>
             </TabsTrigger>
@@ -1058,12 +1256,12 @@ export function AccountsPanel() {
                   </NativeSelect>
                 </div>
               ) : ledgerSubView === 'general-ledger' ? (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <NativeSelect
                     value={accountFilter}
                     onChange={(e) => setAccountFilter(e.target.value)}
                     size="sm"
-                    className="h-8 text-xs font-mono"
+                    className="h-8 text-xs font-mono max-w-[200px]"
                   >
                     <NativeSelectOption value="all">
                       All Chart Accounts ({rawChartOfAccounts.length})
@@ -1072,10 +1270,106 @@ export function AccountsPanel() {
                       .filter((a: any) => !a.isGroup)
                       .map((a: any) => (
                         <NativeSelectOption key={a.id} value={a.id}>
-                          {a.code} - {a.name} ({a.rootType})
+                          {a.code} - {a.name}
                         </NativeSelectOption>
                       ))}
                   </NativeSelect>
+
+                  <NativeSelect
+                    value={glPartyTypeFilter}
+                    onChange={(e) => {
+                      setGlPartyTypeFilter(e.target.value)
+                      setGlPartyIdFilter('all')
+                    }}
+                    size="sm"
+                    className="h-8 text-xs"
+                  >
+                    <NativeSelectOption value="all">
+                      All Parties
+                    </NativeSelectOption>
+                    <NativeSelectOption value="dealer">
+                      Dealers / Suppliers
+                    </NativeSelectOption>
+                    <NativeSelectOption value="rider">
+                      Fleet Couriers
+                    </NativeSelectOption>
+                    <NativeSelectOption value="customer">
+                      Customers
+                    </NativeSelectOption>
+                  </NativeSelect>
+
+                  {glPartyTypeFilter === 'dealer' && (
+                    <NativeSelect
+                      value={glPartyIdFilter}
+                      onChange={(e) => setGlPartyIdFilter(e.target.value)}
+                      size="sm"
+                      className="h-8 text-xs max-w-[150px]"
+                    >
+                      <NativeSelectOption value="all">
+                        All Dealers ({rawDealers.length})
+                      </NativeSelectOption>
+                      {rawDealers.map((d: any) => (
+                        <NativeSelectOption key={d.id} value={d.id}>
+                          {d.name}
+                        </NativeSelectOption>
+                      ))}
+                    </NativeSelect>
+                  )}
+
+                  {glPartyTypeFilter === 'rider' && (
+                    <NativeSelect
+                      value={glPartyIdFilter}
+                      onChange={(e) => setGlPartyIdFilter(e.target.value)}
+                      size="sm"
+                      className="h-8 text-xs max-w-[150px]"
+                    >
+                      <NativeSelectOption value="all">
+                        All Riders ({ops.riders.length})
+                      </NativeSelectOption>
+                      {ops.riders.map((r: any) => (
+                        <NativeSelectOption key={r.id} value={r.id}>
+                          {r.name}
+                        </NativeSelectOption>
+                      ))}
+                    </NativeSelect>
+                  )}
+
+                  <NativeSelect
+                    value={glVoucherTypeFilter}
+                    onChange={(e) => setGlVoucherTypeFilter(e.target.value)}
+                    size="sm"
+                    className="h-8 text-xs font-mono"
+                  >
+                    <NativeSelectOption value="all">
+                      All Vouchers
+                    </NativeSelectOption>
+                    <NativeSelectOption value="SV">
+                      SV - Sales
+                    </NativeSelectOption>
+                    <NativeSelectOption value="RV">
+                      RV - Receipt
+                    </NativeSelectOption>
+                    <NativeSelectOption value="PV">
+                      PV - Payment
+                    </NativeSelectOption>
+                    <NativeSelectOption value="JV">
+                      JV - Journal
+                    </NativeSelectOption>
+                    <NativeSelectOption value="CV">
+                      CV - Contra
+                    </NativeSelectOption>
+                  </NativeSelect>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportGeneralLedgerCSV}
+                    className="h-8 gap-1.5 text-xs"
+                    title="Export filtered General Ledger to CSV"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export CSV
+                  </Button>
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center gap-2">
@@ -1145,6 +1439,91 @@ export function AccountsPanel() {
                 </div>
               )}
             </div>
+
+            {ledgerSubView === 'general-ledger' &&
+              (accountFilter !== 'all' ||
+                glPartyTypeFilter !== 'all' ||
+                glPartyIdFilter !== 'all' ||
+                glVoucherTypeFilter !== 'all' ||
+                ledgerSearch.trim() !== '') && (
+                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50 text-xs">
+                  <span className="text-muted-foreground font-medium">
+                    Active Filters:
+                  </span>
+                  {accountFilter !== 'all' && (
+                    <Badge
+                      variant="secondary"
+                      className="gap-1 text-[11px] font-mono"
+                    >
+                      Account:{' '}
+                      {rawChartOfAccounts.find(
+                        (a: any) =>
+                          a.id === accountFilter || a.code === accountFilter,
+                      )?.code || accountFilter}
+                      <button
+                        type="button"
+                        onClick={() => setAccountFilter('all')}
+                        className="cursor-pointer"
+                      >
+                        <X className="h-3 w-3 hover:text-foreground" />
+                      </button>
+                    </Badge>
+                  )}
+                  {glPartyTypeFilter !== 'all' && (
+                    <Badge
+                      variant="secondary"
+                      className="gap-1 text-[11px] capitalize"
+                    >
+                      Party: {glPartyTypeFilter}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGlPartyTypeFilter('all')
+                          setGlPartyIdFilter('all')
+                        }}
+                        className="cursor-pointer"
+                      >
+                        <X className="h-3 w-3 hover:text-foreground" />
+                      </button>
+                    </Badge>
+                  )}
+                  {glPartyIdFilter !== 'all' && (
+                    <Badge variant="secondary" className="gap-1 text-[11px]">
+                      Party ID: {glPartyIdFilter}
+                      <button
+                        type="button"
+                        onClick={() => setGlPartyIdFilter('all')}
+                        className="cursor-pointer"
+                      >
+                        <X className="h-3 w-3 hover:text-foreground" />
+                      </button>
+                    </Badge>
+                  )}
+                  {glVoucherTypeFilter !== 'all' && (
+                    <Badge
+                      variant="secondary"
+                      className="gap-1 text-[11px] font-mono"
+                    >
+                      Type: {glVoucherTypeFilter}
+                      <button
+                        type="button"
+                        onClick={() => setGlVoucherTypeFilter('all')}
+                        className="cursor-pointer"
+                      >
+                        <X className="h-3 w-3 hover:text-foreground" />
+                      </button>
+                    </Badge>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetGlFilters}
+                    className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                  >
+                    Reset All Filters
+                  </Button>
+                </div>
+              )}
           </div>
 
           {/* Ledger Table Container */}
@@ -1364,52 +1743,80 @@ export function AccountsPanel() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredGeneralLedger.map((row: any) => (
-                      <TableRow key={row.lineId}>
-                        <TableCell>
-                          <span className="text-xs font-medium text-foreground block">
-                            {row.bsDate}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {row.postingDate.slice(0, 10)}
-                          </span>
+                    <>
+                      {filteredGeneralLedger.map((row: any) => (
+                        <TableRow key={row.lineId}>
+                          <TableCell>
+                            <span className="text-xs font-medium text-foreground block">
+                              {row.bsDate}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {row.postingDate.slice(0, 10)}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleOpenVoucherDetails(row.voucherNo)
+                              }
+                              className="font-mono text-xs font-semibold text-primary hover:underline cursor-pointer text-left"
+                              title="Inspect journal voucher and balancing legs"
+                            >
+                              {row.voucherNo}
+                            </button>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-mono text-xs font-bold text-foreground block">
+                              {row.accountCode}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {row.accountName}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs text-foreground font-medium">
+                              {row.narration}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-[11px] text-muted-foreground">
+                              {row.partyType
+                                ? `${row.partyType}: ${row.partyId}`
+                                : row.costCenter || '—'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                            {row.debit > 0 ? formatNPR(row.debit) : '—'}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold">
+                            {row.credit > 0 ? formatNPR(row.credit) : '—'}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-bold tabular-nums">
+                            {formatNPR(row.balance)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+
+                      {/* Summary Table Footer */}
+                      <TableRow className="bg-muted/40 font-bold border-t-2 border-border">
+                        <TableCell
+                          colSpan={5}
+                          className="text-xs uppercase text-foreground"
+                        >
+                          Total Movement ({filteredGeneralLedger.length} lines)
                         </TableCell>
-                        <TableCell>
-                          <span className="font-mono text-xs font-semibold text-foreground">
-                            {row.voucherNo}
-                          </span>
+                        <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400">
+                          {formatNPR(totalGlDebit)}
                         </TableCell>
-                        <TableCell>
-                          <span className="font-mono text-xs font-bold text-foreground block">
-                            {row.accountCode}
-                          </span>
-                          <span className="text-[11px] text-muted-foreground">
-                            {row.accountName}
-                          </span>
+                        <TableCell className="text-right font-mono text-xs text-blue-600 dark:text-blue-400">
+                          {formatNPR(totalGlCredit)}
                         </TableCell>
-                        <TableCell>
-                          <span className="text-xs text-foreground font-medium">
-                            {row.narration}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-[11px] text-muted-foreground">
-                            {row.partyType
-                              ? `${row.partyType}: ${row.partyId}`
-                              : row.costCenter || '—'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs text-destructive">
-                          {row.debit > 0 ? `-${formatNPR(row.debit)}` : '—'}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs text-success">
-                          {row.credit > 0 ? `+${formatNPR(row.credit)}` : '—'}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs font-bold tabular-nums">
-                          {formatNPR(row.balance)}
+                        <TableCell className="text-right font-mono text-xs font-bold text-foreground">
+                          {formatNPR(netGlClosingBalance)}
                         </TableCell>
                       </TableRow>
-                    ))
+                    </>
                   )}
                 </TableBody>
               </Table>
@@ -2543,12 +2950,21 @@ export function AccountsPanel() {
                 Receive Cash Handover
               </Button>
               <Button
+                variant="outline"
                 size="sm"
                 onClick={() => handleOpenSalaryDisbursement()}
                 className="h-8 gap-1.5 text-xs"
               >
                 <Plus className="h-3.5 w-3.5" />
-                Disburse Payroll
+                Manual Entry
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setIsRiderPayrollRunOpen(true)}
+                className="h-8 gap-1.5 text-xs bg-primary"
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                Run Monthly Payroll
               </Button>
             </div>
           </div>
@@ -2757,13 +3173,15 @@ export function AccountsPanel() {
                             {set.status !== 'paid' && (
                               <Button
                                 size="sm"
-                                onClick={() =>
-                                  handleApproveSettlement(set.id, 'paid')
-                                }
+                                onClick={() => {
+                                  setSelectedRiderSettlement(set)
+                                  setIsRiderApprovalModalOpen(true)
+                                }}
                                 disabled={isSubmitting}
-                                className="h-7 px-2 text-xs"
+                                className="h-7 px-2 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                               >
-                                Mark paid
+                                <CheckCircle2 className="h-3 w-3" />
+                                Approve & Pay
                               </Button>
                             )}
                           </div>
@@ -3029,12 +3447,15 @@ export function AccountsPanel() {
                   <TableHead className="text-right text-xs">
                     Net Balance
                   </TableHead>
+                  <TableHead className="text-right text-xs w-[90px]">
+                    Action
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredChartOfAccounts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="p-0">
+                    <TableCell colSpan={8} className="p-0">
                       <EmptyState
                         title="No accounts match filter"
                         description="Try adjusting your search or category filter."
@@ -3052,9 +3473,24 @@ export function AccountsPanel() {
                         className={isGroup ? 'bg-muted/30 font-semibold' : ''}
                       >
                         <TableCell>
-                          <span className="font-mono text-xs font-bold text-foreground">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              !isGroup && handleDrillDownToLedger(acc.id)
+                            }
+                            className={`font-mono text-xs font-bold text-left ${
+                              !isGroup
+                                ? 'text-primary hover:underline cursor-pointer'
+                                : 'text-foreground'
+                            }`}
+                            title={
+                              !isGroup
+                                ? 'Drill down into General Ledger'
+                                : undefined
+                            }
+                          >
                             {acc.code}
-                          </span>
+                          </button>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -3121,6 +3557,20 @@ export function AccountsPanel() {
                             {formatNPR(acc.netBalance)}
                           </span>
                         </TableCell>
+                        <TableCell className="text-right">
+                          {!isGroup && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDrillDownToLedger(acc.id)}
+                              className="h-7 px-2 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10"
+                              title="Drill down into General Ledger"
+                            >
+                              <span>Ledger</span>
+                              <ArrowRight className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     )
                   })
@@ -3129,6 +3579,24 @@ export function AccountsPanel() {
             </Table>
           </div>
         </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* 7. SUB-ACCOUNT: FINANCIAL REPORTS (ERP DESK)         */}
+      {/* ==================================================== */}
+      {activeTab === 'financial-reports' && (
+        <FinancialReportsTab
+          chartOfAccounts={rawChartOfAccounts}
+          onDrillDown={handleDrillDownToLedger}
+          settings={{
+            legalName: ops.settings.legalName,
+            address: ops.settings.address,
+            pan: ops.settings.pan,
+          }}
+          fiscalYearName={
+            rawFiscalYears.find((fy: any) => !fy.isClosed)?.name || '2083/84'
+          }
+        />
       )}
 
       {/* ==================================================== */}
@@ -3708,7 +4176,7 @@ export function AccountsPanel() {
                     'MEZMANI LIQUOR & GROCERY PVT. LTD.'}
                 </h2>
                 <p className="text-muted-foreground">
-                  {ops.settings.address || 'Kathmandu, Nepal'}
+                  {ops.settings.address || 'Traffic Chowk, Butwal, Nepal'}
                 </p>
                 <p className="text-muted-foreground font-mono">
                   PAN/VAT: {ops.settings.pan || '609823415'}
@@ -3786,6 +4254,31 @@ export function AccountsPanel() {
           defaultTdsRate: d.tdsRate ? parseFloat(d.tdsRate) : 0,
         }))}
         initialDealerId={batchDealerId}
+      />
+
+      {/* Rider Monthly Payroll Run Dialog */}
+      <RiderPayrollRunDialog
+        open={isRiderPayrollRunOpen}
+        onOpenChange={setIsRiderPayrollRunOpen}
+        riders={ops.riders}
+      />
+
+      {/* Rider Settlement Double-Entry Approval & Payout Dialog */}
+      <RiderSettlementApprovalDialog
+        open={isRiderApprovalModalOpen}
+        onOpenChange={setIsRiderApprovalModalOpen}
+        settlement={selectedRiderSettlement}
+        onSuccess={(_voucherNo, slug) => {
+          setSelectedVoucherSlug(slug)
+        }}
+      />
+
+      {/* ERPNext Voucher Details Inspector Dialog */}
+      <VoucherDetailsDialog
+        open={isVoucherDetailsOpen}
+        onOpenChange={setIsVoucherDetailsOpen}
+        entry={selectedVoucherEntry}
+        publicSlug={selectedVoucherSlug}
       />
     </div>
   )

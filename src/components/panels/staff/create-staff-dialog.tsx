@@ -53,7 +53,7 @@ export function CreateStaffDialog({
     // Rider specific
     vehicle: 'bike' as 'bike' | 'scooter' | 'car',
     licenseNo: '',
-    zone: 'Kathmandu Central',
+    zone: 'Butwal Core',
     commissionRate: 10,
   }
 
@@ -110,22 +110,27 @@ export function CreateStaffDialog({
         },
       })
 
-      toast.success(
-        `${form.role.toUpperCase()} account created for ${name}!`,
-      )
+      toast.success(`${form.role.toUpperCase()} account created for ${name}!`)
       onOpenChange(false)
       setForm({
         ...initialFormState,
         role: defaultRole,
       })
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: adminQueries.staff().queryKey }),
-        queryClient.invalidateQueries({ queryKey: adminQueries.users().queryKey }),
-        queryClient.invalidateQueries({ queryKey: adminQueries.chrome().queryKey }),
+        queryClient.invalidateQueries({
+          queryKey: adminQueries.staff().queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: adminQueries.users().queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: adminQueries.chrome().queryKey,
+        }),
       ])
       onSuccess?.()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to create staff account'
+      const msg =
+        err instanceof Error ? err.message : 'Failed to create staff account'
       toast.error(msg)
     } finally {
       setIsSubmitting(false)
@@ -328,14 +333,14 @@ export function CreateStaffDialog({
                     size="sm"
                     className="w-full text-xs"
                   >
-                    <NativeSelectOption value="Kathmandu Central">
-                      Kathmandu Central
+                    <NativeSelectOption value="Butwal Core">
+                      Butwal Core
                     </NativeSelectOption>
-                    <NativeSelectOption value="Patan / Lalitpur">
-                      Patan / Lalitpur
+                    <NativeSelectOption value="Tilottama / Manigram">
+                      Tilottama / Manigram
                     </NativeSelectOption>
-                    <NativeSelectOption value="Bhaktapur Core">
-                      Bhaktapur Core
+                    <NativeSelectOption value="Siddharthanagar / Bhairahawa">
+                      Siddharthanagar / Bhairahawa
                     </NativeSelectOption>
                   </NativeSelect>
                 </div>

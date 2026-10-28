@@ -13,8 +13,13 @@ const accountsSearchSchema = z.object({
       'sales-account',
       'salary-account',
       'chart-of-accounts',
+      'financial-reports',
     ])
     .optional(),
+  account: z.string().optional(),
+  voucherType: z.string().optional(),
+  partyType: z.string().optional(),
+  partyId: z.string().optional(),
 })
 
 export const Route = createFileRoute('/admin/accounts')({

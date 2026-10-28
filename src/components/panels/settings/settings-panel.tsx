@@ -99,8 +99,8 @@ export function SettingsPanel() {
     vat: ops.settings?.vat ?? 'NP-VAT-001',
     phone: ops.settings?.phone ?? '+977-9800000000',
     email: ops.settings?.email ?? 'ops@mezmani.com.np',
-    address: ops.settings?.address ?? 'Durbar Marg, Kathmandu',
-    city: ops.settings?.city ?? 'Kathmandu',
+    address: ops.settings?.address ?? 'Traffic Chowk, Butwal',
+    city: ops.settings?.city ?? 'Butwal',
     invoicePrefix: ops.settings?.invoicePrefix ?? 'MZ',
     taxRate: ops.settings?.taxRate ?? 13,
     lowStockThreshold: ops.settings?.lowStockThreshold ?? 20,
@@ -426,7 +426,7 @@ export function SettingsPanel() {
                         onChange={(e) =>
                           setForm({ ...form, city: e.target.value })
                         }
-                        placeholder="Kathmandu"
+                        placeholder="Butwal"
                         required
                       />
                     </div>
@@ -897,7 +897,7 @@ export function SettingsPanel() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm">
-                    Kathmandu Valley Liquor License
+                    Rupandehi Liquor & Beverage License
                   </CardTitle>
                   <CardDescription>
                     Registered under Department of Commerce, Supplies and
@@ -1256,8 +1256,8 @@ export function SettingsPanel() {
                     </h3>
                   </div>
                   <p className="mt-1 max-w-xl text-xs text-muted-foreground">
-                    Re-populates the Neon database with default orders,
-                    Kathmandu Valley dispatch riders, initial general ledger
+                    Re-populates the Neon database with default orders, Butwal &
+                    Tilottama dispatch riders, initial general ledger
                     transactions, and marketing vouchers from the catalog.
                   </p>
                 </div>

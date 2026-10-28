@@ -16,6 +16,8 @@ import {
   Shield,
   Bike,
   Heart,
+  Truck,
+  ShoppingBag,
 } from 'lucide-react'
 import { ThemeToggle } from '#/components/shared/theme-toggle'
 import { Button } from '#/components/ui/button'
@@ -99,6 +101,14 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
               activeProps={{ className: 'text-foreground font-semibold' }}
             >
               Food
+            </Link>
+            <Link
+              to="/track"
+              className="hover:text-foreground transition-colors flex items-center gap-1"
+              activeProps={{ className: 'text-foreground font-semibold' }}
+            >
+              <Truck className="h-3.5 w-3.5 text-primary" />
+              Track Order
             </Link>
             <a
               href="/#reviews"
@@ -194,6 +204,25 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                     </Badge>
                   )}
                 </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/orders" className="cursor-pointer">
+                    <ShoppingBag className="h-3.5 w-3.5 mr-2" />
+                    My Orders
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/track" className="cursor-pointer">
+                    <Truck className="h-3.5 w-3.5 mr-2" />
+                    Track Delivery
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/favorites" className="cursor-pointer">
+                    <Heart className="h-3.5 w-3.5 mr-2" />
+                    Saved Favorites
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {(session.user.role === 'admin' ||
                   session.user.role === 'manager') && (
@@ -316,6 +345,32 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                     className="text-foreground hover:text-primary transition-colors py-1"
                   >
                     Food &amp; Snacks
+                  </Link>
+                  <Link
+                    to="/track"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-foreground hover:text-primary transition-colors py-1 flex items-center gap-2"
+                  >
+                    <Truck className="h-3.5 w-3.5 text-primary" />
+                    Track Live Order
+                  </Link>
+                  {session?.user && (
+                    <Link
+                      to="/orders"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-foreground hover:text-primary transition-colors py-1 flex items-center gap-2"
+                    >
+                      <ShoppingBag className="h-3.5 w-3.5 text-primary" />
+                      My Orders &amp; Receipts
+                    </Link>
+                  )}
+                  <Link
+                    to="/favorites"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-foreground hover:text-primary transition-colors py-1 flex items-center gap-2"
+                  >
+                    <Heart className="h-3.5 w-3.5 text-primary" />
+                    Saved Favorites
                   </Link>
                   <a
                     href="/#reviews"

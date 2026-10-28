@@ -16,6 +16,7 @@ import { Route as DrinksRouteImport } from './routes/drinks'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as GroceryRouteImport } from './routes/grocery'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as RiderRouteRouteImport } from './routes/rider/route'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
@@ -38,11 +39,14 @@ import { Route as AdminStaffRouteImport } from './routes/admin/staff'
 import { Route as AdminTaxonomyRouteImport } from './routes/admin/taxonomy'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiNeonHealthRouteImport } from './routes/api/neon-health'
+import { Route as OffersSlugRouteImport } from './routes/offers.$slug'
 import { Route as OrderConfirmationOrderIdRouteImport } from './routes/order-confirmation.$orderId'
 import { Route as RiderIndexRouteImport } from './routes/rider/index'
 import { Route as RiderDeliveriesRouteImport } from './routes/rider/deliveries'
 import { Route as RiderEarningsRouteImport } from './routes/rider/earnings'
 import { Route as RiderProfileRouteImport } from './routes/rider/profile'
+import { Route as TrackIndexRouteImport } from './routes/track.index'
+import { Route as TrackCodeRouteImport } from './routes/track.$code'
 import { Route as VoucherSlugRouteImport } from './routes/voucher.$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as CheckoutPaymentEsewaFailureRouteImport } from './routes/checkout.payment.esewa.failure'
@@ -81,6 +85,11 @@ const GroceryRoute = GroceryRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersRoute = OrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RiderRouteRoute = RiderRouteRouteImport.update({
@@ -193,6 +202,11 @@ const ApiNeonHealthRoute = ApiNeonHealthRouteImport.update({
   path: '/api/neon-health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OffersSlugRoute = OffersSlugRouteImport.update({
+  id: '/offers/$slug',
+  path: '/offers/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrderConfirmationOrderIdRoute =
   OrderConfirmationOrderIdRouteImport.update({
     id: '/order-confirmation/$orderId',
@@ -218,6 +232,16 @@ const RiderProfileRoute = RiderProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
   getParentRoute: () => RiderRouteRoute,
+} as any)
+const TrackIndexRoute = TrackIndexRouteImport.update({
+  id: '/track/',
+  path: '/track/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrackCodeRoute = TrackCodeRouteImport.update({
+  id: '/track/$code',
+  path: '/track/$code',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const VoucherSlugRoute = VoucherSlugRouteImport.update({
   id: '/voucher/$slug',
@@ -251,6 +275,7 @@ export interface FileRoutesByFullPath {
   '/favorites': typeof FavoritesRoute
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
+  '/orders': typeof OrdersRoute
   '/signup': typeof SignupRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
@@ -271,13 +296,16 @@ export interface FileRoutesByFullPath {
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/neon-health': typeof ApiNeonHealthRoute
+  '/offers/$slug': typeof OffersSlugRoute
   '/order-confirmation/$orderId': typeof OrderConfirmationOrderIdRoute
   '/rider/deliveries': typeof RiderDeliveriesRoute
   '/rider/earnings': typeof RiderEarningsRoute
   '/rider/profile': typeof RiderProfileRoute
+  '/track/$code': typeof TrackCodeRoute
   '/voucher/$slug': typeof VoucherSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/rider/': typeof RiderIndexRoute
+  '/track/': typeof TrackIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
@@ -289,6 +317,7 @@ export interface FileRoutesByTo {
   '/favorites': typeof FavoritesRoute
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
+  '/orders': typeof OrdersRoute
   '/signup': typeof SignupRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
@@ -309,13 +338,16 @@ export interface FileRoutesByTo {
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/neon-health': typeof ApiNeonHealthRoute
+  '/offers/$slug': typeof OffersSlugRoute
   '/order-confirmation/$orderId': typeof OrderConfirmationOrderIdRoute
   '/rider/deliveries': typeof RiderDeliveriesRoute
   '/rider/earnings': typeof RiderEarningsRoute
   '/rider/profile': typeof RiderProfileRoute
+  '/track/$code': typeof TrackCodeRoute
   '/voucher/$slug': typeof VoucherSlugRoute
   '/admin': typeof AdminIndexRoute
   '/rider': typeof RiderIndexRoute
+  '/track': typeof TrackIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
@@ -330,6 +362,7 @@ export interface FileRoutesById {
   '/favorites': typeof FavoritesRoute
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
+  '/orders': typeof OrdersRoute
   '/signup': typeof SignupRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
@@ -350,13 +383,16 @@ export interface FileRoutesById {
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/neon-health': typeof ApiNeonHealthRoute
+  '/offers/$slug': typeof OffersSlugRoute
   '/order-confirmation/$orderId': typeof OrderConfirmationOrderIdRoute
   '/rider/deliveries': typeof RiderDeliveriesRoute
   '/rider/earnings': typeof RiderEarningsRoute
   '/rider/profile': typeof RiderProfileRoute
+  '/track/$code': typeof TrackCodeRoute
   '/voucher/$slug': typeof VoucherSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/rider/': typeof RiderIndexRoute
+  '/track/': typeof TrackIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
@@ -372,6 +408,7 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/grocery'
     | '/login'
+    | '/orders'
     | '/signup'
     | '/admin/accounts'
     | '/admin/brands'
@@ -392,13 +429,16 @@ export interface FileRouteTypes {
     | '/admin/taxonomy'
     | '/admin/users'
     | '/api/neon-health'
+    | '/offers/$slug'
     | '/order-confirmation/$orderId'
     | '/rider/deliveries'
     | '/rider/earnings'
     | '/rider/profile'
+    | '/track/$code'
     | '/voucher/$slug'
     | '/admin/'
     | '/rider/'
+    | '/track/'
     | '/api/auth/$'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
@@ -410,6 +450,7 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/grocery'
     | '/login'
+    | '/orders'
     | '/signup'
     | '/admin/accounts'
     | '/admin/brands'
@@ -430,13 +471,16 @@ export interface FileRouteTypes {
     | '/admin/taxonomy'
     | '/admin/users'
     | '/api/neon-health'
+    | '/offers/$slug'
     | '/order-confirmation/$orderId'
     | '/rider/deliveries'
     | '/rider/earnings'
     | '/rider/profile'
+    | '/track/$code'
     | '/voucher/$slug'
     | '/admin'
     | '/rider'
+    | '/track'
     | '/api/auth/$'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
@@ -450,6 +494,7 @@ export interface FileRouteTypes {
     | '/favorites'
     | '/grocery'
     | '/login'
+    | '/orders'
     | '/signup'
     | '/admin/accounts'
     | '/admin/brands'
@@ -470,13 +515,16 @@ export interface FileRouteTypes {
     | '/admin/taxonomy'
     | '/admin/users'
     | '/api/neon-health'
+    | '/offers/$slug'
     | '/order-confirmation/$orderId'
     | '/rider/deliveries'
     | '/rider/earnings'
     | '/rider/profile'
+    | '/track/$code'
     | '/voucher/$slug'
     | '/admin/'
     | '/rider/'
+    | '/track/'
     | '/api/auth/$'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
@@ -491,10 +539,14 @@ export interface RootRouteChildren {
   FavoritesRoute: typeof FavoritesRoute
   GroceryRoute: typeof GroceryRoute
   LoginRoute: typeof LoginRoute
+  OrdersRoute: typeof OrdersRoute
   SignupRoute: typeof SignupRoute
   ApiNeonHealthRoute: typeof ApiNeonHealthRoute
+  OffersSlugRoute: typeof OffersSlugRoute
   OrderConfirmationOrderIdRoute: typeof OrderConfirmationOrderIdRoute
+  TrackCodeRoute: typeof TrackCodeRoute
   VoucherSlugRoute: typeof VoucherSlugRoute
+  TrackIndexRoute: typeof TrackIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -547,6 +599,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orders': {
+      id: '/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof OrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rider': {
@@ -703,6 +762,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiNeonHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/offers/$slug': {
+      id: '/offers/$slug'
+      path: '/offers/$slug'
+      fullPath: '/offers/$slug'
+      preLoaderRoute: typeof OffersSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/order-confirmation/$orderId': {
       id: '/order-confirmation/$orderId'
       path: '/order-confirmation/$orderId'
@@ -737,6 +803,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/rider/profile'
       preLoaderRoute: typeof RiderProfileRouteImport
       parentRoute: typeof RiderRouteRoute
+    }
+    '/track/': {
+      id: '/track/'
+      path: '/track'
+      fullPath: '/track/'
+      preLoaderRoute: typeof TrackIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/track/$code': {
+      id: '/track/$code'
+      path: '/track/$code'
+      fullPath: '/track/$code'
+      preLoaderRoute: typeof TrackCodeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/voucher/$slug': {
       id: '/voucher/$slug'
@@ -858,10 +938,14 @@ const rootRouteChildren: RootRouteChildren = {
   FavoritesRoute: FavoritesRoute,
   GroceryRoute: GroceryRoute,
   LoginRoute: LoginRoute,
+  OrdersRoute: OrdersRoute,
   SignupRoute: SignupRoute,
   ApiNeonHealthRoute: ApiNeonHealthRoute,
+  OffersSlugRoute: OffersSlugRoute,
   OrderConfirmationOrderIdRoute: OrderConfirmationOrderIdRoute,
+  TrackCodeRoute: TrackCodeRoute,
   VoucherSlugRoute: VoucherSlugRoute,
+  TrackIndexRoute: TrackIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

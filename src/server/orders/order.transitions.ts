@@ -100,6 +100,15 @@ export async function transitionOrderTx(
     updates.paymentStatus = 'paid'
   }
 
+  if (toStatus === 'delivered') {
+    if (options.ageVerifiedAtDelivery) {
+      updates.ageVerifiedAtDelivery = true
+    }
+    if (options.proofPhotoUrl) {
+      updates.deliveryProofPhotoUrl = options.proofPhotoUrl
+    }
+  }
+
   await tx.update(orders).set(updates).where(eq(orders.id, orderId))
 
   // 3. Write enhanced audit status history
@@ -117,6 +126,13 @@ export async function transitionOrderTx(
     cancelled: options.cancellationReason || `Order cancelled by ${user.name}`,
   }
 
+  const auditMetadata = {
+    ...(options.metadata || {}),
+    ...(options.proofPhotoUrl ? { proofPhotoUrl: options.proofPhotoUrl } : {}),
+    ...(options.deliveryOtp ? { deliveryOtpVerified: true } : {}),
+    ...(options.ageVerifiedAtDelivery ? { ageVerified: true } : {}),
+  }
+
   await tx.insert(orderStatusHistory).values({
     id: nid('evt'),
     orderId,
@@ -127,7 +143,7 @@ export async function transitionOrderTx(
     actor: user.name, // legacy column
     actorId: user.id,
     actorRole: user.role,
-    metadata: options.metadata || null,
+    metadata: Object.keys(auditMetadata).length > 0 ? auditMetadata : null,
     createdAt: now,
   })
 

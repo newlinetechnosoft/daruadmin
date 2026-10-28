@@ -21,7 +21,9 @@ export const dealers = pgTable(
     pan: text('pan'),
     vatNumber: text('vat_number'),
     providesVatBill: boolean('provides_vat_bill').notNull().default(false),
-    tdsRate: numeric('tds_rate', { precision: 5, scale: 2 }).notNull().default('0'),
+    tdsRate: numeric('tds_rate', { precision: 5, scale: 2 })
+      .notNull()
+      .default('0'),
     creditLimit: integer('credit_limit').notNull().default(0), // paisa
     paymentTermsDays: integer('payment_terms_days').notNull().default(0),
     openingBalance: integer('opening_balance').notNull().default(0), // paisa

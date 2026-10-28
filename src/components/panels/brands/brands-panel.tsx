@@ -78,7 +78,9 @@ export function BrandsPanel() {
   // Stats calculation
   const totalLiquorCount = liquorBrands.length
   const totalGroceryCount = groceryBrands.length
-  const totalActiveCurrent = currentBrands.filter((b) => b.isActive !== false).length
+  const totalActiveCurrent = currentBrands.filter(
+    (b) => b.isActive !== false,
+  ).length
   const totalProductsLinked = currentBrands.reduce(
     (acc, b) => acc + (b.productCount ?? 0),
     0,
@@ -100,7 +102,8 @@ export function BrandsPanel() {
     try {
       await deleteItemFn({
         data: {
-          catalogType: activeTab === 'liquor' ? 'liquor-brand' : 'grocery-brand',
+          catalogType:
+            activeTab === 'liquor' ? 'liquor-brand' : 'grocery-brand',
           id: deleteTarget.id,
         },
       })
@@ -152,8 +155,12 @@ export function BrandsPanel() {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-3">
-            <div className="text-xl font-bold tracking-tight">{totalLiquorCount}</div>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Distilleries &amp; makers</p>
+            <div className="text-xl font-bold tracking-tight">
+              {totalLiquorCount}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Distilleries &amp; makers
+            </p>
           </CardContent>
         </Card>
 
@@ -165,21 +172,31 @@ export function BrandsPanel() {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-3">
-            <div className="text-xl font-bold tracking-tight">{totalGroceryCount}</div>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Food, snacks &amp; mixers</p>
+            <div className="text-xl font-bold tracking-tight">
+              {totalGroceryCount}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Food, snacks &amp; mixers
+            </p>
           </CardContent>
         </Card>
 
         <Card className="border-border/60 shadow-none">
           <CardHeader className="pb-1 pt-3 px-4">
             <CardTitle className="text-xs font-normal text-muted-foreground flex items-center justify-between">
-              <span>Active in {activeTab === 'liquor' ? 'Liquor' : 'Grocery'}</span>
+              <span>
+                Active in {activeTab === 'liquor' ? 'Liquor' : 'Grocery'}
+              </span>
               <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-3">
-            <div className="text-xl font-bold tracking-tight">{totalActiveCurrent}</div>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Enabled for customers</p>
+            <div className="text-xl font-bold tracking-tight">
+              {totalActiveCurrent}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Enabled for customers
+            </p>
           </CardContent>
         </Card>
 
@@ -191,8 +208,12 @@ export function BrandsPanel() {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-3">
-            <div className="text-xl font-bold tracking-tight">{totalProductsLinked}</div>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Products assigned to {activeTab}</p>
+            <div className="text-xl font-bold tracking-tight">
+              {totalProductsLinked}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Products assigned to {activeTab}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -211,14 +232,20 @@ export function BrandsPanel() {
             <TabsTrigger value="liquor" className="text-xs gap-1.5 px-3">
               <Wine className="h-3.5 w-3.5" />
               Liquor Brands
-              <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0 h-4">
+              <Badge
+                variant="secondary"
+                className="ml-1 text-[10px] px-1 py-0 h-4"
+              >
                 {totalLiquorCount}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="grocery" className="text-xs gap-1.5 px-3">
               <ShoppingBag className="h-3.5 w-3.5" />
               Grocery Brands
-              <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0 h-4">
+              <Badge
+                variant="secondary"
+                className="ml-1 text-[10px] px-1 py-0 h-4"
+              >
                 {totalGroceryCount}
               </Badge>
             </TabsTrigger>

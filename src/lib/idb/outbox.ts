@@ -138,14 +138,17 @@ export async function flushOutboxQueue(): Promise<{
     }
 
     if (failedCount > 0) {
-      toast.error(`Failed to sync ${failedCount} offline action(s). Tap to retry.`, {
-        action: {
-          label: 'Retry',
-          onClick: () => {
-            flushOutboxQueue()
+      toast.error(
+        `Failed to sync ${failedCount} offline action(s). Tap to retry.`,
+        {
+          action: {
+            label: 'Retry',
+            onClick: () => {
+              flushOutboxQueue()
+            },
           },
         },
-      })
+      )
     }
   } finally {
     isFlushing = false

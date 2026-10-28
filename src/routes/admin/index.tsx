@@ -5,7 +5,7 @@ import { DashboardPanel } from '#/components/panels/dashboard'
 import { adminQueries } from '#/queries/admin'
 
 const searchSchema = z.object({
-  range: z.enum(['7d', '30d', '90d', 'ytd', 'custom']).optional(),
+  range: z.enum(['today', '7d', '30d', '90d', 'ytd', 'custom']).optional(),
   from: z.string().optional(),
   to: z.string().optional(),
 })

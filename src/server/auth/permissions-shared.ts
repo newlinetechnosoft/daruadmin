@@ -104,11 +104,11 @@ export function can(
   if (module === 'products') {
     return Boolean(
       grants.liquor?.includes(action) ||
-        grants.grocery?.includes(action) ||
-        grants.categories?.includes(action) ||
-        grants.brands?.includes(action) ||
-        grants.inventory?.includes(action) ||
-        grants.dealers?.includes(action),
+      grants.grocery?.includes(action) ||
+      grants.categories?.includes(action) ||
+      grants.brands?.includes(action) ||
+      grants.inventory?.includes(action) ||
+      grants.dealers?.includes(action),
     )
   }
 

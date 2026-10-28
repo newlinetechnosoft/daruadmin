@@ -32,18 +32,18 @@ Input: items `[{catalogType, variantId, qty}]`, address id/snapshot + lat/lng, 1
 
 | Function                                                                    | Roles          | Purpose                                      | Status |
 | --------------------------------------------------------------------------- | -------------- | -------------------------------------------- | ------ |
-| `placeOrder`                                                                | customer       | Validate, re-price, create order             | ⬜     |
-| `listMyOrders`, `getMyOrder`, `cancelMyOrder`                               | customer       | Own orders                                   | ⬜     |
-| `listOrders`, `getOrder`                                                    | admin, manager | Filtered/paginated list, detail with history | ⬜     |
-| `confirmOrder`, `cancelOrder`                                               | admin, manager | Transitions                                  | ⬜     |
-| `suggestDealers(orderId)`                                                   | admin, manager | Distance-sorted dealers with stock check     | ⬜     |
-| `assignDealer`, `assignRider`                                               | admin, manager | Assign (reserves stock) + notify rider       | ⬜     |
-| `listMyAssignedOrders`, `getMyAssignedOrder`                                | rider          | Own assigned orders                          | ⬜     |
-| `markPickedUp`, `markOutForDelivery`, `markDelivered`, `markDeliveryFailed` | rider          | Delivery status                              | ⬜     |
+| `placeOrder`                                                                | customer       | Validate, re-price, create order             | ✅     |
+| `listMyOrders`, `getMyOrder`, `cancelMyOrder`                               | customer       | Own orders                                   | ✅     |
+| `listOrders`, `getOrder`                                                    | admin, manager | Filtered/paginated list, detail with history | ✅     |
+| `confirmOrder`, `cancelOrder`                                               | admin, manager | Transitions                                  | ✅     |
+| `suggestDealers(orderItemId)`, `autoAssignNearestDealers`                   | admin, manager | Distance-sorted dealers with stock check     | ✅     |
+| `assignDealer`, `assignRider`, `suggestRiders`                              | admin, manager | Assign (dealer sourcing) + proximity courier | ✅     |
+| `listMyAssignedOrders`, `getMyAssignedOrder`                                | rider          | Own assigned orders                          | ✅     |
+| `markPickedUp`, `markOutForDelivery`, `markDelivered`, `markDeliveryFailed` | rider          | Delivery status                              | ✅     |
 
 ## Assumptions to confirm
 
-- Delivery fee: flat, configurable (default). Service-area limits unspecified.
-- Auto-assignment is out of scope (manual only).
+- Delivery fee: flat, configurable (default Rs. 150, free >= Rs. 3,000). Service-area limits: Butwal, Tilottama, Siddharthanagar zones.
+- Nearest-dealer haversine ranking and courier proximity suggestions implemented.
 
-## Status: ⬜ not started
+## Status: 🟨 in progress

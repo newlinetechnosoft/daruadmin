@@ -17,6 +17,7 @@ import {
   ledgerEntries,
   payments,
   notifications,
+  riders,
 } from '#/db/schema'
 import { getSessionUser, logAudit } from '#/server/auth/permissions'
 import {
@@ -24,14 +25,19 @@ import {
   getStoreSettingsQuery,
   getCustomerCouponRedemptionCountQuery,
 } from '#/server/platform/platform.queries'
-import { getOrderByIdQuery } from '#/server/orders/order.queries'
+import {
+  getOrderByIdQuery,
+  getOrderByTrackingCodeQuery,
+  getCustomerOrdersQuery,
+} from '#/server/orders/order.queries'
 import type { PaymentMethod } from '#/server/operations/types'
 import { checkoutFormSchema, validatePromoSchema } from './order.schemas'
 import { fromPaisa } from '#/lib/money'
+import { validateCoupon, calculateOrderTotals } from '#/lib/pricing'
 import {
-  validateCoupon,
-  calculateOrderTotals,
-} from '#/lib/pricing'
+  transitionOrder,
+  transitionOrderTx,
+} from '#/server/orders/order.transitions'
 
 // eSewa configuration defaults (UAT / Test credentials)
 const ESEWA_PRODUCT_CODE = process.env.ESEWA_PRODUCT_CODE || 'EPAYTEST'
@@ -339,6 +345,7 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
 
     const orderId = nid('ord')
     const trackingCode = `TRK${Math.floor(100000 + Math.random() * 900000)}`
+    const deliveryOtp = String(Math.floor(1000 + Math.random() * 9000))
     const now = new Date()
 
     // Execute atomic creation in transaction with dbTx
@@ -353,7 +360,9 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
 
         const locked = lockedCoupons[0]
         if (!locked || locked.used >= locked.usageLimit) {
-          throw new Error('This promo code has just reached its total usage limit.')
+          throw new Error(
+            'This promo code has just reached its total usage limit.',
+          )
         }
 
         await tx
@@ -398,9 +407,16 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         tax: totals.vatPaisa, // 13% Nepal VAT component computed by pricing engine
         total: totals.totalPaisa,
         riderId: null,
-        dealerId: null,
         trackingCode,
-        notes: '',
+        deliveryOtp,
+        notes: [
+          data.deliverySlot && data.deliverySlot !== 'express'
+            ? `[Slot: ${data.deliverySlot === 'evening' ? 'Evening 6PM-8PM' : 'Late Night 8PM-10PM'}]`
+            : null,
+          data.deliveryNotes?.trim() || null,
+        ]
+          .filter(Boolean)
+          .join(' — '),
         couponCode: appliedCoupon ? appliedCoupon.code : null,
         idempotencyKey: data.idempotencyKey || null,
       })
@@ -611,14 +627,6 @@ export const verifyEsewaPaymentFn = createServerFn({ method: 'POST' })
         .set({ paymentStatus: 'paid' })
         .where(eq(orders.id, order.id))
 
-      await tx.insert(orderStatusHistory).values({
-        id: nid('ev'),
-        orderId: order.id,
-        status: order.status,
-        note: 'Payment verified successfully via eSewa ePay v2',
-        actor: 'eSewa Gateway',
-      })
-
       await tx.insert(payments).values({
         id: nid('pay'),
         orderId: order.id,
@@ -628,6 +636,29 @@ export const verifyEsewaPaymentFn = createServerFn({ method: 'POST' })
         reference: String(esewaData.transaction_code || `ESEWA_${order.id}`),
         metadata: esewaData,
       })
+
+      if (order.status === 'pending') {
+        await transitionOrderTx(tx, {
+          orderId: order.id,
+          toStatus: 'confirmed',
+          user: {
+            id: 'sys_gateway',
+            role: 'system',
+            name: 'eSewa Gateway',
+          },
+          options: {
+            note: 'Payment verified successfully via eSewa ePay v2. Order auto-confirmed.',
+          },
+        })
+      } else {
+        await tx.insert(orderStatusHistory).values({
+          id: nid('ev'),
+          orderId: order.id,
+          status: order.status,
+          note: 'Payment verified successfully via eSewa ePay v2',
+          actor: 'eSewa Gateway',
+        })
+      }
     })
 
     await logAudit(
@@ -643,3 +674,137 @@ export const verifyEsewaPaymentFn = createServerFn({ method: 'POST' })
       orderNumber: order.number,
     }
   })
+
+// -------------------------------------------------------------
+// 5. CANCEL CUSTOMER ORDER FUNCTION
+// -------------------------------------------------------------
+
+export const cancelCustomerOrderFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        orderId: z.string(),
+        reason: z
+          .string()
+          .min(1, 'Please select or enter a cancellation reason'),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const sessionUser = await getSessionUser()
+    const result = await transitionOrder({
+      orderId: data.orderId,
+      toStatus: 'cancelled',
+      user: {
+        id: sessionUser.id,
+        name: sessionUser.name,
+        role: sessionUser.role as any,
+      },
+      options: {
+        cancellationReason: data.reason,
+        note: `Cancelled by customer: ${data.reason}`,
+      },
+    })
+
+    return {
+      success: true,
+      order: result.order,
+    }
+  })
+
+// -------------------------------------------------------------
+// 6. PUBLIC ORDER TRACKING FUNCTION (NO LOGIN REQUIRED)
+// -------------------------------------------------------------
+
+export const trackPublicOrderFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) => z.object({ code: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const order = await getOrderByTrackingCodeQuery(data.code)
+    if (!order) {
+      throw new Error('Order not found with this tracking reference or code')
+    }
+
+    // Mask phone for public privacy
+    const maskedPhone =
+      order.customerPhone.length > 5
+        ? `${order.customerPhone.slice(0, 3)}••••${order.customerPhone.slice(-3)}`
+        : order.customerPhone
+
+    // Optional courier telemetry details if rider assigned
+    let publicRider: {
+      name: string
+      phone: string
+      vehicle: string | null
+      rating: number | null
+    } | null = null
+
+    if (order.riderId) {
+      const riderRows = await db
+        .select({
+          name: riders.name,
+          phone: riders.phone,
+          vehicle: riders.vehicle,
+          rating: riders.rating,
+        })
+        .from(riders)
+        .where(eq(riders.id, order.riderId))
+        .limit(1)
+
+      if (riderRows[0]) {
+        publicRider = {
+          name: riderRows[0].name,
+          phone: riderRows[0].phone,
+          vehicle: riderRows[0].vehicle ?? null,
+          rating: riderRows[0].rating ? Number(riderRows[0].rating) : null,
+        }
+      }
+    }
+
+    return {
+      id: order.id,
+      number: order.number,
+      trackingCode: order.trackingCode,
+      status: order.status,
+      paymentMethod: order.paymentMethod,
+      paymentStatus: order.paymentStatus,
+      customerName: order.customerName,
+      customerPhone: maskedPhone,
+      address: order.address,
+      city: order.city,
+      lat: order.lat,
+      lng: order.lng,
+      subtotal: order.subtotal,
+      deliveryCharge: order.deliveryCharge,
+      discount: order.discount,
+      couponCode: order.couponCode,
+      tax: order.tax,
+      total: order.total,
+      cancellationReason: order.cancellationReason,
+      deliveryOtp: order.deliveryOtp,
+      deliveryProofPhotoUrl: order.deliveryProofPhotoUrl,
+      createdAt: order.createdAt,
+      items: order.items.map((it) => ({
+        id: it.id,
+        name: it.name,
+        variantName: it.variantName,
+        sku: it.sku,
+        qty: it.qty,
+        unitPrice: it.unitPrice,
+        lineTotal: it.lineTotal,
+      })),
+      events: order.events,
+      rider: publicRider,
+    }
+  })
+
+// -------------------------------------------------------------
+// 7. GET AUTHENTICATED CUSTOMER ORDERS (ORDER HISTORY)
+// -------------------------------------------------------------
+
+export const getCustomerOrdersFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const sessionUser = await getSessionUser()
+    const customerOrders = await getCustomerOrdersQuery(sessionUser.id)
+    return customerOrders
+  },
+)

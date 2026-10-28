@@ -134,4 +134,114 @@ describe('Order Totals Calculation', () => {
     expect(totals.totalPaisa).toBe(285000) // Rs. 2700 + Rs. 150 = Rs. 2850
     expect(totals.vatPaisa).toBe(vatFromInclusive(270000, 13))
   })
+
+  it('evaluates BOGO and percent offers correctly on matching items', () => {
+    const items = [
+      {
+        catalogType: 'liquor' as const,
+        productId: 'prod_beer',
+        variantId: 'var_beer_can',
+        categoryId: 'cat_beer',
+        brandId: 'brand_tuborg',
+        name: 'Tuborg Gold Beer Can',
+        variantName: '500ml',
+        sku: 'TUB-500',
+        qty: 4,
+        unitPrice: 35000, // Rs 350 each, total 140,000 (Rs. 1,400)
+      },
+      {
+        catalogType: 'grocery' as const,
+        productId: 'prod_chips',
+        variantId: 'var_chips',
+        categoryId: 'cat_snacks',
+        brandId: 'brand_lays',
+        name: 'Lays Magic Masala',
+        variantName: '50g',
+        sku: 'LAYS-50',
+        qty: 2,
+        unitPrice: 5000, // Rs 50 each, total 10,000 (Rs. 100)
+      },
+    ]
+
+    // Offer 1: BOGO on Beer (buy 2 get 1 free -> for 4 cans, 2 are free = 70,000 paisa discount)
+    const bogoOffer = {
+      id: 'ofr_bogo_beer',
+      title: 'Buy 1 Get 1 Beer',
+      slug: 'bogo-beer',
+      type: 'bogo' as const,
+      scope: 'category' as const,
+      scopeId: 'cat_beer',
+      discountValue: 0,
+      minOrderAmount: 0,
+      priority: 10,
+      stackable: true,
+      active: true,
+    }
+
+    // Offer 2: 20% off Snacks
+    const snacksOffer = {
+      id: 'ofr_snacks_20',
+      title: '20% off Snacks',
+      slug: 'snacks-20',
+      type: 'percent' as const,
+      scope: 'category' as const,
+      scopeId: 'cat_snacks',
+      discountValue: 20, // 20% of 10,000 = 2,000 paisa
+      minOrderAmount: 0,
+      priority: 5,
+      stackable: true,
+      active: true,
+    }
+
+    const totals = calculateOrderTotals({
+      items,
+      offers: [bogoOffer, snacksOffer],
+    })
+
+    // Subtotal: 140,000 + 10,000 = 150,000 paisa
+    expect(totals.subtotalPaisa).toBe(150000)
+    // Offer discount: 70,000 (beer BOGO) + 2,000 (snacks 20%) = 72,000 paisa
+    expect(totals.offerDiscountPaisa).toBe(72000)
+    expect(totals.discountPaisa).toBe(72000)
+    expect(totals.discountedSubtotalPaisa).toBe(78000)
+    expect(totals.appliedOffers.length).toBe(2)
+  })
+
+  it('applies free delivery offer to order regardless of merchandise threshold', () => {
+    const items = [
+      {
+        catalogType: 'liquor' as const,
+        productId: 'prod_wine',
+        variantId: 'var_wine',
+        name: 'Divine Wine',
+        variantName: '750ml',
+        sku: 'WINE-750',
+        qty: 1,
+        unitPrice: 85000, // Rs. 850 (< Rs. 3,000)
+      },
+    ]
+
+    const freeDeliveryOffer = {
+      id: 'ofr_free_del',
+      title: 'Free Delivery Special',
+      slug: 'free-del-special',
+      type: 'free_delivery' as const,
+      scope: 'all' as const,
+      discountValue: 0,
+      minOrderAmount: 50000, // min Rs. 500
+      priority: 1,
+      stackable: true,
+      active: true,
+    }
+
+    const totals = calculateOrderTotals({
+      items,
+      offers: [freeDeliveryOffer],
+    })
+
+    expect(totals.subtotalPaisa).toBe(85000)
+    expect(totals.freeDeliveryGranted).toBe(true)
+    expect(totals.deliveryChargePaisa).toBe(0)
+    expect(totals.totalPaisa).toBe(85000)
+  })
 })

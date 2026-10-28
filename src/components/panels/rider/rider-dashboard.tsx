@@ -41,6 +41,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { RiderDealerPickups } from './rider-dealer-pickups'
+import { DeliveryProofDialog } from './delivery-proof-dialog'
 
 type RiderPortalData = Awaited<ReturnType<typeof getRiderPortalFn>>
 
@@ -74,6 +75,7 @@ export function RiderDashboard({
   // Track in-flight actions per order to prevent clobbering and double-taps
   const [pendingOrderIds, setPendingOrderIds] = useState<Set<string>>(new Set())
   const [isTogglingAvail, setIsTogglingAvail] = useState(false)
+  const [deliveringOrder, setDeliveringOrder] = useState<any | null>(null)
 
   // Map pending offline outbox delivery actions by orderId
   const pendingDeliveryActionsMap = useMemo(() => {
@@ -102,7 +104,9 @@ export function RiderDashboard({
   // Derive active and completed orders from the current cache
   const activeOrders = useMemo(() => {
     return orders.filter((o) =>
-      ['assigned', 'out_for_delivery'].includes(o.status),
+      ['assigned', 'rider_assigned', 'picked_up', 'out_for_delivery'].includes(
+        o.status,
+      ),
     )
   }, [orders])
 
@@ -397,6 +401,59 @@ export function RiderDashboard({
     }
   }
 
+  const handleConfirmDelivery = async ({
+    orderId,
+    ageVerifiedAtDelivery,
+    deliveryOtp,
+    proofPhotoUrl,
+    notes,
+  }: {
+    orderId: string
+    ageVerifiedAtDelivery: boolean
+    deliveryOtp?: string
+    proofPhotoUrl?: string
+    notes?: string
+  }) => {
+    try {
+      setPendingOrderIds((prev) => new Set(prev).add(orderId))
+
+      if (!isOnline) {
+        await queueOutboxAction('delivery_status', {
+          orderId,
+          status: 'delivered',
+        })
+        toast.info("Saved on this device. Will sync when you're online.")
+        return
+      }
+
+      await updateRiderDeliveryStatusFn({
+        data: {
+          orderId,
+          status: 'delivered',
+          ageVerifiedAtDelivery,
+          deliveryOtp,
+          proofPhotoUrl,
+          notes,
+        },
+      })
+      toast.success('Delivery completed with proof! Cash & earnings updated.')
+      await queryClient.invalidateQueries({
+        queryKey: riderQueries.portal().queryKey,
+      })
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to complete delivery',
+      )
+      throw err
+    } finally {
+      setPendingOrderIds((prev) => {
+        const next = new Set(prev)
+        next.delete(orderId)
+        return next
+      })
+    }
+  }
+
   return (
     <div className="space-y-6 pb-12 transition-colors duration-200">
       {/* Connectivity Status Banners */}
@@ -513,6 +570,29 @@ export function RiderDashboard({
                 </span>{' '}
                 ({rider.licenseNo})
               </p>
+
+              <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                {portalData.activeShift ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    <Clock className="h-3 w-3" />
+                    <span>
+                      Shift active since{' '}
+                      {new Date(
+                        portalData.activeShift.startedAt,
+                      ).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </span>
+                ) : null}
+                {portalData.attendanceStats ? (
+                  <span className="text-[11px] text-muted-foreground font-mono">
+                    {portalData.attendanceStats.totalHours}h logged (
+                    {portalData.attendanceStats.totalShifts} shifts)
+                  </span>
+                ) : null}
+              </div>
             </div>
           </div>
 
@@ -711,12 +791,23 @@ export function RiderDashboard({
                   pendingSync={pendingSync}
                   isUpdating={isUpdating}
                   onUpdateStatus={handleUpdateStatus}
+                  onOpenDeliveryProof={setDeliveringOrder}
                 />
               )
             })}
           </div>
         )}
       </div>
+
+      <DeliveryProofDialog
+        order={deliveringOrder}
+        isOpen={Boolean(deliveringOrder)}
+        onClose={() => setDeliveringOrder(null)}
+        onConfirmDelivery={handleConfirmDelivery}
+        isSubmitting={Boolean(
+          deliveringOrder && pendingOrderIds.has(deliveringOrder.id),
+        )}
+      />
     </div>
   )
 }
@@ -737,6 +828,7 @@ interface OrderDeliveryCardProps {
     orderId: string,
     targetStatus: 'out_for_delivery' | 'delivered',
   ) => Promise<void>
+  onOpenDeliveryProof?: (order: Order) => void
 }
 
 function OrderDeliveryCard({
@@ -744,6 +836,7 @@ function OrderDeliveryCard({
   pendingSync,
   isUpdating,
   onUpdateStatus,
+  onOpenDeliveryProof,
 }: OrderDeliveryCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -1016,7 +1109,11 @@ function OrderDeliveryCard({
               <Button
                 size="sm"
                 onClick={() => {
-                  void onUpdateStatus(order.id, 'delivered')
+                  if (onOpenDeliveryProof) {
+                    onOpenDeliveryProof(order)
+                  } else {
+                    void onUpdateStatus(order.id, 'delivered')
+                  }
                 }}
                 disabled={isUpdating}
                 className="w-full h-11 min-h-[44px] text-xs font-semibold bg-success hover:bg-success/90 text-success-foreground shadow-sm transition-all"

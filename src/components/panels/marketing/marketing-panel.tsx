@@ -42,6 +42,9 @@ import {
   Trash2,
   Check,
   XCircle,
+  History,
+  Download,
+  Search,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -51,9 +54,10 @@ export function MarketingPanel() {
   const { ops } = routeApi.useLoaderData()
   const router = useRouter()
 
-  const [activeTab, setActiveTab] = useState<'coupons' | 'banners' | 'reviews'>(
-    'coupons',
-  )
+  const [activeTab, setActiveTab] = useState<
+    'coupons' | 'banners' | 'reviews' | 'redemptions'
+  >('coupons')
+  const [redemptionSearch, setRedemptionSearch] = useState('')
   const [isAddCouponOpen, setIsAddCouponOpen] = useState(false)
   const [isAddBannerOpen, setIsAddBannerOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -201,6 +205,62 @@ export function MarketingPanel() {
     }
   }
 
+  const redemptions = ops.couponRedemptions ?? []
+
+  const filteredRedemptions = redemptions.filter((r) => {
+    if (!redemptionSearch.trim()) return true
+    const q = redemptionSearch.toLowerCase()
+    return (
+      r.customerName.toLowerCase().includes(q) ||
+      r.customerEmail.toLowerCase().includes(q) ||
+      r.customerPhone.toLowerCase().includes(q) ||
+      r.couponCode.toLowerCase().includes(q)
+    )
+  })
+
+  const exportRedemptionsCSV = () => {
+    if (filteredRedemptions.length === 0) {
+      toast.info('No redemption data to export')
+      return
+    }
+
+    const headers = [
+      'Customer Name',
+      'Email',
+      'Phone',
+      'Coupon Code',
+      'Order Total (NPR)',
+      'Discount (NPR)',
+      'Date (AD)',
+    ]
+
+    const rows = filteredRedemptions.map((r) => [
+      `"${r.customerName.replace(/"/g, '""')}"`,
+      `"${r.customerEmail.replace(/"/g, '""')}"`,
+      `"${r.customerPhone.replace(/"/g, '""')}"`,
+      `"${r.couponCode.replace(/"/g, '""')}"`,
+      (r.orderTotal / 100).toFixed(2),
+      (r.discountAmount / 100).toFixed(2),
+      `"${new Date(r.createdAt).toISOString()}"`,
+    ])
+
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n')
+
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement('a')
+    link.setAttribute('href', encodedUri)
+    link.setAttribute(
+      'download',
+      `promo_redemptions_${new Date().toISOString().slice(0, 10)}.csv`,
+    )
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    toast.success('Promo redemptions CSV downloaded')
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -218,17 +278,33 @@ export function MarketingPanel() {
               <Plus className="h-4 w-4" />
               Add Banner
             </Button>
+          ) : activeTab === 'redemptions' ? (
+            <Button
+              variant="outline"
+              onClick={exportRedemptionsCSV}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
           ) : null
         }
       />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           label="Active Coupons"
           value={ops.coupons.filter((c) => c.active).length}
           note="Promotional voucher codes"
           icon={Tag}
+        />
+        <KpiCard
+          label="Promo Redemptions"
+          value={redemptions.length}
+          note="Customer orders with discounts"
+          icon={History}
+          tone="default"
         />
         <KpiCard
           label="Hero Campaign Sliders"
@@ -249,7 +325,7 @@ export function MarketingPanel() {
       <Tabs
         value={activeTab}
         onValueChange={(val) =>
-          setActiveTab(val as 'coupons' | 'banners' | 'reviews')
+          setActiveTab(val as 'coupons' | 'banners' | 'reviews' | 'redemptions')
         }
         className="w-full space-y-4"
       >
@@ -257,6 +333,10 @@ export function MarketingPanel() {
           <TabsTrigger value="coupons" className="gap-2">
             <Tag className="h-3.5 w-3.5" />
             <span>Discount Coupons ({ops.coupons.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="redemptions" className="gap-2">
+            <History className="h-3.5 w-3.5" />
+            <span>Usage History ({redemptions.length})</span>
           </TabsTrigger>
           <TabsTrigger value="banners" className="gap-2">
             <Megaphone className="h-3.5 w-3.5" />
@@ -375,6 +455,98 @@ export function MarketingPanel() {
                         </TableRow>
                       )
                     })
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="redemptions" className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by customer, phone, code..."
+                value={redemptionSearch}
+                onChange={(e) => setRedemptionSearch(e.target.value)}
+                className="pl-8 text-xs"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1.5"
+              onClick={exportRedemptionsCSV}
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </Button>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Promo Code</TableHead>
+                    <TableHead>Order Total</TableHead>
+                    <TableHead>Discount</TableHead>
+                    <TableHead>Redeemed At</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRedemptions.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="text-center py-8 text-xs text-muted-foreground"
+                      >
+                        {redemptionSearch
+                          ? 'No redemptions matching search query.'
+                          : 'No promo codes redeemed yet.'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredRedemptions.map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell>
+                          <div className="font-semibold text-foreground text-xs">
+                            {r.customerName}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs font-mono">
+                            {r.customerPhone}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {r.customerEmail}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className="font-mono font-bold text-xs uppercase"
+                          >
+                            {r.couponCode}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs font-medium">
+                          {formatNPR(r.orderTotal)}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                          -{formatNPR(r.discountAmount)}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {new Date(r.createdAt).toLocaleString('en-US', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          })}
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
                 </TableBody>
               </Table>

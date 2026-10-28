@@ -11,6 +11,9 @@ import {
   reviews,
   shippingZones,
   couponRedemptions,
+  offers,
+  customerAddresses,
+  orders,
 } from '#/db/schema'
 import { desc, eq, count, and } from 'drizzle-orm'
 import type {
@@ -20,7 +23,9 @@ import type {
   Complaint,
   Coupon,
   CouponRedemption,
+  CustomerAddress,
   NotificationItem,
+  Offer,
   PermissionMap,
   ModuleKey,
   ActionKey,
@@ -37,8 +42,8 @@ export function defaultStoreSettings(): StoreSettings {
     vat: 'NP-VAT-001',
     phone: '+977-9800000000',
     email: 'ops@mezmani.com.np',
-    address: 'Durbar Marg, Kathmandu',
-    city: 'Kathmandu',
+    address: 'Traffic Chowk, Butwal',
+    city: 'Butwal',
     invoicePrefix: 'MZ',
     taxRate: 13,
     lowStockThreshold: 20,
@@ -336,19 +341,71 @@ export async function getCustomerCouponRedemptionCountQuery(
 
 export async function getAllComplaintsQuery(): Promise<Complaint[]> {
   const rows = await db
-    .select()
+    .select({
+      complaint: complaints,
+      orderNumber: orders.number,
+    })
     .from(complaints)
+    .leftJoin(orders, eq(complaints.orderId, orders.id))
     .orderBy(desc(complaints.createdAt))
-  return rows.map((c) => ({
+
+  return rows.map(({ complaint: c, orderNumber }) => ({
     id: c.id,
     customerId: c.customerId,
     customerName: c.customerName,
     orderId: c.orderId,
+    orderNumber: orderNumber ?? null,
     subject: c.subject,
     body: c.body,
     status: c.status as 'open' | 'in_progress' | 'resolved',
     createdAt: c.createdAt.toISOString(),
   }))
+}
+
+export async function getCustomerComplaintsQuery(
+  customerId: string,
+): Promise<Complaint[]> {
+  const rows = await db
+    .select({
+      complaint: complaints,
+      orderNumber: orders.number,
+    })
+    .from(complaints)
+    .leftJoin(orders, eq(complaints.orderId, orders.id))
+    .where(eq(complaints.customerId, customerId))
+    .orderBy(desc(complaints.createdAt))
+
+  return rows.map(({ complaint: c, orderNumber }) => ({
+    id: c.id,
+    customerId: c.customerId,
+    customerName: c.customerName,
+    orderId: c.orderId,
+    orderNumber: orderNumber ?? null,
+    subject: c.subject,
+    body: c.body,
+    status: c.status as 'open' | 'in_progress' | 'resolved',
+    createdAt: c.createdAt.toISOString(),
+  }))
+}
+
+export async function createComplaintQuery(data: {
+  customerId: string
+  customerName: string
+  orderId?: string | null
+  subject: string
+  body: string
+}): Promise<string> {
+  const id = `cmp_${crypto.randomUUID().slice(0, 12)}`
+  await db.insert(complaints).values({
+    id,
+    customerId: data.customerId,
+    customerName: data.customerName,
+    orderId: data.orderId || null,
+    subject: data.subject,
+    body: data.body,
+    status: 'open',
+  })
+  return id
 }
 
 export async function updateComplaintStatusQuery(
@@ -490,4 +547,222 @@ export async function upsertShippingZoneQuery(z: Zone) {
         courier: z.courier,
       },
     })
+}
+
+// -------------------------------------------------------------
+// OFFERS & PROMOTIONS (A3 & B10)
+// -------------------------------------------------------------
+
+function mapOfferRecord(o: typeof offers.$inferSelect): Offer {
+  return {
+    id: o.id,
+    title: o.title,
+    slug: o.slug,
+    type: o.type as any,
+    scope: o.scope as any,
+    scopeId: o.scopeId,
+    discountValue: o.discountValue,
+    minOrderAmount: o.minOrderAmount,
+    bannerUrl: o.bannerUrl,
+    heading: o.heading,
+    description: o.description,
+    priority: o.priority,
+    stackable: o.stackable,
+    active: o.active,
+    startsAt: o.startsAt ? o.startsAt.toISOString() : null,
+    expiresAt: o.expiresAt ? o.expiresAt.toISOString() : null,
+    createdAt: o.createdAt.toISOString(),
+    updatedAt: o.updatedAt.toISOString(),
+  }
+}
+
+export async function getAllOffersQuery(onlyActive = false): Promise<Offer[]> {
+  const rows = onlyActive
+    ? await db
+        .select()
+        .from(offers)
+        .where(eq(offers.active, true))
+        .orderBy(desc(offers.priority), desc(offers.createdAt))
+    : await db
+        .select()
+        .from(offers)
+        .orderBy(desc(offers.priority), desc(offers.createdAt))
+
+  return rows.map(mapOfferRecord)
+}
+
+export async function getOfferBySlugQuery(slug: string): Promise<Offer | null> {
+  const rows = await db
+    .select()
+    .from(offers)
+    .where(eq(offers.slug, slug))
+    .limit(1)
+
+  return rows[0] ? mapOfferRecord(rows[0]) : null
+}
+
+export async function upsertOfferQuery(data: {
+  id?: string
+  title: string
+  slug: string
+  type?: 'bogo' | 'percent' | 'fixed' | 'free_delivery' | 'bundle'
+  scope?: 'all' | 'category' | 'brand' | 'product' | 'variant'
+  scopeId?: string | null
+  discountValue?: number
+  minOrderAmount?: number
+  bannerUrl?: string | null
+  heading?: string | null
+  description?: string | null
+  priority?: number
+  stackable?: boolean
+  active?: boolean
+  startsAt?: Date | null
+  expiresAt?: Date | null
+}) {
+  const id = data.id || `ofr_${crypto.randomUUID().slice(0, 8)}`
+  const values = {
+    id,
+    title: data.title,
+    slug: data.slug,
+    type: data.type || 'percent',
+    scope: data.scope || 'all',
+    scopeId: data.scopeId || null,
+    discountValue: data.discountValue ?? 0,
+    minOrderAmount: data.minOrderAmount ?? 0,
+    bannerUrl: data.bannerUrl || null,
+    heading: data.heading || null,
+    description: data.description || null,
+    priority: data.priority ?? 0,
+    stackable: data.stackable ?? false,
+    active: data.active ?? true,
+    startsAt: data.startsAt || null,
+    expiresAt: data.expiresAt || null,
+    updatedAt: new Date(),
+  }
+
+  await db.insert(offers).values(values).onConflictDoUpdate({
+    target: offers.id,
+    set: values,
+  })
+
+  return id
+}
+
+export async function deleteOfferQuery(id: string) {
+  await db.delete(offers).where(eq(offers.id, id))
+}
+
+// -------------------------------------------------------------
+// CUSTOMER ADDRESSES (B11)
+// -------------------------------------------------------------
+
+function mapCustomerAddressRecord(
+  a: typeof customerAddresses.$inferSelect,
+): CustomerAddress {
+  return {
+    id: a.id,
+    customerId: a.customerId,
+    label: a.label,
+    address: a.address,
+    city: a.city,
+    landmark: a.landmark,
+    lat: a.lat ? Number(a.lat) : null,
+    lng: a.lng ? Number(a.lng) : null,
+    isDefault: a.isDefault,
+    contactPhone: a.contactPhone,
+    createdAt: a.createdAt.toISOString(),
+    updatedAt: a.updatedAt.toISOString(),
+  }
+}
+
+export async function getCustomerAddressesQuery(
+  customerId: string,
+): Promise<CustomerAddress[]> {
+  const rows = await db
+    .select()
+    .from(customerAddresses)
+    .where(eq(customerAddresses.customerId, customerId))
+    .orderBy(
+      desc(customerAddresses.isDefault),
+      desc(customerAddresses.createdAt),
+    )
+
+  return rows.map(mapCustomerAddressRecord)
+}
+
+export async function upsertCustomerAddressQuery(data: {
+  id?: string
+  customerId: string
+  label?: string
+  address: string
+  city?: string
+  landmark?: string | null
+  lat?: number | null
+  lng?: number | null
+  isDefault?: boolean
+  contactPhone?: string | null
+}) {
+  const id = data.id || `addr_${crypto.randomUUID().slice(0, 8)}`
+
+  if (data.isDefault) {
+    await db
+      .update(customerAddresses)
+      .set({ isDefault: false })
+      .where(eq(customerAddresses.customerId, data.customerId))
+  }
+
+  const values = {
+    id,
+    customerId: data.customerId,
+    label: data.label || 'Home',
+    address: data.address,
+    city: data.city || 'Butwal',
+    landmark: data.landmark || null,
+    lat: data.lat !== undefined && data.lat !== null ? String(data.lat) : null,
+    lng: data.lng !== undefined && data.lng !== null ? String(data.lng) : null,
+    isDefault: data.isDefault ?? false,
+    contactPhone: data.contactPhone || null,
+    updatedAt: new Date(),
+  }
+
+  await db.insert(customerAddresses).values(values).onConflictDoUpdate({
+    target: customerAddresses.id,
+    set: values,
+  })
+
+  return id
+}
+
+export async function deleteCustomerAddressQuery(
+  id: string,
+  customerId: string,
+) {
+  await db
+    .delete(customerAddresses)
+    .where(
+      and(
+        eq(customerAddresses.id, id),
+        eq(customerAddresses.customerId, customerId),
+      ),
+    )
+}
+
+export async function setDefaultCustomerAddressQuery(
+  id: string,
+  customerId: string,
+) {
+  await db
+    .update(customerAddresses)
+    .set({ isDefault: false })
+    .where(eq(customerAddresses.customerId, customerId))
+
+  await db
+    .update(customerAddresses)
+    .set({ isDefault: true, updatedAt: new Date() })
+    .where(
+      and(
+        eq(customerAddresses.id, id),
+        eq(customerAddresses.customerId, customerId),
+      ),
+    )
 }

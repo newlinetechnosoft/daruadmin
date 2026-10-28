@@ -4,9 +4,7 @@ import { RiderLayout } from '#/components/panels/rider'
 
 export const Route = createFileRoute('/rider')({
   beforeLoad: async ({ location, context }) => {
-    const access = await context.queryClient.fetchQuery(
-      adminQueries.access(),
-    )
+    const access = await context.queryClient.fetchQuery(adminQueries.access())
     if (!access.authenticated) {
       throw redirect({
         to: '/login',
