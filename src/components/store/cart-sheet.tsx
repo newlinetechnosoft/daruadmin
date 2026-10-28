@@ -111,7 +111,7 @@ export function CartSheet() {
                   {isGrowthFreeDelivery
                     ? '🎉 Free express delivery unlocked (Growth Stage Offer)'
                     : remainingForFree === 0
-                      ? 'Free 40-minute express delivery unlocked'
+                      ? 'Free 30-minute express delivery unlocked'
                       : `Add ${formatNPR(remainingForFree)} more for free delivery`}
                 </span>
                 <span className="text-[11px] font-mono text-muted-foreground">

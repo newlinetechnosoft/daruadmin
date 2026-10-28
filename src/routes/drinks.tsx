@@ -376,7 +376,7 @@ function DrinksPage() {
 
             <p className="mt-2 max-w-lg text-xs leading-relaxed text-muted-foreground">
               {activeCategoryObj?.description ??
-                'Discover our selection of spirits, vodka, whiskey, beer, wine and more with 40-minute late-night delivery.'}
+                'Discover our selection of spirits, vodka, whiskey, beer, wine and more with 30-minute night delivery.'}
             </p>
           </div>
         </section>

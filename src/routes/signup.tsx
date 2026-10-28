@@ -119,7 +119,7 @@ function SignUpPage() {
                 Join Mezmani
               </CardTitle>
               <CardDescription className="text-xs">
-                Order genuine liquor, cold beers, and groceries with 40-minute
+                Order genuine liquor, cold beers, and groceries with 30-minute
                 express delivery.
               </CardDescription>
             </CardHeader>

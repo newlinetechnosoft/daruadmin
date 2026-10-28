@@ -13,7 +13,7 @@ export function Footer() {
             </div>
             <div>
               <h3 className="text-xs font-semibold text-foreground">
-                On-demand 40-minute delivery
+                On-demand 30-minute delivery
               </h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Rapid doorstep service across Butwal & Tilottama.

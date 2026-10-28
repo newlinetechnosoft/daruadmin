@@ -98,7 +98,7 @@ function LoginPage() {
         return
       }
       navigate({
-        to: search.redirect || '/drinks',
+        to: search.redirect || '/',
       })
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Sign in failed')
@@ -121,7 +121,7 @@ function LoginPage() {
                 Sign in
               </CardTitle>
               <CardDescription className="text-xs">
-                Access your orders, saved addresses, and 40-minute express
+                Access your orders, saved addresses, and 30-minute express
                 delivery.
               </CardDescription>
             </CardHeader>
@@ -262,7 +262,7 @@ function LoginPage() {
             <span>•</span>
             <div className="flex items-center gap-1.5">
               <Zap className="h-3.5 w-3.5 text-warning" />
-              <span>40-Minute Valley Delivery</span>
+              <span>30-Minute Valley Delivery</span>
             </div>
           </div>
         </div>

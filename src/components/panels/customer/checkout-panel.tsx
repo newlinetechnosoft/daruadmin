@@ -371,7 +371,7 @@ export function CheckoutPanel() {
                 variant="default"
                 className="text-[10px] uppercase tracking-wider"
               >
-                Express 40-Min Dispatch
+                Express 30-Min Dispatch
               </Badge>
             </div>
             <h1 className="mt-2 text-2xl sm:text-3xl font-black uppercase tracking-tight text-foreground">
@@ -1076,7 +1076,7 @@ export function CheckoutPanel() {
                   <div className="flex justify-between">
                     <span className="flex items-center gap-1.5">
                       <Bike className="h-3.5 w-3.5 text-primary" />
-                      40-Min Express Delivery
+                      30-Min Express Delivery
                       {isGrowthFreeDelivery && (
                         <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
                           Launch Free Offer
