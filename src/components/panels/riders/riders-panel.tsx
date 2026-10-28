@@ -541,187 +541,188 @@ export function RidersPanel() {
 
       {/* Onboard Rider Dialog */}
       <Dialog open={isAddRiderOpen} onOpenChange={setIsAddRiderOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-sm font-semibold">
-              Onboard fleet courier
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Register new delivery personnel
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+          <form
+            onSubmit={handleCreateRider}
+            className="flex flex-col h-full min-h-0"
+          >
+            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
+              <DialogTitle className="text-sm font-semibold">
+                Onboard fleet courier
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Register new delivery personnel
+              </DialogDescription>
+            </DialogHeader>
 
-          <form onSubmit={handleCreateRider} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Full name *</Label>
-              <Input
-                required
-                value={riderForm.name}
-                onChange={(e) =>
-                  setRiderForm({ ...riderForm, name: e.target.value })
-                }
-                placeholder="e.g. Ramesh Shrestha"
-                className="h-8 text-xs"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
               <div className="space-y-1.5">
-                <Label className="text-xs">Contact phone *</Label>
-                <div className="relative">
-                  <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    required
-                    value={riderForm.phone}
-                    onChange={(e) =>
-                      setRiderForm({ ...riderForm, phone: e.target.value })
-                    }
-                    placeholder="+977 98..."
-                    className="pl-8 h-8 font-mono text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Email address *</Label>
-                <div className="relative">
-                  <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    required
-                    value={riderForm.email}
-                    onChange={(e) =>
-                      setRiderForm({ ...riderForm, email: e.target.value })
-                    }
-                    placeholder="rider@mezmani.com.np"
-                    className="pl-8 h-8 font-mono text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Login password *</Label>
-              <div className="relative">
-                <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Label className="text-xs">Full name *</Label>
                 <Input
-                  type={showRiderPassword ? 'text' : 'password'}
                   required
-                  value={riderForm.password}
+                  value={riderForm.name}
                   onChange={(e) =>
-                    setRiderForm({ ...riderForm, password: e.target.value })
+                    setRiderForm({ ...riderForm, name: e.target.value })
                   }
-                  placeholder="Min. 8 characters"
-                  className="pl-8 pr-8 h-8 font-mono text-xs"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowRiderPassword(!showRiderPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showRiderPassword ? (
-                    <EyeOff className="h-3.5 w-3.5" />
-                  ) : (
-                    <Eye className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Vehicle type</Label>
-                <NativeSelect
-                  value={riderForm.vehicle}
-                  onChange={(e) =>
-                    setRiderForm({
-                      ...riderForm,
-                      vehicle: e.target.value as any,
-                    })
-                  }
-                  size="sm"
-                  className="w-full text-xs"
-                >
-                  <NativeSelectOption value="bike">
-                    Motorcycle
-                  </NativeSelectOption>
-                  <NativeSelectOption value="scooter">
-                    Scooter
-                  </NativeSelectOption>
-                  <NativeSelectOption value="car">
-                    Delivery van / car
-                  </NativeSelectOption>
-                </NativeSelect>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Vehicle plate no.</Label>
-                <Input
-                  value={riderForm.licenseNo}
-                  onChange={(e) =>
-                    setRiderForm({ ...riderForm, licenseNo: e.target.value })
-                  }
-                  placeholder="LU-2-PA-8899"
-                  className="h-8 font-mono text-xs"
+                  placeholder="e.g. Ramesh Shrestha"
+                  className="h-8 text-xs"
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Delivery zone</Label>
-                <NativeSelect
-                  value={riderForm.zone}
-                  onChange={(e) =>
-                    setRiderForm({ ...riderForm, zone: e.target.value })
-                  }
-                  size="sm"
-                  className="w-full text-xs"
-                >
-                  <NativeSelectOption value="Butwal Core">
-                    Butwal Core
-                  </NativeSelectOption>
-                  <NativeSelectOption value="Tilottama / Manigram">
-                    Tilottama / Manigram
-                  </NativeSelectOption>
-                  <NativeSelectOption value="Siddharthanagar / Bhairahawa">
-                    Siddharthanagar / Bhairahawa
-                  </NativeSelectOption>
-                </NativeSelect>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Contact phone *</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      required
+                      value={riderForm.phone}
+                      onChange={(e) =>
+                        setRiderForm({ ...riderForm, phone: e.target.value })
+                      }
+                      placeholder="+977 98..."
+                      className="pl-8 h-8 font-mono text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Email address *</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      type="email"
+                      required
+                      value={riderForm.email}
+                      onChange={(e) =>
+                        setRiderForm({ ...riderForm, email: e.target.value })
+                      }
+                      placeholder="rider@mezmani.com.np"
+                      className="pl-8 h-8 font-mono text-xs"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs">Per-delivery commission (NPR)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={riderForm.commissionRate}
-                  onChange={(e) =>
-                    setRiderForm({
-                      ...riderForm,
-                      commissionRate: Number(e.target.value),
-                    })
-                  }
-                  className="h-8 font-mono text-xs"
-                />
+                <Label className="text-xs">Login password *</Label>
+                <div className="relative">
+                  <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    type={showRiderPassword ? 'text' : 'password'}
+                    required
+                    value={riderForm.password}
+                    onChange={(e) =>
+                      setRiderForm({ ...riderForm, password: e.target.value })
+                    }
+                    placeholder="Min. 8 characters"
+                    className="pl-8 pr-8 h-8 font-mono text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRiderPassword(!showRiderPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showRiderPassword ? (
+                      <EyeOff className="h-3.5 w-3.5" />
+                    ) : (
+                      <Eye className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Vehicle type</Label>
+                  <NativeSelect
+                    value={riderForm.vehicle}
+                    onChange={(e) =>
+                      setRiderForm({
+                        ...riderForm,
+                        vehicle: e.target.value as any,
+                      })
+                    }
+                    size="sm"
+                    className="w-full text-xs"
+                  >
+                    <NativeSelectOption value="bike">
+                      Motorcycle
+                    </NativeSelectOption>
+                    <NativeSelectOption value="scooter">
+                      Scooter
+                    </NativeSelectOption>
+                    <NativeSelectOption value="car">
+                      Delivery van / car
+                    </NativeSelectOption>
+                  </NativeSelect>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Vehicle plate no.</Label>
+                  <Input
+                    value={riderForm.licenseNo}
+                    onChange={(e) =>
+                      setRiderForm({ ...riderForm, licenseNo: e.target.value })
+                    }
+                    placeholder="LU-2-PA-8899"
+                    className="h-8 font-mono text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Delivery zone</Label>
+                  <NativeSelect
+                    value={riderForm.zone}
+                    onChange={(e) =>
+                      setRiderForm({ ...riderForm, zone: e.target.value })
+                    }
+                    size="sm"
+                    className="w-full text-xs"
+                  >
+                    <NativeSelectOption value="Butwal Core">
+                      Butwal Core
+                    </NativeSelectOption>
+                    <NativeSelectOption value="Tilottama / Manigram">
+                      Tilottama / Manigram
+                    </NativeSelectOption>
+                    <NativeSelectOption value="Siddharthanagar / Bhairahawa">
+                      Siddharthanagar / Bhairahawa
+                    </NativeSelectOption>
+                  </NativeSelect>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">
+                    Per-delivery commission (NPR)
+                  </Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={riderForm.commissionRate}
+                    onChange={(e) =>
+                      setRiderForm({
+                        ...riderForm,
+                        commissionRate: Number(e.target.value),
+                      })
+                    }
+                    className="h-8 font-mono text-xs"
+                  />
+                </div>
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setIsAddRiderOpen(false)}
-                className="h-8 text-xs"
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isSubmitting}
-                className="h-8 text-xs"
-              >
+              <Button type="submit" size="sm" disabled={isSubmitting}>
                 {isSubmitting ? 'Onboarding...' : 'Register courier'}
               </Button>
             </DialogFooter>

@@ -414,72 +414,71 @@ export function InventoryPanel() {
         onOpenChange={(open) => !open && setRestockItem(null)}
       >
         {restockItem && (
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-sm font-semibold">
-                Restock inventory
-              </DialogTitle>
-              <DialogDescription className="text-xs">
-                {restockItem.name} ({restockItem.variantName})
-              </DialogDescription>
-            </DialogHeader>
+          <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+            <form
+              onSubmit={handleQuickRestock}
+              className="flex flex-col h-full min-h-0"
+            >
+              <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
+                <DialogTitle className="text-sm font-semibold">
+                  Restock inventory
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  {restockItem.name} ({restockItem.variantName})
+                </DialogDescription>
+              </DialogHeader>
 
-            <form onSubmit={handleQuickRestock} className="space-y-4 pt-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Units to add to warehouse *</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  required
-                  value={restockQty}
-                  onChange={(e) => setRestockQty(Number(e.target.value))}
-                  className="h-8 text-xs font-mono"
-                />
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Units to add to warehouse *</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    required
+                    value={restockQty}
+                    onChange={(e) => setRestockQty(Number(e.target.value))}
+                    className="h-8 text-xs font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">
+                    Vendor purchase cost per unit (NPR) *
+                  </Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    required
+                    value={costPerUnit}
+                    onChange={(e) => setCostPerUnit(Number(e.target.value))}
+                    className="h-8 text-xs font-mono"
+                  />
+                  <span className="text-[11px] text-muted-foreground">
+                    Automatically logged as COGS purchase bill in the general
+                    ledger
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-md bg-muted/40 p-3 text-xs">
+                  <span className="text-muted-foreground">
+                    Total purchase expenditure:
+                  </span>
+                  <span className="font-mono text-sm font-bold text-foreground">
+                    {formatNPR(restockQty * costPerUnit)}
+                  </span>
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs">
-                  Vendor purchase cost per unit (NPR) *
-                </Label>
-                <Input
-                  type="number"
-                  min="1"
-                  required
-                  value={costPerUnit}
-                  onChange={(e) => setCostPerUnit(Number(e.target.value))}
-                  className="h-8 text-xs font-mono"
-                />
-                <span className="text-[11px] text-muted-foreground">
-                  Automatically logged as COGS purchase bill in the general
-                  ledger
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between rounded-md bg-muted/40 p-3 text-xs">
-                <span className="text-muted-foreground">
-                  Total purchase expenditure:
-                </span>
-                <span className="font-mono text-sm font-bold text-foreground">
-                  {formatNPR(restockQty * costPerUnit)}
-                </span>
-              </div>
-
-              <DialogFooter className="gap-2 sm:gap-0">
+              <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setRestockItem(null)}
-                  className="h-8 text-xs"
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={isSubmitting}
-                  className="h-8 text-xs"
-                >
+                <Button type="submit" size="sm" disabled={isSubmitting}>
                   {isSubmitting ? 'Posting...' : 'Confirm restock and log COGS'}
                 </Button>
               </DialogFooter>

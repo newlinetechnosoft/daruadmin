@@ -498,89 +498,90 @@ export function PaymentsPanel() {
         onOpenChange={(open) => !open && setEditingGateway(null)}
       >
         {editingGateway && (
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-sm font-semibold">
-                Configure {GATEWAY_INFO[editingGateway].name}
-              </DialogTitle>
-              <DialogDescription className="text-xs">
-                Update merchant credentials
-              </DialogDescription>
-            </DialogHeader>
+          <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+            <form
+              onSubmit={handleSaveGateway}
+              className="flex flex-col h-full min-h-0"
+            >
+              <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
+                <DialogTitle className="text-sm font-semibold">
+                  Configure {GATEWAY_INFO[editingGateway].name}
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Update merchant credentials
+                </DialogDescription>
+              </DialogHeader>
 
-            <form onSubmit={handleSaveGateway} className="space-y-4 pt-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Merchant ID / account code *</Label>
-                <Input
-                  required
-                  value={gatewayForm.merchantId}
-                  onChange={(e) =>
-                    setGatewayForm({
-                      ...gatewayForm,
-                      merchantId: e.target.value,
-                    })
-                  }
-                  className="h-8 font-mono text-xs"
-                />
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">
+                    Merchant ID / account code *
+                  </Label>
+                  <Input
+                    required
+                    value={gatewayForm.merchantId}
+                    onChange={(e) =>
+                      setGatewayForm({
+                        ...gatewayForm,
+                        merchantId: e.target.value,
+                      })
+                    }
+                    className="h-8 font-mono text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Environment mode</Label>
+                  <NativeSelect
+                    value={gatewayForm.mode}
+                    onChange={(e) =>
+                      setGatewayForm({
+                        ...gatewayForm,
+                        mode: e.target.value as any,
+                      })
+                    }
+                    size="sm"
+                    className="w-full text-xs"
+                  >
+                    <NativeSelectOption value="sandbox">
+                      Sandbox (Testing)
+                    </NativeSelectOption>
+                    <NativeSelectOption value="live">
+                      Live (Production)
+                    </NativeSelectOption>
+                  </NativeSelect>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <Checkbox
+                    id="enable_gw"
+                    checked={gatewayForm.enabled}
+                    onCheckedChange={(checked) =>
+                      setGatewayForm({
+                        ...gatewayForm,
+                        enabled: Boolean(checked),
+                      })
+                    }
+                  />
+                  <Label
+                    htmlFor="enable_gw"
+                    className="text-xs cursor-pointer font-normal"
+                  >
+                    Accept customer checkouts via this channel
+                  </Label>
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs">Environment mode</Label>
-                <NativeSelect
-                  value={gatewayForm.mode}
-                  onChange={(e) =>
-                    setGatewayForm({
-                      ...gatewayForm,
-                      mode: e.target.value as any,
-                    })
-                  }
-                  size="sm"
-                  className="w-full text-xs"
-                >
-                  <NativeSelectOption value="sandbox">
-                    Sandbox (Testing)
-                  </NativeSelectOption>
-                  <NativeSelectOption value="live">
-                    Live (Production)
-                  </NativeSelectOption>
-                </NativeSelect>
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <Checkbox
-                  id="enable_gw"
-                  checked={gatewayForm.enabled}
-                  onCheckedChange={(checked) =>
-                    setGatewayForm({
-                      ...gatewayForm,
-                      enabled: Boolean(checked),
-                    })
-                  }
-                />
-                <Label
-                  htmlFor="enable_gw"
-                  className="text-xs cursor-pointer font-normal"
-                >
-                  Accept customer checkouts via this channel
-                </Label>
-              </div>
-
-              <DialogFooter className="gap-2 sm:gap-0">
+              <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setEditingGateway(null)}
-                  className="h-8 text-xs"
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={isUpdating}
-                  className="h-8 text-xs"
-                >
+                <Button type="submit" size="sm" disabled={isUpdating}>
                   {isUpdating ? 'Saving...' : 'Save configuration'}
                 </Button>
               </DialogFooter>

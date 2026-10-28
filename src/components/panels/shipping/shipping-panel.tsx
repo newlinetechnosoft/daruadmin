@@ -374,119 +374,118 @@ export function ShippingPanel() {
 
       {/* Add / Edit Zone Dialog */}
       <Dialog open={isAddZoneOpen} onOpenChange={setIsAddZoneOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-sm font-semibold">
-              {editingZone ? 'Edit delivery zone' : 'Add delivery zone'}
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Persists rate configuration to database
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+          <form
+            onSubmit={handleSaveZone}
+            className="flex flex-col h-full min-h-0"
+          >
+            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
+              <DialogTitle className="text-sm font-semibold">
+                {editingZone ? 'Edit delivery zone' : 'Add delivery zone'}
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Persists rate configuration to database
+              </DialogDescription>
+            </DialogHeader>
 
-          <form onSubmit={handleSaveZone} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Zone name *</Label>
-              <Input
-                required
-                value={zoneForm.name}
-                onChange={(e) =>
-                  setZoneForm({ ...zoneForm, name: e.target.value })
-                }
-                placeholder="e.g. Traffic Chowk, Butwal"
-                className="h-8 text-xs"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Covered localities / areas *</Label>
-              <Input
-                required
-                value={zoneForm.areas}
-                onChange={(e) =>
-                  setZoneForm({ ...zoneForm, areas: e.target.value })
-                }
-                placeholder="e.g. Jhamsikhel, Kupondole, Pulchowk"
-                className="h-8 text-xs"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
               <div className="space-y-1.5">
-                <Label className="text-xs">Base fee (NPR) *</Label>
+                <Label className="text-xs">Zone name *</Label>
                 <Input
-                  type="number"
-                  min="0"
                   required
-                  value={zoneForm.deliveryCharge}
+                  value={zoneForm.name}
                   onChange={(e) =>
-                    setZoneForm({
-                      ...zoneForm,
-                      deliveryCharge: Number(e.target.value),
-                    })
+                    setZoneForm({ ...zoneForm, name: e.target.value })
                   }
-                  className="h-8 font-mono text-xs"
+                  placeholder="e.g. Traffic Chowk, Butwal"
+                  className="h-8 text-xs"
                 />
               </div>
+
               <div className="space-y-1.5">
-                <Label className="text-xs">SLA window (minutes) *</Label>
+                <Label className="text-xs">Covered localities / areas *</Label>
                 <Input
-                  type="number"
-                  min="1"
                   required
-                  value={zoneForm.etaMinutes}
+                  value={zoneForm.areas}
                   onChange={(e) =>
-                    setZoneForm({
-                      ...zoneForm,
-                      etaMinutes: Number(e.target.value),
-                    })
+                    setZoneForm({ ...zoneForm, areas: e.target.value })
                   }
-                  className="h-8 font-mono text-xs"
+                  placeholder="e.g. Traffic Chowk, Golpark, Devinagar"
+                  className="h-8 text-xs"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Base fee (NPR) *</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    required
+                    value={zoneForm.deliveryCharge}
+                    onChange={(e) =>
+                      setZoneForm({
+                        ...zoneForm,
+                        deliveryCharge: Number(e.target.value),
+                      })
+                    }
+                    className="h-8 font-mono text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">SLA window (minutes) *</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    required
+                    value={zoneForm.etaMinutes}
+                    onChange={(e) =>
+                      setZoneForm({
+                        ...zoneForm,
+                        etaMinutes: Number(e.target.value),
+                      })
+                    }
+                    className="h-8 font-mono text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Designated courier mode</Label>
+                <NativeSelect
+                  value={zoneForm.courier}
+                  onChange={(e) =>
+                    setZoneForm({ ...zoneForm, courier: e.target.value as any })
+                  }
+                  size="sm"
+                  className="w-full text-xs"
+                >
+                  <NativeSelectOption value="in-house">
+                    In-house rider fleet
+                  </NativeSelectOption>
+                  <NativeSelectOption value="pathao">
+                    Pathao express delivery
+                  </NativeSelectOption>
+                  <NativeSelectOption value="ncm">
+                    Nepal Can Move (NCM)
+                  </NativeSelectOption>
+                  <NativeSelectOption value="none">
+                    Self pickup only
+                  </NativeSelectOption>
+                </NativeSelect>
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs">Designated courier mode</Label>
-              <NativeSelect
-                value={zoneForm.courier}
-                onChange={(e) =>
-                  setZoneForm({ ...zoneForm, courier: e.target.value as any })
-                }
-                size="sm"
-                className="w-full text-xs"
-              >
-                <NativeSelectOption value="in-house">
-                  In-house rider fleet
-                </NativeSelectOption>
-                <NativeSelectOption value="pathao">
-                  Pathao express delivery
-                </NativeSelectOption>
-                <NativeSelectOption value="ncm">
-                  Nepal Can Move (NCM)
-                </NativeSelectOption>
-                <NativeSelectOption value="none">
-                  Self pickup only
-                </NativeSelectOption>
-              </NativeSelect>
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setIsAddZoneOpen(false)}
-                className="h-8 text-xs"
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isSubmitting}
-                className="h-8 text-xs"
-              >
+              <Button type="submit" size="sm" disabled={isSubmitting}>
                 {isSubmitting ? 'Saving...' : 'Save zone'}
               </Button>
             </DialogFooter>

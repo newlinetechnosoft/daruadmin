@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { cn } from '#/lib/utils'
 import {
   updateOrderFn,
   createOrderFn,
@@ -22,6 +23,7 @@ import {
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
 import { StatusBadge } from '#/components/shared/status-badge'
+import { StatusIndicator } from '#/components/shared/status-indicator'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -64,6 +66,10 @@ import {
   Store,
   MessageCircle,
   Sparkles,
+  Check,
+  CheckCheck,
+  X,
+  AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -95,6 +101,8 @@ export function OrdersPanel() {
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false)
   const [invoiceMode, setInvoiceMode] = useState<'a4' | 'thermal'>('a4')
   const [isUpdating, setIsUpdating] = useState(false)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
 
   // Create order form state
   const [orderForm, setOrderForm] = useState({
@@ -281,28 +289,47 @@ export function OrdersPanel() {
       )
       await router.invalidate()
       if (selectedOrder && selectedOrder.id === orderId) {
+        const updatedItems = selectedOrder.items.map((it) =>
+          it.id === orderItemId
+            ? {
+                ...it,
+                dealerId: dealerId || null,
+                dealer: foundDealer
+                  ? {
+                      id: foundDealer.id,
+                      name: foundDealer.name,
+                      contact: foundDealer.contact,
+                      whatsappNumber: foundDealer.whatsappNumber,
+                      address: foundDealer.address,
+                      city: foundDealer.city,
+                      lat: foundDealer.lat ? Number(foundDealer.lat) : null,
+                      lng: foundDealer.lng ? Number(foundDealer.lng) : null,
+                    }
+                  : null,
+              }
+            : it,
+        )
+
+        let targetStatus: OrderStatus = selectedOrder.status
+        const allItemsSourced = updatedItems.every((it) => Boolean(it.dealerId))
+        if (allItemsSourced && selectedOrder.status === 'confirmed') {
+          try {
+            await updateOrderFn({
+              data: { id: orderId, status: 'dealer_assigned' },
+            })
+            targetStatus = 'dealer_assigned'
+            toast.success(
+              'All items sourced: Order advanced to Dealer Assigned',
+            )
+          } catch {
+            // Ignore if already transitioned
+          }
+        }
+
         setSelectedOrder({
           ...selectedOrder,
-          items: selectedOrder.items.map((it) =>
-            it.id === orderItemId
-              ? {
-                  ...it,
-                  dealerId: dealerId || null,
-                  dealer: foundDealer
-                    ? {
-                        id: foundDealer.id,
-                        name: foundDealer.name,
-                        contact: foundDealer.contact,
-                        whatsappNumber: foundDealer.whatsappNumber,
-                        address: foundDealer.address,
-                        city: foundDealer.city,
-                        lat: foundDealer.lat ? Number(foundDealer.lat) : null,
-                        lng: foundDealer.lng ? Number(foundDealer.lng) : null,
-                      }
-                    : null,
-                }
-              : it,
-          ),
+          status: targetStatus,
+          items: updatedItems,
         })
       }
     } catch (err: any) {
@@ -322,8 +349,89 @@ export function OrdersPanel() {
         `Auto-assigned closest available dealers to ${res.updatedCount} items`,
       )
       await router.invalidate()
+
+      if (
+        selectedOrder &&
+        selectedOrder.id === orderId &&
+        selectedOrder.status === 'confirmed'
+      ) {
+        try {
+          await updateOrderFn({
+            data: { id: orderId, status: 'dealer_assigned' },
+          })
+          setSelectedOrder({
+            ...selectedOrder,
+            status: 'dealer_assigned',
+          })
+          toast.success(
+            'Nearest dealers assigned: Order advanced to Dealer Assigned',
+          )
+        } catch {
+          // ignore
+        }
+      }
     } catch (err: any) {
       toast.error(err?.message || 'Failed to auto-assign dealers')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleMarkDelivered = async (orderId: string) => {
+    try {
+      setIsUpdating(true)
+      await updateOrderFn({
+        data: {
+          id: orderId,
+          status: 'delivered',
+          ageVerifiedAtDelivery: true,
+        },
+      })
+      toast.success('Order marked as delivered and settled')
+      await router.invalidate()
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder({
+          ...selectedOrder,
+          status: 'delivered',
+          paymentStatus:
+            selectedOrder.paymentMethod === 'cod'
+              ? 'paid'
+              : selectedOrder.paymentStatus,
+        })
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to mark order delivered')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleConfirmCancelOrder = async () => {
+    if (!selectedOrder) return
+    if (!cancelReason.trim()) {
+      toast.error('Please specify a cancellation reason')
+      return
+    }
+    try {
+      setIsUpdating(true)
+      await updateOrderFn({
+        data: {
+          id: selectedOrder.id,
+          status: 'cancelled',
+          cancellationReason: cancelReason.trim(),
+        },
+      })
+      toast.success('Order cancelled')
+      setCancelDialogOpen(false)
+      setCancelReason('')
+      await router.invalidate()
+      setSelectedOrder({
+        ...selectedOrder,
+        status: 'cancelled',
+        cancellationReason: cancelReason.trim(),
+      })
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to cancel order')
     } finally {
       setIsUpdating(false)
     }
@@ -798,36 +906,136 @@ export function OrdersPanel() {
             </DialogHeader>
 
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 text-xs click-scroll">
-              {/* Status and Action Selector */}
-              <div className="p-3.5 rounded-lg border border-border bg-muted/30 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground font-medium">
-                    Status:
-                  </span>
-                  <StatusBadge value={selectedOrder.status} />
+              {/* Automated Lifecycle Status & Primary Operational Actions */}
+              <div className="p-4 rounded-lg border border-border bg-card shadow-xs space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-muted-foreground font-medium text-xs">
+                      Lifecycle Stage:
+                    </span>
+                    <StatusIndicator status={selectedOrder.status} asBadge />
+                  </div>
+
+                  {/* Contextual Automated Action based on stage */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {selectedOrder.status === 'pending' && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() =>
+                          handleUpdateStatus(selectedOrder.id, 'confirmed')
+                        }
+                        disabled={isUpdating}
+                        className="h-8 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                      >
+                        <Check className="size-3.5" />
+                        Confirm Order
+                      </Button>
+                    )}
+
+                    {[
+                      'picked_up',
+                      'out_for_delivery',
+                      'rider_assigned',
+                    ].includes(selectedOrder.status) && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => handleMarkDelivered(selectedOrder.id)}
+                        disabled={isUpdating}
+                        className="h-8 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                      >
+                        <CheckCheck className="size-3.5" />
+                        Mark as Delivered
+                      </Button>
+                    )}
+
+                    {!['delivered', 'cancelled', 'returned'].includes(
+                      selectedOrder.status,
+                    ) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCancelDialogOpen(true)}
+                        disabled={isUpdating}
+                        className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
+                      >
+                        <X className="size-3.5 mr-1" />
+                        Cancel Order
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <NativeSelect
-                    value={selectedOrder.status}
-                    onChange={(e) =>
-                      handleUpdateStatus(
-                        selectedOrder.id,
-                        e.target.value as OrderStatus,
-                      )
-                    }
-                    disabled={isUpdating}
-                    className="text-xs font-medium"
-                  >
-                    {ORDER_STATUSES.filter((s) => s.value !== 'all').map(
-                      (s) => (
-                        <option key={s.value} value={s.value}>
-                          Set {s.label}
-                        </option>
-                      ),
-                    )}
-                  </NativeSelect>
-                </div>
+                {/* Visual Progress Stepper */}
+                {selectedOrder.status === 'cancelled' ? (
+                  <div className="rounded-md border border-destructive/20 bg-destructive/10 p-2.5 text-destructive text-[11px] flex items-center gap-2">
+                    <AlertTriangle className="size-4 shrink-0" />
+                    <span>
+                      <strong>Order Cancelled:</strong>{' '}
+                      {selectedOrder.cancellationReason ||
+                        'Customer or manager cancelled this order.'}
+                    </span>
+                  </div>
+                ) : selectedOrder.status === 'delivery_failed' ? (
+                  <div className="rounded-md border border-amber-500/20 bg-amber-500/10 p-2.5 text-amber-700 dark:text-amber-400 text-[11px] flex items-center gap-2">
+                    <AlertTriangle className="size-4 shrink-0" />
+                    <span>
+                      <strong>Delivery Attempt Failed:</strong>{' '}
+                      {selectedOrder.deliveryFailureReason ||
+                        'Customer unreachable / rescheduled.'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="pt-2 border-t border-border/60">
+                    <div className="grid grid-cols-4 gap-2 text-center text-[11px]">
+                      {[
+                        { key: 'placed', label: '1. Placed', done: true },
+                        {
+                          key: 'confirmed',
+                          label: '2. Confirmed',
+                          done: [
+                            'confirmed',
+                            'dealer_assigned',
+                            'rider_assigned',
+                            'picked_up',
+                            'out_for_delivery',
+                            'delivered',
+                          ].includes(selectedOrder.status),
+                        },
+                        {
+                          key: 'dispatched',
+                          label: '3. Dispatched',
+                          done: [
+                            'dealer_assigned',
+                            'rider_assigned',
+                            'picked_up',
+                            'out_for_delivery',
+                            'delivered',
+                          ].includes(selectedOrder.status),
+                        },
+                        {
+                          key: 'delivered',
+                          label: '4. Delivered',
+                          done: selectedOrder.status === 'delivered',
+                        },
+                      ].map((step) => (
+                        <div
+                          key={step.key}
+                          className={cn(
+                            'rounded-md py-1.5 px-2 border text-[11px] font-medium transition-colors',
+                            step.done
+                              ? 'border-primary/40 bg-primary/10 text-primary font-semibold'
+                              : 'border-border bg-muted/20 text-muted-foreground',
+                          )}
+                        >
+                          {step.label}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Customer & Courier dispatch details */}
@@ -1608,6 +1816,57 @@ export function OrdersPanel() {
             </DialogFooter>
           </DialogContent>
         )}
+      </Dialog>
+
+      {/* Cancel Order Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent className="sm:max-w-md w-[calc(100%-2rem)] flex flex-col p-0 overflow-hidden shadow-2xl">
+          <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
+            <DialogTitle className="text-sm font-semibold text-destructive flex items-center gap-1.5">
+              <AlertTriangle className="size-4 shrink-0" />
+              Cancel Order #{selectedOrder?.number}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Please specify a reason for cancellation. This will be permanently
+              recorded in the order history.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 sm:p-6 space-y-3">
+            <Label htmlFor="cancel-reason" className="text-xs font-medium">
+              Cancellation Reason *
+            </Label>
+            <Textarea
+              id="cancel-reason"
+              rows={3}
+              placeholder="e.g. Customer cancelled, out of stock, incorrect address..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              className="text-xs"
+            />
+          </div>
+          <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCancelDialogOpen(false)
+                setCancelReason('')
+              }}
+            >
+              Back
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={handleConfirmCancelOrder}
+              disabled={isUpdating || !cancelReason.trim()}
+            >
+              {isUpdating ? 'Cancelling...' : 'Confirm Cancellation'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
       {/* Printable Nepal VAT Tax Invoice Dialog */}

@@ -695,118 +695,126 @@ export function MarketingPanel() {
 
       {/* Create Coupon Dialog */}
       <Dialog open={isAddCouponOpen} onOpenChange={setIsAddCouponOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create Promo Coupon</DialogTitle>
-            <DialogDescription>
-              Configure cart discounts in Neon DB
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+          <form
+            onSubmit={handleCreateCoupon}
+            className="flex flex-col h-full min-h-0"
+          >
+            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
+              <DialogTitle className="text-sm font-semibold">
+                Create Promo Coupon
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Configure cart discounts in Neon DB
+              </DialogDescription>
+            </DialogHeader>
 
-          <form onSubmit={handleCreateCoupon} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="coupon-code">Coupon Code *</Label>
-              <Input
-                id="coupon-code"
-                required
-                value={couponForm.code}
-                onChange={(e) =>
-                  setCouponForm({ ...couponForm, code: e.target.value })
-                }
-                placeholder="e.g. TIHAR2026, FESTIVE15"
-                className="font-mono font-semibold uppercase"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
               <div className="space-y-1.5">
-                <Label htmlFor="coupon-type">Discount Type</Label>
-                <NativeSelect
-                  id="coupon-type"
-                  value={couponForm.type}
-                  onChange={(e) =>
-                    setCouponForm({
-                      ...couponForm,
-                      type: e.target.value as 'percent' | 'fixed',
-                    })
-                  }
-                >
-                  <option value="percent">Percentage (%)</option>
-                  <option value="fixed">Flat Amount (NPR)</option>
-                </NativeSelect>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="coupon-val">Discount Value *</Label>
+                <Label htmlFor="coupon-code">Coupon Code *</Label>
                 <Input
-                  id="coupon-val"
-                  type="number"
-                  min="1"
+                  id="coupon-code"
                   required
-                  value={couponForm.value}
+                  value={couponForm.code}
                   onChange={(e) =>
-                    setCouponForm({
-                      ...couponForm,
-                      value: Number(e.target.value),
-                    })
+                    setCouponForm({ ...couponForm, code: e.target.value })
                   }
+                  placeholder="e.g. TIHAR2026, FESTIVE15"
+                  className="font-mono font-semibold uppercase"
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="coupon-type">Discount Type</Label>
+                  <NativeSelect
+                    id="coupon-type"
+                    value={couponForm.type}
+                    onChange={(e) =>
+                      setCouponForm({
+                        ...couponForm,
+                        type: e.target.value as 'percent' | 'fixed',
+                      })
+                    }
+                  >
+                    <option value="percent">Percentage (%)</option>
+                    <option value="fixed">Flat Amount (NPR)</option>
+                  </NativeSelect>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="coupon-val">Discount Value *</Label>
+                  <Input
+                    id="coupon-val"
+                    type="number"
+                    min="1"
+                    required
+                    value={couponForm.value}
+                    onChange={(e) =>
+                      setCouponForm({
+                        ...couponForm,
+                        value: Number(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="coupon-min">Minimum Cart Spend (NPR)</Label>
+                  <Input
+                    id="coupon-min"
+                    type="number"
+                    min="0"
+                    value={couponForm.minOrder}
+                    onChange={(e) =>
+                      setCouponForm({
+                        ...couponForm,
+                        minOrder: Number(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="coupon-limit">Usage Limit</Label>
+                  <Input
+                    id="coupon-limit"
+                    type="number"
+                    min="1"
+                    value={couponForm.usageLimit}
+                    onChange={(e) =>
+                      setCouponForm({
+                        ...couponForm,
+                        usageLimit: Number(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
-                <Label htmlFor="coupon-min">Minimum Cart Spend (NPR)</Label>
+                <Label htmlFor="coupon-expiry">Expiry Date</Label>
                 <Input
-                  id="coupon-min"
-                  type="number"
-                  min="0"
-                  value={couponForm.minOrder}
+                  id="coupon-expiry"
+                  type="date"
+                  value={couponForm.expiresAt}
                   onChange={(e) =>
-                    setCouponForm({
-                      ...couponForm,
-                      minOrder: Number(e.target.value),
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="coupon-limit">Usage Limit</Label>
-                <Input
-                  id="coupon-limit"
-                  type="number"
-                  min="1"
-                  value={couponForm.usageLimit}
-                  onChange={(e) =>
-                    setCouponForm({
-                      ...couponForm,
-                      usageLimit: Number(e.target.value),
-                    })
+                    setCouponForm({ ...couponForm, expiresAt: e.target.value })
                   }
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="coupon-expiry">Expiry Date</Label>
-              <Input
-                id="coupon-expiry"
-                type="date"
-                value={couponForm.expiresAt}
-                onChange={(e) =>
-                  setCouponForm({ ...couponForm, expiresAt: e.target.value })
-                }
-              />
-            </div>
-
-            <DialogFooter className="pt-2">
+            <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={() => setIsAddCouponOpen(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" size="sm" disabled={isSubmitting}>
                 {isSubmitting ? 'Activating...' : 'Activate Coupon'}
               </Button>
             </DialogFooter>
@@ -816,81 +824,89 @@ export function MarketingPanel() {
 
       {/* Add Banner Dialog */}
       <Dialog open={isAddBannerOpen} onOpenChange={setIsAddBannerOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Campaign Banner</DialogTitle>
-            <DialogDescription>
-              Publish storefront slider tile to Neon DB
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+          <form
+            onSubmit={handleCreateBanner}
+            className="flex flex-col h-full min-h-0"
+          >
+            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
+              <DialogTitle className="text-sm font-semibold">
+                Add Campaign Banner
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Publish storefront slider tile to Neon DB
+              </DialogDescription>
+            </DialogHeader>
 
-          <form onSubmit={handleCreateBanner} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="banner-title">Banner Title *</Label>
-              <Input
-                id="banner-title"
-                required
-                value={bannerForm.title}
-                onChange={(e) =>
-                  setBannerForm({ ...bannerForm, title: e.target.value })
-                }
-                placeholder="e.g. Premium Single Malt Scotch Deals"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="banner-img">Image URL *</Label>
-              <Input
-                id="banner-img"
-                type="url"
-                required
-                value={bannerForm.imageUrl}
-                onChange={(e) =>
-                  setBannerForm({ ...bannerForm, imageUrl: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
               <div className="space-y-1.5">
-                <Label htmlFor="banner-placement">Target Placement</Label>
-                <NativeSelect
-                  id="banner-placement"
-                  value={bannerForm.placement}
-                  onChange={(e) =>
-                    setBannerForm({
-                      ...bannerForm,
-                      placement: e.target.value as
-                        'home' | 'drinks' | 'grocery',
-                    })
-                  }
-                >
-                  <option value="home">Homepage Hero</option>
-                  <option value="drinks">Liquor Drinks Catalog</option>
-                  <option value="grocery">Grocery Catalog</option>
-                </NativeSelect>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="banner-href">Link Href</Label>
+                <Label htmlFor="banner-title">Banner Title *</Label>
                 <Input
-                  id="banner-href"
-                  value={bannerForm.href}
+                  id="banner-title"
+                  required
+                  value={bannerForm.title}
                   onChange={(e) =>
-                    setBannerForm({ ...bannerForm, href: e.target.value })
+                    setBannerForm({ ...bannerForm, title: e.target.value })
+                  }
+                  placeholder="e.g. Premium Single Malt Scotch Deals"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="banner-img">Image URL *</Label>
+                <Input
+                  id="banner-img"
+                  type="url"
+                  required
+                  value={bannerForm.imageUrl}
+                  onChange={(e) =>
+                    setBannerForm({ ...bannerForm, imageUrl: e.target.value })
                   }
                 />
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="banner-placement">Target Placement</Label>
+                  <NativeSelect
+                    id="banner-placement"
+                    value={bannerForm.placement}
+                    onChange={(e) =>
+                      setBannerForm({
+                        ...bannerForm,
+                        placement: e.target.value as
+                          'home' | 'drinks' | 'grocery',
+                      })
+                    }
+                  >
+                    <option value="home">Homepage Hero</option>
+                    <option value="drinks">Liquor Drinks Catalog</option>
+                    <option value="grocery">Grocery Catalog</option>
+                  </NativeSelect>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="banner-href">Link Href</Label>
+                  <Input
+                    id="banner-href"
+                    value={bannerForm.href}
+                    onChange={(e) =>
+                      setBannerForm({ ...bannerForm, href: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
             </div>
 
-            <DialogFooter className="pt-2">
+            <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={() => setIsAddBannerOpen(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" size="sm" disabled={isSubmitting}>
                 {isSubmitting ? 'Publishing...' : 'Publish Banner'}
               </Button>
             </DialogFooter>

@@ -161,8 +161,8 @@ export function ProductVelocityDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
+      <DialogContent className="sm:max-w-5xl md:max-w-6xl w-[calc(100%-2rem)] max-h-[92vh] overflow-hidden flex flex-col p-0 shadow-2xl">
+        <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/10 shrink-0">
           <div>
             <DialogTitle className="text-sm font-semibold flex items-center gap-2">
               <Flame className="h-4 w-4 text-amber-500" />
@@ -233,7 +233,7 @@ export function ProductVelocityDialog({
           </div>
         </DialogHeader>
 
-        <div className="p-5 overflow-y-auto space-y-4 text-xs">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 text-xs click-scroll">
           {/* Executive Sourcing Overview Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-muted/40 border border-border rounded-lg p-3 space-y-1">

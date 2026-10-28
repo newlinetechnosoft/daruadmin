@@ -43,6 +43,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '#/components/ui/dialog'
@@ -773,8 +774,8 @@ export function DealerForm({ dealerId }: DealerFormProps) {
 
       {/* Catalog Item Picker Dialog */}
       <Dialog open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg w-[calc(100%-2rem)] max-h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+          <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
             <DialogTitle className="text-sm font-semibold">
               Add Sourcing Item
             </DialogTitle>
@@ -783,7 +784,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 pt-2">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-3 click-scroll">
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
@@ -820,13 +821,13 @@ export function DealerForm({ dealerId }: DealerFormProps) {
               </Select>
             </div>
 
-            <div className="max-h-64 overflow-y-auto divide-y divide-border/60 border rounded-md">
+            <div className="max-h-72 overflow-y-auto divide-y divide-border/60 border rounded-md click-scroll">
               {availableToAdd.length === 0 ? (
                 <div className="py-6 text-center text-xs text-muted-foreground">
                   No matching products available to add.
                 </div>
               ) : (
-                availableToAdd.slice(0, 20).map((p) => (
+                availableToAdd.slice(0, 30).map((p) => (
                   <div
                     key={p.id}
                     className="flex items-center justify-between p-2 hover:bg-muted/30 transition-colors text-xs"
@@ -854,6 +855,17 @@ export function DealerForm({ dealerId }: DealerFormProps) {
               )}
             </div>
           </div>
+
+          <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAddItemOpen(false)}
+            >
+              Done
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

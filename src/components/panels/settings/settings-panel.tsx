@@ -1305,19 +1305,19 @@ export function SettingsPanel() {
 
       {/* Confirmation Dialog for Reset */}
       <Dialog open={resetModalOpen} onOpenChange={setResetModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md w-[calc(100%-2rem)] flex flex-col p-0 overflow-hidden shadow-2xl">
+          <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
               Confirm Sandbox Reset
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs">
               This action replaces live test state in Neon DB with fresh seed
               data.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 py-2 text-xs">
+          <div className="p-4 sm:p-6 space-y-3 text-xs">
             <p className="text-muted-foreground">
               To prevent accidental reset, please type{' '}
               <span className="font-mono font-bold text-destructive">
@@ -1334,9 +1334,10 @@ export function SettingsPanel() {
             />
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
             <Button
               variant="outline"
+              size="sm"
               onClick={() => {
                 setResetModalOpen(false)
                 setResetConfirmationText('')
@@ -1346,6 +1347,7 @@ export function SettingsPanel() {
             </Button>
             <Button
               variant="destructive"
+              size="sm"
               onClick={handleResetSandbox}
               disabled={
                 isResetting ||

@@ -79,9 +79,12 @@ export function RiderSettlementApprovalDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <form onSubmit={handleApproveAndPay} className="space-y-4">
-          <DialogHeader>
+      <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+        <form
+          onSubmit={handleApproveAndPay}
+          className="flex flex-col h-full min-h-0"
+        >
+          <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
             <DialogTitle className="text-sm font-semibold flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Receipt className="h-4 w-4 text-emerald-500" />
@@ -98,7 +101,7 @@ export function RiderSettlementApprovalDialog({
           </DialogHeader>
 
           {/* Breakdown Summary */}
-          <div className="space-y-3 py-1">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
             <Card className="p-3 bg-muted/40 space-y-2 border-border text-xs">
               <div className="flex items-center justify-between border-b border-border/50 pb-1.5">
                 <span className="text-muted-foreground">
@@ -252,7 +255,7 @@ export function RiderSettlementApprovalDialog({
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
             <Button
               type="button"
               variant="outline"

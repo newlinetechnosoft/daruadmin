@@ -489,8 +489,8 @@ export function ReportsPanel() {
 
       {/* Profit & Margin Analytics Preview Dialog */}
       <Dialog open={isMarginModalOpen} onOpenChange={setIsMarginModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-          <DialogHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
+        <DialogContent className="sm:max-w-4xl md:max-w-5xl w-[calc(100%-2rem)] max-h-[90vh] overflow-hidden flex flex-col p-0 shadow-2xl">
+          <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/10 shrink-0">
             <div>
               <DialogTitle className="text-sm font-semibold flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-emerald-500" />
@@ -511,7 +511,7 @@ export function ReportsPanel() {
             </Button>
           </DialogHeader>
 
-          <div className="p-6 overflow-y-auto space-y-4 text-xs">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 text-xs click-scroll">
             {/* Summary Highlights */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-muted/40 p-3 rounded-lg border border-border">
               <div>
@@ -706,8 +706,8 @@ export function ReportsPanel() {
 
       {/* Fleet Delivery Logistics & COD Floats Modal */}
       <Dialog open={isFleetModalOpen} onOpenChange={setIsFleetModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-          <DialogHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
+        <DialogContent className="sm:max-w-4xl md:max-w-5xl w-[calc(100%-2rem)] max-h-[90vh] overflow-hidden flex flex-col p-0 shadow-2xl">
+          <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/10 shrink-0">
             <div>
               <DialogTitle className="text-sm font-semibold flex items-center gap-2">
                 <Truck className="h-4 w-4 text-primary" />
@@ -728,7 +728,7 @@ export function ReportsPanel() {
             </Button>
           </DialogHeader>
 
-          <div className="p-6 overflow-y-auto space-y-4 text-xs">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 text-xs click-scroll">
             {/* Highlights */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-muted/40 p-3 rounded-lg border border-border">
               <div>
@@ -849,8 +849,8 @@ export function ReportsPanel() {
 
       {/* IRD VAT Annex 13 Preview Dialog */}
       <Dialog open={isIrdModalOpen} onOpenChange={setIsIrdModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-          <DialogHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
+        <DialogContent className="sm:max-w-3xl md:max-w-4xl w-[calc(100%-2rem)] max-h-[90vh] overflow-hidden flex flex-col p-0 shadow-2xl">
+          <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/10 shrink-0">
             <DialogTitle className="text-sm font-medium">
               Government of Nepal · IRD Sales Ledger (अनुसूची १३)
             </DialogTitle>
@@ -864,7 +864,7 @@ export function ReportsPanel() {
             </Button>
           </DialogHeader>
 
-          <div className="p-6 overflow-y-auto space-y-4 text-xs">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 text-xs click-scroll">
             <div className="text-center border-b border-border/50 pb-3">
               <h3 className="font-semibold text-xs text-foreground">
                 Government of Nepal · Ministry of Finance

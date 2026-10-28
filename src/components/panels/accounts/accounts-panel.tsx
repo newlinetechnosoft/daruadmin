@@ -3605,161 +3605,164 @@ export function AccountsPanel() {
 
       {/* Record Double-Entry Voucher Dialog */}
       <Dialog open={isAddVoucherOpen} onOpenChange={setIsAddVoucherOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-sm font-semibold">
-              Post Double-Entry Journal Voucher
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Balanced journal voucher posting directly to Nepal Chart of
-              Accounts.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+          <form
+            onSubmit={handlePostManualVoucher}
+            className="flex flex-col h-full min-h-0"
+          >
+            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
+              <DialogTitle className="text-sm font-semibold">
+                Post Double-Entry Journal Voucher
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Balanced journal voucher posting directly to Nepal Chart of
+                Accounts.
+              </DialogDescription>
+            </DialogHeader>
 
-          <form onSubmit={handlePostManualVoucher} className="space-y-4 pt-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Voucher Type *</Label>
-                <NativeSelect
-                  value={manualVoucherForm.voucherType}
-                  onChange={(e) =>
-                    setManualVoucherForm({
-                      ...manualVoucherForm,
-                      voucherType: e.target.value as any,
-                    })
-                  }
-                  size="sm"
-                  className="w-full text-xs font-mono"
-                >
-                  <NativeSelectOption value="JV">
-                    JV - Journal Voucher
-                  </NativeSelectOption>
-                  <NativeSelectOption value="PV">
-                    PV - Payment Voucher
-                  </NativeSelectOption>
-                  <NativeSelectOption value="RV">
-                    RV - Receipt Voucher
-                  </NativeSelectOption>
-                  <NativeSelectOption value="CV">
-                    CV - Contra Voucher
-                  </NativeSelectOption>
-                </NativeSelect>
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Voucher Type *</Label>
+                  <NativeSelect
+                    value={manualVoucherForm.voucherType}
+                    onChange={(e) =>
+                      setManualVoucherForm({
+                        ...manualVoucherForm,
+                        voucherType: e.target.value as any,
+                      })
+                    }
+                    size="sm"
+                    className="w-full text-xs font-mono"
+                  >
+                    <NativeSelectOption value="JV">
+                      JV - Journal Voucher
+                    </NativeSelectOption>
+                    <NativeSelectOption value="PV">
+                      PV - Payment Voucher
+                    </NativeSelectOption>
+                    <NativeSelectOption value="RV">
+                      RV - Receipt Voucher
+                    </NativeSelectOption>
+                    <NativeSelectOption value="CV">
+                      CV - Contra Voucher
+                    </NativeSelectOption>
+                  </NativeSelect>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Amount (in Rs. NPR) *</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    required
+                    value={manualVoucherForm.amountInRs}
+                    onChange={(e) =>
+                      setManualVoucherForm({
+                        ...manualVoucherForm,
+                        amountInRs: Number(e.target.value),
+                      })
+                    }
+                    className="h-8 font-mono text-xs"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs">Amount (in Rs. NPR) *</Label>
+                <Label className="text-xs">Narration / memo *</Label>
                 <Input
-                  type="number"
-                  min="1"
                   required
-                  value={manualVoucherForm.amountInRs}
+                  value={manualVoucherForm.narration}
                   onChange={(e) =>
                     setManualVoucherForm({
                       ...manualVoucherForm,
-                      amountInRs: Number(e.target.value),
+                      narration: e.target.value,
                     })
                   }
-                  className="h-8 font-mono text-xs"
+                  placeholder="e.g. Warehouse electricity utility payment"
+                  className="h-8 text-xs"
                 />
               </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs">Narration / memo *</Label>
-              <Input
-                required
-                value={manualVoucherForm.narration}
-                onChange={(e) =>
-                  setManualVoucherForm({
-                    ...manualVoucherForm,
-                    narration: e.target.value,
-                  })
-                }
-                placeholder="e.g. Warehouse electricity utility payment"
-                className="h-8 text-xs"
-              />
-            </div>
-
-            <div className="space-y-3 rounded-md border border-border bg-muted/20 p-3">
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                    Debit Line (Dr.) *
-                  </Label>
-                  <span className="text-[10px] text-muted-foreground font-mono">
-                    Rs.{' '}
-                    {Number(manualVoucherForm.amountInRs || 0).toLocaleString()}
-                  </span>
+              <div className="space-y-3 rounded-md border border-border bg-muted/20 p-3">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                      Debit Line (Dr.) *
+                    </Label>
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      Rs.{' '}
+                      {Number(
+                        manualVoucherForm.amountInRs || 0,
+                      ).toLocaleString()}
+                    </span>
+                  </div>
+                  <NativeSelect
+                    value={manualVoucherForm.debitAccountId}
+                    onChange={(e) =>
+                      setManualVoucherForm({
+                        ...manualVoucherForm,
+                        debitAccountId: e.target.value,
+                      })
+                    }
+                    size="sm"
+                    className="w-full text-xs font-mono"
+                  >
+                    {rawChartOfAccounts
+                      .filter((a: any) => !a.isGroup)
+                      .map((a: any) => (
+                        <NativeSelectOption key={a.id} value={a.id}>
+                          {a.code} - {a.name} ({a.rootType})
+                        </NativeSelectOption>
+                      ))}
+                  </NativeSelect>
                 </div>
-                <NativeSelect
-                  value={manualVoucherForm.debitAccountId}
-                  onChange={(e) =>
-                    setManualVoucherForm({
-                      ...manualVoucherForm,
-                      debitAccountId: e.target.value,
-                    })
-                  }
-                  size="sm"
-                  className="w-full text-xs font-mono"
-                >
-                  {rawChartOfAccounts
-                    .filter((a: any) => !a.isGroup)
-                    .map((a: any) => (
-                      <NativeSelectOption key={a.id} value={a.id}>
-                        {a.code} - {a.name} ({a.rootType})
-                      </NativeSelectOption>
-                    ))}
-                </NativeSelect>
-              </div>
 
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium text-blue-600 dark:text-blue-400">
-                    Credit Line (Cr.) *
-                  </Label>
-                  <span className="text-[10px] text-muted-foreground font-mono">
-                    Rs.{' '}
-                    {Number(manualVoucherForm.amountInRs || 0).toLocaleString()}
-                  </span>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                      Credit Line (Cr.) *
+                    </Label>
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      Rs.{' '}
+                      {Number(
+                        manualVoucherForm.amountInRs || 0,
+                      ).toLocaleString()}
+                    </span>
+                  </div>
+                  <NativeSelect
+                    value={manualVoucherForm.creditAccountId}
+                    onChange={(e) =>
+                      setManualVoucherForm({
+                        ...manualVoucherForm,
+                        creditAccountId: e.target.value,
+                      })
+                    }
+                    size="sm"
+                    className="w-full text-xs font-mono"
+                  >
+                    {rawChartOfAccounts
+                      .filter((a: any) => !a.isGroup)
+                      .map((a: any) => (
+                        <NativeSelectOption key={a.id} value={a.id}>
+                          {a.code} - {a.name} ({a.rootType})
+                        </NativeSelectOption>
+                      ))}
+                  </NativeSelect>
                 </div>
-                <NativeSelect
-                  value={manualVoucherForm.creditAccountId}
-                  onChange={(e) =>
-                    setManualVoucherForm({
-                      ...manualVoucherForm,
-                      creditAccountId: e.target.value,
-                    })
-                  }
-                  size="sm"
-                  className="w-full text-xs font-mono"
-                >
-                  {rawChartOfAccounts
-                    .filter((a: any) => !a.isGroup)
-                    .map((a: any) => (
-                      <NativeSelectOption key={a.id} value={a.id}>
-                        {a.code} - {a.name} ({a.rootType})
-                      </NativeSelectOption>
-                    ))}
-                </NativeSelect>
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setIsAddVoucherOpen(false)}
-                className="h-8 text-xs"
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isSubmitting}
-                className="h-8 text-xs"
-              >
+              <Button type="submit" size="sm" disabled={isSubmitting}>
                 {isSubmitting ? 'Posting...' : 'Post balanced voucher'}
               </Button>
             </DialogFooter>
@@ -3769,154 +3772,153 @@ export function AccountsPanel() {
 
       {/* Record Dealer Payout Dialog */}
       <Dialog open={isDealerPayoutOpen} onOpenChange={setIsDealerPayoutOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-sm font-semibold">
-              Disburse Dealer Supplier Payment
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Records an accounts payable settlement voucher to the dealer in
-              the general ledger with optional TDS withholding.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+          <form
+            onSubmit={handlePostDealerPayout}
+            className="flex flex-col h-full min-h-0"
+          >
+            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
+              <DialogTitle className="text-sm font-semibold">
+                Disburse Dealer Supplier Payment
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Records an accounts payable settlement voucher to the dealer in
+                the general ledger with optional TDS withholding.
+              </DialogDescription>
+            </DialogHeader>
 
-          <form onSubmit={handlePostDealerPayout} className="space-y-4 pt-2">
-            <div className="rounded-md border border-border bg-muted/30 p-3 text-xs space-y-1">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wide block">
-                Dealer / Supplier
-              </span>
-              <span className="font-semibold text-foreground text-sm block">
-                {dealerPayoutForm.dealerName}
-              </span>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Payment memo *</Label>
-              <Input
-                required
-                value={dealerPayoutForm.memo}
-                onChange={(e) =>
-                  setDealerPayoutForm({
-                    ...dealerPayoutForm,
-                    memo: e.target.value,
-                  })
-                }
-                className="h-8 text-xs"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Gross Amount (in Rs. NPR) *</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  required
-                  value={dealerPayoutForm.amountInRs}
-                  onChange={(e) =>
-                    setDealerPayoutForm({
-                      ...dealerPayoutForm,
-                      amountInRs: Number(e.target.value),
-                    })
-                  }
-                  className="h-8 font-mono text-xs"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">TDS Withholding Rate %</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={dealerPayoutForm.tdsRate}
-                  onChange={(e) =>
-                    setDealerPayoutForm({
-                      ...dealerPayoutForm,
-                      tdsRate: Number(e.target.value),
-                    })
-                  }
-                  placeholder="0 (default)"
-                  className="h-8 font-mono text-xs"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Disburse from</Label>
-              <NativeSelect
-                value={dealerPayoutForm.account}
-                onChange={(e) =>
-                  setDealerPayoutForm({
-                    ...dealerPayoutForm,
-                    account: e.target.value,
-                  })
-                }
-                size="sm"
-                className="w-full text-xs"
-              >
-                <NativeSelectOption value="bank">
-                  Bank transfer / Cheque (acc_1012)
-                </NativeSelectOption>
-                <NativeSelectOption value="cash">
-                  Cash in hand (acc_1011)
-                </NativeSelectOption>
-              </NativeSelect>
-            </div>
-
-            {/* Payout Calculation Preview */}
-            <div className="rounded-md border border-border bg-muted/20 p-2.5 text-xs space-y-1">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Gross Payable (Dr Dealer AP):</span>
-                <span className="font-mono">
-                  Rs.{' '}
-                  {Number(dealerPayoutForm.amountInRs || 0).toLocaleString()}
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
+              <div className="rounded-md border border-border bg-muted/30 p-3 text-xs space-y-1">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wide block">
+                  Dealer / Supplier
+                </span>
+                <span className="font-semibold text-foreground text-sm block">
+                  {dealerPayoutForm.dealerName}
                 </span>
               </div>
-              {Number(dealerPayoutForm.tdsRate || 0) > 0 && (
-                <div className="flex justify-between text-amber-500">
-                  <span>
-                    TDS Withholding ({dealerPayoutForm.tdsRate}% Cr TDS):
-                  </span>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Payment memo *</Label>
+                <Input
+                  required
+                  value={dealerPayoutForm.memo}
+                  onChange={(e) =>
+                    setDealerPayoutForm({
+                      ...dealerPayoutForm,
+                      memo: e.target.value,
+                    })
+                  }
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Gross Amount (in Rs. NPR) *</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    required
+                    value={dealerPayoutForm.amountInRs}
+                    onChange={(e) =>
+                      setDealerPayoutForm({
+                        ...dealerPayoutForm,
+                        amountInRs: Number(e.target.value),
+                      })
+                    }
+                    className="h-8 font-mono text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">TDS Withholding Rate %</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={dealerPayoutForm.tdsRate}
+                    onChange={(e) =>
+                      setDealerPayoutForm({
+                        ...dealerPayoutForm,
+                        tdsRate: Number(e.target.value),
+                      })
+                    }
+                    placeholder="0 (default)"
+                    className="h-8 font-mono text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Disburse from</Label>
+                <NativeSelect
+                  value={dealerPayoutForm.account}
+                  onChange={(e) =>
+                    setDealerPayoutForm({
+                      ...dealerPayoutForm,
+                      account: e.target.value,
+                    })
+                  }
+                  size="sm"
+                  className="w-full text-xs"
+                >
+                  <NativeSelectOption value="bank">
+                    Bank transfer / Cheque (acc_1012)
+                  </NativeSelectOption>
+                  <NativeSelectOption value="cash">
+                    Cash in hand (acc_1011)
+                  </NativeSelectOption>
+                </NativeSelect>
+              </div>
+
+              {/* Payout Calculation Preview */}
+              <div className="rounded-md border border-border bg-muted/20 p-2.5 text-xs space-y-1">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Gross Payable (Dr Dealer AP):</span>
                   <span className="font-mono">
-                    -Rs.{' '}
+                    Rs.{' '}
+                    {Number(dealerPayoutForm.amountInRs || 0).toLocaleString()}
+                  </span>
+                </div>
+                {Number(dealerPayoutForm.tdsRate || 0) > 0 && (
+                  <div className="flex justify-between text-amber-500">
+                    <span>
+                      TDS Withholding ({dealerPayoutForm.tdsRate}% Cr TDS):
+                    </span>
+                    <span className="font-mono">
+                      -Rs.{' '}
+                      {(
+                        (Number(dealerPayoutForm.amountInRs || 0) *
+                          Number(dealerPayoutForm.tdsRate)) /
+                        100
+                      ).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between font-semibold text-foreground pt-1 border-t border-border/50">
+                  <span>Net Disbursed (Cr Cash/Bank):</span>
+                  <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                    Rs.{' '}
                     {(
-                      (Number(dealerPayoutForm.amountInRs || 0) *
-                        Number(dealerPayoutForm.tdsRate)) /
-                      100
+                      Number(dealerPayoutForm.amountInRs || 0) *
+                      (1 - Number(dealerPayoutForm.tdsRate || 0) / 100)
                     ).toFixed(2)}
                   </span>
                 </div>
-              )}
-              <div className="flex justify-between font-semibold text-foreground pt-1 border-t border-border/50">
-                <span>Net Disbursed (Cr Cash/Bank):</span>
-                <span className="font-mono text-emerald-600 dark:text-emerald-400">
-                  Rs.{' '}
-                  {(
-                    Number(dealerPayoutForm.amountInRs || 0) *
-                    (1 - Number(dealerPayoutForm.tdsRate || 0) / 100)
-                  ).toFixed(2)}
-                </span>
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setIsDealerPayoutOpen(false)}
-                className="h-8 text-xs"
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isSubmitting}
-                className="h-8 text-xs"
-              >
+              <Button type="submit" size="sm" disabled={isSubmitting}>
                 {isSubmitting ? 'Posting...' : 'Disburse & Post PV'}
               </Button>
             </DialogFooter>
@@ -3926,97 +3928,98 @@ export function AccountsPanel() {
 
       {/* Receive Rider Cash Handover Dialog */}
       <Dialog open={isHandoverModalOpen} onOpenChange={setIsHandoverModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-sm font-semibold">
-              Receive Rider Cash Handover
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Receives COD cash collected by rider into operations counter and
-              posts Receipt Voucher (RV).
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+          <form
+            onSubmit={handlePostCashHandover}
+            className="flex flex-col h-full min-h-0"
+          >
+            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
+              <DialogTitle className="text-sm font-semibold">
+                Receive Rider Cash Handover
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Receives COD cash collected by rider into operations counter and
+                posts Receipt Voucher (RV).
+              </DialogDescription>
+            </DialogHeader>
 
-          <form onSubmit={handlePostCashHandover} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Select Rider *</Label>
-              <NativeSelect
-                value={handoverForm.riderId}
-                onChange={(e) => {
-                  const r = ops.riders.find(
-                    (rider) => rider.id === e.target.value,
-                  )
-                  setHandoverForm({
-                    ...handoverForm,
-                    riderId: e.target.value,
-                    amountInRs: r
-                      ? Math.round(r.cashOnHand / 100)
-                      : handoverForm.amountInRs,
-                    notes: r
-                      ? `Cash handover from ${r.name}`
-                      : handoverForm.notes,
-                  })
-                }}
-                size="sm"
-                className="w-full text-xs"
-              >
-                <NativeSelectOption value="">
-                  Choose rider...
-                </NativeSelectOption>
-                {ops.riders.map((r) => (
-                  <NativeSelectOption key={r.id} value={r.id}>
-                    {r.name} — Cash on hand: Rs.{' '}
-                    {(r.cashOnHand / 100).toLocaleString()}
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Select Rider *</Label>
+                <NativeSelect
+                  value={handoverForm.riderId}
+                  onChange={(e) => {
+                    const r = ops.riders.find(
+                      (rider) => rider.id === e.target.value,
+                    )
+                    setHandoverForm({
+                      ...handoverForm,
+                      riderId: e.target.value,
+                      amountInRs: r
+                        ? Math.round(r.cashOnHand / 100)
+                        : handoverForm.amountInRs,
+                      notes: r
+                        ? `Cash handover from ${r.name}`
+                        : handoverForm.notes,
+                    })
+                  }}
+                  size="sm"
+                  className="w-full text-xs"
+                >
+                  <NativeSelectOption value="">
+                    Choose rider...
                   </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                  {ops.riders.map((r) => (
+                    <NativeSelectOption key={r.id} value={r.id}>
+                      {r.name} — Cash on hand: Rs.{' '}
+                      {(r.cashOnHand / 100).toLocaleString()}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  Amount Received (in Rs. NPR) *
+                </Label>
+                <Input
+                  type="number"
+                  min="1"
+                  required
+                  value={handoverForm.amountInRs}
+                  onChange={(e) =>
+                    setHandoverForm({
+                      ...handoverForm,
+                      amountInRs: Number(e.target.value),
+                    })
+                  }
+                  className="h-8 font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Notes / Verification memo</Label>
+                <Input
+                  value={handoverForm.notes}
+                  onChange={(e) =>
+                    setHandoverForm({ ...handoverForm, notes: e.target.value })
+                  }
+                  placeholder="Counter handover verified"
+                  className="h-8 text-xs"
+                />
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs">Amount Received (in Rs. NPR) *</Label>
-              <Input
-                type="number"
-                min="1"
-                required
-                value={handoverForm.amountInRs}
-                onChange={(e) =>
-                  setHandoverForm({
-                    ...handoverForm,
-                    amountInRs: Number(e.target.value),
-                  })
-                }
-                className="h-8 font-mono text-xs"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs">Notes / Verification memo</Label>
-              <Input
-                value={handoverForm.notes}
-                onChange={(e) =>
-                  setHandoverForm({ ...handoverForm, notes: e.target.value })
-                }
-                placeholder="Counter handover verified"
-                className="h-8 text-xs"
-              />
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setIsHandoverModalOpen(false)}
-                className="h-8 text-xs"
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isSubmitting}
-                className="h-8 text-xs"
-              >
+              <Button type="submit" size="sm" disabled={isSubmitting}>
                 {isSubmitting ? 'Receiving...' : 'Verify & Post RV'}
               </Button>
             </DialogFooter>
@@ -4026,121 +4029,117 @@ export function AccountsPanel() {
 
       {/* Disburse Salary Dialog */}
       <Dialog open={isSalaryModalOpen} onOpenChange={setIsSalaryModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-sm font-semibold">
-              Disburse Salary / Rider Commission
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Records a payroll disbursement debit voucher into the general
-              ledger.
-            </DialogDescription>
-          </DialogHeader>
-
+        <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
           <form
             onSubmit={handlePostSalaryDisbursement}
-            className="space-y-4 pt-2"
+            className="flex flex-col h-full min-h-0"
           >
-            <div className="space-y-1.5">
-              <Label className="text-xs">Recipient / Rider (optional)</Label>
-              <NativeSelect
-                value={salaryForm.riderId}
-                onChange={(e) => {
-                  const r = ops.riders.find(
-                    (rider) => rider.id === e.target.value,
-                  )
-                  setSalaryForm({
-                    ...salaryForm,
-                    riderId: e.target.value,
-                    recipientName: r?.name || '',
-                    memo: r
-                      ? `Courier compensation: ${r.name}`
-                      : salaryForm.memo,
-                  })
-                }}
-                size="sm"
-                className="w-full text-xs"
-              >
-                <NativeSelectOption value="">
-                  General courier / staff pool
-                </NativeSelectOption>
-                {ops.riders.map((rider) => (
-                  <NativeSelectOption key={rider.id} value={rider.id}>
-                    {rider.name} ({rider.phone})
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </div>
+            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
+              <DialogTitle className="text-sm font-semibold">
+                Disburse Salary / Rider Commission
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Records a payroll disbursement debit voucher into the general
+                ledger.
+              </DialogDescription>
+            </DialogHeader>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs">Payroll memo *</Label>
-              <Input
-                required
-                value={salaryForm.memo}
-                onChange={(e) =>
-                  setSalaryForm({ ...salaryForm, memo: e.target.value })
-                }
-                className="h-8 text-xs"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
               <div className="space-y-1.5">
-                <Label className="text-xs">Payout source</Label>
+                <Label className="text-xs">Recipient / Rider (optional)</Label>
                 <NativeSelect
-                  value={salaryForm.account}
-                  onChange={(e) =>
-                    setSalaryForm({ ...salaryForm, account: e.target.value })
-                  }
+                  value={salaryForm.riderId}
+                  onChange={(e) => {
+                    const r = ops.riders.find(
+                      (rider) => rider.id === e.target.value,
+                    )
+                    setSalaryForm({
+                      ...salaryForm,
+                      riderId: e.target.value,
+                      recipientName: r?.name || '',
+                      memo: r
+                        ? `Courier compensation: ${r.name}`
+                        : salaryForm.memo,
+                    })
+                  }}
                   size="sm"
                   className="w-full text-xs"
                 >
-                  <NativeSelectOption value="bank">
-                    Bank account
+                  <NativeSelectOption value="">
+                    General courier / staff pool
                   </NativeSelectOption>
-                  <NativeSelectOption value="cash">
-                    Cash remittance
-                  </NativeSelectOption>
-                  <NativeSelectOption value="esewa">
-                    eSewa wallet transfer
-                  </NativeSelectOption>
+                  {ops.riders.map((rider) => (
+                    <NativeSelectOption key={rider.id} value={rider.id}>
+                      {rider.name} ({rider.phone})
+                    </NativeSelectOption>
+                  ))}
                 </NativeSelect>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs">Amount (in Rs. NPR) *</Label>
+                <Label className="text-xs">Payroll memo *</Label>
                 <Input
-                  type="number"
-                  min="1"
                   required
-                  value={salaryForm.amountInRs}
+                  value={salaryForm.memo}
                   onChange={(e) =>
-                    setSalaryForm({
-                      ...salaryForm,
-                      amountInRs: Number(e.target.value),
-                    })
+                    setSalaryForm({ ...salaryForm, memo: e.target.value })
                   }
-                  className="h-8 font-mono text-xs"
+                  className="h-8 text-xs"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Payout source</Label>
+                  <NativeSelect
+                    value={salaryForm.account}
+                    onChange={(e) =>
+                      setSalaryForm({ ...salaryForm, account: e.target.value })
+                    }
+                    size="sm"
+                    className="w-full text-xs"
+                  >
+                    <NativeSelectOption value="bank">
+                      Bank account
+                    </NativeSelectOption>
+                    <NativeSelectOption value="cash">
+                      Cash remittance
+                    </NativeSelectOption>
+                    <NativeSelectOption value="esewa">
+                      eSewa wallet transfer
+                    </NativeSelectOption>
+                  </NativeSelect>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Amount (in Rs. NPR) *</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    required
+                    value={salaryForm.amountInRs}
+                    onChange={(e) =>
+                      setSalaryForm({
+                        ...salaryForm,
+                        amountInRs: Number(e.target.value),
+                      })
+                    }
+                    className="h-8 font-mono text-xs"
+                  />
+                </div>
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setIsSalaryModalOpen(false)}
-                className="h-8 text-xs"
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isSubmitting}
-                className="h-8 text-xs"
-              >
+              <Button type="submit" size="sm" disabled={isSubmitting}>
                 {isSubmitting ? 'Recording...' : 'Disburse salary'}
               </Button>
             </DialogFooter>
@@ -4153,8 +4152,8 @@ export function AccountsPanel() {
         open={isStatementModalOpen}
         onOpenChange={setIsStatementModalOpen}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-          <DialogHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0">
+        <DialogContent className="sm:max-w-3xl md:max-w-4xl w-[calc(100%-2rem)] max-h-[90vh] overflow-hidden flex flex-col p-0 shadow-2xl">
+          <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/10 shrink-0">
             <DialogTitle className="text-sm font-semibold">
               Official Statement of Financial Position & P&L
             </DialogTitle>
@@ -4168,7 +4167,7 @@ export function AccountsPanel() {
             </Button>
           </DialogHeader>
 
-          <div className="p-6 overflow-y-auto space-y-4 text-xs">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 text-xs click-scroll">
             <div className="flex items-start justify-between border-b border-border/50 pb-3">
               <div>
                 <h2 className="text-xs font-bold text-foreground uppercase">
@@ -4239,6 +4238,21 @@ export function AccountsPanel() {
               </div>
             </div>
           </div>
+
+          <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-between">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => window.print()}
+              className="gap-1.5"
+            >
+              <Printer className="h-4 w-4" />
+              Print / Save PDF
+            </Button>
+            <Button size="sm" onClick={() => setIsStatementModalOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -95,9 +95,12 @@ export function RiderPayrollRunDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <form onSubmit={handleGeneratePayroll} className="space-y-4">
-          <DialogHeader>
+      <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+        <form
+          onSubmit={handleGeneratePayroll}
+          className="flex flex-col h-full min-h-0"
+        >
+          <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
             <DialogTitle className="text-sm font-semibold flex items-center gap-2">
               <Calendar className="h-4 w-4 text-primary" />
               Generate Monthly Courier Payroll Run
@@ -109,7 +112,7 @@ export function RiderPayrollRunDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 py-2">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
             {/* Courier Selection */}
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">Target Couriers</Label>
@@ -216,7 +219,7 @@ export function RiderPayrollRunDialog({
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
             <Button
               type="button"
               variant="outline"

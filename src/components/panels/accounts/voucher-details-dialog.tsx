@@ -5,6 +5,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '#/components/ui/dialog'
@@ -65,8 +66,8 @@ export function VoucherDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="p-4 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/20">
+      <DialogContent className="sm:max-w-2xl md:max-w-3xl w-[calc(100%-2rem)] max-h-[90vh] overflow-hidden flex flex-col p-0 shadow-2xl">
+        <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border flex flex-row items-center justify-between space-y-0 bg-muted/10 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Receipt className="h-5 w-5" />
@@ -131,7 +132,7 @@ export function VoucherDetailsDialog({
           </div>
         </DialogHeader>
 
-        <div className="p-5 overflow-y-auto space-y-5 text-xs">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-5 text-xs click-scroll">
           {/* Metadata Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-lg border border-border bg-card/60">
             <div>
@@ -303,6 +304,22 @@ export function VoucherDetailsDialog({
             </div>
           )}
         </div>
+
+        <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-between">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handlePrint}
+            className="gap-1.5"
+          >
+            <Printer className="h-4 w-4" />
+            Print Voucher
+          </Button>
+          <Button type="button" size="sm" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

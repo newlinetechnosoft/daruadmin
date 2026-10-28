@@ -541,159 +541,165 @@ export function TaxonomyPanel() {
 
       {/* Add / Edit Dialog */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-sm font-semibold capitalize">
-              {modalTitle}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col h-full min-h-0"
+          >
+            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
+              <DialogTitle className="text-sm font-semibold capitalize">
+                {modalTitle}
+              </DialogTitle>
+            </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="tax-name" className="text-xs">
-                Name *
-              </Label>
-              <Input
-                id="tax-name"
-                required
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="e.g. Single Malt Whiskey or Old Durbar"
-                className="h-8 text-xs"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
               <div className="space-y-1.5">
-                <Label htmlFor="tax-slug" className="text-xs">
-                  Slug (optional)
+                <Label htmlFor="tax-name" className="text-xs">
+                  Name *
                 </Label>
                 <Input
-                  id="tax-slug"
-                  value={formSlug}
-                  onChange={(e) => setFormSlug(e.target.value)}
-                  placeholder="auto-derived"
-                  className="h-8 font-mono text-xs"
+                  id="tax-name"
+                  required
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="e.g. Single Malt Whiskey or Old Durbar"
+                  className="h-8 text-xs"
                 />
               </div>
 
-              {activeTab === 'brands' ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="tax-origin" className="text-xs">
-                    Origin country
+                  <Label htmlFor="tax-slug" className="text-xs">
+                    Slug (optional)
                   </Label>
                   <Input
-                    id="tax-origin"
-                    value={formOrigin}
-                    onChange={(e) => setFormOrigin(e.target.value)}
-                    placeholder="e.g. Nepal, Scotland"
-                    className="h-8 text-xs"
-                  />
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  <Label htmlFor="tax-sort" className="text-xs">
-                    Sort order
-                  </Label>
-                  <Input
-                    id="tax-sort"
-                    type="number"
-                    value={formSortOrder}
-                    onChange={(e) => setFormSortOrder(Number(e.target.value))}
+                    id="tax-slug"
+                    value={formSlug}
+                    onChange={(e) => setFormSlug(e.target.value)}
+                    placeholder="auto-derived"
                     className="h-8 font-mono text-xs"
                   />
                 </div>
-              )}
-            </div>
 
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="tax-img" className="text-xs">
-                  {activeTab === 'brands' ? 'Brand Logo' : 'Category Image'}
-                </Label>
-                <label className="cursor-pointer text-xs text-primary hover:underline font-medium flex items-center gap-1">
-                  {isUploadingImage ? (
-                    <>
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      <span>Uploading...</span>
-                    </>
-                  ) : (
-                    <>
-                      <UploadCloud className="h-3 w-3" />
-                      <span>Upload file</span>
-                    </>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageFileUpload}
-                    disabled={isUploadingImage}
-                  />
-                </label>
+                {activeTab === 'brands' ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tax-origin" className="text-xs">
+                      Origin country
+                    </Label>
+                    <Input
+                      id="tax-origin"
+                      value={formOrigin}
+                      onChange={(e) => setFormOrigin(e.target.value)}
+                      placeholder="e.g. Nepal, Scotland"
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tax-sort" className="text-xs">
+                      Sort order
+                    </Label>
+                    <Input
+                      id="tax-sort"
+                      type="number"
+                      value={formSortOrder}
+                      onChange={(e) => setFormSortOrder(Number(e.target.value))}
+                      className="h-8 font-mono text-xs"
+                    />
+                  </div>
+                )}
               </div>
-              <Input
-                id="tax-img"
-                value={formImageUrl}
-                onChange={(e) => setFormImageUrl(e.target.value)}
-                placeholder="https://... or upload from disk"
-                className="h-8 text-xs font-mono"
-              />
-              {formImageUrl && (
-                <div className="relative mt-2 inline-block">
-                  <img
-                    src={formImageUrl}
-                    alt="Preview"
-                    className="h-16 w-16 rounded-md object-cover border border-border bg-muted"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setFormImageUrl('')}
-                    className="absolute -top-1.5 -right-1.5 rounded-full bg-destructive text-destructive-foreground p-0.5 shadow-sm hover:opacity-90"
-                    title="Remove image"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="tax-img" className="text-xs">
+                    {activeTab === 'brands' ? 'Brand Logo' : 'Category Image'}
+                  </Label>
+                  <label className="cursor-pointer text-xs text-primary hover:underline font-medium flex items-center gap-1">
+                    {isUploadingImage ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="h-3 w-3" />
+                        <span>Upload file</span>
+                      </>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageFileUpload}
+                      disabled={isUploadingImage}
+                    />
+                  </label>
                 </div>
-              )}
+                <Input
+                  id="tax-img"
+                  value={formImageUrl}
+                  onChange={(e) => setFormImageUrl(e.target.value)}
+                  placeholder="https://... or upload from disk"
+                  className="h-8 text-xs font-mono"
+                />
+                {formImageUrl && (
+                  <div className="relative mt-2 inline-block">
+                    <img
+                      src={formImageUrl}
+                      alt="Preview"
+                      className="h-16 w-16 rounded-md object-cover border border-border bg-muted"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormImageUrl('')}
+                      className="absolute -top-1.5 -right-1.5 rounded-full bg-destructive text-destructive-foreground p-0.5 shadow-sm hover:opacity-90"
+                      title="Remove image"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="tax-desc" className="text-xs">
+                  Description
+                </Label>
+                <Textarea
+                  id="tax-desc"
+                  rows={2}
+                  value={formDescription}
+                  onChange={(e) => setFormDescription(e.target.value)}
+                  placeholder="Brief overview..."
+                  className="text-xs"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 border-t border-border pt-3">
+                <Checkbox
+                  id="tax-is-active"
+                  checked={formIsActive}
+                  onCheckedChange={(checked) =>
+                    setFormIsActive(Boolean(checked))
+                  }
+                />
+                <Label
+                  htmlFor="tax-is-active"
+                  className="text-xs cursor-pointer font-normal"
+                >
+                  Active on storefront
+                </Label>
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="tax-desc" className="text-xs">
-                Description
-              </Label>
-              <Textarea
-                id="tax-desc"
-                rows={2}
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-                placeholder="Brief overview..."
-                className="text-xs"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 border-t border-border pt-3">
-              <Checkbox
-                id="tax-is-active"
-                checked={formIsActive}
-                onCheckedChange={(checked) => setFormIsActive(Boolean(checked))}
-              />
-              <Label
-                htmlFor="tax-is-active"
-                className="text-xs cursor-pointer font-normal"
-              >
-                Active on storefront
-              </Label>
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setModalOpen(false)}
-                className="h-8 text-xs"
               >
                 Cancel
               </Button>
@@ -701,7 +707,6 @@ export function TaxonomyPanel() {
                 type="submit"
                 size="sm"
                 disabled={isSubmitting || isUploadingImage}
-                className="h-8 text-xs"
               >
                 {isSubmitting ? 'Saving...' : 'Save changes'}
               </Button>

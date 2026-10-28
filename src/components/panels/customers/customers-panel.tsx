@@ -401,8 +401,8 @@ export function CustomersPanel() {
         onOpenChange={(open) => !open && setSelectedCustomer(null)}
       >
         {selectedCustomer && (
-          <DialogContent className="max-w-xl max-h-[85vh] flex flex-col p-0">
-            <DialogHeader className="p-4 border-b border-border">
+          <DialogContent className="sm:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
               <DialogTitle className="text-sm font-semibold">
                 {selectedCustomer.name}
               </DialogTitle>
@@ -411,7 +411,7 @@ export function CustomersPanel() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="p-4 overflow-y-auto space-y-4 text-xs">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 text-xs click-scroll">
               <div className="grid grid-cols-2 gap-3 bg-muted/40 p-3 rounded-md border border-border">
                 <div>
                   <span className="text-[10px] text-muted-foreground block">
@@ -468,12 +468,11 @@ export function CustomersPanel() {
               </div>
             </div>
 
-            <DialogFooter className="p-3 border-t border-border bg-muted/20">
+            <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end">
               <Button
                 type="button"
                 size="sm"
                 onClick={() => setSelectedCustomer(null)}
-                className="h-8 text-xs"
               >
                 Done
               </Button>
@@ -488,8 +487,8 @@ export function CustomersPanel() {
         onOpenChange={(open) => !open && setSelectedComplaint(null)}
       >
         {selectedComplaint && (
-          <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0">
-            <DialogHeader className="p-4 border-b border-border">
+          <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
               <DialogTitle className="text-sm font-semibold">
                 Support ticket: {selectedComplaint.subject}
               </DialogTitle>
@@ -500,7 +499,7 @@ export function CustomersPanel() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="p-4 overflow-y-auto space-y-4 text-xs">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 text-xs click-scroll">
               <div className="p-3 bg-muted/40 rounded-md border border-border">
                 <span className="text-[10px] font-medium text-muted-foreground block mb-1">
                   Customer message:
@@ -539,12 +538,11 @@ export function CustomersPanel() {
               </div>
             </div>
 
-            <DialogFooter className="p-3 border-t border-border bg-muted/20">
+            <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end">
               <Button
                 type="button"
                 size="sm"
                 onClick={() => setSelectedComplaint(null)}
-                className="h-8 text-xs"
               >
                 Close ticket
               </Button>

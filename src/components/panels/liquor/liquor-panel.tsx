@@ -678,500 +678,500 @@ export function LiquorPanel() {
 
       {/* Add / Edit Dialog */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-sm font-semibold">
-              {editingId ? 'Edit liquor product' : 'New liquor product'}
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Manage product profile, alcohol by volume (ABV), and sizing
-              variants.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-3xl md:max-w-4xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col h-full min-h-0"
+          >
+            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
+              <DialogTitle className="text-sm font-semibold">
+                {editingId ? 'Edit liquor product' : 'New liquor product'}
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Manage product profile, alcohol by volume (ABV), and sizing
+                variants.
+              </DialogDescription>
+            </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="liq-name" className="text-xs">
-                Product name *
-              </Label>
-              <Input
-                id="liq-name"
-                required
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="e.g. Old Durbar Black Chimney"
-                className="h-8 text-xs"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
               <div className="space-y-1.5">
-                <Label htmlFor="liq-cat" className="text-xs">
-                  Category *
+                <Label htmlFor="liq-name" className="text-xs">
+                  Product name *
                 </Label>
-                <NativeSelect
-                  id="liq-cat"
-                  value={formCategoryId}
-                  onChange={(e) => setFormCategoryId(e.target.value)}
+                <Input
+                  id="liq-name"
                   required
-                  size="sm"
-                  className="w-full text-xs"
-                >
-                  {taxonomy.liquorCategories.map((c) => (
-                    <NativeSelectOption key={c.id} value={c.id}>
-                      {c.name}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="e.g. Old Durbar Black Chimney"
+                  className="h-8 text-xs"
+                />
               </div>
 
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="liq-brand" className="text-xs">
-                    Brand / distillery
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="liq-cat" className="text-xs">
+                    Category *
                   </Label>
-                  {canCreateBrand && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 px-1.5 text-[11px] text-primary hover:text-primary gap-1"
-                      onClick={() => {
-                        setEditingBrand(null)
-                        setBrandDialogOpen(true)
-                      }}
-                    >
-                      <Plus className="h-3 w-3" />
-                      New Brand
-                    </Button>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5">
                   <NativeSelect
-                    id="liq-brand"
-                    value={formBrandId}
-                    onChange={(e) => setFormBrandId(e.target.value)}
+                    id="liq-cat"
+                    value={formCategoryId}
+                    onChange={(e) => setFormCategoryId(e.target.value)}
+                    required
                     size="sm"
                     className="w-full text-xs"
                   >
-                    <NativeSelectOption value="">
-                      No specific brand
-                    </NativeSelectOption>
-                    {taxonomy.liquorBrands.map((b) => (
-                      <NativeSelectOption key={b.id} value={b.id}>
-                        {b.name}
+                    {taxonomy.liquorCategories.map((c) => (
+                      <NativeSelectOption key={c.id} value={c.id}>
+                        {c.name}
                       </NativeSelectOption>
                     ))}
                   </NativeSelect>
-                  {formBrandId && (
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      {canEditBrand && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 px-2 text-xs"
-                          title="Edit selected brand"
-                          onClick={() => {
-                            const found = taxonomy.liquorBrands.find(
-                              (b) => b.id === formBrandId,
-                            )
-                            if (found) {
-                              setEditingBrand(found)
-                              setBrandDialogOpen(true)
-                            }
-                          }}
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                      {canDeleteBrand && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
-                          title="Delete selected brand"
-                          onClick={() => {
-                            const found = taxonomy.liquorBrands.find(
-                              (b) => b.id === formBrandId,
-                            )
-                            if (found) {
-                              setDeleteBrandTarget(found)
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                    </div>
-                  )}
                 </div>
-              </div>
-            </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="liq-slug" className="text-xs">
-                URL slug (optional)
-              </Label>
-              <Input
-                id="liq-slug"
-                value={formSlug}
-                onChange={(e) => setFormSlug(e.target.value)}
-                placeholder="auto-generated-from-name"
-                className="h-8 font-mono text-xs"
-              />
-            </div>
-
-            {/* Supplying Dealers Selection */}
-            <div className="space-y-2 border-t border-border/60 pt-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-xs font-semibold flex items-center gap-1.5">
-                    <Store className="h-3.5 w-3.5 text-amber-600" />
-                    Supplying Dealers
-                  </Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    Select dealers who supply and fulfill this liquor product.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7 px-2 text-xs gap-1"
-                  onClick={() => setDealerDialogOpen(true)}
-                >
-                  <Plus className="h-3 w-3" />
-                  New Dealer
-                </Button>
-              </div>
-
-              {dealersList.length === 0 ? (
-                <div className="text-xs text-muted-foreground italic p-2.5 rounded-lg border border-dashed bg-muted/20">
-                  No dealers registered yet. Click &ldquo;New Dealer&rdquo; to
-                  add a supplier.
-                </div>
-              ) : (
-                <div className="max-h-36 overflow-y-auto rounded-lg border border-border p-2 space-y-1.5 bg-muted/10">
-                  {dealersList.map((d) => {
-                    const isSelected = formDealerIds.includes(d.id)
-                    return (
-                      <div
-                        key={d.id}
-                        onClick={() => {
-                          setFormDealerIds((prev) =>
-                            isSelected
-                              ? prev.filter((id) => id !== d.id)
-                              : [...prev, d.id],
-                          )
-                        }}
-                        className={`flex items-center justify-between p-2 rounded-md border text-xs cursor-pointer transition-colors ${
-                          isSelected
-                            ? 'border-amber-500/40 bg-amber-500/10 text-foreground font-medium'
-                            : 'border-transparent hover:bg-muted/60 text-muted-foreground'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => {
-                              setFormDealerIds((prev) =>
-                                isSelected
-                                  ? prev.filter((id) => id !== d.id)
-                                  : [...prev, d.id],
-                              )
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <span className="truncate">{d.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0 text-[11px]">
-                          {d.pan && (
-                            <span className="font-mono text-muted-foreground">
-                              PAN: {d.pan}
-                            </span>
-                          )}
-                          <span className="text-muted-foreground">
-                            {d.city}
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-              {formDealerIds.length > 0 && (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Badge
-                    variant="secondary"
-                    className="text-[11px] py-0 px-2 h-5"
-                  >
-                    {formDealerIds.length}{' '}
-                    {formDealerIds.length === 1 ? 'dealer' : 'dealers'} selected
-                  </Badge>
-                  <span>assigned to fulfill this product</span>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1.5 border-t border-border/60 pt-3">
-              <Label className="text-xs font-medium">
-                Product Images (Neon Object Storage)
-              </Label>
-              <ImageUploader
-                ref={imageUploaderRef}
-                draftKey={`liquor-${editingId || 'new'}`}
-                existingImages={existingImagesList}
-                onDeleteExisting={async (img) => {
-                  if (img.id) {
-                    await deleteProductImageFn({
-                      data: {
-                        catalogType: 'liquor',
-                        imageId: img.id,
-                        imageUrl: img.url,
-                      },
-                    })
-                    await queryClient.invalidateQueries({
-                      queryKey: ['admin', 'liquor'],
-                    })
-                  }
-                }}
-                prefix="products/liquor"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="liq-desc" className="text-xs">
-                Tasting notes &amp; description
-              </Label>
-              <Textarea
-                id="liq-desc"
-                rows={2}
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-                placeholder="Aromatic profile, aging cask notes, tasting palate..."
-                className="text-xs"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="liq-custom-badge" className="text-xs">
-                  Custom Badge Label{' '}
-                  <span className="text-muted-foreground font-normal">
-                    (optional)
-                  </span>
-                </Label>
-                <Input
-                  id="liq-custom-badge"
-                  value={formCustomBadge}
-                  onChange={(e) => setFormCustomBadge(e.target.value)}
-                  placeholder="e.g. Popular, Top Pick, Organic"
-                  className="text-xs"
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Overrides default "Popular" badge on storefront &amp; cart.
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="liq-custom-discount" className="text-xs">
-                  Custom Discount Label{' '}
-                  <span className="text-muted-foreground font-normal">
-                    (optional)
-                  </span>
-                </Label>
-                <Input
-                  id="liq-custom-discount"
-                  value={formCustomDiscountLabel}
-                  onChange={(e) => setFormCustomDiscountLabel(e.target.value)}
-                  placeholder="e.g. 86% off, Special Offer, Save Rs 500"
-                  className="text-xs"
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Overrides auto-calculated percentage discount badge.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-6 border-y border-border py-3">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="liq-is-active"
-                  checked={formIsActive}
-                  onCheckedChange={(checked) =>
-                    setFormIsActive(Boolean(checked))
-                  }
-                />
-                <Label
-                  htmlFor="liq-is-active"
-                  className="text-xs cursor-pointer font-normal"
-                >
-                  Active on storefront
-                </Label>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="liq-is-featured"
-                  checked={formIsFeatured}
-                  onCheckedChange={(checked) =>
-                    setFormIsFeatured(Boolean(checked))
-                  }
-                />
-                <Label
-                  htmlFor="liq-is-featured"
-                  className="text-xs cursor-pointer font-normal flex items-center gap-1"
-                >
-                  <Sparkles className="h-3 w-3" />
-                  Featured top pick
-                </Label>
-              </div>
-            </div>
-
-            {/* Variants */}
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-xs">
-                    Volume variants &amp; price tiers
-                  </Label>
-                  <p className="text-[10px] text-muted-foreground">
-                    Set selling price and optional MRP for strikethrough
-                    discount display.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleAddVariantRow}
-                  className="h-7 gap-1 text-xs text-primary"
-                >
-                  <Plus className="h-3 w-3" /> Add variant
-                </Button>
-              </div>
-
-              <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-2 text-[10px] text-muted-foreground font-medium">
-                <div className="col-span-3">Variant Name</div>
-                <div className="col-span-2">Volume (ml)</div>
-                <div className="col-span-2">Price (Rs.)</div>
-                <div className="col-span-2">MRP (Rs.)</div>
-                <div className="col-span-2">Stock</div>
-                <div className="col-span-1"></div>
-              </div>
-
-              <div className="max-h-60 space-y-2 overflow-y-auto">
-                {formVariants.map((v, i) => (
-                  <div
-                    key={i}
-                    className="grid grid-cols-2 items-center gap-2 rounded-md border border-border bg-muted/30 p-2 sm:grid-cols-12"
-                  >
-                    <div className="col-span-2 sm:col-span-3">
-                      <Input
-                        type="text"
-                        placeholder="Variant name"
-                        value={v.name}
-                        onChange={(e) =>
-                          updateVariant(i, { name: e.target.value })
-                        }
-                        className="h-7 text-xs"
-                      />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <Input
-                        type="number"
-                        placeholder="ml"
-                        value={v.volumeMl}
-                        onChange={(e) =>
-                          updateVariant(i, {
-                            volumeMl: Number(e.target.value),
-                          })
-                        }
-                        className="h-7 font-mono text-xs"
-                      />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <Input
-                        type="number"
-                        placeholder="Price"
-                        value={v.price}
-                        onChange={(e) =>
-                          updateVariant(i, {
-                            price: Number(e.target.value),
-                          })
-                        }
-                        className="h-7 font-mono text-xs"
-                        title="Sale Price (Rs.)"
-                      />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <Input
-                        type="number"
-                        placeholder="MRP"
-                        value={v.mrp ?? ''}
-                        onChange={(e) =>
-                          updateVariant(i, {
-                            mrp: e.target.value
-                              ? Number(e.target.value)
-                              : undefined,
-                          })
-                        }
-                        className="h-7 font-mono text-xs"
-                        title="Original / strike-through MRP (Rs.)"
-                      />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <Input
-                        type="number"
-                        placeholder="Stock"
-                        value={v.stock}
-                        onChange={(e) =>
-                          updateVariant(i, {
-                            stock: Number(e.target.value),
-                          })
-                        }
-                        className="h-7 font-mono text-xs"
-                      />
-                    </div>
-
-                    <div className="col-span-2 flex justify-end sm:col-span-1">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="liq-brand" className="text-xs">
+                      Brand / distillery
+                    </Label>
+                    {canCreateBrand && (
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveVariantRow(i)}
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        size="sm"
+                        className="h-5 px-1.5 text-[11px] text-primary hover:text-primary gap-1"
+                        onClick={() => {
+                          setEditingBrand(null)
+                          setBrandDialogOpen(true)
+                        }}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Plus className="h-3 w-3" />
+                        New Brand
                       </Button>
-                    </div>
+                    )}
                   </div>
-                ))}
+                  <div className="flex items-center gap-1.5">
+                    <NativeSelect
+                      id="liq-brand"
+                      value={formBrandId}
+                      onChange={(e) => setFormBrandId(e.target.value)}
+                      size="sm"
+                      className="w-full text-xs"
+                    >
+                      <NativeSelectOption value="">
+                        No specific brand
+                      </NativeSelectOption>
+                      {taxonomy.liquorBrands.map((b) => (
+                        <NativeSelectOption key={b.id} value={b.id}>
+                          {b.name}
+                        </NativeSelectOption>
+                      ))}
+                    </NativeSelect>
+                    {formBrandId && (
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        {canEditBrand && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 px-2 text-xs"
+                            title="Edit selected brand"
+                            onClick={() => {
+                              const found = taxonomy.liquorBrands.find(
+                                (b) => b.id === formBrandId,
+                              )
+                              if (found) {
+                                setEditingBrand(found)
+                                setBrandDialogOpen(true)
+                              }
+                            }}
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {canDeleteBrand && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
+                            title="Delete selected brand"
+                            onClick={() => {
+                              const found = taxonomy.liquorBrands.find(
+                                (b) => b.id === formBrandId,
+                              )
+                              if (found) {
+                                setDeleteBrandTarget(found)
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="liq-slug" className="text-xs">
+                  URL slug (optional)
+                </Label>
+                <Input
+                  id="liq-slug"
+                  value={formSlug}
+                  onChange={(e) => setFormSlug(e.target.value)}
+                  placeholder="auto-generated-from-name"
+                  className="h-8 font-mono text-xs"
+                />
+              </div>
+
+              {/* Supplying Dealers Selection */}
+              <div className="space-y-2 border-t border-border/60 pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-xs font-semibold flex items-center gap-1.5">
+                      <Store className="h-3.5 w-3.5 text-amber-600" />
+                      Supplying Dealers
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Select dealers who supply and fulfill this liquor product.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs gap-1"
+                    onClick={() => setDealerDialogOpen(true)}
+                  >
+                    <Plus className="h-3 w-3" />
+                    New Dealer
+                  </Button>
+                </div>
+
+                {dealersList.length === 0 ? (
+                  <div className="text-xs text-muted-foreground italic p-2.5 rounded-lg border border-dashed bg-muted/20">
+                    No dealers registered yet. Click &ldquo;New Dealer&rdquo; to
+                    add a supplier.
+                  </div>
+                ) : (
+                  <div className="max-h-36 overflow-y-auto rounded-lg border border-border p-2 space-y-1.5 bg-muted/10">
+                    {dealersList.map((d) => {
+                      const isSelected = formDealerIds.includes(d.id)
+                      return (
+                        <div
+                          key={d.id}
+                          onClick={() => {
+                            setFormDealerIds((prev) =>
+                              isSelected
+                                ? prev.filter((id) => id !== d.id)
+                                : [...prev, d.id],
+                            )
+                          }}
+                          className={`flex items-center justify-between p-2 rounded-md border text-xs cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'border-amber-500/40 bg-amber-500/10 text-foreground font-medium'
+                              : 'border-transparent hover:bg-muted/60 text-muted-foreground'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => {
+                                setFormDealerIds((prev) =>
+                                  isSelected
+                                    ? prev.filter((id) => id !== d.id)
+                                    : [...prev, d.id],
+                                )
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <span className="truncate">{d.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 text-[11px]">
+                            {d.pan && (
+                              <span className="font-mono text-muted-foreground">
+                                PAN: {d.pan}
+                              </span>
+                            )}
+                            <span className="text-muted-foreground">
+                              {d.city}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                {formDealerIds.length > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Badge
+                      variant="secondary"
+                      className="text-[11px] py-0 px-2 h-5"
+                    >
+                      {formDealerIds.length}{' '}
+                      {formDealerIds.length === 1 ? 'dealer' : 'dealers'}{' '}
+                      selected
+                    </Badge>
+                    <span>assigned to fulfill this product</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1.5 border-t border-border/60 pt-3">
+                <Label className="text-xs font-medium">
+                  Product Images (Neon Object Storage)
+                </Label>
+                <ImageUploader
+                  ref={imageUploaderRef}
+                  draftKey={`liquor-${editingId || 'new'}`}
+                  existingImages={existingImagesList}
+                  onDeleteExisting={async (img) => {
+                    if (img.id) {
+                      await deleteProductImageFn({
+                        data: {
+                          catalogType: 'liquor',
+                          imageId: img.id,
+                          imageUrl: img.url,
+                        },
+                      })
+                      await queryClient.invalidateQueries({
+                        queryKey: ['admin', 'liquor'],
+                      })
+                    }
+                  }}
+                  prefix="products/liquor"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="liq-desc" className="text-xs">
+                  Tasting notes &amp; description
+                </Label>
+                <Textarea
+                  id="liq-desc"
+                  rows={2}
+                  value={formDescription}
+                  onChange={(e) => setFormDescription(e.target.value)}
+                  placeholder="Aromatic profile, aging cask notes, tasting palate..."
+                  className="text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="liq-custom-badge" className="text-xs">
+                    Custom Badge Label{' '}
+                    <span className="text-muted-foreground font-normal">
+                      (optional)
+                    </span>
+                  </Label>
+                  <Input
+                    id="liq-custom-badge"
+                    value={formCustomBadge}
+                    onChange={(e) => setFormCustomBadge(e.target.value)}
+                    placeholder="e.g. Popular, Top Pick, Organic"
+                    className="text-xs"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Overrides default "Popular" badge on storefront &amp; cart.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="liq-custom-discount" className="text-xs">
+                    Custom Discount Label{' '}
+                    <span className="text-muted-foreground font-normal">
+                      (optional)
+                    </span>
+                  </Label>
+                  <Input
+                    id="liq-custom-discount"
+                    value={formCustomDiscountLabel}
+                    onChange={(e) => setFormCustomDiscountLabel(e.target.value)}
+                    placeholder="e.g. 86% off, Special Offer, Save Rs 500"
+                    className="text-xs"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Overrides auto-calculated percentage discount badge.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-6 border-y border-border py-3">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="liq-is-active"
+                    checked={formIsActive}
+                    onCheckedChange={(checked) =>
+                      setFormIsActive(Boolean(checked))
+                    }
+                  />
+                  <Label
+                    htmlFor="liq-is-active"
+                    className="text-xs cursor-pointer font-normal"
+                  >
+                    Active on storefront
+                  </Label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="liq-is-featured"
+                    checked={formIsFeatured}
+                    onCheckedChange={(checked) =>
+                      setFormIsFeatured(Boolean(checked))
+                    }
+                  />
+                  <Label
+                    htmlFor="liq-is-featured"
+                    className="text-xs cursor-pointer font-normal flex items-center gap-1"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    Featured top pick
+                  </Label>
+                </div>
+              </div>
+
+              {/* Variants */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-xs">
+                      Volume variants &amp; price tiers
+                    </Label>
+                    <p className="text-[10px] text-muted-foreground">
+                      Set selling price and optional MRP for strikethrough
+                      discount display.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleAddVariantRow}
+                    className="h-7 gap-1 text-xs text-primary"
+                  >
+                    <Plus className="h-3 w-3" /> Add variant
+                  </Button>
+                </div>
+
+                <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-2 text-[10px] text-muted-foreground font-medium">
+                  <div className="col-span-3">Variant Name</div>
+                  <div className="col-span-2">Volume (ml)</div>
+                  <div className="col-span-2">Price (Rs.)</div>
+                  <div className="col-span-2">MRP (Rs.)</div>
+                  <div className="col-span-2">Stock</div>
+                  <div className="col-span-1"></div>
+                </div>
+
+                <div className="max-h-60 space-y-2 overflow-y-auto">
+                  {formVariants.map((v, i) => (
+                    <div
+                      key={i}
+                      className="grid grid-cols-2 items-center gap-2 rounded-md border border-border bg-muted/30 p-2 sm:grid-cols-12"
+                    >
+                      <div className="col-span-2 sm:col-span-3">
+                        <Input
+                          type="text"
+                          placeholder="Variant name"
+                          value={v.name}
+                          onChange={(e) =>
+                            updateVariant(i, { name: e.target.value })
+                          }
+                          className="h-7 text-xs"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <Input
+                          type="number"
+                          placeholder="ml"
+                          value={v.volumeMl}
+                          onChange={(e) =>
+                            updateVariant(i, {
+                              volumeMl: Number(e.target.value),
+                            })
+                          }
+                          className="h-7 font-mono text-xs"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <Input
+                          type="number"
+                          placeholder="Price"
+                          value={v.price}
+                          onChange={(e) =>
+                            updateVariant(i, {
+                              price: Number(e.target.value),
+                            })
+                          }
+                          className="h-7 font-mono text-xs"
+                          title="Sale Price (Rs.)"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <Input
+                          type="number"
+                          placeholder="MRP"
+                          value={v.mrp ?? ''}
+                          onChange={(e) =>
+                            updateVariant(i, {
+                              mrp: e.target.value
+                                ? Number(e.target.value)
+                                : undefined,
+                            })
+                          }
+                          className="h-7 font-mono text-xs"
+                          title="Original / strike-through MRP (Rs.)"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <Input
+                          type="number"
+                          placeholder="Stock"
+                          value={v.stock}
+                          onChange={(e) =>
+                            updateVariant(i, {
+                              stock: Number(e.target.value),
+                            })
+                          }
+                          className="h-7 font-mono text-xs"
+                        />
+                      </div>
+
+                      <div className="col-span-2 flex justify-end sm:col-span-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveVariantRow(i)}
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-border">
+            <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setModalOpen(false)}
-                className="h-8 text-xs"
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isSubmitting}
-                className="h-8 text-xs"
-              >
+              <Button type="submit" size="sm" disabled={isSubmitting}>
                 {isSubmitting
                   ? 'Saving...'
                   : editingId
