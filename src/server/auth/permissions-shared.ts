@@ -10,6 +10,8 @@ export interface SessionUser {
   role: string
   isActive: boolean
   banned?: boolean
+  phone?: string | null
+  phoneVerified?: boolean
 }
 
 export const DEFAULT_GRANTS_BY_ROLE: Record<string, UserGrants> = {

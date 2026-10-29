@@ -45,6 +45,8 @@ export async function getSessionUser(): Promise<SessionUser> {
     role?: string | null
     isActive?: boolean | null
     banned?: boolean | null
+    phone?: string | null
+    phoneVerified?: boolean | null
   }
 
   const role = rawUser.role || 'customer'
@@ -62,6 +64,8 @@ export async function getSessionUser(): Promise<SessionUser> {
     role,
     isActive: true,
     banned: false,
+    phone: rawUser.phone || null,
+    phoneVerified: Boolean(rawUser.phoneVerified),
   }
 }
 

@@ -19,6 +19,15 @@ export const Route = createFileRoute('/checkout')({
         search: { redirect: location.pathname },
       })
     }
+    if (access.user.role === 'customer' && !access.user.phoneVerified) {
+      throw redirect({
+        to: '/verify-phone',
+        search: {
+          phone: access.user.phone || '',
+          redirect: location.pathname,
+        },
+      })
+    }
   },
   component: CheckoutPage,
 })
