@@ -1,12 +1,14 @@
 import * as React from 'react'
+import type { QueryKey } from '@tanstack/react-query'
 import { Input } from '#/components/ui/input'
 import { Button } from '#/components/ui/button'
 import { Kbd } from '#/components/ui/kbd'
-import { Search, RotateCw, Rows3, Rows4 } from 'lucide-react'
+import { Search, Rows3, Rows4 } from 'lucide-react'
 import { FilterPopover } from './filter-popover'
 import { FilterChips } from './filter-chips'
 import { ColumnPicker } from './column-picker'
 import { SavedViews } from './saved-views'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import type {
   FilterRule,
   FilterableField,
@@ -34,6 +36,7 @@ export interface ListToolbarProps<TData> {
   primaryAction?: React.ReactNode
   onRefresh?: () => void
   isRefreshing?: boolean
+  refreshQueryKeys?: QueryKey | QueryKey[]
   quickFilterTabs?: React.ReactNode
 }
 
@@ -56,6 +59,7 @@ export function ListToolbar<TData>({
   primaryAction,
   onRefresh,
   isRefreshing = false,
+  refreshQueryKeys,
   quickFilterTabs,
 }: ListToolbarProps<TData>) {
   const searchInputRef = React.useRef<HTMLInputElement>(null)
@@ -146,21 +150,13 @@ export function ListToolbar<TData>({
             )}
           </Button>
 
-          {onRefresh && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={onRefresh}
-              disabled={isRefreshing}
-              className="size-9 text-muted-foreground hover:text-foreground"
-              aria-label="Refresh list"
-              title="Refresh"
-            >
-              <RotateCw
-                className={`size-3.5 ${isRefreshing ? 'animate-spin' : ''}`}
-              />
-            </Button>
+          {(onRefresh || refreshQueryKeys) && (
+            <DataRefreshButton
+              queryKeys={refreshQueryKeys}
+              onRefresh={onRefresh}
+              isRefreshing={isRefreshing}
+              variant="toolbar"
+            />
           )}
         </div>
 

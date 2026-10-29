@@ -1,4 +1,8 @@
 import { Link, getRouteApi } from '@tanstack/react-router'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import { MoneyText } from '#/components/shared/money-text'
 import { DateText } from '#/components/shared/date-text'
 import { StatusIndicator } from '#/components/shared/status-indicator'
@@ -47,10 +51,17 @@ import { Badge } from '#/components/ui/badge'
 const routeApi = getRouteApi('/admin/')
 
 export function DashboardPanel() {
-  const data = routeApi.useLoaderData()
   const search = routeApi.useSearch()
   const navigate = routeApi.useNavigate()
   const range = search.range ?? '30d'
+
+  const { data, isFetching, refetch } = useSuspenseQuery(
+    adminQueries.dashboard({
+      range: range as any,
+      from: search.from,
+      to: search.to,
+    }),
+  )
 
   // Determine attention queue numbers based on current order status counts
   const pendingOrders =
@@ -122,6 +133,19 @@ export function DashboardPanel() {
         description="Action-first hub for order desk dispatch, dealer sourcing, rider handovers, and cash reconciliation in Butwal."
         actions={
           <div className="flex items-center gap-2.5">
+            <DataRefreshButton
+              queryKeys={[
+                adminQueries.dashboard({
+                  range: range as any,
+                  from: search.from,
+                  to: search.to,
+                }).queryKey,
+              ]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
+
             <Select
               value={range}
               onValueChange={(val) =>
@@ -151,7 +175,8 @@ export function DashboardPanel() {
         }
       />
 
-      {/* 1. Needs Attention Work Queues */}
+      <DataSection isRefreshing={isFetching}>
+        {/* 1. Needs Attention Work Queues */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
@@ -394,6 +419,7 @@ export function DashboardPanel() {
           </ul>
         </CardContent>
       </Card>
+      </DataSection>
     </PageShell>
   )
 }

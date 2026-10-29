@@ -1,6 +1,9 @@
-import { useState } from 'react'
-import { getRouteApi, useRouter } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
+import { useRouter } from '@tanstack/react-router'
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import {
   saveSettingsFn,
   resetOpsFn,
@@ -77,12 +80,23 @@ const GATEWAY_NAMES: Record<
   },
 }
 
-const routeApi = getRouteApi('/admin/settings')
-
 export function SettingsPanel() {
-  const { ops, liquor, grocery } = routeApi.useLoaderData()
-  const router = useRouter()
   const queryClient = useQueryClient()
+  const router = useRouter()
+  const { data: settingsData, isFetching, refetch } = useSuspenseQuery(
+    adminQueries.settings(),
+  )
+  const { ops, liquor, grocery } = settingsData
+
+  const invalidateSettings = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: adminQueries.settings().queryKey,
+    })
+    await queryClient.invalidateQueries({
+      queryKey: ['store', 'delivery-pricing'],
+    })
+    await router.invalidate()
+  }
 
   const [activeTab, setActiveTab] = useState<
     | 'general'
@@ -121,6 +135,12 @@ export function SettingsPanel() {
     },
   }))
 
+  useEffect(() => {
+    if (ops.settings) {
+      setForm((prev) => ({ ...prev, ...ops.settings }))
+    }
+  }, [ops.settings])
+
   const [isSaving, setIsSaving] = useState(false)
   const [resetModalOpen, setResetModalOpen] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
@@ -131,12 +151,8 @@ export function SettingsPanel() {
     setIsSaving(true)
     try {
       await saveSettingsFn({ data: form })
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'settings'] })
-      await queryClient.invalidateQueries({
-        queryKey: ['store', 'delivery-pricing'],
-      })
       toast.success('Store settings updated and synced to Neon DB!')
-      await router.invalidate()
+      await invalidateSettings()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to save settings'
       toast.error(msg)
@@ -156,6 +172,7 @@ export function SettingsPanel() {
       toast.success('Sandbox database successfully re-seeded from catalog!')
       setResetModalOpen(false)
       setResetConfirmationText('')
+      await queryClient.invalidateQueries()
       await router.invalidate()
     } catch (err: unknown) {
       const msg =
@@ -196,6 +213,12 @@ export function SettingsPanel() {
         description="Configure platform store legal identity, Nepal IRD VAT invoicing, 18+ liquor age gate, payment credentials, and Neon DB storage."
         actions={
           <div className="flex items-center gap-2">
+            <DataRefreshButton
+              queryKeys={[adminQueries.settings().queryKey]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
             <Button
               variant="outline"
               onClick={() => setResetModalOpen(true)}
@@ -225,8 +248,9 @@ export function SettingsPanel() {
         }
       />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <DataSection isRefreshing={isFetching}>
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           label="Store Identity"
           value={form.storeName}
@@ -1302,6 +1326,7 @@ export function SettingsPanel() {
           </Card>
         </TabsContent>
       </Tabs>
+      </DataSection>
 
       {/* Confirmation Dialog for Reset */}
       <Dialog open={resetModalOpen} onOpenChange={setResetModalOpen}>

@@ -34,6 +34,8 @@ import type { BrandData } from '#/components/panels/brands'
 import { DealerDialog } from '#/components/panels/dealers'
 import { can } from '#/server/auth/permissions-shared'
 import { PageHeader } from '#/components/shared/page-header'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -74,7 +76,11 @@ interface GroceryVariantItem {
 
 export function GroceryPanel() {
   const queryClient = useQueryClient()
-  const { data: products } = useSuspenseQuery(adminQueries.groceryProducts())
+  const {
+    data: products,
+    isFetching,
+    refetch,
+  } = useSuspenseQuery(adminQueries.groceryProducts())
   const { data: taxonomy } = useSuspenseQuery(adminQueries.taxonomy())
   const { data: access } = useSuspenseQuery(adminQueries.access())
 
@@ -413,6 +419,15 @@ export function GroceryPanel() {
         description="Manage snacks, chips, party ice, mixers, energy drinks, and midnight snacks."
         actions={
           <div className="flex items-center gap-2">
+            <DataRefreshButton
+              queryKeys={[
+                adminQueries.groceryProducts().queryKey,
+                adminQueries.taxonomy().queryKey,
+              ]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
             <Badge variant="secondary" className="font-mono text-xs">
               {products.length} SKUs
             </Badge>
@@ -491,7 +506,8 @@ export function GroceryPanel() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+      <DataSection isRefreshing={isFetching}>
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow>
@@ -679,6 +695,7 @@ export function GroceryPanel() {
           </TableBody>
         </Table>
       </div>
+      </DataSection>
 
       {/* Add / Edit Dialog */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>

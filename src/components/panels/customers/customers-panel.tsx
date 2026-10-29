@@ -1,5 +1,9 @@
 import { useState, useMemo } from 'react'
-import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { useRouter } from '@tanstack/react-router'
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import { updateComplaintFn } from '#/server/operations/operations.functions'
 import type { Complaint } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
@@ -38,11 +42,20 @@ import {
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { EmptyState } from '#/components/shared/empty-state'
 
-const routeApi = getRouteApi('/admin/customers')
-
 export function CustomersPanel() {
-  const { ops, users } = routeApi.useLoaderData()
+  const queryClient = useQueryClient()
   const router = useRouter()
+  const { data: customersData, isFetching, refetch } = useSuspenseQuery(
+    adminQueries.customers(),
+  )
+  const { ops, users } = customersData
+
+  const invalidateCustomers = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: adminQueries.customers().queryKey,
+    })
+    await router.invalidate()
+  }
 
   const [activeTab, setActiveTab] = useState<'directory' | 'complaints'>(
     'directory',
@@ -118,7 +131,7 @@ export function CustomersPanel() {
       setIsUpdating(true)
       await updateComplaintFn({ data: { id, status } })
       toast.success(`Ticket marked as ${status.replace('_', ' ')}`)
-      await router.invalidate()
+      await invalidateCustomers()
       if (selectedComplaint && selectedComplaint.id === id) {
         setSelectedComplaint({ ...selectedComplaint, status })
       }
@@ -154,15 +167,23 @@ export function CustomersPanel() {
         title="Customer CRM and support"
         description="View customer lifetime spend, order history, and handle customer service inquiries."
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCSV}
-            className="h-8 gap-1.5 text-xs"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export customers
-          </Button>
+          <div className="flex items-center gap-2">
+            <DataRefreshButton
+              queryKeys={[adminQueries.customers().queryKey]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+              className="h-8 gap-1.5 text-xs"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export customers
+            </Button>
+          </div>
         }
       />
 
@@ -229,33 +250,37 @@ export function CustomersPanel() {
         </div>
       </div>
 
-      {activeTab === 'directory' ? (
-        /* Customer Directory Table */
-        <div className="overflow-hidden rounded-lg border border-border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-xs">Customer name</TableHead>
-                <TableHead className="text-xs">Email address</TableHead>
-                <TableHead className="text-xs">Total orders</TableHead>
-                <TableHead className="text-xs">Lifetime spend</TableHead>
-                <TableHead className="text-xs">Joined date</TableHead>
-                <TableHead className="text-right text-xs">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCustomers.length === 0 ? (
+      <DataSection isRefreshing={isFetching}>
+        {activeTab === 'directory' ? (
+          /* Customer Directory Table */
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="p-0">
-                    <EmptyState
-                      title="No customer accounts found"
-                      description="Try adjusting your search query."
-                    />
-                  </TableCell>
+                  <TableHead className="text-xs">Customer name</TableHead>
+                  <TableHead className="text-xs">Email address</TableHead>
+                  <TableHead className="text-xs">Total orders</TableHead>
+                  <TableHead className="text-xs">Lifetime spend</TableHead>
+                  <TableHead className="text-xs">Joined date</TableHead>
+                  <TableHead className="text-right text-xs">Actions</TableHead>
                 </TableRow>
-              ) : (
-                filteredCustomers.map((cust) => (
-                  <TableRow key={cust.id}>
+              </TableHeader>
+              <TableBody>
+                {filteredCustomers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="p-0">
+                      <EmptyState
+                        title="No customer accounts found"
+                        description="Try adjusting your search query."
+                      />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredCustomers.map((cust) => (
+                    <TableRow
+                      key={cust.id}
+                      className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
+                    >
                     <TableCell>
                       <div className="font-medium text-xs text-foreground">
                         {cust.name}
@@ -335,7 +360,10 @@ export function CustomersPanel() {
                 </TableRow>
               ) : (
                 filteredComplaints.map((comp) => (
-                  <TableRow key={comp.id}>
+                  <TableRow
+                    key={comp.id}
+                    className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
+                  >
                     <TableCell>
                       <span className="font-mono text-xs text-foreground block">
                         {comp.id}
@@ -394,6 +422,7 @@ export function CustomersPanel() {
           </Table>
         </div>
       )}
+      </DataSection>
 
       {/* Customer Profile Dialog */}
       <Dialog

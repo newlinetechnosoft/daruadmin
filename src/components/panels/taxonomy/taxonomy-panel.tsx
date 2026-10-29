@@ -27,6 +27,8 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '#/components/shared/page-header'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -71,7 +73,11 @@ interface BrandLike {
 
 export function TaxonomyPanel() {
   const queryClient = useQueryClient()
-  const { data: taxonomy } = useSuspenseQuery(adminQueries.taxonomy())
+  const {
+    data: taxonomy,
+    isFetching,
+    refetch,
+  } = useSuspenseQuery(adminQueries.taxonomy())
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('liquor-cat')
 
@@ -566,14 +572,25 @@ export function TaxonomyPanel() {
         title="Taxonomy and categories"
         description="Organize catalog categories, brand origins, and visual portals."
         actions={
-          <Button
-            size="sm"
-            onClick={openAddModal}
-            className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
-          >
-            <Plus className="h-4 w-4" />
-            {addLabel}
-          </Button>
+          <div className="flex items-center gap-2">
+            <DataRefreshButton
+              queryKeys={[
+                adminQueries.taxonomy().queryKey,
+                adminQueries.brands().queryKey,
+              ]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
+            <Button
+              size="sm"
+              onClick={openAddModal}
+              className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
+            >
+              <Plus className="h-4 w-4" />
+              {addLabel}
+            </Button>
+          </div>
         }
       />
 
@@ -603,16 +620,18 @@ export function TaxonomyPanel() {
       </Tabs>
 
       {/* Cards Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {activeTab === 'liquor-cat' &&
-          taxonomy.liquorCategories.map((cat) => renderCategoryCard(cat))}
+      <DataSection isRefreshing={isFetching}>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {activeTab === 'liquor-cat' &&
+            taxonomy.liquorCategories.map((cat) => renderCategoryCard(cat))}
 
-        {activeTab === 'grocery-cat' &&
-          taxonomy.groceryCategories.map((cat) => renderCategoryCard(cat))}
+          {activeTab === 'grocery-cat' &&
+            taxonomy.groceryCategories.map((cat) => renderCategoryCard(cat))}
 
-        {activeTab === 'brands' &&
-          taxonomy.liquorBrands.map((brand) => renderBrandCard(brand))}
-      </div>
+          {activeTab === 'brands' &&
+            taxonomy.liquorBrands.map((brand) => renderBrandCard(brand))}
+        </div>
+      </DataSection>
 
       {/* Add / Edit Dialog */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>

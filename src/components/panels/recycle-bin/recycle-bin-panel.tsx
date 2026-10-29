@@ -10,6 +10,8 @@ import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { Input } from '#/components/ui/input'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import { toast } from 'sonner'
 import {
   Trash2,
@@ -17,7 +19,6 @@ import {
   Clock,
   AlertTriangle,
   Search,
-  RefreshCw,
   Wine,
   ShoppingBag,
   Tags,
@@ -105,7 +106,9 @@ function getEntityMeta(entityType: string) {
 
 export function RecycleBinPanel() {
   const queryClient = useQueryClient()
-  const { data, isLoading, isRefetching, refetch } = useQuery(adminQueries.recycleBin())
+  const { data, isLoading, isRefetching, isFetching, refetch } = useQuery(
+    adminQueries.recycleBin(),
+  )
 
   const [search, setSearch] = React.useState('')
   const [selectedGroup, setSelectedGroup] = React.useState<string>('all')
@@ -228,16 +231,12 @@ export function RecycleBinPanel() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isRefetching || isLoading}
-            className="gap-2 cursor-pointer"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </Button>
+          <DataRefreshButton
+            queryKeys={[adminQueries.recycleBin().queryKey]}
+            onRefresh={() => refetch()}
+            isRefreshing={isFetching || isRefetching}
+            variant="button"
+          />
 
           {items.length > 0 && (
             <Button
@@ -253,7 +252,8 @@ export function RecycleBinPanel() {
         </div>
       </div>
 
-      {/* Metrics Cards */}
+      <DataSection isRefreshing={isFetching || isRefetching}>
+        {/* Metrics Cards */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
@@ -555,6 +555,7 @@ export function RecycleBinPanel() {
           })}
         </div>
       )}
+      </DataSection>
 
       {/* Confirmation Dialog: Delete Single Item Permanently */}
       <ConfirmDialog

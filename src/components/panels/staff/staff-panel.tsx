@@ -16,6 +16,8 @@ import type { ModuleKey, ActionKey } from '#/server/operations/types'
 import { DEFAULT_GRANTS_BY_ROLE } from '#/server/auth/permissions-shared'
 import type { UserGrants } from '#/server/auth/permissions-shared'
 import { PageHeader } from '#/components/shared/page-header'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import { KpiCard } from '#/components/shared/kpi-card'
 import {
   KeyRound,
@@ -160,7 +162,7 @@ type StaffUser = Awaited<ReturnType<typeof getStaffOpsFn>>['users'][number]
 
 export function StaffPanel() {
   const queryClient = useQueryClient()
-  const { data } = useSuspenseQuery(adminQueries.staff())
+  const { data, isFetching, refetch } = useSuspenseQuery(adminQueries.staff())
   const { ops, users, currentUserId } = data
 
   const [activeTab, setActiveTab] = useState<'users' | 'matrix' | 'audit'>(
@@ -646,18 +648,27 @@ export function StaffPanel() {
         title="Staff and access control"
         description="Configure granular module action privileges across managers, couriers, and support staff."
         actions={
-          <Button
-            size="sm"
-            onClick={() => setIsCreateOpen(true)}
-            className="gap-1.5 h-8 text-xs bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            Add Staff Account
-          </Button>
+          <div className="flex items-center gap-2">
+            <DataRefreshButton
+              queryKeys={[adminQueries.staff().queryKey]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
+            <Button
+              size="sm"
+              onClick={() => setIsCreateOpen(true)}
+              className="gap-1.5 h-8 text-xs bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              Add Staff Account
+            </Button>
+          </div>
         }
       />
 
-      {/* KPI Cards */}
+      <DataSection isRefreshing={isFetching}>
+        {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard
           label="Staff and operators"
@@ -1412,6 +1423,7 @@ export function StaffPanel() {
           </div>
         </div>
       )}
+      </DataSection>
 
       {/* Role Change Confirmation Dialog */}
       <AlertDialog

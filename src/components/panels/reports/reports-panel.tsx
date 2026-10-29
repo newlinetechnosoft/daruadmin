@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import { getRouteApi } from '@tanstack/react-router'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
@@ -45,10 +48,11 @@ import {
   TableRow,
 } from '#/components/ui/table'
 
-const routeApi = getRouteApi('/admin/reports')
-
 export function ReportsPanel() {
-  const { ops } = routeApi.useLoaderData()
+  const { data: reportsData, isFetching, refetch } = useSuspenseQuery(
+    adminQueries.reports(),
+  )
+  const ops = reportsData.ops
 
   const [isIrdModalOpen, setIsIrdModalOpen] = useState(false)
   const [isMarginModalOpen, setIsMarginModalOpen] = useState(false)
@@ -257,7 +261,18 @@ export function ReportsPanel() {
         kicker="Growth"
         title="Business reports and audits"
         description="Downloadable fiscal audits, IRD VAT compliance returns, courier fulfillment metrics, and warehouse valuation."
+        actions={
+          <DataRefreshButton
+            queryKeys={[adminQueries.reports().queryKey]}
+            onRefresh={() => refetch()}
+            isRefreshing={isFetching}
+            variant="button"
+          />
+        }
       />
+
+      <DataSection isRefreshing={isFetching}>
+        <div className="space-y-6">
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -486,6 +501,8 @@ export function ReportsPanel() {
           </CardFooter>
         </Card>
       </div>
+      </div>
+      </DataSection>
 
       {/* Profit & Margin Analytics Preview Dialog */}
       <Dialog open={isMarginModalOpen} onOpenChange={setIsMarginModalOpen}>

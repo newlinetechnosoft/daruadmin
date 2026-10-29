@@ -47,6 +47,7 @@ export interface ListViewProps<TData> {
   data: TData[]
   columns: ListViewColumnDef<TData, unknown>[]
   isLoading?: boolean
+  isRefreshing?: boolean
   emptyMessage?: string
   emptyAction?: React.ReactNode
   density?: TableDensity
@@ -73,6 +74,7 @@ export function ListView<TData extends Record<string, unknown>>({
   data,
   columns,
   isLoading = false,
+  isRefreshing = false,
   emptyMessage = 'No records found.',
   emptyAction,
   density = 'comfortable',
@@ -143,11 +145,12 @@ export function ListView<TData extends Record<string, unknown>>({
 
   // Density padding classes
   const cellPaddingClass = density === 'compact' ? 'py-2 px-3.5' : 'py-3.5 px-4'
+  const showSkeleton = isLoading && data.length === 0
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* Loading Skeleton */}
-      {isLoading ? (
+      {/* Loading Skeleton only on initial load when data is empty */}
+      {showSkeleton ? (
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-12 w-full rounded-md" />
@@ -155,7 +158,17 @@ export function ListView<TData extends Record<string, unknown>>({
         </div>
       ) : isMobile && renderCard ? (
         /* Mobile Card View (< 640px) */
-        <div className="space-y-2.5">
+        <div
+          className={cn(
+            'space-y-2.5 relative transition-opacity duration-300',
+            isRefreshing && 'opacity-80',
+          )}
+        >
+          {isRefreshing && (
+            <div className="absolute -top-1 left-0 right-0 h-0.5 overflow-hidden z-20 rounded-full bg-primary/20 pointer-events-none">
+              <div className="h-full w-full bg-gradient-to-r from-transparent via-primary to-transparent animate-refresh-shimmer" />
+            </div>
+          )}
           {rows.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border/80 p-8 text-center space-y-3">
               <p className="text-xs text-muted-foreground">{emptyMessage}</p>
@@ -163,7 +176,7 @@ export function ListView<TData extends Record<string, unknown>>({
             </div>
           ) : (
             rows.map((row, idx) => (
-              <div key={row.id}>
+              <div key={row.id} className="animate-in fade-in-50 duration-200">
                 {renderCard(row.original, idx, row.getIsSelected())}
               </div>
             ))
@@ -171,7 +184,17 @@ export function ListView<TData extends Record<string, unknown>>({
         </div>
       ) : (
         /* Standard Table View */
-        <div className="rounded-md border border-border bg-card overflow-hidden shadow-xs">
+        <div
+          className={cn(
+            'rounded-md border border-border bg-card overflow-hidden shadow-xs relative transition-opacity duration-300',
+            isRefreshing && 'opacity-80',
+          )}
+        >
+          {isRefreshing && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 overflow-hidden z-20 rounded-t-md bg-primary/20 pointer-events-none">
+              <div className="h-full w-full bg-gradient-to-r from-transparent via-primary to-transparent animate-refresh-shimmer" />
+            </div>
+          )}
           <div
             className="w-full overflow-auto click-scroll"
             style={maxHeight ? { maxHeight } : undefined}
@@ -264,7 +287,7 @@ export function ListView<TData extends Record<string, unknown>>({
                       key={row.id}
                       data-state={row.getIsSelected() && 'selected'}
                       className={cn(
-                        'transition-colors hover:bg-muted/30',
+                        'transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50',
                         onRowClick && 'cursor-pointer',
                       )}
                       onClick={() => onRowClick && onRowClick(row.original)}

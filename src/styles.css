@@ -390,4 +390,34 @@
     scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
     overflow-x: hidden;
   }
+
+  /* Table and data refresh smooth transitions */
+  @keyframes refresh-shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-refresh-shimmer {
+    animation: refresh-shimmer 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes data-update-glow {
+    0% {
+      background-color: rgba(245, 158, 11, 0.22);
+    }
+    50% {
+      background-color: rgba(245, 158, 11, 0.12);
+    }
+    100% {
+      background-color: transparent;
+    }
+  }
+
+  .animate-data-glow {
+    animation: data-update-glow 1.5s ease-out forwards;
+  }
 }

@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { useRouter } from '@tanstack/react-router'
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import {
   upsertCouponFn,
   deleteCouponFn,
@@ -49,11 +53,20 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-const routeApi = getRouteApi('/admin/marketing')
-
 export function MarketingPanel() {
-  const { ops } = routeApi.useLoaderData()
+  const queryClient = useQueryClient()
   const router = useRouter()
+  const { data: marketingData, isFetching, refetch } = useSuspenseQuery(
+    adminQueries.marketing(),
+  )
+  const ops = marketingData.ops
+
+  const invalidateMarketing = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: adminQueries.marketing().queryKey,
+    })
+    await router.invalidate()
+  }
 
   const [activeTab, setActiveTab] = useState<
     'coupons' | 'banners' | 'reviews' | 'redemptions'
@@ -128,7 +141,7 @@ export function MarketingPanel() {
         expiresAt: '2026-12-31',
         active: true,
       })
-      await router.invalidate()
+      await invalidateMarketing()
     } catch {
       toast.error('Failed to create coupon')
     } finally {
@@ -143,7 +156,7 @@ export function MarketingPanel() {
       await deleteCouponFn({ data: { id: deleteCouponTarget.id } })
       toast.success(`Coupon "${deleteCouponTarget.code}" deleted from database`)
       setDeleteCouponTarget(null)
-      await router.invalidate()
+      await invalidateMarketing()
     } catch {
       toast.error('Failed to delete coupon')
     } finally {
@@ -179,7 +192,7 @@ export function MarketingPanel() {
         placement: 'home',
         active: true,
       })
-      await router.invalidate()
+      await invalidateMarketing()
     } catch {
       toast.error('Failed to create banner')
     } finally {
@@ -194,7 +207,7 @@ export function MarketingPanel() {
       await deleteBannerFn({ data: { id: deleteBannerTarget.id } })
       toast.success(`Banner "${deleteBannerTarget.title}" removed from database`)
       setDeleteBannerTarget(null)
-      await router.invalidate()
+      await invalidateMarketing()
     } catch {
       toast.error('Failed to delete banner')
     } finally {
@@ -210,7 +223,7 @@ export function MarketingPanel() {
       setIsSubmitting(true)
       await updateReviewFn({ data: { id, status } })
       toast.success(`Review marked as ${status.toUpperCase()}!`)
-      await router.invalidate()
+      await invalidateMarketing()
     } catch {
       toast.error('Failed to moderate review')
     } finally {
@@ -281,26 +294,34 @@ export function MarketingPanel() {
         title="Marketing & Promotions"
         description="Discount promo vouchers, storefront campaign banners, and verified customer review moderation."
         actions={
-          activeTab === 'coupons' ? (
-            <Button onClick={() => setIsAddCouponOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Create Coupon
-            </Button>
-          ) : activeTab === 'banners' ? (
-            <Button onClick={() => setIsAddBannerOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Banner
-            </Button>
-          ) : activeTab === 'redemptions' ? (
-            <Button
-              variant="outline"
-              onClick={exportRedemptionsCSV}
-              className="gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Export CSV
-            </Button>
-          ) : null
+          <div className="flex items-center gap-2">
+            <DataRefreshButton
+              queryKeys={[adminQueries.marketing().queryKey]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
+            {activeTab === 'coupons' ? (
+              <Button onClick={() => setIsAddCouponOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Create Coupon
+              </Button>
+            ) : activeTab === 'banners' ? (
+              <Button onClick={() => setIsAddBannerOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Banner
+              </Button>
+            ) : activeTab === 'redemptions' ? (
+              <Button
+                variant="outline"
+                onClick={exportRedemptionsCSV}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+            ) : null}
+          </div>
         }
       />
 
@@ -335,13 +356,14 @@ export function MarketingPanel() {
       </div>
 
       {/* Sub Tabs */}
-      <Tabs
-        value={activeTab}
-        onValueChange={(val) =>
-          setActiveTab(val as 'coupons' | 'banners' | 'reviews' | 'redemptions')
-        }
-        className="w-full space-y-4"
-      >
+      <DataSection isRefreshing={isFetching}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(val) =>
+            setActiveTab(val as 'coupons' | 'banners' | 'reviews' | 'redemptions')
+          }
+          className="w-full space-y-4"
+        >
         <TabsList>
           <TabsTrigger value="coupons" className="gap-2">
             <Tag className="h-3.5 w-3.5" />
@@ -715,6 +737,7 @@ export function MarketingPanel() {
           </Card>
         </TabsContent>
       </Tabs>
+      </DataSection>
 
       {/* Create Coupon Dialog */}
       <Dialog open={isAddCouponOpen} onOpenChange={setIsAddCouponOpen}>

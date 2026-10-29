@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
 import { generateMonthlyRiderPayrollRunFn } from '#/server/operations/operations.functions'
 import {
   Dialog,
@@ -39,6 +41,7 @@ export function RiderPayrollRunDialog({
   onSuccess,
 }: RiderPayrollRunDialogProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   // Default to 1st of current month to today
   const now = new Date()
@@ -85,6 +88,9 @@ export function RiderPayrollRunDialog({
       )
       onOpenChange(false)
       if (onSuccess) onSuccess()
+      await queryClient.invalidateQueries({
+        queryKey: adminQueries.ledger().queryKey,
+      })
       await router.invalidate()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to generate monthly payroll run')

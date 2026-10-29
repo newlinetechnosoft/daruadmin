@@ -1,5 +1,9 @@
 import { useState, useMemo } from 'react'
-import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { useRouter } from '@tanstack/react-router'
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import { updateUserRoleFn } from '#/server/catalog/catalog.functions'
 import {
   Search,
@@ -40,11 +44,20 @@ const ROLES = [
   { value: 'customer', label: 'Customer' },
 ]
 
-const routeApi = getRouteApi('/admin/users')
-
 export function UsersPanel() {
-  const { users } = routeApi.useLoaderData()
+  const queryClient = useQueryClient()
   const router = useRouter()
+  const { data: usersData, isFetching, refetch } = useSuspenseQuery(
+    adminQueries.users(),
+  )
+  const users = usersData ?? []
+
+  const invalidateUsers = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: adminQueries.users().queryKey,
+    })
+    await router.invalidate()
+  }
 
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
@@ -81,7 +94,7 @@ export function UsersPanel() {
         },
       })
       toast.success('User role updated')
-      await router.invalidate()
+      await invalidateUsers()
     } catch {
       toast.error('Failed to update role')
     } finally {
@@ -100,7 +113,7 @@ export function UsersPanel() {
         },
       })
       toast.success(currentStatus ? 'User suspended' : 'User activated')
-      await router.invalidate()
+      await invalidateUsers()
     } catch {
       toast.error('Failed to update status')
     } finally {
@@ -148,6 +161,12 @@ export function UsersPanel() {
         description="Manage staff privileges, rider assignments, customer profiles, and account status."
         actions={
           <div className="flex items-center gap-2">
+            <DataRefreshButton
+              queryKeys={[adminQueries.users().queryKey]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
             <Badge variant="secondary" className="font-mono text-xs">
               {users.length} users
             </Badge>
@@ -189,8 +208,9 @@ export function UsersPanel() {
         </NativeSelect>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
-        <Table>
+      <DataSection isRefreshing={isFetching}>
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="text-xs">User</TableHead>
@@ -216,7 +236,10 @@ export function UsersPanel() {
                 const isUpdating = updatingUserId === u.id
                 const isActive = u.isActive !== false
                 return (
-                  <TableRow key={u.id}>
+                  <TableRow
+                    key={u.id}
+                    className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
+                  >
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
@@ -315,6 +338,7 @@ export function UsersPanel() {
           </TableBody>
         </Table>
       </div>
+      </DataSection>
 
       <CreateStaffDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
 

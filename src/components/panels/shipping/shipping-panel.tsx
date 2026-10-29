@@ -1,6 +1,9 @@
 import { useState } from 'react'
-import { getRouteApi, useRouter } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
+import { useRouter } from '@tanstack/react-router'
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import { upsertZoneFn } from '#/server/operations/operations.functions'
 import type { Zone } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
@@ -46,12 +49,23 @@ import {
   CardDescription,
 } from '#/components/ui/card'
 
-const routeApi = getRouteApi('/admin/shipping')
-
 export function ShippingPanel() {
-  const { ops } = routeApi.useLoaderData()
-  const router = useRouter()
   const queryClient = useQueryClient()
+  const router = useRouter()
+  const { data: shippingData, isFetching, refetch } = useSuspenseQuery(
+    adminQueries.shipping(),
+  )
+  const ops = shippingData.ops
+
+  const invalidateShipping = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: adminQueries.shipping().queryKey,
+    })
+    await queryClient.invalidateQueries({
+      queryKey: ['store', 'delivery-pricing'],
+    })
+    await router.invalidate()
+  }
 
   const [isAddZoneOpen, setIsAddZoneOpen] = useState(false)
   const [editingZone, setEditingZone] = useState<Zone | null>(null)
@@ -115,10 +129,7 @@ export function ShippingPanel() {
         active: true,
         courier: 'in-house',
       })
-      await queryClient.invalidateQueries({
-        queryKey: ['store', 'delivery-pricing'],
-      })
-      await router.invalidate()
+      await invalidateShipping()
     } catch {
       toast.error('Failed to save delivery zone')
     } finally {
@@ -165,6 +176,12 @@ export function ShippingPanel() {
         description="Configure Butwal, Tilottama & Rupandehi express dispatch corridors, courier SLA windows, and parcel rate calculations."
         actions={
           <div className="flex items-center gap-2">
+            <DataRefreshButton
+              queryKeys={[adminQueries.shipping().queryKey]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
             <Button
               variant="outline"
               size="sm"
@@ -298,21 +315,25 @@ export function ShippingPanel() {
 
         {/* Zones Table */}
         <div className="lg:col-span-2">
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Zone and areas</TableHead>
-                  <TableHead className="text-xs">Base charge</TableHead>
-                  <TableHead className="text-xs">ETA window</TableHead>
-                  <TableHead className="text-xs">Courier</TableHead>
-                  <TableHead className="text-xs">Status</TableHead>
-                  <TableHead className="text-right text-xs">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {ops.zones.map((zone) => (
-                  <TableRow key={zone.id}>
+          <DataSection isRefreshing={isFetching}>
+            <div className="overflow-hidden rounded-lg border border-border bg-card">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Zone and areas</TableHead>
+                    <TableHead className="text-xs">Base charge</TableHead>
+                    <TableHead className="text-xs">ETA window</TableHead>
+                    <TableHead className="text-xs">Courier</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-right text-xs">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ops.zones.map((zone) => (
+                    <TableRow
+                      key={zone.id}
+                      className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
+                    >
                     <TableCell>
                       <div className="font-medium text-xs text-foreground">
                         {zone.name}
@@ -369,7 +390,8 @@ export function ShippingPanel() {
               </TableBody>
             </Table>
           </div>
-        </div>
+        </DataSection>
+      </div>
       </div>
 
       {/* Add / Edit Zone Dialog */}

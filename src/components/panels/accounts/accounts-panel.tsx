@@ -5,6 +5,10 @@ import {
   useRouter,
   Link,
 } from '@tanstack/react-router'
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import { addLedgerFn } from '#/server/operations/operations.functions'
 import {
   postManualJournalVoucherFn,
@@ -90,10 +94,22 @@ type SubAccountTab =
   | 'financial-reports'
 
 export function AccountsPanel() {
-  const { ops } = routeApi.useLoaderData()
+  const queryClient = useQueryClient()
+  const router = useRouter()
+  const { data: ledgerData, isFetching, refetch } = useSuspenseQuery(
+    adminQueries.ledger(),
+  )
+  const ops = ledgerData.ops
+
+  const invalidateLedger = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: adminQueries.ledger().queryKey,
+    })
+    await router.invalidate()
+  }
+
   const search = routeApi.useSearch()
   const navigate = useNavigate()
-  const router = useRouter()
 
   const activeTab: SubAccountTab = search.tab || 'ledger'
 
@@ -669,7 +685,7 @@ export function AccountsPanel() {
         creditAccountId: 'acc_1012',
         amountInRs: 1000,
       })
-      await router.invalidate()
+      await invalidateLedger()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to post voucher')
     } finally {
@@ -718,7 +734,7 @@ export function AccountsPanel() {
         `Dealer payout of Rs. ${dealerPayoutForm.amountInRs} posted with PV voucher`,
       )
       setIsDealerPayoutOpen(false)
-      await router.invalidate()
+      await invalidateLedger()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to record dealer payout')
     } finally {
@@ -757,7 +773,7 @@ export function AccountsPanel() {
       })
       toast.success('Rider cash handover received and RV voucher posted!')
       setIsHandoverModalOpen(false)
-      await router.invalidate()
+      await invalidateLedger()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to record cash handover')
     } finally {
@@ -803,7 +819,7 @@ export function AccountsPanel() {
       })
       toast.success('Salary disbursement recorded in general ledger')
       setIsSalaryModalOpen(false)
-      await router.invalidate()
+      await invalidateLedger()
     } catch {
       toast.error('Failed to record salary disbursement')
     } finally {
@@ -963,6 +979,12 @@ export function AccountsPanel() {
         description="Unified financial ecosystem: General Ledger, Payment Gateways, Dealer Payables, Sales Accounts, and Rider Payroll."
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <DataRefreshButton
+              queryKeys={[adminQueries.ledger().queryKey]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
             <Button
               variant="outline"
               size="sm"
@@ -994,7 +1016,8 @@ export function AccountsPanel() {
       />
 
       {/* Sub-Accounts Navigation Tabs */}
-      <div className="border-b border-border">
+      <DataSection isRefreshing={isFetching}>
+        <div className="border-b border-border">
         <Tabs
           value={activeTab}
           onValueChange={(val) => setActiveTab(val as SubAccountTab)}
@@ -3406,6 +3429,7 @@ export function AccountsPanel() {
           }
         />
       )}
+      </DataSection>
 
       {/* ==================================================== */}
       {/* MODALS                                               */}

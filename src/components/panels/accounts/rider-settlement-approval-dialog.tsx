@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
 import { approveSettlementFn } from '#/server/operations/operations.functions'
 import type { Settlement } from '#/server/operations/types'
 import {
@@ -34,6 +36,7 @@ export function RiderSettlementApprovalDialog({
   onSuccess,
 }: RiderSettlementApprovalDialogProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   const [paymentMethod, setPaymentMethod] = useState<
     'cash' | 'bank_transfer' | 'esewa' | 'khalti' | 'cheque'
@@ -69,6 +72,9 @@ export function RiderSettlementApprovalDialog({
       )
       onOpenChange(false)
       if (onSuccess) onSuccess(res.voucherNo, res.slug)
+      await queryClient.invalidateQueries({
+        queryKey: adminQueries.ledger().queryKey,
+      })
       await router.invalidate()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to approve and disburse settlement')

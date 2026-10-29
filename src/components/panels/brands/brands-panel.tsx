@@ -41,7 +41,7 @@ type CatalogTab = 'liquor' | 'grocery'
 
 export function BrandsPanel() {
   const queryClient = useQueryClient()
-  const { data: brandsData } = useSuspenseQuery(adminQueries.brands())
+  const { data: brandsData, isFetching, refetch } = useSuspenseQuery(adminQueries.brands())
   const { data: access } = useSuspenseQuery(adminQueries.access())
 
   const grants = access.authenticated ? access.grants : null
@@ -317,6 +317,9 @@ export function BrandsPanel() {
         onClearFilters={() => setActiveFilters([])}
         density={density}
         onDensityChange={setDensity}
+        onRefresh={() => refetch()}
+        isRefreshing={isFetching}
+        refreshQueryKeys={[adminQueries.brands().queryKey]}
         quickFilterTabs={
           <Tabs
             value={activeTab}
@@ -353,6 +356,7 @@ export function BrandsPanel() {
         data={filteredBrands}
         columns={columns}
         density={density}
+        isRefreshing={isFetching}
         emptyMessage={`No ${activeTab} brands found.`}
         emptyAction={
           canCreate && (

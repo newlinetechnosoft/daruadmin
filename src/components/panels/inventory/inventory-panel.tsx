@@ -4,6 +4,8 @@ import { adminQueries } from '#/queries/admin'
 import { addLedgerFn } from '#/server/operations/operations.functions'
 import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import { KpiCard } from '#/components/shared/kpi-card'
 import {
   Package,
@@ -42,7 +44,9 @@ import { EmptyState } from '#/components/shared/empty-state'
 
 export function InventoryPanel() {
   const queryClient = useQueryClient()
-  const { data } = useSuspenseQuery(adminQueries.inventory())
+  const { data, isFetching, refetch } = useSuspenseQuery(
+    adminQueries.inventory(),
+  )
   const { liquor, grocery } = data
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -206,19 +210,28 @@ export function InventoryPanel() {
         title="Inventory and stock tracking"
         description="Unified warehouse stock management across Liquor and Grocery catalogs with automated COGS ledger sync."
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCSV}
-            className="h-8 gap-1.5 text-xs"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export stock CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            <DataRefreshButton
+              queryKeys={[adminQueries.inventory().queryKey]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+              className="h-8 gap-1.5 text-xs"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export stock CSV
+            </Button>
+          </div>
         }
       />
 
-      {/* KPI Cards */}
+      <DataSection isRefreshing={isFetching}>
+        {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <KpiCard
           label="Catalog SKUs"
@@ -407,6 +420,7 @@ export function InventoryPanel() {
           </TableBody>
         </Table>
       </div>
+      </DataSection>
 
       {/* Quick Restock Dialog */}
       <Dialog

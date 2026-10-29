@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
 import {
   createDealerSettlementBatchFn,
   getUnsettledDealerItemsFn,
@@ -70,6 +72,7 @@ export function BatchDealerSettlementDialog({
   onSettled,
 }: BatchDealerSettlementDialogProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [selectedDealerId, setSelectedDealerId] = useState<string>(
     initialDealerId || (dealers[0]?.id ?? ''),
   )
@@ -195,6 +198,9 @@ export function BatchDealerSettlementDialog({
 
       if (onSettled) onSettled(res.voucherNo, res.slug)
       onOpenChange(false)
+      await queryClient.invalidateQueries({
+        queryKey: adminQueries.ledger().queryKey,
+      })
       await router.invalidate()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to process batch settlement')

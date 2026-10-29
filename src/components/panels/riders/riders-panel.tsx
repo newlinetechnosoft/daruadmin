@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
-import { getRouteApi, useRouter } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useRouter } from '@tanstack/react-router'
+import { useQuery, useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import {
   upsertRiderFn,
   deleteRiderFn,
@@ -56,11 +58,20 @@ import {
 import { Card, CardTitle } from '#/components/ui/card'
 import { EmptyState } from '#/components/shared/empty-state'
 
-const routeApi = getRouteApi('/admin/riders')
-
 export function RidersPanel() {
-  const { ops } = routeApi.useLoaderData()
+  const queryClient = useQueryClient()
   const router = useRouter()
+  const { data: ridersData, isFetching, refetch } = useSuspenseQuery(
+    adminQueries.riders(),
+  )
+  const ops = ridersData.ops
+
+  const invalidateRiders = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: adminQueries.riders().queryKey,
+    })
+    await router.invalidate()
+  }
 
   const { data: access } = useQuery(adminQueries.access())
   const grants = access?.authenticated ? access.grants : null
@@ -141,7 +152,7 @@ export function RidersPanel() {
         data: { id: deleteTarget.id },
       })
       toast.success(`Courier "${deleteTarget.name}" deleted from fleet`)
-      await router.invalidate()
+      await invalidateRiders()
       setDeleteTarget(null)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to delete courier'
@@ -174,7 +185,7 @@ export function RidersPanel() {
       toast.success(
         `Courier ${rider.name} marked as ${!rider.verified ? 'KYC Verified' : 'Pending Verification'}`,
       )
-      await router.invalidate()
+      await invalidateRiders()
     } catch {
       toast.error('Failed to update KYC status')
     } finally {
@@ -209,7 +220,7 @@ export function RidersPanel() {
       toast.success(
         `Settled ${formatNPR(amount)} from ${rider.name}! Credited to bank in ledger.`,
       )
-      await router.invalidate()
+      await invalidateRiders()
     } catch {
       toast.error('Failed to settle courier cash')
     } finally {
@@ -245,6 +256,12 @@ export function RidersPanel() {
         description="Live Butwal & Tilottama delivery radar, courier telemetry, and COD cash remittance settlement."
         actions={
           <div className="flex items-center gap-2">
+            <DataRefreshButton
+              queryKeys={[adminQueries.riders().queryKey]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
             <Button
               variant="outline"
               size="sm"
@@ -447,32 +464,36 @@ export function RidersPanel() {
       </div>
 
       {/* Riders Table */}
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-xs">Rider name</TableHead>
-              <TableHead className="text-xs">Zone and vehicle</TableHead>
-              <TableHead className="text-xs">KYC status</TableHead>
-              <TableHead className="text-xs">Duty status</TableHead>
-              <TableHead className="text-xs">Rating and deliveries</TableHead>
-              <TableHead className="text-xs">Cash in hand (COD)</TableHead>
-              <TableHead className="text-right text-xs">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredRiders.length === 0 ? (
+      <DataSection isRefreshing={isFetching}>
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={7} className="p-0">
-                  <EmptyState
-                    title="No couriers match your search"
-                    description="Try adjusting your filter or search terms."
-                  />
-                </TableCell>
+                <TableHead className="text-xs">Rider name</TableHead>
+                <TableHead className="text-xs">Zone and vehicle</TableHead>
+                <TableHead className="text-xs">KYC status</TableHead>
+                <TableHead className="text-xs">Duty status</TableHead>
+                <TableHead className="text-xs">Rating and deliveries</TableHead>
+                <TableHead className="text-xs">Cash in hand (COD)</TableHead>
+                <TableHead className="text-right text-xs">Actions</TableHead>
               </TableRow>
-            ) : (
-              filteredRiders.map((rider) => (
-                <TableRow key={rider.id}>
+            </TableHeader>
+            <TableBody>
+              {filteredRiders.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="p-0">
+                    <EmptyState
+                      title="No couriers match your search"
+                      description="Try adjusting your filter or search terms."
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredRiders.map((rider) => (
+                  <TableRow
+                    key={rider.id}
+                    className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
+                  >
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <div className="min-w-0">
@@ -695,6 +716,7 @@ export function RidersPanel() {
           </TableBody>
         </Table>
       </div>
+      </DataSection>
 
       {/* Shared Rider Modal Dialog (Create & Edit) */}
       <RiderDialog

@@ -1,6 +1,10 @@
 import { useState, useMemo } from 'react'
-import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { useRouter } from '@tanstack/react-router'
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
 import { cn } from '#/lib/utils'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import {
   updateOrderFn,
   createOrderFn,
@@ -74,8 +78,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-const routeApi = getRouteApi('/admin/orders')
-
 const ORDER_STATUSES: { value: string; label: string }[] = [
   { value: 'all', label: 'All Orders' },
   { value: 'pending', label: 'Pending' },
@@ -91,9 +93,20 @@ const ORDER_STATUSES: { value: string; label: string }[] = [
 ]
 
 export function OrdersPanel() {
-  const { ops, liquor, grocery, dealers } = routeApi.useLoaderData()
-  const dealersList = dealers
+  const queryClient = useQueryClient()
   const router = useRouter()
+  const { data: ordersData, isFetching, refetch } = useSuspenseQuery(
+    adminQueries.orders(),
+  )
+  const { ops, liquor, grocery, dealers } = ordersData
+  const dealersList = dealers
+
+  const invalidateOrders = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: adminQueries.orders().queryKey,
+    })
+    await router.invalidate()
+  }
 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -224,7 +237,7 @@ export function OrdersPanel() {
       setIsUpdating(true)
       await updateOrderFn({ data: { id: orderId, status } })
       toast.success(`Order status updated to ${status.replaceAll('_', ' ')}`)
-      await router.invalidate()
+      await invalidateOrders()
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder({ ...selectedOrder, status })
       }
@@ -259,7 +272,7 @@ export function OrdersPanel() {
       toast.success(
         riderId ? `Assigned to rider: ${riderName}` : 'Courier unassigned',
       )
-      await router.invalidate()
+      await invalidateOrders()
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder({
           ...selectedOrder,
@@ -294,7 +307,7 @@ export function OrdersPanel() {
           ? `Assigned item to ${foundDealer?.name || 'dealer'}`
           : 'Dealer unassigned from item',
       )
-      await router.invalidate()
+      await invalidateOrders()
       if (selectedOrder && selectedOrder.id === orderId) {
         const updatedItems = selectedOrder.items.map((it) =>
           it.id === orderItemId
@@ -355,7 +368,7 @@ export function OrdersPanel() {
       toast.success(
         `Auto-assigned closest available dealers to ${res.updatedCount} items`,
       )
-      await router.invalidate()
+      await invalidateOrders()
 
       if (
         selectedOrder &&
@@ -395,7 +408,7 @@ export function OrdersPanel() {
         },
       })
       toast.success('Order marked as delivered and settled')
-      await router.invalidate()
+      await invalidateOrders()
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder({
           ...selectedOrder,
@@ -431,7 +444,7 @@ export function OrdersPanel() {
       toast.success('Order cancelled')
       setCancelDialogOpen(false)
       setCancelReason('')
-      await router.invalidate()
+      await invalidateOrders()
       setSelectedOrder({
         ...selectedOrder,
         status: 'cancelled',
@@ -461,7 +474,7 @@ export function OrdersPanel() {
       )
       setRemoveItemTarget(null)
       setRemoveItemReason('')
-      await router.invalidate()
+      await invalidateOrders()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to remove item')
     } finally {
@@ -557,7 +570,7 @@ export function OrdersPanel() {
         notes: '',
         items: [],
       })
-      await router.invalidate()
+      await invalidateOrders()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to create order')
     } finally {
@@ -591,6 +604,12 @@ export function OrdersPanel() {
         description="Monitor lifecycle transitions, assign Butwal & Tilottama fleet couriers, and generate government-compliant VAT invoices or thermal dispatch slips."
         actions={
           <div className="flex items-center gap-2">
+            <DataRefreshButton
+              queryKeys={[adminQueries.orders().queryKey]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
             <Button
               variant="outline"
               onClick={handleExportCSV}
@@ -700,9 +719,10 @@ export function OrdersPanel() {
       </Card>
 
       {/* Orders Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
+      <DataSection isRefreshing={isFetching}>
+        <Card className="overflow-hidden">
+          <CardContent className="p-0">
+            <Table>
             <TableHeader className="bg-muted/40">
               <TableRow className="border-b border-border">
                 <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Order # & Date</TableHead>
@@ -731,7 +751,10 @@ export function OrdersPanel() {
                     (r) => r.id === order.riderId,
                   )
                   return (
-                    <TableRow key={order.id}>
+                    <TableRow
+                      key={order.id}
+                      className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
+                    >
                       <TableCell>
                         <span className="font-mono font-medium text-foreground block">
                           {order.number}
@@ -894,6 +917,7 @@ export function OrdersPanel() {
           </Table>
         </CardContent>
       </Card>
+      </DataSection>
 
       {/* Order Details Dialog */}
       <Dialog

@@ -42,7 +42,7 @@ import type { DealerDto } from '#/server/inventory/inventory.queries'
 export function DealersList() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const { data } = useSuspenseQuery(adminQueries.dealers())
+  const { data, isFetching, refetch } = useSuspenseQuery(adminQueries.dealers())
   const { data: access } = useSuspenseQuery(adminQueries.access())
 
   const grants = access.authenticated ? access.grants : null
@@ -427,6 +427,9 @@ export function DealersList() {
         onClearFilters={() => setActiveFilters([])}
         density={density}
         onDensityChange={setDensity}
+        onRefresh={() => refetch()}
+        isRefreshing={isFetching}
+        refreshQueryKeys={[adminQueries.dealers().queryKey]}
         quickFilterTabs={
           <Tabs
             value={statusTab}
@@ -470,6 +473,7 @@ export function DealersList() {
         data={filteredDealers}
         columns={columns}
         density={density}
+        isRefreshing={isFetching}
         emptyMessage="No partner dealers found."
         emptyAction={
           canCreate && (

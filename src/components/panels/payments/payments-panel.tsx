@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { useRouter } from '@tanstack/react-router'
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import { adminQueries } from '#/queries/admin'
+import { DataRefreshButton } from '#/components/shared/data-refresh-button'
+import { DataSection } from '#/components/shared/data-section'
 import {
   saveSettingsFn,
   reconcilePaymentFn,
@@ -75,11 +79,20 @@ const GATEWAY_INFO: Record<
   },
 }
 
-const routeApi = getRouteApi('/admin/payments')
-
 export function PaymentsPanel() {
-  const { ops } = routeApi.useLoaderData()
+  const queryClient = useQueryClient()
   const router = useRouter()
+  const { data: paymentsData, isFetching, refetch } = useSuspenseQuery(
+    adminQueries.payments(),
+  )
+  const ops = paymentsData.ops
+
+  const invalidatePayments = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: adminQueries.payments().queryKey,
+    })
+    await router.invalidate()
+  }
 
   const [activeTab, setActiveTab] = useState<'gateways' | 'reconciliation'>(
     'gateways',
@@ -159,7 +172,7 @@ export function PaymentsPanel() {
         `Gateway configuration for ${GATEWAY_INFO[editingGateway].name} saved`,
       )
       setEditingGateway(null)
-      await router.invalidate()
+      await invalidatePayments()
     } catch {
       toast.error('Failed to save gateway config')
     } finally {
@@ -172,7 +185,7 @@ export function PaymentsPanel() {
       setIsUpdating(true)
       await reconcilePaymentFn({ data: { id: txnId } })
       toast.success('Transaction reconciled and matched with ledger')
-      await router.invalidate()
+      await invalidatePayments()
     } catch {
       toast.error('Failed to reconcile transaction')
     } finally {
@@ -221,15 +234,23 @@ export function PaymentsPanel() {
         title="Payments and gateway reconciliation"
         description="Nepal payment provider keys, IPN callback health pings, and transaction payout reconciliation."
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCSV}
-            className="h-8 gap-1.5 text-xs"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export reconciliation
-          </Button>
+          <div className="flex items-center gap-2">
+            <DataRefreshButton
+              queryKeys={[adminQueries.payments().queryKey]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+              className="h-8 gap-1.5 text-xs"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export reconciliation
+            </Button>
+          </div>
         }
       />
 
@@ -258,18 +279,19 @@ export function PaymentsPanel() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)}>
-        <TabsList className="h-9">
-          <TabsTrigger value="gateways" className="gap-2 text-xs">
-            <CreditCard className="h-3.5 w-3.5" />
-            <span>Nepal payment gateways</span>
-          </TabsTrigger>
-          <TabsTrigger value="reconciliation" className="gap-2 text-xs">
-            <CheckCircle className="h-3.5 w-3.5" />
-            <span>Reconciliation ({ops.payments.length})</span>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <DataSection isRefreshing={isFetching}>
+        <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)}>
+          <TabsList className="h-9">
+            <TabsTrigger value="gateways" className="gap-2 text-xs">
+              <CreditCard className="h-3.5 w-3.5" />
+              <span>Nepal payment gateways</span>
+            </TabsTrigger>
+            <TabsTrigger value="reconciliation" className="gap-2 text-xs">
+              <CheckCircle className="h-3.5 w-3.5" />
+              <span>Reconciliation ({ops.payments.length})</span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
       {activeTab === 'gateways' ? (
         /* Gateway Cards Grid */
@@ -435,7 +457,10 @@ export function PaymentsPanel() {
                   </TableRow>
                 ) : (
                   filteredPayments.map((p) => (
-                    <TableRow key={p.id}>
+                    <TableRow
+                      key={p.id}
+                      className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
+                    >
                       <TableCell>
                         <span className="font-mono text-xs font-semibold text-foreground">
                           {p.reference}
@@ -491,6 +516,7 @@ export function PaymentsPanel() {
           </div>
         </div>
       )}
+      </DataSection>
 
       {/* Configure Gateway Dialog */}
       <Dialog
