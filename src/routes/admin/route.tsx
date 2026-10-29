@@ -17,6 +17,7 @@ import { authClient } from '#/lib/auth-client'
 import { clearAllLocalData } from '#/lib/idb'
 import { Awesomebar } from '#/components/shared/awesomebar'
 import { ShortcutsHelp } from '#/components/shared/shortcuts-help'
+import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import {
   LayoutDashboard,
   Wine,
@@ -308,6 +309,7 @@ function AdminLayout() {
   const queryClient = useQueryClient()
   const [searchOpen, setSearchOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
   const [notificationsRead, setNotificationsRead] = useState(false)
 
   const currentPath = routerState.location.pathname
@@ -623,12 +625,12 @@ function AdminLayout() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={handleSignOut}
+                    onSelect={() => setShowSignOutConfirm(true)}
                     disabled={isLoggingOut}
-                    className="text-destructive focus:text-destructive"
+                    className="text-destructive focus:text-destructive cursor-pointer"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>{isLoggingOut ? 'Signing out...' : 'Sign out'}</span>
+                    <span>Sign out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -642,6 +644,18 @@ function AdminLayout() {
 
         <Awesomebar open={searchOpen} onOpenChange={setSearchOpen} />
         <ShortcutsHelp />
+
+        <ConfirmDialog
+          open={showSignOutConfirm}
+          onOpenChange={setShowSignOutConfirm}
+          title="Sign out of Admin Portal?"
+          description="Are you sure you want to sign out? Any unsaved edits in active forms may be lost."
+          confirmLabel="Sign out"
+          tone="destructive"
+          isLoading={isLoggingOut}
+          icon={<LogOut className="h-5 w-5 text-destructive" />}
+          onConfirm={handleSignOut}
+        />
       </div>
     </SidebarProvider>
   )

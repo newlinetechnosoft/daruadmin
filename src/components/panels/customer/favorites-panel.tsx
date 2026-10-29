@@ -8,6 +8,7 @@ import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { Button } from '#/components/ui/button'
 import { EmptyState } from '#/components/shared/empty-state'
+import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { Heart, Trash2, ArrowRight, Loader2 } from 'lucide-react'
 
 /**
@@ -25,6 +26,7 @@ export function FavoritesPanel() {
     useFavorites()
   const [products, setProducts] = useState<ProductProps[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   const favKey = favoriteIds.join(',')
 
@@ -100,7 +102,7 @@ export function FavoritesPanel() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={clearAllFavorites}
+                onClick={() => setShowClearConfirm(true)}
                 className="gap-1.5 text-xs text-muted-foreground hover:text-destructive hover:border-destructive/40 self-start sm:self-auto cursor-pointer"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -141,6 +143,17 @@ export function FavoritesPanel() {
       </main>
 
       <Footer />
+
+      <ConfirmDialog
+        open={showClearConfirm}
+        onOpenChange={setShowClearConfirm}
+        title="Clear All Favorites?"
+        description="Are you sure you want to remove all saved favorites from this device? This action cannot be undone."
+        confirmLabel="Clear Favorites"
+        tone="destructive"
+        icon={<Trash2 className="h-5 w-5 text-destructive" />}
+        onConfirm={clearAllFavorites}
+      />
     </div>
   )
 }

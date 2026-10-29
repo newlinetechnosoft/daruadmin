@@ -9,10 +9,13 @@ import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
-import { Package, Phone, MapPin, CheckCircle2, Truck } from 'lucide-react'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { Package, Phone, MapPin, CheckCircle2, Truck, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { RiderDealerPickups } from './rider-dealer-pickups'
 import { DeliveryProofDialog } from './delivery-proof-dialog'
+import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 
 interface RiderDeliveriesProps {
   orders: Order[]
@@ -23,6 +26,8 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('active')
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
   const [deliveringOrder, setDeliveringOrder] = useState<Order | null>(null)
+  const [failedOrderTarget, setFailedOrderTarget] = useState<Order | null>(null)
+  const [failedReason, setFailedReason] = useState('')
 
   const activeOrders = orders.filter((o) =>
     ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status),
@@ -379,19 +384,11 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                             variant="destructive"
                             size="sm"
                             onClick={() => {
-                              const reason = window.prompt(
-                                'Please state the reason for delivery failure (e.g., customer unreachable, address not found):',
-                              )
-                              if (reason && reason.trim()) {
-                                void handleUpdateStatus(
-                                  order.id,
-                                  'delivery_failed',
-                                  reason.trim(),
-                                )
-                              }
+                              setFailedOrderTarget(order)
+                              setFailedReason('')
                             }}
                             disabled={isUpdating}
-                            className="h-8 text-xs"
+                            className="h-8 text-xs cursor-pointer"
                           >
                             Failed
                           </Button>
@@ -415,6 +412,48 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
           updatingOrderId && deliveringOrder?.id === updatingOrderId,
         )}
       />
+
+      <ConfirmDialog
+        open={Boolean(failedOrderTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setFailedOrderTarget(null)
+            setFailedReason('')
+          }
+        }}
+        title={`Mark Delivery #${failedOrderTarget?.number} as Failed?`}
+        description="Please specify the reason why this order could not be delivered. This reason will be recorded on the order timeline and alert dispatch managers."
+        confirmLabel="Mark as Failed"
+        tone="destructive"
+        disabled={!failedReason.trim()}
+        isLoading={Boolean(
+          updatingOrderId && failedOrderTarget?.id === updatingOrderId,
+        )}
+        icon={<AlertTriangle className="h-5 w-5 text-destructive" />}
+        onConfirm={async () => {
+          if (!failedOrderTarget || !failedReason.trim()) return
+          await handleUpdateStatus(
+            failedOrderTarget.id,
+            'delivery_failed',
+            failedReason.trim(),
+          )
+          setFailedOrderTarget(null)
+          setFailedReason('')
+        }}
+      >
+        <div className="space-y-1.5 pt-2">
+          <Label htmlFor="failure-reason" className="text-xs font-medium">
+            Failure Reason *
+          </Label>
+          <Input
+            id="failure-reason"
+            placeholder="e.g. Customer unreachable after multiple call attempts"
+            value={failedReason}
+            onChange={(e) => setFailedReason(e.target.value)}
+            className="text-xs"
+          />
+        </div>
+      </ConfirmDialog>
     </div>
   )
 }

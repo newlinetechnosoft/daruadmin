@@ -4,7 +4,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { storefrontQueries } from '#/queries/storefront'
 import { Header } from '#/components/store/header'
 import { toast } from 'sonner'
-import { Sparkles, ArrowRight, ShieldCheck, Clock, Award } from 'lucide-react'
+import { ArrowRight, ShieldCheck, Clock, Award } from 'lucide-react'
 
 export const Route = createFileRoute('/')({
   loader: async ({ context }) => {
@@ -205,9 +205,8 @@ export function HomePage() {
                   src={slideImg}
                   alt={`Food & Drinks Delivery Background ${idx + 1}`}
                   loading={idx === 0 ? 'eager' : 'lazy'}
-                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${
-                    idx === currentSlide ? 'scale-110' : 'scale-100'
-                  }`}
+                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${idx === currentSlide ? 'scale-110' : 'scale-100'
+                    }`}
                 />
               </div>
             ))}
@@ -219,10 +218,13 @@ export function HomePage() {
           {/* HERO FOREGROUND CONTENT */}
           <div className="mx-auto max-w-5xl px-4 sm:px-8 w-full flex-1 flex flex-col items-center justify-center text-center relative z-10 py-16 sm:py-24">
             {/* TOP PILL BADGE */}
+
+            {/*
             <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-4 sm:px-5 py-1.5 text-xs font-bold uppercase tracking-widest text-white backdrop-blur-md shadow-lg mb-6">
               <Sparkles size={15} className="text-primary" />
               <span>NEPAL&apos;S #1 FASTEST DELIVERY PLATFORM</span>
             </div>
+              */}
 
             {/* BOLD HEADLINE */}
             <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[5.25rem] font-black tracking-tight uppercase leading-[1.05] drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
@@ -239,7 +241,12 @@ export function HomePage() {
 
             {/* SUBTITLE */}
             <p className="mt-4 text-xs sm:text-sm md:text-base font-bold tracking-[0.2em] text-white/90 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
-              EASY, FAST &amp; CONVENIENT
+              EASY, FAST &amp; AFFORDABLE
+            </p>
+
+            {/* SPEED FOOTER */}
+            <p className="mt-5 sm:mt-6 text-xs sm:text-sm font-bold tracking-[0.18em] text-amber-300 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
+              ALCOHOL, BEVERAGES &amp; FOOD DELIVERY WITHIN 30 MINS
             </p>
 
             {/* CAPSULE SEARCH BAR */}
@@ -254,7 +261,7 @@ export function HomePage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search for food or drinks (beer, whisky, momo, pizza, snacks...)"
+                  placeholder="Search for food or drinks"
                   className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm md:text-base font-semibold text-white outline-none placeholder:text-white/60"
                 />
                 <button
@@ -267,11 +274,6 @@ export function HomePage() {
               </div>
             </form>
 
-            {/* SPEED FOOTER */}
-            <p className="mt-5 sm:mt-6 text-xs sm:text-sm font-bold tracking-[0.18em] text-amber-300 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
-              ALCOHOL, BEVERAGES &amp; FOOD DELIVERY WITHIN 30 MINS
-            </p>
-
             {/* 5-SLIDE LOOP INDICATORS */}
             <div className="mt-8 flex items-center gap-2.5 rounded-full bg-black/60 border border-white/20 px-3.5 py-1.5 backdrop-blur-md shadow-md">
               {HERO_SLIDES.map((_, idx) => (
@@ -279,11 +281,10 @@ export function HomePage() {
                   key={idx}
                   type="button"
                   onClick={() => setCurrentSlide(idx)}
-                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                    idx === currentSlide
-                      ? 'w-8 bg-primary shadow-md shadow-primary/50'
-                      : 'w-2.5 bg-white/70 hover:bg-white'
-                  }`}
+                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${idx === currentSlide
+                    ? 'w-8 bg-primary shadow-md shadow-primary/50'
+                    : 'w-2.5 bg-white/70 hover:bg-white'
+                    }`}
                   aria-label={`Go to slide ${idx + 1}`}
                 />
               ))}
@@ -293,16 +294,16 @@ export function HomePage() {
           {/* BOTTOM TRUST BADGES */}
           <div className="relative z-20 border-t border-white/15 bg-black/75 backdrop-blur-md py-3.5 text-xs font-semibold text-white/90">
             <div className="mx-auto flex max-w-7xl items-center justify-around px-4">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={16} className="text-primary" />
+              <div className="flex items-center gap-2 font-extrabold">
+                <ShieldCheck size={16} className="white font-extrabold" />
                 <span>100% Genuine Quality</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Clock size={16} className="text-cyan-400" />
+              <div className="flex items-center gap-2 font-extrabold">
+                <Clock size={16} className="white font-extrabold" />
                 <span>30 Min Express Delivery</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Award size={16} className="text-primary" />
+              <div className="flex items-center gap-2 font-extrabold">
+                <Award size={16} className="white font-extrabold" />
                 <span>5-12pm Night Delivery</span>
               </div>
             </div>

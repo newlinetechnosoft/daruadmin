@@ -10,6 +10,7 @@ import {
 import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
+import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent } from '#/components/ui/card'
 import {
@@ -61,6 +62,14 @@ export function MarketingPanel() {
   const [isAddCouponOpen, setIsAddCouponOpen] = useState(false)
   const [isAddBannerOpen, setIsAddBannerOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deleteCouponTarget, setDeleteCouponTarget] = useState<{
+    id: string
+    code: string
+  } | null>(null)
+  const [deleteBannerTarget, setDeleteBannerTarget] = useState<{
+    id: string
+    title: string
+  } | null>(null)
 
   // Coupon form state
   const [couponForm, setCouponForm] = useState({
@@ -127,11 +136,13 @@ export function MarketingPanel() {
     }
   }
 
-  const handleDeleteCoupon = async (id: string) => {
+  const handleDeleteCoupon = async () => {
+    if (!deleteCouponTarget) return
     try {
       setIsSubmitting(true)
-      await deleteCouponFn({ data: { id } })
-      toast.success('Coupon deleted from database')
+      await deleteCouponFn({ data: { id: deleteCouponTarget.id } })
+      toast.success(`Coupon "${deleteCouponTarget.code}" deleted from database`)
+      setDeleteCouponTarget(null)
       await router.invalidate()
     } catch {
       toast.error('Failed to delete coupon')
@@ -176,11 +187,13 @@ export function MarketingPanel() {
     }
   }
 
-  const handleDeleteBanner = async (id: string) => {
+  const handleDeleteBanner = async () => {
+    if (!deleteBannerTarget) return
     try {
       setIsSubmitting(true)
-      await deleteBannerFn({ data: { id } })
-      toast.success('Banner removed from database')
+      await deleteBannerFn({ data: { id: deleteBannerTarget.id } })
+      toast.success(`Banner "${deleteBannerTarget.title}" removed from database`)
+      setDeleteBannerTarget(null)
       await router.invalidate()
     } catch {
       toast.error('Failed to delete banner')
@@ -445,8 +458,13 @@ export function MarketingPanel() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                              onClick={() => handleDeleteCoupon(coupon.id)}
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer"
+                              onClick={() =>
+                                setDeleteCouponTarget({
+                                  id: coupon.id,
+                                  code: coupon.code,
+                                })
+                              }
                               title="Delete coupon"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -593,8 +611,13 @@ export function MarketingPanel() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => handleDeleteBanner(banner.id)}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer"
+                      onClick={() =>
+                        setDeleteBannerTarget({
+                          id: banner.id,
+                          title: banner.title,
+                        })
+                      }
                       title="Delete banner"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -913,6 +936,28 @@ export function MarketingPanel() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(deleteCouponTarget)}
+        onOpenChange={(open) => !open && setDeleteCouponTarget(null)}
+        title={`Delete Coupon "${deleteCouponTarget?.code}"?`}
+        description="This coupon will be permanently removed. Any pending checkout carts attempting to redeem this voucher will no longer receive the discount."
+        confirmLabel="Delete Coupon"
+        tone="destructive"
+        isLoading={isSubmitting}
+        onConfirm={handleDeleteCoupon}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteBannerTarget)}
+        onOpenChange={(open) => !open && setDeleteBannerTarget(null)}
+        title={`Delete Banner "${deleteBannerTarget?.title}"?`}
+        description="This promotional banner will be permanently removed from the storefront hero banner slider."
+        confirmLabel="Delete Banner"
+        tone="destructive"
+        isLoading={isSubmitting}
+        onConfirm={handleDeleteBanner}
+      />
     </div>
   )
 }

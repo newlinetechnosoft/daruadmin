@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Sheet,
@@ -15,6 +15,7 @@ import { useCart } from '#/lib/cart-context'
 import { useNavigate } from '@tanstack/react-router'
 import { formatNPR } from '#/lib/money'
 import { storeQueries } from '#/queries/admin'
+import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import {
   ShoppingBag,
   Plus,
@@ -37,6 +38,7 @@ export function CartSheet() {
     clearCart,
   } = useCart()
   const navigate = useNavigate()
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   const { data: deliverySettings } = useQuery(storeQueries.deliveryPricing())
   const deliveryFeePaisa = deliverySettings?.deliveryFee ?? 0
@@ -94,8 +96,8 @@ export function CartSheet() {
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={clearCart}
-                className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                onClick={() => setShowClearConfirm(true)}
+                className="h-7 text-xs text-muted-foreground hover:text-destructive cursor-pointer"
               >
                 Clear all
               </Button>
@@ -338,6 +340,17 @@ export function CartSheet() {
           </SheetFooter>
         )}
       </SheetContent>
+
+      <ConfirmDialog
+        open={showClearConfirm}
+        onOpenChange={setShowClearConfirm}
+        title="Clear Shopping Cart?"
+        description="Are you sure you want to remove all items from your cart? This action cannot be undone."
+        confirmLabel="Clear Cart"
+        tone="destructive"
+        icon={<Trash2 className="h-5 w-5 text-destructive" />}
+        onConfirm={clearCart}
+      />
     </Sheet>
   )
 }

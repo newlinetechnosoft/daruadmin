@@ -18,6 +18,7 @@ import { createImageUploadFn } from '#/server/catalog/catalog.functions'
 import { Badge } from '#/components/ui/badge'
 import { UploadCloud, Trash2, Star, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 
 export interface ExistingImageItem {
   id?: string
@@ -72,6 +73,9 @@ export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(
     const [isUploading, setIsUploading] = useState(false)
     const [uploadProgress, setUploadProgress] = useState<string | null>(null)
     const [isDragOver, setIsDragOver] = useState(false)
+    const [deleteImageTarget, setDeleteImageTarget] =
+      useState<ExistingImageItem | null>(null)
+    const [isDeletingImage, setIsDeletingImage] = useState(false)
 
     // Sync existingImages when prop changes
     useEffect(() => {
@@ -457,9 +461,9 @@ export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleRemovePersisted(img)
+                            setDeleteImageTarget(img)
                           }}
-                          className="rounded-full bg-background/80 p-1 text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors shadow"
+                          className="rounded-full bg-background/80 p-1 text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors shadow cursor-pointer"
                           title="Delete photo"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -547,6 +551,27 @@ export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(
             </div>
           </div>
         )}
+
+        <ConfirmDialog
+          open={Boolean(deleteImageTarget)}
+          onOpenChange={(open) => !open && setDeleteImageTarget(null)}
+          title="Delete Saved Image?"
+          description="Are you sure you want to permanently delete this photo from the database? This cannot be undone."
+          confirmLabel="Delete Image"
+          tone="destructive"
+          isLoading={isDeletingImage}
+          icon={<Trash2 className="h-5 w-5 text-destructive" />}
+          onConfirm={async () => {
+            if (!deleteImageTarget) return
+            setIsDeletingImage(true)
+            try {
+              await handleRemovePersisted(deleteImageTarget)
+              setDeleteImageTarget(null)
+            } finally {
+              setIsDeletingImage(false)
+            }
+          }}
+        />
       </div>
     )
   },

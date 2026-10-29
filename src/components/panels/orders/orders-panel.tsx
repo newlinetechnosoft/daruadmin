@@ -24,6 +24,7 @@ import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
 import { StatusBadge } from '#/components/shared/status-badge'
 import { StatusIndicator } from '#/components/shared/status-indicator'
+import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -103,6 +104,12 @@ export function OrdersPanel() {
   const [isUpdating, setIsUpdating] = useState(false)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
+  const [removeItemTarget, setRemoveItemTarget] = useState<{
+    orderId: string
+    orderItemId: string
+    itemName: string
+  } | null>(null)
+  const [removeItemReason, setRemoveItemReason] = useState('')
 
   // Create order form state
   const [orderForm, setOrderForm] = useState({
@@ -437,26 +444,23 @@ export function OrdersPanel() {
     }
   }
 
-  const handleRemoveOrderItem = async (
-    orderId: string,
-    orderItemId: string,
-    itemName: string,
-  ) => {
-    const reason = window.prompt(
-      `Please enter a reason for removing "${itemName}" from this order (e.g., unavailable at dealer, customer requested):`,
-    )
-    if (!reason || !reason.trim()) return
+  const handleConfirmRemoveItem = async () => {
+    if (!removeItemTarget || !removeItemReason.trim()) return
 
     try {
       setIsUpdating(true)
       await removeOrderItemFn({
         data: {
-          orderId,
-          orderItemId,
-          reason: reason.trim(),
+          orderId: removeItemTarget.orderId,
+          orderItemId: removeItemTarget.orderItemId,
+          reason: removeItemReason.trim(),
         },
       })
-      toast.success(`Removed "${itemName}" and recalculated order totals`)
+      toast.success(
+        `Removed "${removeItemTarget.itemName}" and recalculated order totals`,
+      )
+      setRemoveItemTarget(null)
+      setRemoveItemReason('')
       await router.invalidate()
     } catch (err: any) {
       toast.error(err?.message || 'Failed to remove item')
@@ -1496,15 +1500,16 @@ export function OrdersPanel() {
                                       type="button"
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive cursor-pointer"
                                       title={`Remove "${item.name}" from order`}
-                                      onClick={() =>
-                                        handleRemoveOrderItem(
-                                          selectedOrder.id,
-                                          item.id,
-                                          item.name,
-                                        )
-                                      }
+                                      onClick={() => {
+                                        setRemoveItemTarget({
+                                          orderId: selectedOrder.id,
+                                          orderItemId: item.id,
+                                          itemName: item.name,
+                                        })
+                                        setRemoveItemReason('')
+                                      }}
                                       disabled={isUpdating}
                                     >
                                       <Trash2 className="h-3.5 w-3.5" />
@@ -1868,6 +1873,38 @@ export function OrdersPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Remove Order Line Item Confirmation Dialog */}
+      <ConfirmDialog
+        open={Boolean(removeItemTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRemoveItemTarget(null)
+            setRemoveItemReason('')
+          }
+        }}
+        title={`Remove "${removeItemTarget?.itemName}" from Order?`}
+        description="Please provide a reason for removing this line item. Line item removal recalculates the subtotal, taxes, and dealer payouts."
+        confirmLabel="Remove Item"
+        tone="destructive"
+        disabled={!removeItemReason.trim()}
+        isLoading={isUpdating}
+        icon={<Trash2 className="size-4 text-destructive" />}
+        onConfirm={handleConfirmRemoveItem}
+      >
+        <div className="space-y-1.5 pt-2">
+          <Label htmlFor="remove-item-reason" className="text-xs font-medium">
+            Reason for removal *
+          </Label>
+          <Input
+            id="remove-item-reason"
+            placeholder="e.g. Out of stock at dealer, customer requested modification"
+            value={removeItemReason}
+            onChange={(e) => setRemoveItemReason(e.target.value)}
+            className="text-xs"
+          />
+        </div>
+      </ConfirmDialog>
 
       {/* Printable Nepal VAT Tax Invoice Dialog */}
       <Dialog

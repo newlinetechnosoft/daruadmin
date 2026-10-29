@@ -31,6 +31,7 @@ import {
   TableRow,
 } from '#/components/ui/table'
 import { EmptyState } from '#/components/shared/empty-state'
+import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 
 const ROLES = [
   { value: 'admin', label: 'Admin (Full Access)' },
@@ -49,6 +50,10 @@ export function UsersPanel() {
   const [roleFilter, setRoleFilter] = useState('all')
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [suspendTarget, setSuspendTarget] = useState<{
+    id: string
+    name: string
+  } | null>(null)
 
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
@@ -282,10 +287,14 @@ export function UsersPanel() {
                         variant={isActive ? 'outline' : 'destructive'}
                         size="sm"
                         disabled={isUpdating}
-                        onClick={() =>
-                          handleToggleActive(u.id, u.isActive ?? true)
-                        }
-                        className="h-7 gap-1 text-[11px]"
+                        onClick={() => {
+                          if (isActive) {
+                            setSuspendTarget({ id: u.id, name: u.name })
+                          } else {
+                            void handleToggleActive(u.id, false)
+                          }
+                        }}
+                        className="h-7 gap-1 text-[11px] cursor-pointer"
                       >
                         {isActive ? (
                           <>
@@ -308,6 +317,23 @@ export function UsersPanel() {
       </div>
 
       <CreateStaffDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+
+      <ConfirmDialog
+        open={Boolean(suspendTarget)}
+        onOpenChange={(open) => !open && setSuspendTarget(null)}
+        title={`Suspend User "${suspendTarget?.name}"?`}
+        description="Are you sure you want to suspend this user? They will immediately lose access and be blocked from logging in or placing orders."
+        confirmLabel="Suspend User"
+        tone="destructive"
+        isLoading={updatingUserId === suspendTarget?.id}
+        icon={<XCircle className="h-5 w-5 text-destructive" />}
+        onConfirm={async () => {
+          if (suspendTarget) {
+            await handleToggleActive(suspendTarget.id, true)
+            setSuspendTarget(null)
+          }
+        }}
+      />
     </div>
   )
 }

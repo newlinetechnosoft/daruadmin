@@ -5,6 +5,7 @@ import type { Rider } from '#/server/operations/types'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
+import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { authClient } from '#/lib/auth-client'
 import { clearAllLocalData } from '#/lib/idb'
 import {
@@ -27,6 +28,7 @@ export function RiderProfile({ rider }: RiderProfileProps) {
   const router = useRouter()
   const [isTogglingAvail, setIsTogglingAvail] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
 
   const handleToggleOnline = async () => {
     try {
@@ -170,15 +172,27 @@ export function RiderProfile({ rider }: RiderProfileProps) {
 
           <Button
             variant="ghost"
-            onClick={handleSignOut}
+            onClick={() => setShowSignOutConfirm(true)}
             disabled={isLoggingOut}
-            className="w-full h-10 text-xs text-destructive hover:bg-destructive/10 gap-2"
+            className="w-full h-10 text-xs text-destructive hover:bg-destructive/10 gap-2 cursor-pointer"
           >
             <LogOut className="h-4 w-4" />
-            {isLoggingOut ? 'Signing out...' : 'Sign Out'}
+            Sign Out
           </Button>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={showSignOutConfirm}
+        onOpenChange={setShowSignOutConfirm}
+        title="Sign out of Rider Portal?"
+        description="Are you sure you want to sign out? You will stop receiving delivery dispatch notifications on this device."
+        confirmLabel="Sign out"
+        tone="destructive"
+        isLoading={isLoggingOut}
+        icon={<LogOut className="h-5 w-5 text-destructive" />}
+        onConfirm={handleSignOut}
+      />
     </div>
   )
 }
