@@ -43,10 +43,13 @@ import {
   calculateOrderMargins,
 } from '#/server/orders/order.queries'
 import { calculateOrderTotals } from '#/lib/pricing'
+import { toPaisa } from '#/lib/money'
 import { getAllDealersQuery } from '#/server/inventory/inventory.queries'
 import {
   getAllRidersQuery,
+  getRiderByIdQuery,
   getRiderByUserIdQuery,
+  deleteRiderQuery,
   getAllSettlementsQuery,
   getSettlementsByRiderIdQuery,
   getActiveRiderShiftQuery,
@@ -1808,17 +1811,23 @@ export const upsertRiderFn = createServerFn({ method: 'POST' })
     z
       .object({
         id: z.string().optional(),
-        name: z.string().min(2),
-        email: z.string().email(),
-        phone: z.string().min(6),
+        name: z.string().min(2, 'Name must be at least 2 characters'),
+        email: z.string().email('Invalid email address'),
+        phone: z.string().min(6, 'Phone number must be at least 6 digits'),
         vehicle: z.enum(['bike', 'scooter', 'car']).default('bike'),
-        licenseNo: z.string().min(3),
+        licenseNo: z.string().optional().default(''),
         zone: z.string().default('Butwal Core'),
         commissionRate: z.number().min(0).max(100).default(10),
+        baseSalary: z.number().min(0).optional().default(0),
+        perDropRate: z.number().min(0).optional().default(50),
         available: z.boolean().default(true),
         status: z.enum(['offline', 'available', 'busy']).default('available'),
         verified: z.boolean().default(true),
-        password: z.string().min(8).optional(),
+        password: z
+          .string()
+          .min(8, 'Password must be at least 8 characters')
+          .optional()
+          .or(z.literal('')),
       })
       .parse(d),
   )
@@ -1852,12 +1861,58 @@ export const upsertRiderFn = createServerFn({ method: 'POST' })
           .update(user)
           .set({ role: 'rider' })
           .where(eq(user.id, assignedUserId))
-      } else if (data.password) {
+      } else if (data.password && data.password.trim().length >= 8) {
         const created = await auth.api.createUser({
           body: {
             name: data.name.trim(),
             email: normalizedEmail,
-            password: data.password,
+            password: data.password.trim(),
+            role: 'rider' as any,
+            data: {
+              phone: data.phone.trim(),
+              isActive: true,
+            },
+          },
+        })
+        assignedUserId = created.user.id
+      }
+    } else {
+      const existingRiders = await db
+        .select()
+        .from(riders)
+        .where(eq(riders.id, data.id))
+        .limit(1)
+
+      if (!existingRiders[0]) {
+        throw new Error('Rider not found')
+      }
+
+      assignedUserId = existingRiders[0].userId
+
+      if (assignedUserId) {
+        await db
+          .update(user)
+          .set({
+            name: data.name.trim(),
+            email: normalizedEmail,
+            phone: data.phone.trim(),
+          })
+          .where(eq(user.id, assignedUserId))
+
+        if (data.password && data.password.trim().length >= 8) {
+          await auth.api.setUserPassword({
+            body: {
+              userId: assignedUserId,
+              newPassword: data.password.trim(),
+            },
+          })
+        }
+      } else if (data.password && data.password.trim().length >= 8) {
+        const created = await auth.api.createUser({
+          body: {
+            name: data.name.trim(),
+            email: normalizedEmail,
+            password: data.password.trim(),
             role: 'rider' as any,
             data: {
               phone: data.phone.trim(),
@@ -1869,18 +1924,23 @@ export const upsertRiderFn = createServerFn({ method: 'POST' })
       }
     }
 
+    const baseSalaryPaisa = toPaisa(data.baseSalary)
+    const perDropRatePaisa = toPaisa(data.perDropRate)
+
     await db
       .insert(riders)
       .values({
         id: riderId,
         userId: assignedUserId,
-        name: data.name,
+        name: data.name.trim(),
         email: normalizedEmail,
-        phone: data.phone,
+        phone: data.phone.trim(),
         vehicle: data.vehicle,
-        licenseNo: data.licenseNo,
+        licenseNo: data.licenseNo.trim(),
         zone: data.zone,
         commissionRate: data.commissionRate,
+        baseSalary: baseSalaryPaisa,
+        perDropRate: perDropRatePaisa,
         available: data.available,
         status: data.status,
         verified: data.verified,
@@ -1888,13 +1948,15 @@ export const upsertRiderFn = createServerFn({ method: 'POST' })
       .onConflictDoUpdate({
         target: riders.id,
         set: {
-          name: data.name,
+          name: data.name.trim(),
           email: normalizedEmail,
-          phone: data.phone,
+          phone: data.phone.trim(),
           vehicle: data.vehicle,
-          licenseNo: data.licenseNo,
+          licenseNo: data.licenseNo.trim(),
           zone: data.zone,
           commissionRate: data.commissionRate,
+          baseSalary: baseSalaryPaisa,
+          perDropRate: perDropRatePaisa,
           available: data.available,
           status: data.status,
           verified: data.verified,
@@ -1911,6 +1973,33 @@ export const upsertRiderFn = createServerFn({ method: 'POST' })
     )
 
     return true
+  })
+
+export const deleteRiderFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.string().min(1, 'Rider ID is required'),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user: actor } = await requirePermission('riders', 'delete')
+    const existing = await getRiderByIdQuery(data.id)
+    if (!existing) {
+      throw new Error('Rider not found')
+    }
+
+    await deleteRiderQuery(data.id)
+
+    await logAudit(
+      actor.name,
+      'riders',
+      'delete',
+      `Deleted courier: ${existing.name} (${existing.phone})`,
+    )
+
+    return { success: true, id: data.id }
   })
 
 export const createStaffUserFn = createServerFn({ method: 'POST' })

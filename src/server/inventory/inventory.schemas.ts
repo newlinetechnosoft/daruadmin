@@ -49,3 +49,19 @@ export const assignItemDealersSchema = z.object({
 })
 
 export type AssignItemDealersInput = z.infer<typeof assignItemDealersSchema>
+
+export const updateDealerLocationSchema = z.object({
+  dealerId: z.string().min(1, 'Dealer ID is required'),
+  lat: z
+    .number()
+    .min(-90, 'Latitude must be between -90 and 90')
+    .max(90, 'Latitude must be between -90 and 90'),
+  lng: z
+    .number()
+    .min(-180, 'Longitude must be between -180 and 180')
+    .max(180, 'Longitude must be between -180 and 180'),
+})
+
+export type UpdateDealerLocationInput = z.infer<
+  typeof updateDealerLocationSchema
+>

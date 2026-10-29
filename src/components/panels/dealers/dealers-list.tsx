@@ -33,8 +33,10 @@ import {
   MessageCircle,
   MapPin,
   Download,
+  Navigation,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getGoogleMapsUrl } from '#/lib/map-config'
 import type { DealerDto } from '#/server/inventory/inventory.queries'
 
 export function DealersList() {
@@ -185,9 +187,34 @@ export function DealersList() {
                 >
                   {d.name}
                 </Link>
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
                   <MapPin className="size-2.5 shrink-0" />
                   <span className="truncate">{d.city}</span>
+                  {d.lat == null || d.lng == null ? (
+                    <Badge
+                      variant="outline"
+                      className="border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10 text-[9px] px-1.5 py-0 h-4 font-normal shrink-0"
+                    >
+                      No location
+                    </Badge>
+                  ) : (
+                    <a
+                      href={getGoogleMapsUrl({
+                        lat: d.lat,
+                        lng: d.lng,
+                        address: d.address,
+                        city: d.city,
+                      })}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] text-primary hover:underline inline-flex items-center gap-0.5 font-sans shrink-0"
+                      title="View pinned coordinates on map"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Navigation className="size-2.5" />
+                      Map
+                    </a>
+                  )}
                 </div>
               </div>
             </div>

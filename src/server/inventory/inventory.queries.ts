@@ -17,6 +17,7 @@ import type {
   UpsertDealerInput,
   AssignDealerItemsInput,
   AssignItemDealersInput,
+  UpdateDealerLocationInput,
 } from './inventory.schemas'
 
 export interface AssignedItemDto {
@@ -587,4 +588,33 @@ export async function getRecentStockMovementsQuery(
     createdBy: m.createdBy,
     createdAt: m.createdAt.toISOString(),
   }))
+}
+
+export async function updateDealerLocationQuery(
+  input: UpdateDealerLocationInput,
+): Promise<DealerDto> {
+  const existing = await db
+    .select({ id: dealers.id })
+    .from(dealers)
+    .where(eq(dealers.id, input.dealerId))
+    .limit(1)
+
+  if (!existing[0]) {
+    throw new Error('Dealer not found')
+  }
+
+  await db
+    .update(dealers)
+    .set({
+      lat: String(input.lat),
+      lng: String(input.lng),
+      updatedAt: new Date(),
+    })
+    .where(eq(dealers.id, input.dealerId))
+
+  const updated = await getDealerByIdQuery(input.dealerId)
+  if (!updated) {
+    throw new Error('Failed to retrieve updated dealer')
+  }
+  return updated
 }

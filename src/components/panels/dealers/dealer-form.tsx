@@ -8,6 +8,7 @@ import { can } from '#/server/auth/permissions-shared'
 import {
   upsertDealerFn,
   deleteDealerFn,
+  updateDealerLocationFn,
 } from '#/server/inventory/inventory.functions'
 import { upsertDealerSchema } from '#/server/inventory/inventory.schemas'
 import type { UpsertDealerInput } from '#/server/inventory/inventory.schemas'
@@ -19,6 +20,9 @@ import { RelatedRecords } from '#/components/shared/form-view/related-records'
 import { ChildTable } from '#/components/shared/child-table'
 import type { ChildTableColumn } from '#/components/shared/child-table'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
+import { LocationPicker } from '#/components/shared/location-picker'
+import { DEFAULT_MAP_CENTER } from '#/lib/map-config'
+import type { GeoPoint } from '#/lib/map-config'
 import {
   Form,
   FormControl,
@@ -31,7 +35,15 @@ import {
 import { Input } from '#/components/ui/input'
 import { Checkbox } from '#/components/ui/checkbox'
 import { Button } from '#/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '#/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert'
+import { Badge } from '#/components/ui/badge'
 import {
   Select,
   SelectContent,
@@ -47,7 +59,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#/components/ui/dialog'
-import { TrendingUp, Search, Plus } from 'lucide-react'
+import {
+  TrendingUp,
+  Search,
+  Plus,
+  MapPin,
+  AlertCircle,
+  Save,
+  Loader2,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { toPaisa, fromPaisa } from '#/lib/money'
 import type { CatalogItemSummary } from '#/server/inventory/inventory.queries'
@@ -111,10 +131,65 @@ export function DealerForm({ dealerId }: DealerFormProps) {
       whatsappNumber: '',
       address: '',
       city: 'Butwal',
+      lat: null,
+      lng: null,
       isActive: true,
       assignedItems: [],
     },
   })
+
+  const [isSavingLocation, setIsSavingLocation] = useState(false)
+  const watchedLat = form.watch('lat')
+  const watchedLng = form.watch('lng')
+
+  const hasLocationSelected = watchedLat != null && watchedLng != null
+  const serverHasLocation = Boolean(
+    existingDealer && existingDealer.lat != null && existingDealer.lng != null,
+  )
+
+  const isLocationDirty = useMemo(() => {
+    const initialLat = existingDealer?.lat ?? null
+    const initialLng = existingDealer?.lng ?? null
+    return watchedLat !== initialLat || watchedLng !== initialLng
+  }, [existingDealer, watchedLat, watchedLng])
+
+  const selectedPoint = useMemo<GeoPoint | null>(() => {
+    if (watchedLat != null && watchedLng != null) {
+      return { lat: Number(watchedLat), lng: Number(watchedLng) }
+    }
+    return null
+  }, [watchedLat, watchedLng])
+
+  const handleLocationChange = (pt: GeoPoint) => {
+    form.setValue('lat', pt.lat, { shouldDirty: true, shouldValidate: true })
+    form.setValue('lng', pt.lng, { shouldDirty: true, shouldValidate: true })
+  }
+
+  const handleSaveLocationOnly = async () => {
+    if (!dealerId || watchedLat == null || watchedLng == null) return
+    setIsSavingLocation(true)
+    try {
+      await updateDealerLocationFn({
+        data: {
+          dealerId,
+          lat: Number(watchedLat),
+          lng: Number(watchedLng),
+        },
+      })
+      toast.success('Dealer shop location updated successfully!')
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin', 'dealers'] }),
+        queryClient.invalidateQueries({
+          queryKey: ['admin', 'dealer', dealerId],
+        }),
+      ])
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to save location'
+      toast.error(msg)
+    } finally {
+      setIsSavingLocation(false)
+    }
+  }
 
   // Initialize or reset form values
   useEffect(() => {
@@ -133,6 +208,8 @@ export function DealerForm({ dealerId }: DealerFormProps) {
         whatsappNumber: existingDealer.whatsappNumber ?? '',
         address: existingDealer.address,
         city: existingDealer.city || 'Butwal',
+        lat: existingDealer.lat ?? null,
+        lng: existingDealer.lng ?? null,
         isActive: existingDealer.isActive,
       })
 
@@ -162,6 +239,8 @@ export function DealerForm({ dealerId }: DealerFormProps) {
         whatsappNumber: '',
         address: '',
         city: 'Butwal',
+        lat: null,
+        lng: null,
         isActive: true,
       })
       setItems([])
@@ -595,6 +674,90 @@ export function DealerForm({ dealerId }: DealerFormProps) {
               </div>
             </FormGrid>
           </FormSection>
+
+          {/* Section: Dealer Physical Shop Location Map */}
+          {existingDealer && !serverHasLocation && (
+            <Alert className="border-amber-500/40 bg-amber-500/10 text-xs py-3">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <AlertTitle className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+                No shop location set
+              </AlertTitle>
+              <AlertDescription className="text-[11px] text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
+                This dealer does not have a physical shop location pinned on the
+                map. Set coordinates below to enable automated nearest-dealer
+                routing and delivery sourcing.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <Card className="border-border shadow-xs overflow-hidden">
+            <CardHeader className="pb-3 border-b border-border/60 bg-muted/10">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <MapPin className="size-4 text-primary" />
+                    Dealer location
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-0.5">
+                    Click the map or drag the pin to the dealer&apos;s exact
+                    shop location.
+                  </CardDescription>
+                </div>
+                {existingDealer && (
+                  <div className="flex items-center gap-2">
+                    {isLocationDirty && (
+                      <Badge
+                        variant="outline"
+                        className="border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-500/10 text-[10px] font-normal"
+                      >
+                        Unsaved coordinates
+                      </Badge>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={isLocationDirty ? 'default' : 'outline'}
+                      disabled={
+                        !hasLocationSelected ||
+                        isSavingLocation ||
+                        !isLocationDirty
+                      }
+                      onClick={handleSaveLocationOnly}
+                      className="h-8 text-xs gap-1.5 shadow-xs"
+                    >
+                      {isSavingLocation ? (
+                        <>
+                          <Loader2 className="size-3.5 animate-spin" />
+                          Saving location...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="size-3.5" />
+                          Save location
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <LocationPicker
+                value={selectedPoint}
+                onChange={handleLocationChange}
+                defaultCenter={
+                  existingDealer?.city.toLowerCase().includes('kathmandu')
+                    ? [27.7172, 85.324]
+                    : existingDealer?.city.toLowerCase().includes('lalitpur')
+                      ? [27.671, 85.321]
+                      : DEFAULT_MAP_CENTER
+                }
+                height="h-72 sm:h-80"
+                helperText="Click the map or drag the pin to the dealer's exact shop location."
+                showCoordinatesInputs={true}
+              />
+            </CardContent>
+          </Card>
 
           {/* Section 2: Tax & Credit Settings */}
           <FormSection

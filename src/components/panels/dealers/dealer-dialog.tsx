@@ -71,6 +71,8 @@ export function DealerDialog({
   const [whatsappNumber, setWhatsappNumber] = useState('')
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('Butwal')
+  const [lat, setLat] = useState<number | null>(null)
+  const [lng, setLng] = useState<number | null>(null)
   const [isActive, setIsActive] = useState(true)
   const [selectedItemKeys, setSelectedItemKeys] = useState<Set<string>>(
     new Set(),
@@ -110,6 +112,8 @@ export function DealerDialog({
         setWhatsappNumber(dealer.whatsappNumber || '')
         setAddress(dealer.address || '')
         setCity(dealer.city || 'Butwal')
+        setLat(dealer.lat ?? null)
+        setLng(dealer.lng ?? null)
         setIsActive(dealer.isActive !== false)
 
         const initialKeys = new Set(
@@ -130,6 +134,8 @@ export function DealerDialog({
         setWhatsappNumber('')
         setAddress('')
         setCity('Butwal')
+        setLat(null)
+        setLng(null)
         setIsActive(true)
         setSelectedItemKeys(new Set())
       }
@@ -243,6 +249,8 @@ export function DealerDialog({
           whatsappNumber: whatsappNumber.trim() || null,
           address: address.trim(),
           city: city.trim() || 'Butwal',
+          lat: lat != null ? lat : null,
+          lng: lng != null ? lng : null,
           isActive,
           assignedItems,
         },
@@ -265,8 +273,8 @@ export function DealerDialog({
         onSuccess(res)
       }
       onOpenChange(false)
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to save dealer')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save dealer')
     } finally {
       setIsSubmitting(false)
     }
