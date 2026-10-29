@@ -6,6 +6,7 @@ import {
   deleteDealerSchema,
   assignDealerItemsSchema,
   assignItemDealersSchema,
+  updateDealerLocationSchema,
 } from './inventory.schemas'
 import {
   getAllDealersQuery,
@@ -17,6 +18,7 @@ import {
   getDealersByItemQuery,
   getAdminDealersWithCatalogQuery,
   getRecentStockMovementsQuery,
+  updateDealerLocationQuery,
 } from './inventory.queries'
 
 export const getAdminDealersFn = createServerFn({ method: 'GET' }).handler(
@@ -51,6 +53,27 @@ export const upsertDealerFn = createServerFn({ method: 'POST' })
       'dealers',
       action,
       `${action === 'create' ? 'Registered' : 'Updated'} dealer: ${data.name} (Contact: ${data.contact})`,
+    )
+    return result
+  })
+
+export const updateDealerLocationFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => updateDealerLocationSchema.parse(d))
+  .handler(async ({ data }) => {
+    // Admin only guard: verify session and role from database
+    const { user } = await requirePermission('dealers', 'edit')
+    if (user.role !== 'admin' && user.role !== 'manager') {
+      throw new Error(
+        'Forbidden: Only staff with administrator privileges can update dealer locations',
+      )
+    }
+
+    const result = await updateDealerLocationQuery(data)
+    await logAudit(
+      user.name,
+      'dealers',
+      'edit',
+      `Updated coordinates for dealer ${result.name} (ID: ${data.dealerId}) to [${data.lat}, ${data.lng}]`,
     )
     return result
   })

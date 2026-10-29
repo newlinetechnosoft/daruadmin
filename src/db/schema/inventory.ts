@@ -40,7 +40,10 @@ export const dealers = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index('dealers_is_active_idx').on(table.isActive)],
+  (table) => [
+    index('dealers_is_active_idx').on(table.isActive),
+    index('dealers_location_idx').on(table.lat, table.lng),
+  ],
 )
 
 export const dealerItems = pgTable(

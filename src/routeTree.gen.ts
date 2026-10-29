@@ -19,6 +19,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as RiderRouteRouteImport } from './routes/rider/route'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as VerifyPhoneRouteImport } from './routes/verify-phone'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAccountsRouteImport } from './routes/admin/accounts'
 import { Route as AdminBrandsRouteImport } from './routes/admin/brands'
@@ -103,6 +104,11 @@ const RiderRouteRoute = RiderRouteRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyPhoneRoute = VerifyPhoneRouteImport.update({
+  id: '/verify-phone',
+  path: '/verify-phone',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -295,6 +301,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/signup': typeof SignupRoute
+  '/verify-phone': typeof VerifyPhoneRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
@@ -340,6 +347,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/signup': typeof SignupRoute
+  '/verify-phone': typeof VerifyPhoneRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
@@ -387,6 +395,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/signup': typeof SignupRoute
+  '/verify-phone': typeof VerifyPhoneRoute
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
@@ -436,6 +445,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/orders'
     | '/signup'
+    | '/verify-phone'
     | '/admin/accounts'
     | '/admin/brands'
     | '/admin/customers'
@@ -481,6 +491,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/orders'
     | '/signup'
+    | '/verify-phone'
     | '/admin/accounts'
     | '/admin/brands'
     | '/admin/customers'
@@ -527,6 +538,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/orders'
     | '/signup'
+    | '/verify-phone'
     | '/admin/accounts'
     | '/admin/brands'
     | '/admin/customers'
@@ -575,6 +587,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OrdersRoute: typeof OrdersRoute
   SignupRoute: typeof SignupRoute
+  VerifyPhoneRoute: typeof VerifyPhoneRoute
   ApiNeonHealthRoute: typeof ApiNeonHealthRoute
   OffersSlugRoute: typeof OffersSlugRoute
   OrderConfirmationOrderIdRoute: typeof OrderConfirmationOrderIdRoute
@@ -654,6 +667,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-phone': {
+      id: '/verify-phone'
+      path: '/verify-phone'
+      fullPath: '/verify-phone'
+      preLoaderRoute: typeof VerifyPhoneRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -1011,6 +1031,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OrdersRoute: OrdersRoute,
   SignupRoute: SignupRoute,
+  VerifyPhoneRoute: VerifyPhoneRoute,
   ApiNeonHealthRoute: ApiNeonHealthRoute,
   OffersSlugRoute: OffersSlugRoute,
   OrderConfirmationOrderIdRoute: OrderConfirmationOrderIdRoute,

@@ -1,14 +1,20 @@
 import { useState, useMemo } from 'react'
 import { getRouteApi, useRouter } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import {
   upsertRiderFn,
+  deleteRiderFn,
   updateRiderLiveFn,
   addLedgerFn,
 } from '#/server/operations/operations.functions'
 import type { Rider } from '#/server/operations/types'
-import { formatNPR } from '#/lib/money'
+import { formatNPR, fromPaisa } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
+import { ConfirmDialog } from '#/components/shared/confirm-dialog'
+import { RiderDialog } from './rider-dialog'
+import { adminQueries } from '#/queries/admin'
+import { can } from '#/server/auth/permissions-shared'
 import {
   Bike,
   Search,
@@ -20,18 +26,25 @@ import {
   Star,
   Radio,
   Navigation,
-  Lock,
-  Mail,
-  Eye,
-  EyeOff,
+  Edit2,
+  Trash2,
+  MoreHorizontal,
+  MessageCircle,
   Phone,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
-import { Label } from '#/components/ui/label'
 import { Badge } from '#/components/ui/badge'
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
+import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '#/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -40,14 +53,6 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '#/components/ui/dialog'
 import { Card, CardTitle } from '#/components/ui/card'
 import { EmptyState } from '#/components/shared/empty-state'
 
@@ -57,49 +62,94 @@ export function RidersPanel() {
   const { ops } = routeApi.useLoaderData()
   const router = useRouter()
 
+  const { data: access } = useQuery(adminQueries.access())
+  const grants = access?.authenticated ? access.grants : null
+  const canCreate = access ? can(grants, 'riders', 'create') : true
+  const canEdit = access ? can(grants, 'riders', 'edit') : true
+  const canDelete = access ? can(grants, 'riders', 'delete') : true
+
   const [searchQuery, setSearchQuery] = useState('')
   const [zoneFilter, setZoneFilter] = useState('all')
-  const [isAddRiderOpen, setIsAddRiderOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showRiderPassword, setShowRiderPassword] = useState(false)
+  const [statusTab, setStatusTab] = useState<'all' | 'available' | 'busy' | 'offline'>('all')
 
-  // Add rider form state
-  const [riderForm, setRiderForm] = useState({
-    name: '',
-    email: '',
-    phone: '+977 ',
-    password: '',
-    vehicle: 'bike' as 'bike' | 'scooter' | 'car',
-    licenseNo: '',
-    zone: 'Butwal Core',
-    commissionRate: 150,
-  })
+  // Rider Dialog state (for both Create & Edit)
+  const [isRiderDialogOpen, setIsRiderDialogOpen] = useState(false)
+  const [selectedRider, setSelectedRider] = useState<Rider | null>(null)
+
+  // Delete Confirm Dialog state
+  const [deleteTarget, setDeleteTarget] = useState<Rider | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const filteredRiders = useMemo(() => {
     return ops.riders.filter((r) => {
+      // Status filter tab
+      if (statusTab !== 'all') {
+        if (statusTab === 'available' && r.status !== 'available') return false
+        if (statusTab === 'busy' && r.status !== 'busy') return false
+        if (statusTab === 'offline' && r.status !== 'offline') return false
+      }
+
+      // Zone filter
       if (zoneFilter !== 'all' && r.zone !== zoneFilter) return false
+
+      // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase()
         return (
           r.name.toLowerCase().includes(q) ||
           r.phone.includes(q) ||
-          r.zone.toLowerCase().includes(q)
+          r.email.toLowerCase().includes(q) ||
+          r.zone.toLowerCase().includes(q) ||
+          (r.licenseNo && r.licenseNo.toLowerCase().includes(q))
         )
       }
       return true
     })
-  }, [ops.riders, zoneFilter, searchQuery])
+  }, [ops.riders, statusTab, zoneFilter, searchQuery])
 
   // KPIs
   const totalRidersCount = ops.riders.length
   const activeAvailableCount = ops.riders.filter(
-    (r) => r.available || r.status === 'available',
+    (r) => r.status === 'available' || r.available,
+  ).length
+  const busyCount = ops.riders.filter((r) => r.status === 'busy').length
+  const offlineCount = ops.riders.filter(
+    (r) => r.status === 'offline' && !r.available,
   ).length
   const totalCodFloat = ops.riders.reduce((sum, r) => sum + r.cashOnHand, 0)
   const totalCompletedDeliveries = ops.riders.reduce(
     (sum, r) => sum + r.deliveries,
     0,
   )
+
+  const handleOpenCreate = () => {
+    setSelectedRider(null)
+    setIsRiderDialogOpen(true)
+  }
+
+  const handleOpenEdit = (rider: Rider) => {
+    setSelectedRider(rider)
+    setIsRiderDialogOpen(true)
+  }
+
+  const handleDeleteRider = async () => {
+    if (!deleteTarget) return
+    try {
+      setIsDeleting(true)
+      await deleteRiderFn({
+        data: { id: deleteTarget.id },
+      })
+      toast.success(`Courier "${deleteTarget.name}" deleted from fleet`)
+      await router.invalidate()
+      setDeleteTarget(null)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete courier'
+      toast.error(msg)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   const handleToggleKyc = async (rider: Rider) => {
     try {
@@ -111,15 +161,18 @@ export function RidersPanel() {
           email: rider.email,
           phone: rider.phone,
           vehicle: rider.vehicle,
-          licenseNo: rider.licenseNo,
+          licenseNo: rider.licenseNo || '',
           zone: rider.zone,
           commissionRate: rider.commissionRate,
+          baseSalary: rider.baseSalary ? fromPaisa(rider.baseSalary) : 0,
+          perDropRate: rider.perDropRate ? fromPaisa(rider.perDropRate) : 50,
           verified: !rider.verified,
           available: rider.available,
+          status: rider.status,
         },
       })
       toast.success(
-        `Rider ${rider.name} marked as ${!rider.verified ? 'KYC Verified' : 'Pending Verification'}`,
+        `Courier ${rider.name} marked as ${!rider.verified ? 'KYC Verified' : 'Pending Verification'}`,
       )
       await router.invalidate()
     } catch {
@@ -164,72 +217,23 @@ export function RidersPanel() {
     }
   }
 
-  const handleCreateRider = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!riderForm.name.trim() || !riderForm.phone.trim()) {
-      toast.error('Please enter rider name and phone')
-      return
-    }
-    if (!riderForm.email.trim()) {
-      toast.error('Please enter an email address for courier login')
-      return
-    }
-    if (riderForm.password.length < 8) {
-      toast.error('Password must be at least 8 characters long')
-      return
-    }
-
-    try {
-      setIsSubmitting(true)
-      await upsertRiderFn({
-        data: {
-          name: riderForm.name.trim(),
-          email: riderForm.email.trim(),
-          phone: riderForm.phone.trim(),
-          password: riderForm.password,
-          vehicle: riderForm.vehicle,
-          licenseNo: riderForm.licenseNo || 'LU-2-PA-1234',
-          zone: riderForm.zone,
-          commissionRate: Number(riderForm.commissionRate),
-          verified: true,
-          available: true,
-        },
-      })
-      toast.success('Rider onboarded with login account successfully')
-      setIsAddRiderOpen(false)
-      setRiderForm({
-        name: '',
-        email: '',
-        phone: '+977 ',
-        password: '',
-        vehicle: 'bike',
-        licenseNo: '',
-        zone: 'Butwal Core',
-        commissionRate: 150,
-      })
-      await router.invalidate()
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to onboard rider')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   const handleExportCSV = () => {
     const headers =
-      'ID,Name,Phone,Zone,Vehicle,Verified,Available,Deliveries,Rating,CashOnHandNPR,EarningsNPR\n'
+      'ID,Name,Phone,Email,Zone,Vehicle,Plate,Status,Verified,Available,Deliveries,Rating,CashOnHandNPR,BaseSalaryNPR,PerDropRateNPR,CommissionRatePct\n'
     const rows = filteredRiders
       .map(
         (r) =>
-          `"${r.id}","${r.name}","${r.phone}","${r.zone}","${r.vehicle}",${r.verified},${r.available},${r.deliveries},${r.rating},${r.cashOnHand},${r.earnings}`,
+          `"${r.id}","${r.name}","${r.phone}","${r.email}","${r.zone}","${r.vehicle}","${r.licenseNo || ''}",${r.status},${r.verified},${r.available},${r.deliveries},${r.rating},${(r.cashOnHand / 100).toFixed(2)},${r.baseSalary ? (r.baseSalary / 100).toFixed(2) : '0'},${r.perDropRate ? (r.perDropRate / 100).toFixed(2) : '50'},${r.commissionRate}`,
       )
       .join('\n')
-    const blob = new Blob([headers + rows], { type: 'text/csv' })
+    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = `riders-fleet-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
     toast.success('Rider fleet exported to CSV')
   }
 
@@ -248,16 +252,18 @@ export function RidersPanel() {
               className="h-8 gap-1.5 text-xs"
             >
               <Download className="h-3.5 w-3.5" />
-              Export roster
+              <span>Export roster</span>
             </Button>
-            <Button
-              size="sm"
-              onClick={() => setIsAddRiderOpen(true)}
-              className="h-8 gap-1.5 text-xs"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Onboard rider
-            </Button>
+            {canCreate && (
+              <Button
+                size="sm"
+                onClick={handleOpenCreate}
+                className="h-8 gap-1.5 text-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Onboard rider</span>
+              </Button>
+            )}
           </div>
         }
       />
@@ -361,36 +367,83 @@ export function RidersPanel() {
       </Card>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Search riders by name, phone, zone..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 pl-9 text-xs"
-          />
-        </div>
-
-        <NativeSelect
-          value={zoneFilter}
-          onChange={(e) => setZoneFilter(e.target.value)}
-          size="sm"
-          className="h-8 text-xs"
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3">
+        <Tabs
+          value={statusTab}
+          onValueChange={(val) => setStatusTab(val as typeof statusTab)}
+          className="w-full"
         >
-          <NativeSelectOption value="all">
-            All delivery zones
-          </NativeSelectOption>
-          <NativeSelectOption value="Butwal Core">
-            Butwal Core
-          </NativeSelectOption>
-          <NativeSelectOption value="Tilottama / Manigram">
-            Tilottama / Manigram
-          </NativeSelectOption>
-          <NativeSelectOption value="Siddharthanagar / Bhairahawa">
-            Siddharthanagar / Bhairahawa
-          </NativeSelectOption>
-        </NativeSelect>
+          <TabsList className="h-8 p-0.5 bg-muted/60">
+            <TabsTrigger
+              value="all"
+              className="h-7 text-xs gap-1.5 data-[state=active]:bg-background"
+            >
+              <span>All Couriers</span>
+              <span className="font-mono text-[10px] text-muted-foreground ml-1">
+                ({totalRidersCount})
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="available"
+              className="h-7 text-xs gap-1.5 data-[state=active]:bg-background"
+            >
+              <span>Available</span>
+              <span className="font-mono text-[10px] text-muted-foreground ml-1">
+                ({activeAvailableCount})
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="busy"
+              className="h-7 text-xs gap-1.5 data-[state=active]:bg-background"
+            >
+              <span>On Delivery</span>
+              <span className="font-mono text-[10px] text-muted-foreground ml-1">
+                ({busyCount})
+              </span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="offline"
+              className="h-7 text-xs gap-1.5 data-[state=active]:bg-background"
+            >
+              <span>Offline</span>
+              <span className="font-mono text-[10px] text-muted-foreground ml-1">
+                ({offlineCount})
+              </span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search couriers by name, phone, plate, zone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 pl-9 text-xs"
+            />
+          </div>
+
+          <NativeSelect
+            value={zoneFilter}
+            onChange={(e) => setZoneFilter(e.target.value)}
+            size="sm"
+            className="h-8 text-xs sm:w-56"
+          >
+            <NativeSelectOption value="all">
+              All delivery zones
+            </NativeSelectOption>
+            <NativeSelectOption value="Butwal Core">
+              Butwal Core
+            </NativeSelectOption>
+            <NativeSelectOption value="Tilottama / Manigram">
+              Tilottama / Manigram
+            </NativeSelectOption>
+            <NativeSelectOption value="Siddharthanagar / Bhairahawa">
+              Siddharthanagar / Bhairahawa
+            </NativeSelectOption>
+          </NativeSelect>
+        </div>
       </div>
 
       {/* Riders Table */}
@@ -412,7 +465,7 @@ export function RidersPanel() {
               <TableRow>
                 <TableCell colSpan={7} className="p-0">
                   <EmptyState
-                    title="No riders match your search"
+                    title="No couriers match your search"
                     description="Try adjusting your filter or search terms."
                   />
                 </TableCell>
@@ -421,11 +474,19 @@ export function RidersPanel() {
               filteredRiders.map((rider) => (
                 <TableRow key={rider.id}>
                   <TableCell>
-                    <div className="font-medium text-xs text-foreground">
-                      {rider.name}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground font-mono">
-                      {rider.phone}
+                    <div className="flex items-center gap-2">
+                      <div className="min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => canEdit && handleOpenEdit(rider)}
+                          className={`text-left font-medium text-xs text-foreground ${canEdit ? 'hover:underline cursor-pointer' : ''}`}
+                        >
+                          {rider.name}
+                        </button>
+                        <div className="text-[11px] text-muted-foreground font-mono">
+                          {rider.phone}
+                        </div>
+                      </div>
                     </div>
                   </TableCell>
 
@@ -445,6 +506,7 @@ export function RidersPanel() {
                       onClick={() => handleToggleKyc(rider)}
                       disabled={isSubmitting}
                       className="h-6 p-0 hover:bg-transparent"
+                      title={rider.verified ? 'Revoke KYC Verification' : 'Approve KYC Verification'}
                     >
                       {rider.verified ? (
                         <Badge
@@ -468,7 +530,11 @@ export function RidersPanel() {
                   <TableCell>
                     <Badge
                       variant={
-                        rider.status === 'available' ? 'success' : 'secondary'
+                        rider.status === 'available'
+                          ? 'success'
+                          : rider.status === 'busy'
+                            ? 'warning'
+                            : 'secondary'
                       }
                       className="text-[10px] font-normal capitalize"
                     >
@@ -510,27 +576,118 @@ export function RidersPanel() {
                   </TableCell>
 
                   <TableCell className="text-right">
-                    <Button
-                      variant={
-                        rider.cashOnHand >= 2000000
-                          ? 'destructive'
-                          : rider.cashOnHand > 0
-                            ? 'default'
-                            : 'outline'
-                      }
-                      size="sm"
-                      disabled={rider.cashOnHand === 0 || isSubmitting}
-                      onClick={() => handleSettleRiderCash(rider)}
-                      className="h-7 gap-1 px-2 text-xs"
-                      title={
-                        rider.cashOnHand >= 2000000
-                          ? 'Settle COD Cash Handover (Over Limit)'
-                          : 'Settle COD Cash'
-                      }
-                    >
-                      <Coins className="h-3 w-3" />
-                      {rider.cashOnHand > 0 ? 'Settle COD' : 'Settled'}
-                    </Button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      {rider.cashOnHand > 0 && (
+                        <Button
+                          variant={rider.cashOnHand >= 2000000 ? 'destructive' : 'default'}
+                          size="sm"
+                          disabled={isSubmitting}
+                          onClick={() => handleSettleRiderCash(rider)}
+                          className="h-7 gap-1 px-2 text-xs"
+                          title="Settle COD Cash Handover"
+                        >
+                          <Coins className="h-3 w-3" />
+                          <span className="hidden sm:inline">Settle</span>
+                        </Button>
+                      )}
+
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenEdit(rider)}
+                          className="size-7 text-muted-foreground hover:text-foreground"
+                          title={`Edit ${rider.name}`}
+                          aria-label={`Edit ${rider.name}`}
+                        >
+                          <Edit2 className="size-3.5" />
+                        </Button>
+                      )}
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 text-muted-foreground hover:text-foreground"
+                            aria-label={`More actions for ${rider.name}`}
+                          >
+                            <MoreHorizontal className="size-3.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          {canEdit && (
+                            <DropdownMenuItem
+                              onSelect={() => handleOpenEdit(rider)}
+                              className="text-xs gap-2 cursor-pointer"
+                            >
+                              <Edit2 className="size-3.5" />
+                              <span>Edit courier</span>
+                            </DropdownMenuItem>
+                          )}
+
+                          {rider.phone && (
+                            <>
+                              <DropdownMenuItem
+                                onSelect={() =>
+                                  window.open(
+                                    `https://wa.me/977${rider.phone.replace(/\D/g, '').slice(-10)}`,
+                                    '_blank',
+                                  )
+                                }
+                                className="text-xs gap-2 cursor-pointer"
+                              >
+                                <MessageCircle className="size-3.5 text-emerald-600" />
+                                <span>WhatsApp courier</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={() =>
+                                  window.open(`tel:${rider.phone}`, '_self')
+                                }
+                                className="text-xs gap-2 cursor-pointer"
+                              >
+                                <Phone className="size-3.5" />
+                                <span>Call courier</span>
+                              </DropdownMenuItem>
+                            </>
+                          )}
+
+                          <DropdownMenuItem
+                            onSelect={() => handleToggleKyc(rider)}
+                            className="text-xs gap-2 cursor-pointer"
+                          >
+                            <ShieldCheck className="size-3.5" />
+                            <span>
+                              {rider.verified ? 'Revoke KYC' : 'Verify KYC'}
+                            </span>
+                          </DropdownMenuItem>
+
+                          {rider.cashOnHand > 0 && (
+                            <DropdownMenuItem
+                              onSelect={() => handleSettleRiderCash(rider)}
+                              className="text-xs gap-2 cursor-pointer text-amber-600 focus:text-amber-600"
+                            >
+                              <Coins className="size-3.5" />
+                              <span>Settle COD float</span>
+                            </DropdownMenuItem>
+                          )}
+
+                          {canDelete && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onSelect={() => setDeleteTarget(rider)}
+                                className="text-xs gap-2 text-rose-600 focus:text-rose-600 cursor-pointer"
+                              >
+                                <Trash2 className="size-3.5" />
+                                <span>Delete courier</span>
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -539,196 +696,30 @@ export function RidersPanel() {
         </Table>
       </div>
 
-      {/* Onboard Rider Dialog */}
-      <Dialog open={isAddRiderOpen} onOpenChange={setIsAddRiderOpen}>
-        <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
-          <form
-            onSubmit={handleCreateRider}
-            className="flex flex-col h-full min-h-0"
-          >
-            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
-              <DialogTitle className="text-sm font-semibold">
-                Onboard fleet courier
-              </DialogTitle>
-              <DialogDescription className="text-xs">
-                Register new delivery personnel
-              </DialogDescription>
-            </DialogHeader>
+      {/* Shared Rider Modal Dialog (Create & Edit) */}
+      <RiderDialog
+        open={isRiderDialogOpen}
+        onOpenChange={setIsRiderDialogOpen}
+        rider={selectedRider}
+      />
 
-            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Full name *</Label>
-                <Input
-                  required
-                  value={riderForm.name}
-                  onChange={(e) =>
-                    setRiderForm({ ...riderForm, name: e.target.value })
-                  }
-                  placeholder="e.g. Ramesh Shrestha"
-                  className="h-8 text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Contact phone *</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      required
-                      value={riderForm.phone}
-                      onChange={(e) =>
-                        setRiderForm({ ...riderForm, phone: e.target.value })
-                      }
-                      placeholder="+977 98..."
-                      className="pl-8 h-8 font-mono text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Email address *</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      type="email"
-                      required
-                      value={riderForm.email}
-                      onChange={(e) =>
-                        setRiderForm({ ...riderForm, email: e.target.value })
-                      }
-                      placeholder="rider@mezmani.com.np"
-                      className="pl-8 h-8 font-mono text-xs"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Login password *</Label>
-                <div className="relative">
-                  <Lock className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    type={showRiderPassword ? 'text' : 'password'}
-                    required
-                    value={riderForm.password}
-                    onChange={(e) =>
-                      setRiderForm({ ...riderForm, password: e.target.value })
-                    }
-                    placeholder="Min. 8 characters"
-                    className="pl-8 pr-8 h-8 font-mono text-xs"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowRiderPassword(!showRiderPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showRiderPassword ? (
-                      <EyeOff className="h-3.5 w-3.5" />
-                    ) : (
-                      <Eye className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Vehicle type</Label>
-                  <NativeSelect
-                    value={riderForm.vehicle}
-                    onChange={(e) =>
-                      setRiderForm({
-                        ...riderForm,
-                        vehicle: e.target.value as any,
-                      })
-                    }
-                    size="sm"
-                    className="w-full text-xs"
-                  >
-                    <NativeSelectOption value="bike">
-                      Motorcycle
-                    </NativeSelectOption>
-                    <NativeSelectOption value="scooter">
-                      Scooter
-                    </NativeSelectOption>
-                    <NativeSelectOption value="car">
-                      Delivery van / car
-                    </NativeSelectOption>
-                  </NativeSelect>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Vehicle plate no.</Label>
-                  <Input
-                    value={riderForm.licenseNo}
-                    onChange={(e) =>
-                      setRiderForm({ ...riderForm, licenseNo: e.target.value })
-                    }
-                    placeholder="LU-2-PA-8899"
-                    className="h-8 font-mono text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Delivery zone</Label>
-                  <NativeSelect
-                    value={riderForm.zone}
-                    onChange={(e) =>
-                      setRiderForm({ ...riderForm, zone: e.target.value })
-                    }
-                    size="sm"
-                    className="w-full text-xs"
-                  >
-                    <NativeSelectOption value="Butwal Core">
-                      Butwal Core
-                    </NativeSelectOption>
-                    <NativeSelectOption value="Tilottama / Manigram">
-                      Tilottama / Manigram
-                    </NativeSelectOption>
-                    <NativeSelectOption value="Siddharthanagar / Bhairahawa">
-                      Siddharthanagar / Bhairahawa
-                    </NativeSelectOption>
-                  </NativeSelect>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs">
-                    Per-delivery commission (NPR)
-                  </Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={riderForm.commissionRate}
-                    onChange={(e) =>
-                      setRiderForm({
-                        ...riderForm,
-                        commissionRate: Number(e.target.value),
-                      })
-                    }
-                    className="h-8 font-mono text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setIsAddRiderOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" disabled={isSubmitting}>
-                {isSubmitting ? 'Onboarding...' : 'Register courier'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title={`Delete courier "${deleteTarget?.name}"?`}
+        description={
+          deleteTarget?.cashOnHand && deleteTarget.cashOnHand > 0
+            ? `This courier currently has ${formatNPR(deleteTarget.cashOnHand)} in unremitted COD custody. Please settle cash float before removing from the fleet.`
+            : 'Are you sure you want to remove this courier from the fleet roster? This will revoke their courier access and unassign future deliveries.'
+        }
+        confirmLabel="Delete Courier"
+        cancelLabel="Keep Courier"
+        danger
+        isLoading={isDeleting}
+        disabled={Boolean(deleteTarget?.cashOnHand && deleteTarget.cashOnHand > 0)}
+        onConfirm={handleDeleteRider}
+      />
     </div>
   )
 }

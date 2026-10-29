@@ -41,6 +41,22 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       if (access?.authenticated && access.user?.role === 'rider') {
         throw redirect({ to: '/rider' })
       }
+      if (
+        access?.authenticated &&
+        access.user?.role === 'customer' &&
+        !access.user?.phoneVerified &&
+        location.pathname !== '/verify-phone' &&
+        location.pathname !== '/login' &&
+        location.pathname !== '/signup'
+      ) {
+        throw redirect({
+          to: '/verify-phone',
+          search: {
+            phone: access.user.phone || '',
+            redirect: location.pathname,
+          },
+        })
+      }
     } catch (err) {
       if (isRedirect(err)) throw err
     }

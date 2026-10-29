@@ -1,5 +1,5 @@
 import { db } from '#/db'
-import { riders, riderShifts, settlements, user } from '#/db/schema'
+import { orders, riders, riderShifts, settlements, user } from '#/db/schema'
 import { and, desc, eq, gte, isNull, lte, or } from 'drizzle-orm'
 import type { Rider, RiderShift, Settlement } from '#/server/operations/types'
 
@@ -212,4 +212,65 @@ export async function getRiderAttendanceStatsQuery(
     hasActiveShift: Boolean(activeShift),
     activeShiftSince: activeShift ? activeShift.startedAt.toISOString() : null,
   }
+}
+
+export async function deleteRiderQuery(
+  id: string,
+): Promise<{ success: boolean; id: string }> {
+  const existing = await db
+    .select()
+    .from(riders)
+    .where(eq(riders.id, id))
+    .limit(1)
+
+  if (!existing[0]) {
+    throw new Error('Rider not found')
+  }
+
+  const rider = existing[0]
+
+  if (rider.cashOnHand > 0) {
+    throw new Error(
+      `Cannot delete courier with outstanding cash on hand (Rs. ${(rider.cashOnHand / 100).toFixed(2)}). Please settle COD cash remittance before deleting.`,
+    )
+  }
+
+  const activeOrders = await db
+    .select({ id: orders.id })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.riderId, id),
+        or(
+          eq(orders.status, 'rider_assigned'),
+          eq(orders.status, 'picked_up'),
+          eq(orders.status, 'out_for_delivery'),
+        ),
+      ),
+    )
+
+  if (activeOrders.length > 0) {
+    throw new Error(
+      `Cannot delete courier with ${activeOrders.length} active delivery in progress. Reassign or complete deliveries before deleting.`,
+    )
+  }
+
+  // Detach riderId from historical orders so order records remain intact
+  await db
+    .update(orders)
+    .set({ riderId: null })
+    .where(eq(orders.riderId, id))
+
+  // If rider had a linked user account, revoke rider role
+  if (rider.userId) {
+    await db
+      .update(user)
+      .set({ role: 'customer' })
+      .where(eq(user.id, rider.userId))
+  }
+
+  // Delete the rider record (cascades shifts, cash handovers, settlements)
+  await db.delete(riders).where(eq(riders.id, id))
+
+  return { success: true, id }
 }

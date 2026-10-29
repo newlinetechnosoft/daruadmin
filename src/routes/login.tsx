@@ -28,10 +28,15 @@ import {
   EyeOff,
   Lock,
   Mail,
+  Phone,
   ArrowRight,
   ShieldCheck,
   Zap,
 } from 'lucide-react'
+import {
+  resolveLoginIdentifierFn,
+  sendPhoneOtpFn,
+} from '#/server/otp/otp.functions'
 
 const loginSearchSchema = z.object({
   redirect: z.string().optional(),
@@ -48,7 +53,7 @@ function LoginPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
 
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
@@ -56,31 +61,74 @@ function LoginPage() {
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault()
-    if (!email.trim() || !password.trim()) {
-      toast.error('Please enter both email and password')
+    const trimmedId = identifier.trim()
+    if (!trimmedId || !password.trim()) {
+      toast.error('Please enter both your mobile number / email and password')
       return
     }
 
     setIsLoading(true)
     try {
+      // 1. Resolve identifier (phone or email) to auth email
+      const resolution = await resolveLoginIdentifierFn({
+        data: { identifier: trimmedId },
+      })
+
+      if (!resolution.found || !resolution.email) {
+        toast.error(
+          resolution.error ||
+            'No account found with this mobile number or email. Please check your credentials.',
+        )
+        setIsLoading(false)
+        return
+      }
+
+      // 2. Sign in with Better-Auth email provider
       const res = await authClient.signIn.email({
-        email: email.trim(),
+        email: resolution.email,
         password,
         rememberMe,
       })
 
       if (res.error) {
-        toast.error(res.error.message || 'Invalid email or password')
+        toast.error(
+          res.error.message || 'Invalid mobile number/email or password',
+        )
         setIsLoading(false)
         return
       }
 
-      // Wipe any previous session's in-memory query cache immediately
+      // Wipe previous session's in-memory query cache immediately
       queryClient.clear()
       await router.invalidate()
 
+      const userRole = (res.data as any)?.user?.role || 'customer'
+      const isPhoneVerified = resolution.phoneVerified
+
+      // 3. Check if regular customer needs mobile number verification
+      if (userRole === 'customer' && !isPhoneVerified) {
+        const phoneToVerify = resolution.phone || (res.data as any)?.user?.phone
+        if (phoneToVerify) {
+          try {
+            await sendPhoneOtpFn({
+              data: { phone: phoneToVerify },
+            })
+          } catch {
+            // Non-blocking OTP resend
+          }
+          toast.info('Please verify your mobile number to continue.')
+          navigate({
+            to: '/verify-phone',
+            search: {
+              phone: phoneToVerify,
+              redirect: search.redirect,
+            },
+          })
+          return
+        }
+      }
+
       toast.success('Welcome back to Mezmani!')
-      const userRole = (res.data as any)?.user?.role
       if (userRole === 'rider') {
         navigate({
           to: search.redirect?.startsWith('/rider')
@@ -98,7 +146,7 @@ function LoginPage() {
         return
       }
       navigate({
-        to: search.redirect || '/',
+        to: search.redirect || '/drinks',
       })
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Sign in failed')
@@ -128,21 +176,26 @@ function LoginPage() {
 
             <CardContent>
               <form onSubmit={handleLogin} className="space-y-4">
-                {/* Email Field */}
+                {/* Mobile Number or Email Field */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="email" className="text-xs">
-                    Email address
+                  <Label htmlFor="identifier" className="text-xs">
+                    Mobile number or email
                   </Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    {identifier.replace(/[^\d+]/g, '').length >= 3 &&
+                    !identifier.includes('@') ? (
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    )}
                     <Input
-                      id="email"
-                      type="email"
-                      autoComplete="email"
+                      id="identifier"
+                      type="text"
+                      autoComplete="username"
                       required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@example.com"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      placeholder="98XXXXXXXX or name@example.com"
                       className="pl-9 text-xs"
                     />
                   </div>
