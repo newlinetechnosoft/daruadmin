@@ -1,26 +1,220 @@
 import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { storefrontQueries } from '#/queries/storefront'
 import { Header } from '#/components/store/header'
 import { toast } from 'sonner'
-import { ArrowRight, ShieldCheck, Clock, Award } from 'lucide-react'
+import {
+  ArrowRight,
+  ShieldCheck,
+  Clock,
+  Award,
+  Sparkles,
+  Utensils,
+} from 'lucide-react'
 
 export const Route = createFileRoute('/')({
   loader: async ({ context }) => {
-    return context.queryClient.ensureQueryData(storefrontQueries.frontpage())
+    const [frontpage, groceryCategories] = await Promise.all([
+      context.queryClient.ensureQueryData(storefrontQueries.frontpage()),
+      context.queryClient.ensureQueryData(storefrontQueries.groceryCategories()),
+    ])
+    return { frontpage, groceryCategories }
   },
   component: HomePage,
 })
 
-const FOOD_ITEMS = [
-  'Momo',
-  'Biryani',
-  'Spaghetti',
-  'Pizza',
-  'Wings',
-  'Chowmein',
-]
+function getCategoryFallbackImage(slug?: string, name?: string): string {
+  const s = `${slug ?? ''} ${name ?? ''}`.toLowerCase()
+  if (s.includes('momo') || s.includes('dumpling')) {
+    return 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=1000&q=80'
+  }
+  if (
+    s.includes('snack') ||
+    s.includes('munch') ||
+    s.includes('chip') ||
+    s.includes('peanut')
+  ) {
+    return 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?auto=format&fit=crop&w=1000&q=80'
+  }
+  if (
+    s.includes('beverage') ||
+    s.includes('mixer') ||
+    s.includes('drink') ||
+    s.includes('juice') ||
+    s.includes('cola')
+  ) {
+    return 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=1000&q=80'
+  }
+  if (s.includes('pizza')) {
+    return 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1000&q=80'
+  }
+  if (s.includes('burger')) {
+    return 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1000&q=80'
+  }
+  if (s.includes('biryani') || s.includes('rice')) {
+    return 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=1000&q=80'
+  }
+  if (
+    s.includes('noodle') ||
+    s.includes('chowmein') ||
+    s.includes('pasta') ||
+    s.includes('spaghetti')
+  ) {
+    return 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=1000&q=80'
+  }
+  if (s.includes('ice') || s.includes('party')) {
+    return 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1000&q=80'
+  }
+  return 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1000&q=80'
+}
+
+type GroceryCategoryItem = {
+  id: string
+  name: string
+  slug: string
+  description?: string | null
+  imageUrl?: string | null
+}
+
+function FoodCategoryCard({
+  category,
+  index,
+  isFeatured = false,
+  totalCount = 1,
+}: {
+  category: GroceryCategoryItem
+  index: number
+  isFeatured?: boolean
+  totalCount?: number
+}) {
+  const imgSrc =
+    category.imageUrl && category.imageUrl.trim() !== ''
+      ? category.imageUrl
+      : getCategoryFallbackImage(category.slug, category.name)
+
+  if (isFeatured) {
+    return (
+      <Link
+        to="/grocery"
+        search={{ category: category.slug }}
+        className="group relative isolate block overflow-hidden rounded-3xl border border-border/80 bg-card/60 shadow-xl transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 animate-in fade-in-0 slide-in-from-bottom-6 duration-700 fill-mode-both"
+      >
+        <div className="grid grid-cols-1 items-center lg:grid-cols-12 min-h-[400px] sm:min-h-[440px]">
+          {/* Left Details */}
+          <div className="z-10 flex flex-col justify-between p-7 sm:p-10 lg:col-span-5 h-full">
+            <div>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary">
+                <Sparkles className="h-3.5 w-3.5" />
+                Featured Category
+              </div>
+              <h3 className="mt-4 text-3xl font-black uppercase tracking-tight text-foreground sm:text-5xl group-hover:text-primary transition-colors duration-300">
+                {category.name}
+              </h3>
+              <p className="mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed line-clamp-3">
+                {category.description ||
+                  'Explore delicious handcrafted dishes and essential kitchen items, freshly prepared and delivered within 30 minutes.'}
+              </p>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-border/60 flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-foreground group-hover:text-primary transition-colors">
+                Order {category.name} →
+              </span>
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-primary/30">
+                <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5" />
+              </span>
+            </div>
+          </div>
+
+          {/* Right Big Image */}
+          <div className="relative h-72 sm:h-88 lg:h-full lg:col-span-7 overflow-hidden">
+            <img
+              src={imgSrc}
+              alt={category.name}
+              loading="lazy"
+              onError={(e) => {
+                const target = e.currentTarget
+                const fallback = getCategoryFallbackImage(
+                  category.slug,
+                  category.name,
+                )
+                if (target.src !== fallback) target.src = fallback
+              }}
+              className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-108"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent lg:bg-gradient-to-r lg:from-background lg:via-transparent lg:to-transparent pointer-events-none" />
+          </div>
+        </div>
+      </Link>
+    )
+  }
+
+  // Adaptive height based on layout density
+  const cardHeightClass =
+    totalCount === 2
+      ? 'min-h-[380px] sm:min-h-[440px]'
+      : totalCount === 3
+        ? 'min-h-[360px] sm:min-h-[420px]'
+        : 'min-h-[340px] sm:min-h-[380px]'
+
+  return (
+    <Link
+      to="/grocery"
+      search={{ category: category.slug }}
+      style={{ animationDelay: `${index * 120}ms` }}
+      className={`group relative isolate flex flex-col justify-end overflow-hidden rounded-3xl border border-border/80 bg-card/60 p-6 sm:p-7 ${cardHeightClass} shadow-lg transition-all duration-500 hover:-translate-y-2 hover:border-primary/60 hover:shadow-2xl hover:shadow-primary/15 animate-in fade-in-0 slide-in-from-bottom-6 duration-700 fill-mode-both`}
+    >
+      {/* Big Image Background with Smooth Zoom */}
+      <img
+        src={imgSrc}
+        alt={category.name}
+        loading="lazy"
+        onError={(e) => {
+          const target = e.currentTarget
+          const fallback = getCategoryFallbackImage(
+            category.slug,
+            category.name,
+          )
+          if (target.src !== fallback) target.src = fallback
+        }}
+        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110 group-hover:rotate-0.5"
+      />
+
+      {/* Multi-stop dark gradient for high readability & depth */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/10 transition-opacity duration-300 group-hover:opacity-90 pointer-events-none" />
+
+      {/* Top badges */}
+      <div className="relative z-10 mb-auto flex items-center justify-between w-full">
+        <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/40 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-white shadow-sm">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          {String(index + 1).padStart(2, '0')}
+        </span>
+
+        <span className="grid h-10 w-10 place-items-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-white transition-all duration-300 group-hover:bg-primary group-hover:border-primary group-hover:text-primary-foreground group-hover:scale-110 group-hover:rotate-[-45deg] shadow-md">
+          <ArrowRight className="h-4 w-4" />
+        </span>
+      </div>
+
+      {/* Bottom Content */}
+      <div className="relative z-10 pt-6">
+        <h3 className="text-2xl font-black uppercase tracking-tight text-white drop-shadow-md sm:text-3xl transition-transform duration-300 group-hover:translate-x-1">
+          {category.name}
+        </h3>
+        {category.description && (
+          <p className="mt-2 text-xs text-gray-300/90 line-clamp-2 leading-relaxed drop-shadow">
+            {category.description}
+          </p>
+        )}
+        <div className="mt-4 flex items-center gap-2 text-xs font-bold text-amber-300 group-hover:text-amber-200 transition-colors uppercase tracking-wider">
+          <span>Explore Category</span>
+          <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+        </div>
+      </div>
+    </Link>
+  )
+}
 
 const HERO_SLIDES = [
   '/images/butwal_night_view.webp',
@@ -137,8 +331,15 @@ function SearchIcon({ className = 'h-5 w-5' }: { className?: string }) {
   )
 }
 
-export function HomePage() {
+function HomePage() {
   const navigate = useNavigate()
+  const loaderData = Route.useLoaderData()
+  const { data: groceryCategories = loaderData?.groceryCategories ?? [] } =
+    useQuery({
+      ...storefrontQueries.groceryCategories(),
+      initialData: loaderData?.groceryCategories,
+    })
+
   const [searchQuery, setSearchQuery] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -420,50 +621,119 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* FOOD */}
+        {/* SHOP BY FOOD & GROCERY */}
         <section
-          className="scroll-mt-24 border-t border-border py-16 sm:py-24"
+          className="relative isolate scroll-mt-24 overflow-hidden border-t border-border bg-gradient-to-b from-background via-card/25 to-background py-16 sm:py-24"
           id="food"
         >
+          {/* Subtle Ambient Glows */}
           <div
-            className={`${wrap} grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20`}
-          >
-            <div>
-              <p className={eyebrow}>Hungry?</p>
-              <h2 className="mt-3 text-4xl font-black uppercase leading-none tracking-tighter sm:text-6xl">
-                Shop by food
-              </h2>
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-20 top-1/4 -z-10 h-80 w-80 rounded-full bg-amber-500/[0.04] blur-3xl"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-20 bottom-10 -z-10 h-96 w-96 rounded-full bg-primary/[0.04] blur-3xl"
+          />
+
+          <div className={wrap}>
+            <div className="mb-8 flex flex-col justify-between gap-4 sm:mb-12 sm:flex-row sm:items-end">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-primary uppercase">
+                    <Sparkles className="h-3 w-3" /> Fresh &amp; Ready
+                  </span>
+                  <span className={eyebrow}>Fast Delivery</span>
+                </div>
+                <h2 className="mt-3 text-4xl font-black uppercase leading-none tracking-tighter sm:text-6xl text-foreground">
+                  Shop by food
+                </h2>
+                <p className="mt-2.5 max-w-xl text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  Hot meals, late-night bites, and essential snacks delivered fresh to your doorstep in 30 minutes.
+                </p>
+              </div>
+
               <Link
                 to="/grocery"
-                className="mt-8 inline-block border-b border-foreground pb-0.5 text-sm font-semibold transition-opacity hover:opacity-60 text-foreground"
+                className="group inline-flex items-center gap-2 border-b border-foreground pb-1 text-sm font-semibold text-foreground transition-all hover:opacity-75"
               >
-                View all →
+                <span>View all food &amp; groceries</span>
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </div>
 
-            <ul className="border-t border-border">
-              {FOOD_ITEMS.map((item, i) => (
-                <li key={item} className="border-b border-border">
-                  <Link
-                    to="/grocery"
-                    search={{ category: 'late-night-bites' }}
-                    className="group flex items-center justify-between gap-4 py-5 transition-colors hover:bg-accent sm:py-6"
-                  >
-                    <span className="flex items-baseline gap-5 sm:gap-8">
-                      <span className="w-6 text-xs font-medium tabular-nums text-muted-foreground">
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                      <span className="text-2xl font-bold uppercase tracking-tight transition-transform group-hover:translate-x-2 sm:text-4xl text-foreground">
-                        {item}
-                      </span>
-                    </span>
-                    <span className="text-xl transition-transform group-hover:translate-x-1 text-foreground">
-                      →
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            {/* Flexible & Animated Category Grid based on count */}
+            {groceryCategories.length === 0 ? (
+              <div className="rounded-3xl border border-dashed border-border bg-card/40 p-12 text-center animate-in fade-in-0 duration-500">
+                <Utensils className="mx-auto h-12 w-12 text-muted-foreground/60" />
+                <h3 className="mt-4 text-lg font-bold text-foreground">
+                  Delicious Food Menu Coming Up
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Browse our full food, beverage and grocery catalog.
+                </p>
+                <Link
+                  to="/grocery"
+                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all"
+                >
+                  Browse Groceries
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            ) : groceryCategories.length === 1 ? (
+              <div className="mx-auto max-w-4xl">
+                <FoodCategoryCard
+                  category={groceryCategories[0]}
+                  index={0}
+                  isFeatured={true}
+                  totalCount={1}
+                />
+              </div>
+            ) : groceryCategories.length === 2 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                {groceryCategories.map((cat, i) => (
+                  <FoodCategoryCard
+                    key={cat.id}
+                    category={cat}
+                    index={i}
+                    totalCount={2}
+                  />
+                ))}
+              </div>
+            ) : groceryCategories.length === 3 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+                {groceryCategories.map((cat, i) => (
+                  <FoodCategoryCard
+                    key={cat.id}
+                    category={cat}
+                    index={i}
+                    totalCount={3}
+                  />
+                ))}
+              </div>
+            ) : groceryCategories.length === 4 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {groceryCategories.map((cat, i) => (
+                  <FoodCategoryCard
+                    key={cat.id}
+                    category={cat}
+                    index={i}
+                    totalCount={4}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {groceryCategories.map((cat, i) => (
+                  <FoodCategoryCard
+                    key={cat.id}
+                    category={cat}
+                    index={i}
+                    totalCount={groceryCategories.length}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
