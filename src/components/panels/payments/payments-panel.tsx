@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
+import { DateRangeFilter, useDateFilter } from '#/components/shared/date-range-filter'
 import {
   saveSettingsFn,
   reconcilePaymentFn,
@@ -193,20 +194,29 @@ export function PaymentsPanel() {
     }
   }
 
-  const filteredPayments = ops.payments.filter((p) => {
-    if (!searchQuery.trim()) return true
-    const q = searchQuery.toLowerCase()
-    return (
-      p.reference.toLowerCase().includes(q) ||
-      p.orderId.toLowerCase().includes(q) ||
-      p.gateway.toLowerCase().includes(q)
-    )
-  })
+  const { dateFilter, setDateFilter, bounds, filterItems } =
+    useDateFilter('today')
 
-  const totalReconciled = ops.payments
+  const dateFilteredPayments = useMemo(() => {
+    return filterItems(ops.payments, (p) => p.createdAt)
+  }, [ops.payments, filterItems])
+
+  const filteredPayments = useMemo(() => {
+    return dateFilteredPayments.filter((p) => {
+      if (!searchQuery.trim()) return true
+      const q = searchQuery.toLowerCase()
+      return (
+        p.reference.toLowerCase().includes(q) ||
+        p.orderId.toLowerCase().includes(q) ||
+        p.gateway.toLowerCase().includes(q)
+      )
+    })
+  }, [dateFilteredPayments, searchQuery])
+
+  const totalReconciled = dateFilteredPayments
     .filter((p) => p.status === 'reconciled')
     .reduce((sum, p) => sum + p.amount, 0)
-  const pendingReconciliation = ops.payments.filter(
+  const pendingReconciliation = dateFilteredPayments.filter(
     (p) => p.status !== 'reconciled',
   ).length
 
@@ -265,14 +275,22 @@ export function PaymentsPanel() {
         <KpiCard
           label="Reconciled volume"
           value={formatNPR(totalReconciled)}
-          note="Matched checkout payments"
+          note={
+            bounds.isFiltered
+              ? `Reconciled for ${bounds.label}`
+              : 'Matched checkout payments'
+          }
           icon={CheckCircle}
           tone="success"
         />
         <KpiCard
           label="Pending batch matches"
           value={pendingReconciliation}
-          note="Unmatched gateway checkouts"
+          note={
+            bounds.isFiltered
+              ? `Pending for ${bounds.label}`
+              : 'Unmatched gateway checkouts'
+          }
           icon={Activity}
           tone={pendingReconciliation > 0 ? 'danger' : 'default'}
         />
@@ -288,7 +306,7 @@ export function PaymentsPanel() {
             </TabsTrigger>
             <TabsTrigger value="reconciliation" className="gap-2 text-xs">
               <CheckCircle className="h-3.5 w-3.5" />
-              <span>Reconciliation ({ops.payments.length})</span>
+              <span>Reconciliation ({dateFilteredPayments.length})</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -421,7 +439,7 @@ export function PaymentsPanel() {
       ) : (
         /* Reconciliation Table */
         <div className="space-y-4">
-          <div className="flex rounded-lg border border-border bg-card p-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-lg border border-border bg-card p-3">
             <div className="relative w-full max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
@@ -431,6 +449,14 @@ export function PaymentsPanel() {
                 className="h-8 pl-9 text-xs"
               />
             </div>
+
+            <DateRangeFilter
+              value={dateFilter}
+              onChange={setDateFilter}
+              size="sm"
+              filteredCount={filteredPayments.length}
+              totalCount={ops.payments.length}
+            />
           </div>
 
           <div className="overflow-hidden rounded-lg border border-border bg-card">
@@ -450,8 +476,25 @@ export function PaymentsPanel() {
                   <TableRow>
                     <TableCell colSpan={6} className="p-0">
                       <EmptyState
-                        title="No payment records found"
-                        description="Try adjusting your search query."
+                        title={`No payment records found for ${bounds.label}`}
+                        description={
+                          bounds.isFiltered
+                            ? `There are no transactions recorded for ${bounds.secondaryLabel}. You can switch to All Dates or pick another range.`
+                            : 'Try adjusting your search query.'
+                        }
+                        action={
+                          bounds.isFiltered ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setDateFilter({ preset: 'all' })}
+                              className="mt-2 text-xs"
+                            >
+                              View All Time Payments ({ops.payments.length})
+                            </Button>
+                          ) : undefined
+                        }
                       />
                     </TableCell>
                   </TableRow>

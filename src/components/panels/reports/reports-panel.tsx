@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
+import { DateRangeFilter, useDateFilter } from '#/components/shared/date-range-filter'
 import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
@@ -54,24 +55,31 @@ export function ReportsPanel() {
   )
   const ops = reportsData.ops
 
+  const { dateFilter, setDateFilter, bounds, filterItems } =
+    useDateFilter('today')
+
+  const dateFilteredOrders = useMemo(() => {
+    return filterItems(ops.orders, (o) => o.createdAt)
+  }, [ops.orders, filterItems])
+
   const [isIrdModalOpen, setIsIrdModalOpen] = useState(false)
   const [isMarginModalOpen, setIsMarginModalOpen] = useState(false)
   const [isFleetModalOpen, setIsFleetModalOpen] = useState(false)
   const [isVelocityModalOpen, setIsVelocityModalOpen] = useState(false)
   const [marginTab, setMarginTab] = useState<'product' | 'dealer'>('product')
 
-  // Aggregate Metrics
-  const grossSalesTotal = ops.orders.reduce((sum, o) => sum + o.total, 0)
+  // Aggregate Metrics based on selected date period (default: Today)
+  const grossSalesTotal = dateFilteredOrders.reduce((sum, o) => sum + o.total, 0)
   const totalDeliveriesCount = ops.riders.reduce(
     (sum, r) => sum + r.deliveries,
     0,
   )
   const estimatedVatCollected = Math.round(
-    ops.orders.reduce((sum, o) => sum + o.tax, 0),
+    dateFilteredOrders.reduce((sum, o) => sum + o.tax, 0),
   )
 
   // Order Margin & Profitability Aggregations
-  const marginSummaries = ops.orders.map(calculateOrderMargins)
+  const marginSummaries = dateFilteredOrders.map(calculateOrderMargins)
   const totalMerchandiseRevenue = marginSummaries.reduce(
     (sum, m) => sum + m.netMerchandiseRevenue,
     0,
@@ -112,7 +120,7 @@ export function ReportsPanel() {
     }
   >()
 
-  ops.orders.forEach((order) => {
+  dateFilteredOrders.forEach((order) => {
     order.items.forEach((item) => {
       const unitCost = item.dealerCostPrice ?? 0
       const itemCost = unitCost * item.qty
@@ -214,7 +222,7 @@ export function ReportsPanel() {
     const prefix = ops.settings.invoicePrefix || 'MEZ-INV-'
     const headers =
       'InvoiceNo,Date,CustomerName,CustomerPAN,TaxableSalesNPR,NonTaxableSales,VATRate,VATAmountNPR,TotalNPR\n'
-    const rows = ops.orders
+    const rows = dateFilteredOrders
       .map((o) => {
         const taxable = Math.round(o.subtotal - o.discount)
         return `"${prefix}${o.number.replace(/[^0-9]/g, '')}","${o.createdAt.slice(0, 10)}","${o.customerName}","N/A",${taxable},0,"${ops.settings.taxRate}%",${o.tax},${o.total}`
@@ -262,12 +270,19 @@ export function ReportsPanel() {
         title="Business reports and audits"
         description="Downloadable fiscal audits, IRD VAT compliance returns, courier fulfillment metrics, and warehouse valuation."
         actions={
-          <DataRefreshButton
-            queryKeys={[adminQueries.reports().queryKey]}
-            onRefresh={() => refetch()}
-            isRefreshing={isFetching}
-            variant="button"
-          />
+          <div className="flex items-center gap-2">
+            <DateRangeFilter
+              value={dateFilter}
+              onChange={setDateFilter}
+              size="sm"
+            />
+            <DataRefreshButton
+              queryKeys={[adminQueries.reports().queryKey]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching}
+              variant="button"
+            />
+          </div>
         }
       />
 
@@ -279,20 +294,32 @@ export function ReportsPanel() {
         <KpiCard
           label="Cumulative sales audit"
           value={formatNPR(grossSalesTotal)}
-          note="Gross order checkout revenue"
+          note={
+            bounds.isFiltered
+              ? `Revenue for ${bounds.label}`
+              : 'Gross order checkout revenue'
+          }
           icon={DollarSign}
         />
         <KpiCard
           label="Realized gross profit"
           value={`${formatNPR(totalGrossProfit)} (${overallMarginPercent}%)`}
-          note="Revenue minus dealer snapshot cost"
+          note={
+            bounds.isFiltered
+              ? `Gross profit for ${bounds.label}`
+              : 'Revenue minus dealer snapshot cost'
+          }
           icon={TrendingUp}
           tone="success"
         />
         <KpiCard
           label="Dealer sourcing cost (COGS)"
           value={formatNPR(totalDealerCost)}
-          note="Payable to partner merchant shops"
+          note={
+            bounds.isFiltered
+              ? `Dealer COGS for ${bounds.label}`
+              : 'Payable to partner merchant shops'
+          }
           icon={Store}
         />
         <KpiCard

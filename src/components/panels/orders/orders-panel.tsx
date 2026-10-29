@@ -5,6 +5,7 @@ import { adminQueries } from '#/queries/admin'
 import { cn } from '#/lib/utils'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
+import { DateRangeFilter, useDateFilter } from '#/components/shared/date-range-filter'
 import {
   updateOrderFn,
   createOrderFn,
@@ -108,6 +109,9 @@ export function OrdersPanel() {
     await router.invalidate()
   }
 
+  const { dateFilter, setDateFilter, bounds, filterItems } =
+    useDateFilter('today')
+
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -192,8 +196,13 @@ export function OrdersPanel() {
     return list
   }, [liquor, grocery])
 
+  // Date-filtered orders (defaults to today's orders)
+  const dateFilteredOrders = useMemo(() => {
+    return filterItems(ops.orders, (o) => o.createdAt)
+  }, [ops.orders, filterItems])
+
   const filteredOrders = useMemo(() => {
-    return ops.orders.filter((o) => {
+    return dateFilteredOrders.filter((o) => {
       if (statusFilter !== 'all' && o.status !== statusFilter) return false
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase()
@@ -206,29 +215,29 @@ export function OrdersPanel() {
       }
       return true
     })
-  }, [ops.orders, statusFilter, searchQuery])
+  }, [dateFilteredOrders, statusFilter, searchQuery])
 
-  // Status counts for interactive filter pills
+  // Status counts for interactive filter pills in selected date period
   const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: ops.orders.length }
-    for (const o of ops.orders) {
+    const counts: Record<string, number> = { all: dateFilteredOrders.length }
+    for (const o of dateFilteredOrders) {
       counts[o.status] = (counts[o.status] || 0) + 1
     }
     return counts
-  }, [ops.orders])
+  }, [dateFilteredOrders])
 
-  // KPIs
-  const totalOrdersCount = ops.orders.length
-  const pendingCount = ops.orders.filter(
+  // KPIs strictly respect the selected date period
+  const totalOrdersCount = dateFilteredOrders.length
+  const pendingCount = dateFilteredOrders.filter(
     (o) => o.status === 'pending' || o.status === 'confirmed',
   ).length
-  const outForDeliveryCount = ops.orders.filter(
+  const outForDeliveryCount = dateFilteredOrders.filter(
     (o) =>
       o.status === 'out_for_delivery' ||
       o.status === 'rider_assigned' ||
       o.status === 'picked_up',
   ).length
-  const deliveredRevenue = ops.orders
+  const deliveredRevenue = dateFilteredOrders
     .filter((o) => o.status === 'delivered')
     .reduce((sum, o) => sum + o.total, 0)
 
@@ -689,7 +698,7 @@ export function OrdersPanel() {
 
       {/* Search and Filters */}
       <Card>
-        <CardContent className="p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <CardContent className="p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -701,19 +710,28 @@ export function OrdersPanel() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
-            <NativeSelect
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs sm:text-sm h-9"
-            >
-              {ORDER_STATUSES.map((st) => (
-                <option key={st.value} value={st.value}>
-                  {st.label}
-                </option>
-              ))}
-            </NativeSelect>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <DateRangeFilter
+              value={dateFilter}
+              onChange={setDateFilter}
+              filteredCount={filteredOrders.length}
+              totalCount={ops.orders.length}
+            />
+
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+              <NativeSelect
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="text-xs sm:text-sm h-9"
+              >
+                {ORDER_STATUSES.map((st) => (
+                  <option key={st.value} value={st.value}>
+                    {st.label}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -742,7 +760,27 @@ export function OrdersPanel() {
                     colSpan={8}
                     className="py-12 text-center text-muted-foreground text-sm"
                   >
-                    No orders match your filter criteria.
+                    <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto">
+                      <span className="font-semibold text-foreground">
+                        No orders found for {bounds.label}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {bounds.isFiltered
+                          ? `There are no orders recorded for ${bounds.secondaryLabel}. You can switch to All Time or pick another date.`
+                          : 'Try adjusting your search query or status filter.'}
+                      </span>
+                      {bounds.isFiltered && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setDateFilter({ preset: 'all' })}
+                          className="mt-2 text-xs"
+                        >
+                          View All Time Orders ({ops.orders.length})
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (

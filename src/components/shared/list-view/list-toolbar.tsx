@@ -38,6 +38,7 @@ export interface ListToolbarProps<TData> {
   isRefreshing?: boolean
   refreshQueryKeys?: QueryKey | QueryKey[]
   quickFilterTabs?: React.ReactNode
+  dateFilterNode?: React.ReactNode
 }
 
 export function ListToolbar<TData>({
@@ -61,6 +62,7 @@ export function ListToolbar<TData>({
   isRefreshing = false,
   refreshQueryKeys,
   quickFilterTabs,
+  dateFilterNode,
 }: ListToolbarProps<TData>) {
   const searchInputRef = React.useRef<HTMLInputElement>(null)
 
@@ -108,6 +110,8 @@ export function ListToolbar<TData>({
               <Kbd className="text-xs px-1.5 py-0.5 font-mono">/</Kbd>
             </div>
           </div>
+
+          {dateFilterNode}
 
           {filterableFields.length > 0 && onAddFilter && (
             <FilterPopover

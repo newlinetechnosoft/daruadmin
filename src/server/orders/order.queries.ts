@@ -7,7 +7,7 @@ import {
   dealerItems,
   riders,
 } from '#/db/schema'
-import { desc, eq, inArray, count, and, or } from 'drizzle-orm'
+import { desc, eq, inArray, count, and, or, gte, lte } from 'drizzle-orm'
 import type {
   Order,
   OrderItem,
@@ -189,11 +189,23 @@ function mapOrderRecord(
   }
 }
 
-export async function getAllOrdersQuery(): Promise<Order[]> {
-  const orderRows = await db
-    .select()
-    .from(orders)
-    .orderBy(desc(orders.createdAt))
+export async function getAllOrdersQuery(dateRange?: {
+  start?: Date | null
+  end?: Date | null
+}): Promise<Order[]> {
+  const conditions = []
+  if (dateRange?.start) {
+    conditions.push(gte(orders.createdAt, dateRange.start))
+  }
+  if (dateRange?.end) {
+    conditions.push(lte(orders.createdAt, dateRange.end))
+  }
+
+  const query = db.select().from(orders)
+  const orderRows = await (conditions.length > 0
+    ? query.where(and(...conditions))
+    : query
+  ).orderBy(desc(orders.createdAt))
 
   if (orderRows.length === 0) return []
 

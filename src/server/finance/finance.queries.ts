@@ -48,19 +48,43 @@ function mapPaymentRecord(p: typeof payments.$inferSelect): PaymentTxn {
   }
 }
 
-export async function getAllLedgerEntriesQuery(): Promise<LedgerEntry[]> {
-  const rows = await db
-    .select()
-    .from(ledgerEntries)
-    .orderBy(desc(ledgerEntries.createdAt))
+export async function getAllLedgerEntriesQuery(dateRange?: {
+  start?: Date | null
+  end?: Date | null
+}): Promise<LedgerEntry[]> {
+  const conditions = []
+  if (dateRange?.start) {
+    conditions.push(gte(ledgerEntries.createdAt, dateRange.start))
+  }
+  if (dateRange?.end) {
+    conditions.push(lte(ledgerEntries.createdAt, dateRange.end))
+  }
+
+  const query = db.select().from(ledgerEntries)
+  const rows = await (conditions.length > 0
+    ? query.where(and(...conditions))
+    : query
+  ).orderBy(desc(ledgerEntries.createdAt))
   return rows.map(mapLedgerRecord)
 }
 
-export async function getAllPaymentsQuery(): Promise<PaymentTxn[]> {
-  const rows = await db
-    .select()
-    .from(payments)
-    .orderBy(desc(payments.createdAt))
+export async function getAllPaymentsQuery(dateRange?: {
+  start?: Date | null
+  end?: Date | null
+}): Promise<PaymentTxn[]> {
+  const conditions = []
+  if (dateRange?.start) {
+    conditions.push(gte(payments.createdAt, dateRange.start))
+  }
+  if (dateRange?.end) {
+    conditions.push(lte(payments.createdAt, dateRange.end))
+  }
+
+  const query = db.select().from(payments)
+  const rows = await (conditions.length > 0
+    ? query.where(and(...conditions))
+    : query
+  ).orderBy(desc(payments.createdAt))
   return rows.map(mapPaymentRecord)
 }
 

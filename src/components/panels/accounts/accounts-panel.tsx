@@ -9,6 +9,7 @@ import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
+import { DateRangeFilter, useDateFilter } from '#/components/shared/date-range-filter'
 import { addLedgerFn } from '#/server/operations/operations.functions'
 import {
   postManualJournalVoucherFn,
@@ -119,6 +120,9 @@ export function AccountsPanel() {
       search: (prev) => ({ ...prev, tab }),
     })
   }
+
+  // Frappe / ERPNext-style Date Filter (defaults to Today)
+  const { dateFilter, setDateFilter, filterItems } = useDateFilter('today')
 
   // General Ledger state
   const [ledgerSearch, setLedgerSearch] = useState('')
@@ -244,9 +248,34 @@ export function AccountsPanel() {
   const rawDealerPayables = ops.dealerPayables
   const rawRiderAccounts = ops.riderAccounts
 
+  // Date-filtered collections (defaults to today's data)
+  const dateFilteredLedger = useMemo(() => {
+    return filterItems(rawLedger, (item) => item.date || item.createdAt)
+  }, [rawLedger, filterItems])
+
+  const dateFilteredJournalEntries = useMemo(() => {
+    return filterItems(rawJournalEntries, (e) => e.postingDate)
+  }, [rawJournalEntries, filterItems])
+
+  const dateFilteredGeneralLedger = useMemo(() => {
+    return filterItems(rawGeneralLedger, (row) => row.postingDate)
+  }, [rawGeneralLedger, filterItems])
+
+  const dateFilteredPayments = useMemo(() => {
+    return filterItems(rawPayments, (p) => p.createdAt)
+  }, [rawPayments, filterItems])
+
+  const dateFilteredOrders = useMemo(() => {
+    return filterItems(rawOrders, (o) => o.createdAt)
+  }, [rawOrders, filterItems])
+
+  const dateFilteredSettlements = useMemo(() => {
+    return filterItems(rawSettlements, (s) => s.paidAt || s.createdAt)
+  }, [rawSettlements, filterItems])
+
   // 1. General Ledger calculations
   const filteredLedger = useMemo(() => {
-    return rawLedger.filter((item) => {
+    return dateFilteredLedger.filter((item) => {
       if (accountFilter !== 'all' && item.account !== accountFilter)
         return false
       if (categoryFilter !== 'all' && item.category !== categoryFilter)
@@ -261,11 +290,11 @@ export function AccountsPanel() {
       }
       return true
     })
-  }, [rawLedger, accountFilter, categoryFilter, ledgerSearch])
+  }, [dateFilteredLedger, accountFilter, categoryFilter, ledgerSearch])
 
   // Double-Entry Calculations
   const filteredJournalEntries = useMemo(() => {
-    return rawJournalEntries.filter((e) => {
+    return dateFilteredJournalEntries.filter((e) => {
       if (voucherTypeFilter !== 'all' && e.voucherType !== voucherTypeFilter) {
         return false
       }
@@ -279,10 +308,10 @@ export function AccountsPanel() {
       }
       return true
     })
-  }, [rawJournalEntries, voucherTypeFilter, ledgerSearch])
+  }, [dateFilteredJournalEntries, voucherTypeFilter, ledgerSearch])
 
   const filteredGeneralLedger = useMemo(() => {
-    return rawGeneralLedger.filter((row: any) => {
+    return dateFilteredGeneralLedger.filter((row: any) => {
       if (
         accountFilter !== 'all' &&
         row.accountId !== accountFilter &&
@@ -315,7 +344,7 @@ export function AccountsPanel() {
       return true
     })
   }, [
-    rawGeneralLedger,
+    dateFilteredGeneralLedger,
     accountFilter,
     glPartyTypeFilter,
     glPartyIdFilter,
@@ -358,24 +387,24 @@ export function AccountsPanel() {
     })
   }, [rawChartOfAccounts, coaCategoryFilter, coaSearch])
 
-  const totalDebits = rawLedger
+  const totalDebits = dateFilteredLedger
     .filter((l) => l.type === 'debit')
     .reduce((sum, l) => sum + l.amount, 0)
-  const totalCredits = rawLedger
+  const totalCredits = dateFilteredLedger
     .filter((l) => l.type === 'credit')
     .reduce((sum, l) => sum + l.amount, 0)
   const netLiquidityBalance = totalCredits - totalDebits
 
-  const grossSales = rawLedger
+  const grossSales = dateFilteredLedger
     .filter((l) => l.category === 'sales')
     .reduce((sum, l) => sum + l.amount, 0)
-  const cogsPurchases = rawLedger
+  const cogsPurchases = dateFilteredLedger
     .filter((l) => l.category === 'purchase' || l.category === 'dealer_payment')
     .reduce((sum, l) => sum + l.amount, 0)
-  const operatingExpenses = rawLedger
+  const operatingExpenses = dateFilteredLedger
     .filter((l) => l.category === 'expense' || l.category === 'salary')
     .reduce((sum, l) => sum + l.amount, 0)
-  const refundsIssued = rawLedger
+  const refundsIssued = dateFilteredLedger
     .filter((l) => l.category === 'refund')
     .reduce((sum, l) => sum + l.amount, 0)
 
@@ -384,7 +413,7 @@ export function AccountsPanel() {
 
   // 2. Transactions calculations
   const filteredTransactions = useMemo(() => {
-    return rawPayments.filter((p) => {
+    return dateFilteredPayments.filter((p) => {
       if (txGatewayFilter !== 'all' && p.gateway !== txGatewayFilter)
         return false
       if (txStatusFilter !== 'all' && p.status !== txStatusFilter) return false
@@ -398,13 +427,13 @@ export function AccountsPanel() {
       }
       return true
     })
-  }, [rawPayments, txGatewayFilter, txStatusFilter, txSearch])
+  }, [dateFilteredPayments, txGatewayFilter, txStatusFilter, txSearch])
 
-  const totalTxVolume = rawPayments
+  const totalTxVolume = dateFilteredPayments
     .filter((p) => p.status === 'success' || p.status === 'reconciled')
     .reduce((sum, p) => sum + p.amount, 0)
 
-  const digitalVolume = rawPayments
+  const digitalVolume = dateFilteredPayments
     .filter(
       (p) =>
         p.gateway !== 'cod' &&
@@ -412,7 +441,7 @@ export function AccountsPanel() {
     )
     .reduce((sum, p) => sum + p.amount, 0)
 
-  const codTxVolume = rawPayments
+  const codTxVolume = dateFilteredPayments
     .filter(
       (p) =>
         p.gateway === 'cod' &&
@@ -438,7 +467,7 @@ export function AccountsPanel() {
       dealerPan: string
     }> = []
 
-    for (const order of rawOrders) {
+    for (const order of dateFilteredOrders) {
       const orderDate = order.events[0]?.at || ''
       for (const item of order.items) {
         if (item.dealerId) {
@@ -581,7 +610,7 @@ export function AccountsPanel() {
 
   // 4. Sales Account calculations
   const filteredSalesOrders = useMemo(() => {
-    return rawOrders.filter((o) => {
+    return dateFilteredOrders.filter((o) => {
       if (
         salesPaymentFilter !== 'all' &&
         o.paymentMethod !== salesPaymentFilter
@@ -599,19 +628,19 @@ export function AccountsPanel() {
       }
       return true
     })
-  }, [rawOrders, salesPaymentFilter, salesStatusFilter, salesSearch])
+  }, [dateFilteredOrders, salesPaymentFilter, salesStatusFilter, salesSearch])
 
-  const orderGrossRevenue = rawOrders.reduce((sum, o) => sum + o.total, 0)
-  const orderNetSales = rawOrders.reduce((sum, o) => sum + o.subtotal, 0)
-  const orderDiscountsGiven = rawOrders.reduce((sum, o) => sum + o.discount, 0)
-  const orderDeliveryFees = rawOrders.reduce(
+  const orderGrossRevenue = dateFilteredOrders.reduce((sum, o) => sum + o.total, 0)
+  const orderNetSales = dateFilteredOrders.reduce((sum, o) => sum + o.subtotal, 0)
+  const orderDiscountsGiven = dateFilteredOrders.reduce((sum, o) => sum + o.discount, 0)
+  const orderDeliveryFees = dateFilteredOrders.reduce(
     (sum, o) => sum + o.deliveryCharge,
     0,
   )
 
   let liquorRevenue = 0
   let groceryRevenue = 0
-  for (const order of rawOrders) {
+  for (const order of dateFilteredOrders) {
     for (const item of order.items) {
       if (item.catalogType === 'liquor') {
         liquorRevenue += item.lineTotal
@@ -622,15 +651,15 @@ export function AccountsPanel() {
   }
 
   // 5. Salary Account calculations
-  const totalDeliveries = rawSettlements.reduce(
+  const totalDeliveries = dateFilteredSettlements.reduce(
     (sum, s) => sum + s.deliveries,
     0,
   )
-  const totalCommissionsEarned = rawSettlements.reduce(
+  const totalCommissionsEarned = dateFilteredSettlements.reduce(
     (sum, s) => sum + s.commission,
     0,
   )
-  const pendingSettlementPayouts = rawSettlements
+  const pendingSettlementPayouts = dateFilteredSettlements
     .filter((s) => s.status !== 'paid')
     .reduce((sum, s) => sum + s.payout, 0)
 
@@ -979,6 +1008,11 @@ export function AccountsPanel() {
         description="Unified financial ecosystem: General Ledger, Payment Gateways, Dealer Payables, Sales Accounts, and Rider Payroll."
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <DateRangeFilter
+              value={dateFilter}
+              onChange={setDateFilter}
+              size="sm"
+            />
             <DataRefreshButton
               queryKeys={[adminQueries.ledger().queryKey]}
               onRefresh={() => refetch()}
@@ -1030,7 +1064,7 @@ export function AccountsPanel() {
               <Receipt className="h-3.5 w-3.5" />
               <span>General Ledger</span>
               <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
-                {rawJournalEntries.length}
+                {dateFilteredJournalEntries.length}
               </span>
             </TabsTrigger>
 
@@ -1041,7 +1075,7 @@ export function AccountsPanel() {
               <CreditCard className="h-3.5 w-3.5" />
               <span>Transactions</span>
               <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
-                {rawPayments.length}
+                {dateFilteredPayments.length}
               </span>
             </TabsTrigger>
 
@@ -1062,6 +1096,9 @@ export function AccountsPanel() {
             >
               <TrendingUp className="h-3.5 w-3.5" />
               <span>Sales Account</span>
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
+                {dateFilteredOrders.length}
+              </span>
             </TabsTrigger>
 
             <TabsTrigger
@@ -1071,7 +1108,7 @@ export function AccountsPanel() {
               <Coins className="h-3.5 w-3.5" />
               <span>Rider Payroll</span>
               <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
-                {rawSettlements.length}
+                {dateFilteredSettlements.length}
               </span>
             </TabsTrigger>
 
