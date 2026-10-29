@@ -282,7 +282,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
         <div className="text-center max-w-xl mx-auto mb-8">
           <Badge
             variant="outline"
-            className="mb-2 text-[11px] font-medium border-primary/30 text-primary"
+            className="mb-2 text-xs font-medium border-primary/30 text-primary"
           >
             Live Logistics Tracking
           </Badge>
@@ -554,7 +554,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
                       {order.address}, {order.city}
                     </p>
                     {order.customerPhone && (
-                      <p className="text-[11px] text-muted-foreground font-mono mt-1">
+                      <p className="text-xs text-muted-foreground font-mono mt-1">
                         Contact: {order.customerPhone}
                       </p>
                     )}
@@ -600,7 +600,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
                           {order.rider.rating && (
                             <Badge
                               variant="secondary"
-                              className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                              className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
                             >
                               ★ {order.rider.rating.toFixed(1)}
                             </Badge>
@@ -650,7 +650,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
                             ? 'Rider will be assigned once partner dealer prepares your items.'
                             : 'Dedicated rider dispatch in progress.'}
                         </p>
-                        <p className="text-[11px] text-muted-foreground mt-2">
+                        <p className="text-xs text-muted-foreground mt-2">
                           Support line: +977-9802088800
                         </p>
                       </div>
@@ -673,7 +673,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
                           <p className="font-semibold text-foreground">
                             {item.name}
                           </p>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             {item.variantName} × {item.qty}
                           </p>
                         </div>
@@ -681,7 +681,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
                           <p className="font-semibold text-foreground">
                             {formatNPR(item.lineTotal)}
                           </p>
-                          <p className="text-[10px] text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             {formatNPR(item.unitPrice)} each
                           </p>
                         </div>
@@ -731,7 +731,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
                     </span>
                   </div>
 
-                  <div className="pt-2 flex items-center justify-between text-[11px]">
+                  <div className="pt-2 flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">
                       Payment Mode:{' '}
                       <strong className="text-foreground uppercase">
@@ -744,7 +744,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
                       variant={
                         order.paymentStatus === 'paid' ? 'default' : 'secondary'
                       }
-                      className="text-[10px] uppercase font-semibold"
+                      className="text-xs uppercase font-semibold"
                     >
                       {order.paymentStatus === 'paid' ? 'Paid' : 'Payment Due'}
                     </Badge>

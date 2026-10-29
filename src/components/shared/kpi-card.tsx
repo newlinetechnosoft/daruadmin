@@ -22,24 +22,28 @@ export function KpiCard({
   return (
     <Card
       className={cn(
-        'rounded-lg border border-border bg-card p-4 sm:p-5 shadow-none',
+        'rounded-xl border border-border bg-card p-5 shadow-xs transition-all hover:border-border/80 hover:shadow-sm',
         className,
       )}
     >
       <CardContent className="p-0">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-medium text-muted-foreground">{label}</p>
-          {Icon && <Icon className="h-4 w-4 text-muted-foreground shrink-0" />}
+          <p className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+          {Icon && (
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-muted-foreground">
+              <Icon className="h-4 w-4" />
+            </div>
+          )}
         </div>
-        <div className="mt-2 text-2xl font-semibold tracking-tight tabular-nums text-foreground">
+        <div className="mt-3 text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-foreground">
           {value}
         </div>
         {(note || delta) && (
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="mt-2 flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
             {delta && (
               <span
                 className={cn(
-                  'font-medium',
+                  'font-semibold',
                   tone === 'success' && 'text-success',
                   tone === 'warning' && 'text-warning',
                   tone === 'danger' && 'text-destructive',

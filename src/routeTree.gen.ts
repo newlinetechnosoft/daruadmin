@@ -32,6 +32,7 @@ import { Route as AdminLiquorRouteImport } from './routes/admin/liquor'
 import { Route as AdminMarketingRouteImport } from './routes/admin/marketing'
 import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
 import { Route as AdminPaymentsRouteImport } from './routes/admin/payments'
+import { Route as AdminRecycleBinRouteImport } from './routes/admin/recycle-bin'
 import { Route as AdminReportsRouteImport } from './routes/admin/reports'
 import { Route as AdminRidersRouteImport } from './routes/admin/riders'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
@@ -169,6 +170,11 @@ const AdminOrdersRoute = AdminOrdersRouteImport.update({
 const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminRecycleBinRoute = AdminRecycleBinRouteImport.update({
+  id: '/recycle-bin',
+  path: '/recycle-bin',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminReportsRoute = AdminReportsRouteImport.update({
@@ -313,6 +319,7 @@ export interface FileRoutesByFullPath {
   '/admin/marketing': typeof AdminMarketingRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/recycle-bin': typeof AdminRecycleBinRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/riders': typeof AdminRidersRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -358,6 +365,7 @@ export interface FileRoutesByTo {
   '/admin/marketing': typeof AdminMarketingRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/recycle-bin': typeof AdminRecycleBinRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/riders': typeof AdminRidersRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -407,6 +415,7 @@ export interface FileRoutesById {
   '/admin/marketing': typeof AdminMarketingRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/recycle-bin': typeof AdminRecycleBinRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/riders': typeof AdminRidersRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -457,6 +466,7 @@ export interface FileRouteTypes {
     | '/admin/marketing'
     | '/admin/orders'
     | '/admin/payments'
+    | '/admin/recycle-bin'
     | '/admin/reports'
     | '/admin/riders'
     | '/admin/settings'
@@ -502,6 +512,7 @@ export interface FileRouteTypes {
     | '/admin/marketing'
     | '/admin/orders'
     | '/admin/payments'
+    | '/admin/recycle-bin'
     | '/admin/reports'
     | '/admin/riders'
     | '/admin/settings'
@@ -550,6 +561,7 @@ export interface FileRouteTypes {
     | '/admin/marketing'
     | '/admin/orders'
     | '/admin/payments'
+    | '/admin/recycle-bin'
     | '/admin/reports'
     | '/admin/riders'
     | '/admin/settings'
@@ -760,6 +772,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPaymentsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/recycle-bin': {
+      id: '/admin/recycle-bin'
+      path: '/recycle-bin'
+      fullPath: '/admin/recycle-bin'
+      preLoaderRoute: typeof AdminRecycleBinRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/reports': {
       id: '/admin/reports'
       path: '/reports'
@@ -952,6 +971,7 @@ interface AdminRouteRouteChildren {
   AdminMarketingRoute: typeof AdminMarketingRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
+  AdminRecycleBinRoute: typeof AdminRecycleBinRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminRidersRoute: typeof AdminRidersRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
@@ -974,6 +994,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminMarketingRoute: AdminMarketingRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
+  AdminRecycleBinRoute: AdminRecycleBinRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminRidersRoute: AdminRidersRoute,
   AdminSettingsRoute: AdminSettingsRoute,

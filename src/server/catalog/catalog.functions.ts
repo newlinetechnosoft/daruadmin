@@ -7,6 +7,7 @@ import {
   upsertGroceryProductSchema,
   toggleProductStatusSchema,
   upsertCategorySchema,
+  toggleCategoryStatusSchema,
   upsertBrandSchema,
   deleteItemSchema,
   createImageUploadSchema,
@@ -30,6 +31,7 @@ import {
   upsertGroceryProductQuery,
   toggleProductStatusQuery,
   upsertCategoryQuery,
+  toggleCategoryStatusQuery,
   upsertBrandQuery,
   deleteItemQuery,
   getAdminUsersQuery,
@@ -222,6 +224,20 @@ export const toggleProductStatusFn = createServerFn({ method: 'POST' })
       mod,
       'edit',
       `Toggled status for product ${data.id} in ${data.catalogType} to ${data.field}=${data.value}`,
+    )
+    return result
+  })
+
+export const toggleCategoryStatusFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => toggleCategoryStatusSchema.parse(d))
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('categories', 'edit')
+    const result = await toggleCategoryStatusQuery(data)
+    await logAudit(
+      user.name,
+      'categories',
+      'edit',
+      `Toggled status for category ${data.id} in ${data.catalogType} to ${data.field}=${data.value}`,
     )
     return result
   })

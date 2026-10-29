@@ -539,7 +539,7 @@ export function MarketingPanel() {
                           <div className="text-xs font-mono">
                             {r.customerPhone}
                           </div>
-                          <div className="text-[11px] text-muted-foreground">
+                          <div className="text-xs text-muted-foreground">
                             {r.customerEmail}
                           </div>
                         </TableCell>
@@ -591,7 +591,7 @@ export function MarketingPanel() {
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent flex flex-col justify-end p-4 text-foreground">
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-primary text-primary-foreground w-fit mb-1">
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary text-primary-foreground w-fit mb-1">
                         Placement: {banner.placement}
                       </span>
                       <h4 className="text-sm font-semibold text-foreground">

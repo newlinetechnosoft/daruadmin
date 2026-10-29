@@ -471,7 +471,7 @@ export function RiderDashboard({
             </span>
           </div>
           {pendingActions.length > 0 && (
-            <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-warning/20 shrink-0">
+            <span className="font-mono text-xs px-2 py-0.5 rounded bg-warning/20 shrink-0">
               {pendingActions.length} saved action(s)
             </span>
           )}
@@ -543,7 +543,7 @@ export function RiderDashboard({
                 {!isOnline ? (
                   <Badge
                     variant="outline"
-                    className="text-[10px] py-0 px-2 border-warning/40 text-warning bg-warning/10 gap-1 font-normal"
+                    className="text-xs py-0 px-2 border-warning/40 text-warning bg-warning/10 gap-1 font-normal"
                   >
                     <CloudOff className="h-2.5 w-2.5" />
                     Offline Device
@@ -551,7 +551,7 @@ export function RiderDashboard({
                 ) : (
                   <Badge
                     variant="outline"
-                    className="text-[10px] py-0 px-2 border-border text-muted-foreground gap-1 font-normal hidden sm:inline-flex"
+                    className="text-xs py-0 px-2 border-border text-muted-foreground gap-1 font-normal hidden sm:inline-flex"
                   >
                     <Wifi className="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" />
                     Connected
@@ -573,7 +573,7 @@ export function RiderDashboard({
 
               <div className="flex flex-wrap items-center gap-2 mt-1.5">
                 {portalData.activeShift ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                     <Clock className="h-3 w-3" />
                     <span>
                       Shift active since{' '}
@@ -587,7 +587,7 @@ export function RiderDashboard({
                   </span>
                 ) : null}
                 {portalData.attendanceStats ? (
-                  <span className="text-[11px] text-muted-foreground font-mono">
+                  <span className="text-xs text-muted-foreground font-mono">
                     {portalData.attendanceStats.totalHours}h logged (
                     {portalData.attendanceStats.totalShifts} shifts)
                   </span>
@@ -628,7 +628,7 @@ export function RiderDashboard({
             </Button>
 
             {!isOnline && (
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 Reconnect to change availability
               </span>
             )}
@@ -652,7 +652,7 @@ export function RiderDashboard({
             <div className="mt-2 text-2xl font-bold tracking-tight text-foreground font-mono tabular-nums transition-all">
               {derivedStats.activeCount}
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               In transit & assigned
             </p>
           </CardContent>
@@ -672,7 +672,7 @@ export function RiderDashboard({
             <div className="mt-2 text-2xl font-bold tracking-tight text-foreground font-mono tabular-nums transition-all">
               {derivedStats.completedCount}
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               Total completed
             </p>
           </CardContent>
@@ -692,7 +692,7 @@ export function RiderDashboard({
             <div className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono tabular-nums transition-all">
               {formatNPR(derivedStats.cashOnHand)}
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               Pending handover
             </p>
           </CardContent>
@@ -712,7 +712,7 @@ export function RiderDashboard({
             <div className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono tabular-nums transition-all">
               {formatNPR(derivedStats.earnings)}
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               {rider.commissionRate}% commission rate
             </p>
           </CardContent>
@@ -870,7 +870,7 @@ function OrderDeliveryCard({
               {/* Status Badge */}
               <Badge
                 variant={isOut ? 'default' : 'secondary'}
-                className={`text-[10px] uppercase tracking-wider font-semibold ${
+                className={`text-xs uppercase tracking-wider font-semibold ${
                   isOut
                     ? 'bg-info hover:bg-info/90 text-info-foreground'
                     : 'bg-muted text-muted-foreground'
@@ -892,7 +892,7 @@ function OrderDeliveryCard({
               {/* Distinct Offline Queued Tag */}
               {pendingSync && (
                 <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
                     pendingSync.actionStatus === 'failed'
                       ? 'bg-destructive/15 text-destructive border-destructive/30'
                       : 'bg-warning/15 text-warning border-warning/30'
@@ -931,12 +931,12 @@ function OrderDeliveryCard({
             </span>
             <div className="mt-1">
               {isCOD ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
                   <Coins className="h-2.5 w-2.5" />
                   Collect {formatNPR(order.total)}
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25">
                   <CheckCircle2 className="h-2.5 w-2.5" />
                   Paid ({order.paymentMethod})
                 </span>
@@ -952,7 +952,7 @@ function OrderDeliveryCard({
 
         {/* Customer Drop-off Destination */}
         <div className="space-y-1">
-          <div className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1">
+          <div className="text-xs text-muted-foreground font-semibold flex items-center gap-1">
             <MapPin className="h-3 w-3 text-primary" />
             <span>Customer Drop-off Destination:</span>
           </div>
@@ -978,13 +978,13 @@ function OrderDeliveryCard({
 
         {/* Collapsible Items List */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground font-medium">
+          <div className="flex items-center justify-between text-xs text-muted-foreground font-medium">
             <span>Items ({totalItemCount}):</span>
             {hasMoreItems && (
               <button
                 type="button"
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="text-primary hover:underline flex items-center gap-0.5 text-[11px] cursor-pointer"
+                className="text-primary hover:underline flex items-center gap-0.5 text-xs cursor-pointer"
               >
                 <span>
                   {isExpanded ? 'Show less' : `+${order.items.length - 2} more`}
@@ -1002,7 +1002,7 @@ function OrderDeliveryCard({
             {displayedItems.map((item) => (
               <li
                 key={item.id}
-                className="flex justify-between items-center text-[11px]"
+                className="flex justify-between items-center text-xs"
               >
                 <span className="truncate pr-2">
                   <span className="font-semibold text-foreground/80">

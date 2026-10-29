@@ -214,7 +214,7 @@ export const getAdminChromeFn = createServerFn({ method: 'GET' }).handler(
             .from(reviews)
             .where(eq(reviews.status, 'pending'))
         : Promise.resolve([{ count: 0 }]),
-      getAllNotificationsQuery(),
+      getAllNotificationsQuery(20),
     ])
 
     const badges = {
@@ -374,23 +374,17 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
     await requirePermission('dashboard', 'view')
     const [
       stats,
-      liquor,
-      grocery,
-      users,
       allOrders,
       riderList,
-      auditList,
+      recentAudit,
       notifs,
       dealerList,
     ] = await Promise.all([
       getAdminStatsQuery(),
-      getAdminLiquorProductsQuery(),
-      getAdminGroceryProductsQuery(),
-      getAdminUsersQuery(),
       getAllOrdersQuery(),
       getAllRidersQuery(),
-      getAllAuditLogsQuery(),
-      getAllNotificationsQuery(),
+      getAllAuditLogsQuery(8),
+      getAllNotificationsQuery(20),
       getAllDealersQuery(),
     ])
 
@@ -448,19 +442,7 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 6)
 
-    const inventoryValue =
-      liquor.reduce(
-        (s, p) => s + p.variants.reduce((a, v) => a + v.price * v.stock, 0),
-        0,
-      ) +
-      grocery.reduce(
-        (s, p) => s + p.variants.reduce((a, v) => a + v.price * v.stock, 0),
-        0,
-      )
-
-    const customers = users.filter(
-      (u) => !u.role || u.role === 'customer' || u.role === 'user',
-    )
+    const inventoryValue = stats.totalInventoryValue
 
     return {
       catalog: stats,
@@ -470,7 +452,7 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
         revenue,
         orders: inRangeOrders.length,
         profit,
-        customers: customers.length,
+        customers: stats.totalCustomers,
         riders: riderList.length,
         dealers: dealerList.length,
         activeDealers: dealerList.filter((d) => d.isActive).length,
@@ -484,7 +466,7 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
       })),
       topProducts,
       recentOrders: [...allOrders].slice(0, 8),
-      activities: [...auditList].slice(0, 8),
+      activities: recentAudit,
       ridersOnline: riderList.filter((r) => r.status !== 'offline').length,
       notifications: notifs,
     }
@@ -881,7 +863,7 @@ export const getOpsBundleFn = createServerFn({ method: 'GET' }).handler(
       getAllCampaignsQuery(),
       getAllReviewsQuery(),
       getAllShippingZonesQuery(),
-      getAllNotificationsQuery(),
+      getAllNotificationsQuery(20),
       getAllAuditLogsQuery(),
       getAllUserPermissionsQuery(),
       getStoreSettingsQuery(),

@@ -253,7 +253,7 @@ export function RiderDialog({
               {isEditing && rider && (
                 <Badge
                   variant={rider.verified ? 'success' : 'warning'}
-                  className="text-[10px] font-normal shrink-0"
+                  className="text-xs font-normal shrink-0"
                 >
                   {rider.verified ? 'KYC Verified' : 'KYC Pending'}
                 </Badge>
@@ -342,7 +342,7 @@ export function RiderDialog({
                       {isEditing ? 'Change login password' : 'Login password *'}
                     </Label>
                     {isEditing && (
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         Leave blank to preserve existing password
                       </span>
                     )}
@@ -382,7 +382,7 @@ export function RiderDialog({
                         <span className="font-mono">{formatNPR(rider.cashOnHand)}</span>
                       </div>
                     </div>
-                    <span className="text-[11px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       {rider.deliveries} completed drops
                     </span>
                   </div>
@@ -486,7 +486,7 @@ export function RiderDialog({
                     >
                       Dispatchable on duty roster
                     </Label>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       When enabled, this courier appears in the automated sourcing radar and dispatcher queue.
                     </p>
                   </div>
@@ -512,7 +512,7 @@ export function RiderDialog({
                       className="h-8 font-mono text-xs"
                       placeholder="10"
                     />
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       % of order delivery fee
                     </p>
                   </div>
@@ -531,7 +531,7 @@ export function RiderDialog({
                       className="h-8 font-mono text-xs"
                       placeholder="0"
                     />
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Monthly guaranteed retainer
                     </p>
                   </div>
@@ -550,7 +550,7 @@ export function RiderDialog({
                       className="h-8 font-mono text-xs"
                       placeholder="50"
                     />
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Fixed payout per delivery
                     </p>
                   </div>
@@ -573,7 +573,7 @@ export function RiderDialog({
                       </Label>
                       <ShieldCheck className="size-3.5 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Rider citizenship, driver license, and emergency contacts are validated. Authorizes cash-on-delivery handling up to Rs. 20,000.
                     </p>
                   </div>
@@ -583,7 +583,7 @@ export function RiderDialog({
           </div>
 
           <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-between gap-2">
-            <div className="text-[11px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {isEditing ? `ID: ${rider?.id}` : 'New courier entry'}
             </div>
             <div className="flex items-center gap-2">

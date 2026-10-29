@@ -307,7 +307,7 @@ export function RidersPanel() {
               Live fleet telemetry radar (Butwal & Tilottama Hub)
             </CardTitle>
           </div>
-          <span className="text-[11px] text-muted-foreground font-mono">
+          <span className="text-xs text-muted-foreground font-mono">
             Tracking {ops.riders.length} beacon units
           </span>
         </div>
@@ -317,16 +317,16 @@ export function RidersPanel() {
           <div className="absolute inset-0 bg-[radial-gradient(var(--border)_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
 
           {/* Sectors */}
-          <div className="absolute top-3 left-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+          <div className="absolute top-3 left-4 text-xs font-mono text-muted-foreground uppercase tracking-wider">
             Sector A: Traffic Chowk / Golpark
           </div>
-          <div className="absolute top-3 right-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+          <div className="absolute top-3 right-4 text-xs font-mono text-muted-foreground uppercase tracking-wider">
             Sector B: Kalikanagar / Devinagar
           </div>
-          <div className="absolute bottom-3 left-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+          <div className="absolute bottom-3 left-4 text-xs font-mono text-muted-foreground uppercase tracking-wider">
             Sector C: Tilottama / Drivertole
           </div>
-          <div className="absolute bottom-3 right-4 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+          <div className="absolute bottom-3 right-4 text-xs font-mono text-muted-foreground uppercase tracking-wider">
             Sector D: Manigram / Mangalapur
           </div>
 
@@ -357,7 +357,7 @@ export function RidersPanel() {
                   </div>
                 </div>
 
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground border border-border text-[10px] font-mono px-1.5 py-0.5 rounded shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground border border-border text-xs font-mono px-1.5 py-0.5 rounded shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                   {r.name} · {r.zone} · {r.status}
                 </div>
               </div>
@@ -379,7 +379,7 @@ export function RidersPanel() {
               className="h-7 text-xs gap-1.5 data-[state=active]:bg-background"
             >
               <span>All Couriers</span>
-              <span className="font-mono text-[10px] text-muted-foreground ml-1">
+              <span className="font-mono text-xs text-muted-foreground ml-1">
                 ({totalRidersCount})
               </span>
             </TabsTrigger>
@@ -388,7 +388,7 @@ export function RidersPanel() {
               className="h-7 text-xs gap-1.5 data-[state=active]:bg-background"
             >
               <span>Available</span>
-              <span className="font-mono text-[10px] text-muted-foreground ml-1">
+              <span className="font-mono text-xs text-muted-foreground ml-1">
                 ({activeAvailableCount})
               </span>
             </TabsTrigger>
@@ -397,7 +397,7 @@ export function RidersPanel() {
               className="h-7 text-xs gap-1.5 data-[state=active]:bg-background"
             >
               <span>On Delivery</span>
-              <span className="font-mono text-[10px] text-muted-foreground ml-1">
+              <span className="font-mono text-xs text-muted-foreground ml-1">
                 ({busyCount})
               </span>
             </TabsTrigger>
@@ -406,7 +406,7 @@ export function RidersPanel() {
               className="h-7 text-xs gap-1.5 data-[state=active]:bg-background"
             >
               <span>Offline</span>
-              <span className="font-mono text-[10px] text-muted-foreground ml-1">
+              <span className="font-mono text-xs text-muted-foreground ml-1">
                 ({offlineCount})
               </span>
             </TabsTrigger>
@@ -483,7 +483,7 @@ export function RidersPanel() {
                         >
                           {rider.name}
                         </button>
-                        <div className="text-[11px] text-muted-foreground font-mono">
+                        <div className="text-xs text-muted-foreground font-mono">
                           {rider.phone}
                         </div>
                       </div>
@@ -494,7 +494,7 @@ export function RidersPanel() {
                     <div className="text-xs font-medium text-foreground">
                       {rider.zone}
                     </div>
-                    <span className="text-[11px] text-muted-foreground capitalize">
+                    <span className="text-xs text-muted-foreground capitalize">
                       {rider.vehicle} · Plate: {rider.licenseNo || 'LU-2-PA'}
                     </span>
                   </TableCell>
@@ -511,7 +511,7 @@ export function RidersPanel() {
                       {rider.verified ? (
                         <Badge
                           variant="success"
-                          className="gap-1 text-[10px] font-normal"
+                          className="gap-1 text-xs font-normal"
                         >
                           <ShieldCheck className="h-3 w-3" />
                           Verified
@@ -519,7 +519,7 @@ export function RidersPanel() {
                       ) : (
                         <Badge
                           variant="warning"
-                          className="text-[10px] font-normal"
+                          className="text-xs font-normal"
                         >
                           Pending
                         </Badge>
@@ -536,7 +536,7 @@ export function RidersPanel() {
                             ? 'warning'
                             : 'secondary'
                       }
-                      className="text-[10px] font-normal capitalize"
+                      className="text-xs font-normal capitalize"
                     >
                       {rider.status}
                     </Badge>
@@ -547,7 +547,7 @@ export function RidersPanel() {
                       <Star className="h-3 w-3 fill-warning text-warning" />
                       <span>{rider.rating.toFixed(1)}</span>
                     </div>
-                    <span className="text-[11px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       {rider.deliveries} deliveries
                     </span>
                   </TableCell>
@@ -565,11 +565,11 @@ export function RidersPanel() {
                       {formatNPR(rider.cashOnHand)}
                     </span>
                     {rider.cashOnHand >= 2000000 ? (
-                      <span className="text-[10px] text-destructive font-medium block">
+                      <span className="text-xs text-destructive font-medium block">
                         ⚠️ Limit exceeded (&gt;20k)
                       </span>
                     ) : rider.cashOnHand > 0 ? (
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         Pending handover
                       </span>
                     ) : null}

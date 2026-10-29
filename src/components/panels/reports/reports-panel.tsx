@@ -515,7 +515,7 @@ export function ReportsPanel() {
             {/* Summary Highlights */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-muted/40 p-3 rounded-lg border border-border">
               <div>
-                <span className="text-[11px] text-muted-foreground block">
+                <span className="text-xs text-muted-foreground block">
                   Net Merchandise Turnover:
                 </span>
                 <span className="text-sm font-bold font-mono text-foreground">
@@ -523,7 +523,7 @@ export function ReportsPanel() {
                 </span>
               </div>
               <div>
-                <span className="text-[11px] text-muted-foreground block">
+                <span className="text-xs text-muted-foreground block">
                   Dealer Sourcing Cost (COGS):
                 </span>
                 <span className="text-sm font-bold font-mono text-foreground">
@@ -531,7 +531,7 @@ export function ReportsPanel() {
                 </span>
               </div>
               <div>
-                <span className="text-[11px] text-muted-foreground block">
+                <span className="text-xs text-muted-foreground block">
                   Realized Gross Margin:
                 </span>
                 <span className="text-sm font-bold font-mono text-emerald-600">
@@ -621,8 +621,8 @@ export function ReportsPanel() {
                                 variant="outline"
                                 className={
                                   p.marginPercent >= 20
-                                    ? 'border-emerald-500 text-emerald-500 bg-emerald-500/10 text-[10px]'
-                                    : 'border-amber-500 text-amber-500 bg-amber-500/10 text-[10px]'
+                                    ? 'border-emerald-500 text-emerald-500 bg-emerald-500/10 text-xs'
+                                    : 'border-amber-500 text-amber-500 bg-amber-500/10 text-xs'
                                 }
                               >
                                 {p.marginPercent}%
@@ -732,7 +732,7 @@ export function ReportsPanel() {
             {/* Highlights */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-muted/40 p-3 rounded-lg border border-border">
               <div>
-                <span className="text-[11px] text-muted-foreground block">
+                <span className="text-xs text-muted-foreground block">
                   Active Couriers:
                 </span>
                 <span className="text-sm font-bold font-mono text-foreground">
@@ -741,7 +741,7 @@ export function ReportsPanel() {
                 </span>
               </div>
               <div>
-                <span className="text-[11px] text-muted-foreground block">
+                <span className="text-xs text-muted-foreground block">
                   Total Completed Parcels:
                 </span>
                 <span className="text-sm font-bold font-mono text-foreground">
@@ -749,7 +749,7 @@ export function ReportsPanel() {
                 </span>
               </div>
               <div>
-                <span className="text-[11px] text-muted-foreground block">
+                <span className="text-xs text-muted-foreground block">
                   Total Outstanding COD Float:
                 </span>
                 <span className="text-sm font-bold font-mono text-foreground">
@@ -827,7 +827,7 @@ export function ReportsPanel() {
                             {isHighFloat && (
                               <Badge
                                 variant="outline"
-                                className="ml-1.5 text-[9px] border-destructive text-destructive"
+                                className="ml-1.5 text-xs border-destructive text-destructive"
                               >
                                 Near Limit
                               </Badge>
@@ -872,7 +872,7 @@ export function ReportsPanel() {
               <p className="text-muted-foreground">
                 Inland Revenue Department (आन्तरिक राजस्व विभाग)
               </p>
-              <p className="text-[11px] text-muted-foreground/70">
+              <p className="text-xs text-muted-foreground/70">
                 Monthly Sales Ledger (अनुसूची १३ - बिक्री खाता)
               </p>
             </div>

@@ -203,7 +203,7 @@ export function CustomersPanel() {
             {openComplaintsCount > 0 && (
               <Badge
                 variant="secondary"
-                className="h-4 px-1 text-[10px] font-mono"
+                className="h-4 px-1 text-xs font-mono"
               >
                 {openComplaintsCount}
               </Badge>
@@ -260,7 +260,7 @@ export function CustomersPanel() {
                       <div className="font-medium text-xs text-foreground">
                         {cust.name}
                       </div>
-                      <span className="font-mono text-[11px] text-muted-foreground">
+                      <span className="font-mono text-xs text-muted-foreground">
                         ID: {cust.id.slice(0, 10)}...
                       </span>
                     </TableCell>
@@ -275,7 +275,7 @@ export function CustomersPanel() {
                       <span className="font-mono text-xs font-medium text-foreground">
                         {cust.totalOrders}
                       </span>
-                      <span className="text-[11px] text-muted-foreground ml-1">
+                      <span className="text-xs text-muted-foreground ml-1">
                         orders
                       </span>
                     </TableCell>
@@ -340,7 +340,7 @@ export function CustomersPanel() {
                       <span className="font-mono text-xs text-foreground block">
                         {comp.id}
                       </span>
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {new Date(comp.createdAt).toLocaleDateString()}
                       </span>
                     </TableCell>
@@ -350,11 +350,11 @@ export function CustomersPanel() {
                         {comp.customerName}
                       </div>
                       {comp.orderNumber ? (
-                        <span className="font-mono text-[11px] text-primary block font-semibold">
+                        <span className="font-mono text-xs text-primary block font-semibold">
                           Order #{comp.orderNumber}
                         </span>
                       ) : comp.orderId ? (
-                        <span className="font-mono text-[11px] text-muted-foreground block">
+                        <span className="font-mono text-xs text-muted-foreground block">
                           Ref: {comp.orderId}
                         </span>
                       ) : null}
@@ -414,7 +414,7 @@ export function CustomersPanel() {
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 text-xs click-scroll">
               <div className="grid grid-cols-2 gap-3 bg-muted/40 p-3 rounded-md border border-border">
                 <div>
-                  <span className="text-[10px] text-muted-foreground block">
+                  <span className="text-xs text-muted-foreground block">
                     Total spend
                   </span>
                   <span className="font-mono text-sm font-bold text-foreground">
@@ -422,7 +422,7 @@ export function CustomersPanel() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-muted-foreground block">
+                  <span className="text-xs text-muted-foreground block">
                     Total orders
                   </span>
                   <span className="font-mono text-sm font-bold text-foreground">
@@ -450,7 +450,7 @@ export function CustomersPanel() {
                           <strong className="font-mono text-xs text-foreground block">
                             {o.number}
                           </strong>
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {new Date(o.createdAt).toLocaleDateString()} ·{' '}
                             {o.items.length} items
                           </span>
@@ -501,7 +501,7 @@ export function CustomersPanel() {
 
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 text-xs click-scroll">
               <div className="p-3 bg-muted/40 rounded-md border border-border">
-                <span className="text-[10px] font-medium text-muted-foreground block mb-1">
+                <span className="text-xs font-medium text-muted-foreground block mb-1">
                   Customer message:
                 </span>
                 <p className="text-foreground leading-relaxed italic">

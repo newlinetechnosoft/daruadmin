@@ -358,3 +358,26 @@ export const customerAddressesRelations = relations(
     }),
   }),
 )
+
+
+export const recycleBin = pgTable(
+  'recycle_bin',
+  {
+    id: text('id').primaryKey(),
+    entityType: text('entity_type').notNull(),
+    entityId: text('entity_id').notNull(),
+    name: text('name').notNull(),
+    description: text('description'),
+    data: jsonb('data').notNull(),
+    deletedBy: text('deleted_by').notNull().default('Admin'),
+    deletedAt: timestamp('deleted_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index('recycle_bin_entity_type_idx').on(table.entityType),
+    index('recycle_bin_expires_at_idx').on(table.expiresAt),
+    index('recycle_bin_deleted_at_idx').on(table.deletedAt),
+  ],
+)

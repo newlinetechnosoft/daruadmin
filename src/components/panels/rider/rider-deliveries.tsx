@@ -219,7 +219,7 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                                   ? 'default'
                                   : 'outline'
                           }
-                          className="text-[10px] uppercase tracking-wider"
+                          className="text-xs uppercase tracking-wider"
                         >
                           {order.status.replace(/_/g, ' ')}
                         </Badge>
@@ -233,7 +233,7 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                       <span className="font-mono text-sm font-bold text-foreground">
                         {formatNPR(order.total)}
                       </span>
-                      <div className="text-[10px]">
+                      <div className="text-xs">
                         {isCOD ? (
                           <span className="text-warning font-semibold">
                             Collect COD
@@ -254,7 +254,7 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
 
                   {/* Customer Drop-off Delivery Address */}
                   <div className="space-y-1">
-                    <div className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1">
+                    <div className="text-xs text-muted-foreground font-semibold flex items-center gap-1">
                       <MapPin className="h-3 w-3 text-primary" />
                       <span>Customer Drop-off Destination:</span>
                     </div>
@@ -275,7 +275,7 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                         </a>
                       </div>
                       {order.notes && (
-                        <div className="pt-1 text-[11px] text-muted-foreground italic border-t border-border mt-1">
+                        <div className="pt-1 text-xs text-muted-foreground italic border-t border-border mt-1">
                           Note: {order.notes}
                         </div>
                       )}
@@ -283,7 +283,7 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                   </div>
 
                   <div className="space-y-1">
-                    <div className="text-[11px] text-muted-foreground font-medium">
+                    <div className="text-xs text-muted-foreground font-medium">
                       Items ({order.items.reduce((sum, it) => sum + it.qty, 0)}
                       ):
                     </div>
@@ -291,7 +291,7 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                       {order.items.map((item) => (
                         <li
                           key={item.id}
-                          className="flex justify-between text-[11px]"
+                          className="flex justify-between text-xs"
                         >
                           <span>
                             {item.qty}x {item.name}

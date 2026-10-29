@@ -85,12 +85,12 @@ export function RiderProfile({ rider }: RiderProfileProps) {
                 <div className="flex items-center justify-center sm:justify-start gap-1.5">
                   <Badge
                     variant={rider.available ? 'success' : 'secondary'}
-                    className="text-[10px]"
+                    className="text-xs"
                   >
                     {rider.status.toUpperCase()}
                   </Badge>
                   {rider.verified && (
-                    <Badge variant="success" className="text-[10px] gap-1">
+                    <Badge variant="success" className="text-xs gap-1">
                       <ShieldCheck className="h-3 w-3" />
                       Verified
                     </Badge>

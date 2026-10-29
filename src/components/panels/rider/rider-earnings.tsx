@@ -211,16 +211,16 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
                         <span className="font-mono font-bold text-foreground">
                           {order.number}
                         </span>
-                        <Badge variant="secondary" className="text-[10px]">
+                        <Badge variant="secondary" className="text-xs">
                           {order.city}
                         </Badge>
                         {isCOD && (
-                          <Badge variant="warning" className="text-[10px]">
+                          <Badge variant="warning" className="text-xs">
                             COD: {formatNPR(order.total)}
                           </Badge>
                         )}
                       </div>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         Customer: {order.customerName} •{' '}
                         {new Date(order.updatedAt).toLocaleDateString()}
                       </p>
@@ -230,7 +230,7 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
                       <div className="text-success font-bold font-mono text-sm">
                         +{formatNPR(commission)}
                       </div>
-                      <div className="text-[10px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         Fee: {formatNPR(order.deliveryCharge)}
                       </div>
                     </div>
@@ -272,7 +272,7 @@ export function RiderEarnings({ rider, orders }: RiderEarningsProps) {
                   className="font-mono text-sm"
                   required
                 />
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Current float in hand: {formatNPR(rider.cashOnHand)}
                 </p>
               </div>

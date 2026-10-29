@@ -228,7 +228,7 @@ export function UsersPanel() {
                           <div className="font-medium text-foreground">
                             {u.name}
                           </div>
-                          <div className="font-mono text-[11px] text-muted-foreground">
+                          <div className="font-mono text-xs text-muted-foreground">
                             {u.id.slice(0, 10)}...
                           </div>
                         </div>
@@ -241,7 +241,7 @@ export function UsersPanel() {
                         <span>{u.email}</span>
                       </div>
                       {u.phone && (
-                        <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                           <Phone className="h-3 w-3 text-muted-foreground" />
                           <span>{u.phone}</span>
                         </div>
@@ -294,7 +294,7 @@ export function UsersPanel() {
                             void handleToggleActive(u.id, false)
                           }
                         }}
-                        className="h-7 gap-1 text-[11px] cursor-pointer"
+                        className="h-7 gap-1 text-xs cursor-pointer"
                       >
                         {isActive ? (
                           <>

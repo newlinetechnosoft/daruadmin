@@ -1,3 +1,4 @@
+import { getRecycleBinFn } from '#/server/recycle-bin/recycle-bin.functions'
 import { queryOptions } from '@tanstack/react-query'
 import {
   getAdminChromeFn,
@@ -35,7 +36,7 @@ export const adminQueries = {
     queryOptions({
       queryKey: ['auth', 'my-access'],
       queryFn: () => getMyAccessFn(),
-      staleTime: 0,
+      staleTime: 1000 * 30, // 30s cache prevents repeating network roundtrips on route navigation
     }),
 
   chrome: () =>
@@ -193,6 +194,13 @@ export const adminQueries = {
       queryKey: ['admin', 'dealer', id],
       queryFn: () => getDealerByIdFn({ data: { id } }),
       staleTime: 1000 * 60 * 2,
+    }),
+
+  recycleBin: () =>
+    queryOptions({
+      queryKey: ['admin', 'recycle-bin'],
+      queryFn: () => getRecycleBinFn(),
+      staleTime: 1000 * 10,
     }),
 }
 

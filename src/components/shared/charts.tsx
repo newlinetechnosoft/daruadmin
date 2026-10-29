@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   AreaChart,
   Area,
@@ -10,7 +11,7 @@ import {
   YAxis,
   CartesianGrid,
 } from 'recharts'
-import { formatNPR } from '#/lib/money'
+import { fromPaisa } from '#/lib/money'
 import {
   ChartContainer,
   ChartTooltip,
@@ -25,6 +26,36 @@ const CHART_COLORS = [
   'var(--chart-4)',
   'var(--chart-5)',
 ]
+
+function formatAxisRupees(rupees: number): string {
+  if (rupees === 0) return 'Rs 0'
+  if (rupees >= 10_000_000) {
+    const cr = rupees / 10_000_000
+    return `Rs ${cr % 1 === 0 ? cr : cr.toFixed(1)}Cr`
+  }
+  if (rupees >= 100_000) {
+    const l = rupees / 100_000
+    return `Rs ${l % 1 === 0 ? l : l.toFixed(1)}L`
+  }
+  if (rupees >= 1_000) {
+    const k = rupees / 1_000
+    return `Rs ${k % 1 === 0 ? k : k.toFixed(1)}k`
+  }
+  return `Rs ${Math.round(rupees)}`
+}
+
+function formatXAxisDate(dateStr: string): string {
+  try {
+    const parts = dateStr.split('-')
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      }
+    }
+  } catch {}
+  return dateStr
+}
 
 export function LineChart({
   data,
@@ -43,6 +74,20 @@ export function LineChart({
     )
   }
 
+  // When money is true, the server sends raw amounts in integer paisa (1 NPR = 100 paisa).
+  // Convert to NPR rupees so the chart scale, ticks, and plotted line accurately reflect rupees.
+  const chartData = useMemo(() => {
+    if (!money) return data
+    return data.map((d) => {
+      const rawVal = Number(d[valueKey] ?? 0)
+      return {
+        ...d,
+        [valueKey]: fromPaisa(rawVal),
+        _rawPaisa: rawVal,
+      }
+    })
+  }, [data, money, valueKey])
+
   const chartConfig = {
     [valueKey]: {
       label: money ? 'Revenue' : 'Count',
@@ -56,8 +101,8 @@ export function LineChart({
       className="h-[220px] w-full aspect-auto"
     >
       <AreaChart
-        data={data}
-        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+        data={chartData}
+        margin={{ top: 10, right: 15, left: 10, bottom: 0 }}
       >
         <defs>
           <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
@@ -78,26 +123,53 @@ export function LineChart({
           tickMargin={8}
           fontSize={11}
           stroke="var(--muted-foreground)"
+          tickFormatter={formatXAxisDate}
         />
         <YAxis
+          width={65}
           tickLine={false}
           axisLine={false}
           tickMargin={8}
           fontSize={11}
           stroke="var(--muted-foreground)"
-          tickFormatter={(v) =>
-            money ? `Rs ${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}` : `${v}`
-          }
+          domain={[0, (dataMax: number) => Math.max(dataMax * 1.15, money ? 1000 : 5)]}
+          tickFormatter={(v: number) => (money ? formatAxisRupees(v) : `${v}`)}
         />
         <ChartTooltip
           cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
           content={
             <ChartTooltipContent
-              indicator="line"
-              formatter={(value) => (
-                <span className="font-mono font-medium text-foreground">
-                  {money ? formatNPR(Number(value)) : String(value)}
-                </span>
+              indicator="dot"
+              labelFormatter={(label) => {
+                if (typeof label === 'string' && label.includes('-')) {
+                  try {
+                    const [y, m, d] = label.split('-')
+                    const date = new Date(Number(y), Number(m) - 1, Number(d))
+                    if (!isNaN(date.getTime())) {
+                      return date.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    }
+                  } catch {}
+                }
+                return label
+              }}
+              formatter={(value, name) => (
+                <div className="flex items-center justify-between gap-4 w-full">
+                  <span className="text-muted-foreground font-normal">
+                    {chartConfig[name as string]?.label ?? (money ? 'Revenue' : 'Count')}:
+                  </span>
+                  <span className="font-mono font-bold text-foreground">
+                    {money
+                      ? `Rs. ${Number(value).toLocaleString('en-IN', {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 2,
+                        })}`
+                      : String(value)}
+                  </span>
+                </div>
               )}
             />
           }
@@ -108,6 +180,12 @@ export function LineChart({
           stroke="var(--chart-2)"
           strokeWidth={2}
           fill="url(#areaGradient)"
+          activeDot={{
+            r: 5,
+            strokeWidth: 2,
+            stroke: 'var(--background)',
+            fill: 'var(--chart-2)',
+          }}
         />
       </AreaChart>
     </ChartContainer>
@@ -146,7 +224,7 @@ export function BarChart({
     >
       <RechartsBarChart
         data={formattedData}
-        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+        margin={{ top: 10, right: 15, left: 5, bottom: 0 }}
       >
         <CartesianGrid
           strokeDasharray="3 3"
@@ -163,6 +241,7 @@ export function BarChart({
           stroke="var(--muted-foreground)"
         />
         <YAxis
+          width={40}
           tickLine={false}
           axisLine={false}
           tickMargin={8}

@@ -225,11 +225,11 @@ export function FinancialReportsTab({
               <Scale className="h-3.5 w-3.5 text-primary" />
               <span>Trial Balance</span>
               {isTbBalanced ? (
-                <span className="ml-1 inline-flex items-center rounded-full bg-emerald-500/10 px-1.5 py-0.2 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
+                <span className="ml-1 inline-flex items-center rounded-full bg-emerald-500/10 px-1.5 py-0.2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                   Balanced
                 </span>
               ) : (
-                <span className="ml-1 inline-flex items-center rounded-full bg-rose-500/10 px-1.5 py-0.2 text-[9px] font-semibold text-destructive">
+                <span className="ml-1 inline-flex items-center rounded-full bg-rose-500/10 px-1.5 py-0.2 text-xs font-semibold text-destructive">
                   Variance
                 </span>
               )}
@@ -241,7 +241,7 @@ export function FinancialReportsTab({
             >
               <TrendingUp className="h-3.5 w-3.5" />
               <span>Profit & Loss</span>
-              <span className="ml-1 text-[10px] text-muted-foreground font-mono">
+              <span className="ml-1 text-xs text-muted-foreground font-mono">
                 {formatNPR(netOperatingProfit)}
               </span>
             </TabsTrigger>
@@ -252,7 +252,7 @@ export function FinancialReportsTab({
             >
               <Building2 className="h-3.5 w-3.5" />
               <span>Balance Sheet</span>
-              <span className="ml-1 text-[10px] text-muted-foreground font-mono">
+              <span className="ml-1 text-xs text-muted-foreground font-mono">
                 {formatNPR(totalAssets)}
               </span>
             </TabsTrigger>
@@ -262,7 +262,7 @@ export function FinancialReportsTab({
         <div className="flex items-center gap-2">
           <Badge
             variant="outline"
-            className="text-[10px] text-emerald-600 dark:text-emerald-400 border-emerald-500/40"
+            className="text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/40"
           >
             FY {fiscalYearName}
           </Badge>
@@ -322,7 +322,7 @@ export function FinancialReportsTab({
                     ? 'Double-Entry Trial Balance is Perfectly Balanced'
                     : 'Variance Detected in Trial Balance!'}
                 </h4>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {isTbBalanced
                     ? `Total debits exactly equal total credits across all ${nonGroupAccounts.length} active ledger accounts.`
                     : `Debits differ from credits by ${formatNPR(tbVariance)}. Review posted manual vouchers.`}
@@ -332,7 +332,7 @@ export function FinancialReportsTab({
 
             <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
               <div className="rounded-lg bg-card border border-border px-3 py-1.5">
-                <span className="text-[10px] uppercase text-muted-foreground block font-sans">
+                <span className="text-xs uppercase text-muted-foreground block font-sans">
                   Total Debits (Dr)
                 </span>
                 <span className="font-bold text-emerald-600 dark:text-emerald-400">
@@ -340,7 +340,7 @@ export function FinancialReportsTab({
                 </span>
               </div>
               <div className="rounded-lg bg-card border border-border px-3 py-1.5">
-                <span className="text-[10px] uppercase text-muted-foreground block font-sans">
+                <span className="text-xs uppercase text-muted-foreground block font-sans">
                   Total Credits (Cr)
                 </span>
                 <span className="font-bold text-blue-600 dark:text-blue-400">
@@ -348,7 +348,7 @@ export function FinancialReportsTab({
                 </span>
               </div>
               <div className="rounded-lg bg-card border border-border px-3 py-1.5">
-                <span className="text-[10px] uppercase text-muted-foreground block font-sans">
+                <span className="text-xs uppercase text-muted-foreground block font-sans">
                   Variance
                 </span>
                 <span
@@ -458,7 +458,7 @@ export function FinancialReportsTab({
                         <TableCell>
                           <Badge
                             variant="secondary"
-                            className={`text-[10px] capitalize ${
+                            className={`text-xs capitalize ${
                               acc.rootType === 'asset'
                                 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
                                 : acc.rootType === 'liability'
@@ -656,7 +656,7 @@ export function FinancialReportsTab({
                   <span className="text-xs uppercase tracking-wider block">
                     Gross Operating Margin
                   </span>
-                  <span className="text-[11px] font-normal text-muted-foreground">
+                  <span className="text-xs font-normal text-muted-foreground">
                     Gross Margin Rate: {grossMarginPct}% of Revenue
                   </span>
                 </div>
@@ -717,7 +717,7 @@ export function FinancialReportsTab({
                   <span className="text-xs uppercase font-bold text-foreground block">
                     Net Realized Operating Profit / (Loss)
                   </span>
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     Net Margin: {netMarginPct}% after all supplier costs &
                     overhead
                   </span>
@@ -772,7 +772,7 @@ export function FinancialReportsTab({
                     ? 'Accounting Equation Balanced: Assets = Liabilities + Equity'
                     : 'Balance Sheet Out of Balance!'}
                 </h4>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {isBalanceSheetBalanced
                     ? 'Fundamental double-entry balance satisfied with zero variance.'
                     : `Discrepancy of ${formatNPR(balanceSheetVariance)}. Verify period journal entries.`}
@@ -782,7 +782,7 @@ export function FinancialReportsTab({
 
             <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
               <div className="rounded-lg bg-card border border-border px-3 py-1.5">
-                <span className="text-[10px] uppercase text-muted-foreground block font-sans">
+                <span className="text-xs uppercase text-muted-foreground block font-sans">
                   Total Assets
                 </span>
                 <span className="font-bold text-primary">
@@ -790,7 +790,7 @@ export function FinancialReportsTab({
                 </span>
               </div>
               <div className="rounded-lg bg-card border border-border px-3 py-1.5">
-                <span className="text-[10px] uppercase text-muted-foreground block font-sans">
+                <span className="text-xs uppercase text-muted-foreground block font-sans">
                   Liabilities + Equity
                 </span>
                 <span className="font-bold text-foreground">

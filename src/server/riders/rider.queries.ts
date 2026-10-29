@@ -1,3 +1,4 @@
+import { moveToRecycleBin } from '#/server/recycle-bin/recycle-bin.queries'
 import { db } from '#/db'
 import { orders, riders, riderShifts, settlements, user } from '#/db/schema'
 import { and, desc, eq, gte, isNull, lte, or } from 'drizzle-orm'
@@ -268,6 +269,15 @@ export async function deleteRiderQuery(
       .set({ role: 'customer' })
       .where(eq(user.id, rider.userId))
   }
+
+  // Move to recycle bin before deleting
+  await moveToRecycleBin({
+    entityType: 'rider',
+    entityId: rider.id,
+    name: rider.name,
+    description: `${rider.phone} • ${rider.zone}`,
+    data: { rider },
+  })
 
   // Delete the rider record (cascades shifts, cash handovers, settlements)
   await db.delete(riders).where(eq(riders.id, id))

@@ -369,7 +369,7 @@ export function CheckoutPanel() {
             <div className="flex items-center gap-2">
               <Badge
                 variant="default"
-                className="text-[10px] uppercase tracking-wider"
+                className="text-xs uppercase tracking-wider"
               >
                 Express 30-Min Dispatch
               </Badge>
@@ -408,10 +408,10 @@ export function CheckoutPanel() {
                 {savedAddresses.length > 0 && (
                   <div className="space-y-2 pb-2 border-b border-border/60">
                     <div className="flex items-center justify-between">
-                      <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                         Select Saved Address
                       </Label>
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {savedAddresses.length} saved
                       </span>
                     </div>
@@ -454,13 +454,13 @@ export function CheckoutPanel() {
                                 {addr.isDefault && (
                                   <Badge
                                     variant="outline"
-                                    className="text-[9px] px-1 py-0 h-4 border-primary/40 text-primary"
+                                    className="text-xs px-1 py-0 h-4 border-primary/40 text-primary"
                                   >
                                     Default
                                   </Badge>
                                 )}
                               </div>
-                              <p className="text-[11px] truncate text-muted-foreground mt-0.5">
+                              <p className="text-xs truncate text-muted-foreground mt-0.5">
                                 {addr.address}
                               </p>
                             </div>
@@ -495,7 +495,7 @@ export function CheckoutPanel() {
                           <span className="text-xs font-bold text-foreground">
                             + Pin New Location
                           </span>
-                          <p className="text-[11px] text-muted-foreground truncate">
+                          <p className="text-xs text-muted-foreground truncate">
                             Drop a custom pin on the map
                           </p>
                         </div>
@@ -549,7 +549,7 @@ export function CheckoutPanel() {
                       {errors.address.message}
                     </p>
                   )}
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     Nepali delivery drivers rely heavily on landmarks and
                     notable gates or shops.
                   </p>
@@ -578,7 +578,7 @@ export function CheckoutPanel() {
 
                     {saveAddressForLater && (
                       <div className="flex items-center gap-2 pl-6 pt-1">
-                        <span className="text-[11px] text-muted-foreground font-medium">
+                        <span className="text-xs text-muted-foreground font-medium">
                           Save as:
                         </span>
                         {(['Home', 'Work', 'Other'] as const).map((lbl) => (
@@ -587,7 +587,7 @@ export function CheckoutPanel() {
                             type="button"
                             onClick={() => setAddressLabel(lbl)}
                             className={cn(
-                              'px-2.5 py-0.5 text-[11px] font-semibold rounded-md border transition-all cursor-pointer',
+                              'px-2.5 py-0.5 text-xs font-semibold rounded-md border transition-all cursor-pointer',
                               addressLabel === lbl
                                 ? 'bg-primary text-primary-foreground border-primary'
                                 : 'bg-muted/40 text-muted-foreground border-border hover:bg-muted',
@@ -625,7 +625,7 @@ export function CheckoutPanel() {
                 {!isEditingPhone && hasProfilePhone ? (
                   <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 p-3">
                     <div className="space-y-0.5">
-                      <span className="text-[11px] text-muted-foreground uppercase tracking-wider block font-medium">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider block font-medium">
                         Default Mobile Number
                       </span>
                       <span className="font-mono text-sm font-bold text-foreground">
@@ -660,7 +660,7 @@ export function CheckoutPanel() {
                               setValue('phone', normalizedProfilePhone || '')
                               setIsEditingPhone(false)
                             }}
-                            className="text-[11px] text-muted-foreground hover:text-foreground underline cursor-pointer"
+                            className="text-xs text-muted-foreground hover:text-foreground underline cursor-pointer"
                           >
                             Cancel
                           </button>
@@ -778,10 +778,10 @@ export function CheckoutPanel() {
                                   <Check className="h-3.5 w-3.5 text-primary shrink-0" />
                                 )}
                               </div>
-                              <span className="inline-block text-[11px] font-mono font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                              <span className="inline-block text-xs font-mono font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
                                 {slot.time}
                               </span>
-                              <p className="text-[11px] text-muted-foreground pt-1 leading-snug">
+                              <p className="text-xs text-muted-foreground pt-1 leading-snug">
                                 {slot.desc}
                               </p>
                             </div>
@@ -911,7 +911,7 @@ export function CheckoutPanel() {
                         <span className="font-mono text-xs font-bold text-foreground">
                           {appliedPromo.code}
                         </span>
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           Discount applied: -
                           {formatNPR(appliedPromo.discountPaisa)}
                         </p>
@@ -1010,7 +1010,7 @@ export function CheckoutPanel() {
                               {badgeLabel && (
                                 <Badge
                                   variant="default"
-                                  className="text-[9px] px-1.5 py-0 h-4 font-medium leading-none"
+                                  className="text-xs px-1.5 py-0 h-4 font-medium leading-none"
                                 >
                                   {badgeLabel}
                                 </Badge>
@@ -1018,13 +1018,13 @@ export function CheckoutPanel() {
                               {discountLabel && (
                                 <Badge
                                   variant="secondary"
-                                  className="text-[9px] px-1.5 py-0 h-4 font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 leading-none"
+                                  className="text-xs px-1.5 py-0 h-4 font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 leading-none"
                                 >
                                   {discountLabel}
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-[11px] text-muted-foreground">
+                            <p className="text-xs text-muted-foreground">
                               {item.variantName}
                             </p>
                           </div>
@@ -1034,7 +1034,7 @@ export function CheckoutPanel() {
                             {formatNPR(item.price * item.quantity)}
                           </span>
                           {item.mrp && item.mrp > item.price && (
-                            <span className="text-[10px] text-muted-foreground line-through">
+                            <span className="text-xs text-muted-foreground line-through">
                               {formatNPR(item.mrp * item.quantity)}
                             </span>
                           )}
@@ -1078,7 +1078,7 @@ export function CheckoutPanel() {
                       <Bike className="h-3.5 w-3.5 text-primary" />
                       30-Min Express Delivery
                       {isGrowthFreeDelivery && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
+                        <span className="text-xs px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium">
                           Launch Free Offer
                         </span>
                       )}
@@ -1092,7 +1092,7 @@ export function CheckoutPanel() {
                     </span>
                   </div>
 
-                  <div className="flex justify-between text-[11px]">
+                  <div className="flex justify-between text-xs">
                     <span>VAT (13% included)</span>
                     <span>Included</span>
                   </div>
@@ -1103,7 +1103,7 @@ export function CheckoutPanel() {
                 {/* Final Total */}
                 <div className="flex items-baseline justify-between">
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
                       Total Payable Amount
                     </span>
                     <span className="text-2xl font-black font-mono text-foreground">
@@ -1112,7 +1112,7 @@ export function CheckoutPanel() {
                   </div>
 
                   <div className="text-right">
-                    <span className="text-[10px] text-muted-foreground block">
+                    <span className="text-xs text-muted-foreground block">
                       Payment
                     </span>
                     <Badge
@@ -1146,7 +1146,7 @@ export function CheckoutPanel() {
                         securely.
                       </p>
                     )}
-                    <p className="mt-1 text-[11px]">
+                    <p className="mt-1 text-xs">
                       Destination:{' '}
                       <span className="text-foreground">
                         {watchedAddress || 'Landmark specified above'}

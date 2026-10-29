@@ -317,7 +317,7 @@ export function ShippingPanel() {
                       <div className="font-medium text-xs text-foreground">
                         {zone.name}
                       </div>
-                      <div className="text-[11px] text-muted-foreground max-w-xs truncate">
+                      <div className="text-xs text-muted-foreground max-w-xs truncate">
                         {zone.areas}
                       </div>
                     </TableCell>
@@ -338,7 +338,7 @@ export function ShippingPanel() {
                     <TableCell>
                       <Badge
                         variant="secondary"
-                        className="text-[10px] font-normal capitalize"
+                        className="text-xs font-normal capitalize"
                       >
                         {zone.courier}
                       </Badge>
@@ -347,7 +347,7 @@ export function ShippingPanel() {
                     <TableCell>
                       <Badge
                         variant={zone.active ? 'default' : 'outline'}
-                        className="text-[10px] font-normal"
+                        className="text-xs font-normal"
                       >
                         {zone.active ? 'Active' : 'Disabled'}
                       </Badge>

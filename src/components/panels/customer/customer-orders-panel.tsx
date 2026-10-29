@@ -357,7 +357,7 @@ export function CustomerOrdersPanel() {
                     0 && (
                     <Badge
                       variant="secondary"
-                      className="h-4 px-1 text-[9px] font-mono bg-primary/20 text-primary"
+                      className="h-4 px-1 text-xs font-mono bg-primary/20 text-primary"
                     >
                       {complaints.filter((c) => c.status !== 'resolved').length}
                     </Badge>
@@ -417,7 +417,7 @@ export function CustomerOrdersPanel() {
                           <span className="font-mono font-bold text-foreground">
                             #{order.number}
                           </span>
-                          <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
+                          <span className="text-muted-foreground flex items-center gap-1 text-xs">
                             <Calendar className="h-3 w-3" />
                             {new Date(order.createdAt).toLocaleDateString(
                               'en-US',
@@ -434,7 +434,7 @@ export function CustomerOrdersPanel() {
                           {getStatusBadge(order.status)}
                           <Badge
                             variant="outline"
-                            className="text-[10px] uppercase font-mono"
+                            className="text-xs uppercase font-mono"
                           >
                             {order.paymentMethod === 'cod'
                               ? 'COD'
@@ -448,7 +448,7 @@ export function CustomerOrdersPanel() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {/* Items List Column */}
                           <div className="md:col-span-2 space-y-2">
-                            <p className="text-xs font-semibold text-foreground uppercase tracking-wider text-[11px]">
+                            <p className="text-xs font-semibold text-foreground uppercase tracking-wider text-xs">
                               Items ({order.items.length})
                             </p>
                             <div className="divide-y divide-border/60">
@@ -459,7 +459,7 @@ export function CustomerOrdersPanel() {
                                 >
                                   <span className="text-foreground">
                                     {item.name}{' '}
-                                    <span className="text-muted-foreground text-[11px]">
+                                    <span className="text-muted-foreground text-xs">
                                       ({item.variantName})
                                     </span>
                                   </span>
@@ -482,14 +482,14 @@ export function CustomerOrdersPanel() {
                           {/* Financial Summary & Actions Column */}
                           <div className="flex flex-col justify-between border-t md:border-t-0 md:border-l md:pl-4 border-border pt-3 md:pt-0">
                             <div>
-                              <span className="text-[11px] text-muted-foreground block">
+                              <span className="text-xs text-muted-foreground block">
                                 Total Amount Paid / Due:
                               </span>
                               <span className="text-lg font-extrabold text-foreground">
                                 {formatNPR(order.total)}
                               </span>
                               <div className="mt-1 flex items-center gap-1.5">
-                                <span className="text-[11px] font-mono text-muted-foreground">
+                                <span className="text-xs font-mono text-muted-foreground">
                                   Code: {order.trackingCode}
                                 </span>
                                 <button
@@ -521,7 +521,7 @@ export function CustomerOrdersPanel() {
                                   asChild
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 text-[11px] px-1 gap-1"
+                                  className="h-8 text-xs px-1 gap-1"
                                 >
                                   <Link
                                     to="/track/$code"
@@ -534,7 +534,7 @@ export function CustomerOrdersPanel() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 text-[11px] px-1 gap-1 cursor-pointer"
+                                  className="h-8 text-xs px-1 gap-1 cursor-pointer"
                                   onClick={() => setSelectedReceiptOrder(order)}
                                 >
                                   <Printer className="h-3 w-3" />
@@ -543,7 +543,7 @@ export function CustomerOrdersPanel() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 text-[11px] px-1 gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                                  className="h-8 text-xs px-1 gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
                                   onClick={() =>
                                     handleOpenTicketForOrder(order)
                                   }
@@ -604,7 +604,7 @@ export function CustomerOrdersPanel() {
                                 <Badge
                                   variant="outline"
                                   className={cn(
-                                    'text-[10px] uppercase font-semibold px-2 py-0.5',
+                                    'text-xs uppercase font-semibold px-2 py-0.5',
                                     isResolved
                                       ? 'border-emerald-500 text-emerald-500 bg-emerald-500/10'
                                       : isInProgress
@@ -617,7 +617,7 @@ export function CustomerOrdersPanel() {
                                     : comp.status}
                                 </Badge>
                               </div>
-                              <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
+                              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                                 <span className="font-mono">
                                   Ticket #{comp.id}
                                 </span>
@@ -643,7 +643,7 @@ export function CustomerOrdersPanel() {
                             {comp.body}
                           </div>
 
-                          <div className="text-[11px] flex items-center gap-1.5 text-muted-foreground pt-1">
+                          <div className="text-xs flex items-center gap-1.5 text-muted-foreground pt-1">
                             {isResolved ? (
                               <>
                                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
@@ -693,10 +693,10 @@ export function CustomerOrdersPanel() {
                 <DialogTitle className="text-base font-extrabold tracking-wider uppercase">
                   MEZMANI NEPAL
                 </DialogTitle>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Express Sourcing &amp; Delivery &bull; Butwal, Rupandehi
                 </p>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   VAT Reg: 609823145 &bull; Ph: +977-9802088800
                 </p>
               </DialogHeader>
@@ -741,7 +741,7 @@ export function CustomerOrdersPanel() {
                 <Separator className="my-2" />
 
                 <div className="space-y-1">
-                  <div className="flex justify-between font-bold text-[11px] border-b pb-1">
+                  <div className="flex justify-between font-bold text-xs border-b pb-1">
                     <span>ITEM</span>
                     <span>TOTAL</span>
                   </div>

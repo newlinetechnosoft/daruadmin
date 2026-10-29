@@ -166,7 +166,7 @@ export function CreateStaffDialog({
                 >
                   <ShieldAlert className="h-4 w-4 mb-1 text-primary" />
                   <div className="text-xs font-semibold">Manager</div>
-                  <div className="text-[10px] text-muted-foreground leading-tight">
+                  <div className="text-xs text-muted-foreground leading-tight">
                     Store ops
                   </div>
                 </button>
@@ -182,7 +182,7 @@ export function CreateStaffDialog({
                 >
                   <Bike className="h-4 w-4 mb-1 text-primary" />
                   <div className="text-xs font-semibold">Rider</div>
-                  <div className="text-[10px] text-muted-foreground leading-tight">
+                  <div className="text-xs text-muted-foreground leading-tight">
                     Courier app
                   </div>
                 </button>
@@ -198,7 +198,7 @@ export function CreateStaffDialog({
                 >
                   <Shield className="h-4 w-4 mb-1 text-primary" />
                   <div className="text-xs font-semibold">Admin</div>
-                  <div className="text-[10px] text-muted-foreground leading-tight">
+                  <div className="text-xs text-muted-foreground leading-tight">
                     Full control
                   </div>
                 </button>
@@ -288,7 +288,7 @@ export function CreateStaffDialog({
             {/* Rider Specific Fields */}
             {form.role === 'rider' && (
               <div className="pt-2 border-t border-border space-y-3">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
                   Courier fleet settings
                 </span>
 

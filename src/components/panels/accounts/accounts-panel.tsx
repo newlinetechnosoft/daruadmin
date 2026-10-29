@@ -1006,7 +1006,7 @@ export function AccountsPanel() {
             >
               <Receipt className="h-3.5 w-3.5" />
               <span>General Ledger</span>
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
                 {rawJournalEntries.length}
               </span>
             </TabsTrigger>
@@ -1017,7 +1017,7 @@ export function AccountsPanel() {
             >
               <CreditCard className="h-3.5 w-3.5" />
               <span>Transactions</span>
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
                 {rawPayments.length}
               </span>
             </TabsTrigger>
@@ -1028,7 +1028,7 @@ export function AccountsPanel() {
             >
               <Store className="h-3.5 w-3.5" />
               <span>Dealer Payables</span>
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
                 {rawDealers.length}
               </span>
             </TabsTrigger>
@@ -1047,7 +1047,7 @@ export function AccountsPanel() {
             >
               <Coins className="h-3.5 w-3.5" />
               <span>Rider Payroll</span>
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
                 {rawSettlements.length}
               </span>
             </TabsTrigger>
@@ -1058,7 +1058,7 @@ export function AccountsPanel() {
             >
               <Building2 className="h-3.5 w-3.5" />
               <span>Chart of Accounts</span>
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
                 39
               </span>
             </TabsTrigger>
@@ -1399,7 +1399,7 @@ export function AccountsPanel() {
                   {accountFilter !== 'all' && (
                     <Badge
                       variant="secondary"
-                      className="gap-1 text-[11px] font-mono"
+                      className="gap-1 text-xs font-mono"
                     >
                       Account:{' '}
                       {rawChartOfAccounts.find(
@@ -1418,7 +1418,7 @@ export function AccountsPanel() {
                   {glPartyTypeFilter !== 'all' && (
                     <Badge
                       variant="secondary"
-                      className="gap-1 text-[11px] capitalize"
+                      className="gap-1 text-xs capitalize"
                     >
                       Party: {glPartyTypeFilter}
                       <button
@@ -1434,7 +1434,7 @@ export function AccountsPanel() {
                     </Badge>
                   )}
                   {glPartyIdFilter !== 'all' && (
-                    <Badge variant="secondary" className="gap-1 text-[11px]">
+                    <Badge variant="secondary" className="gap-1 text-xs">
                       Party ID: {glPartyIdFilter}
                       <button
                         type="button"
@@ -1448,7 +1448,7 @@ export function AccountsPanel() {
                   {glVoucherTypeFilter !== 'all' && (
                     <Badge
                       variant="secondary"
-                      className="gap-1 text-[11px] font-mono"
+                      className="gap-1 text-xs font-mono"
                     >
                       Type: {glVoucherTypeFilter}
                       <button
@@ -1464,7 +1464,7 @@ export function AccountsPanel() {
                     variant="ghost"
                     size="sm"
                     onClick={handleResetGlFilters}
-                    className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                    className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
                   >
                     Reset All Filters
                   </Button>
@@ -1527,7 +1527,7 @@ export function AccountsPanel() {
                               <div className="flex items-center gap-2">
                                 <Badge
                                   variant="outline"
-                                  className="font-mono text-[10px]"
+                                  className="font-mono text-xs"
                                 >
                                   {entry.voucherType}
                                 </Badge>
@@ -1540,7 +1540,7 @@ export function AccountsPanel() {
                               <span className="text-xs text-foreground block font-medium">
                                 {entry.bsDate}
                               </span>
-                              <span className="text-[10px] text-muted-foreground">
+                              <span className="text-xs text-muted-foreground">
                                 {entry.postingDate.slice(0, 10)}
                               </span>
                             </TableCell>
@@ -1549,13 +1549,13 @@ export function AccountsPanel() {
                                 {entry.narration}
                               </div>
                               {entry.event && (
-                                <span className="text-[10px] text-muted-foreground capitalize">
+                                <span className="text-xs text-muted-foreground capitalize">
                                   Event: {entry.event.replace('_', ' ')}
                                 </span>
                               )}
                             </TableCell>
                             <TableCell>
-                              <span className="font-mono text-[11px] text-muted-foreground">
+                              <span className="font-mono text-xs text-muted-foreground">
                                 {entry.refType
                                   ? `${entry.refType}: ${entry.refId || '—'}`
                                   : '—'}
@@ -1574,7 +1574,7 @@ export function AccountsPanel() {
                                     ? 'success'
                                     : 'secondary'
                                 }
-                                className="text-[10px] uppercase font-normal"
+                                className="text-xs uppercase font-normal"
                               >
                                 {entry.postingStatus}
                               </Badge>
@@ -1589,13 +1589,13 @@ export function AccountsPanel() {
                             >
                               <TableCell colSpan={8} className="p-3">
                                 <div className="rounded-md border border-border bg-card p-2.5 space-y-2">
-                                  <div className="flex items-center justify-between text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground font-semibold uppercase tracking-wider">
                                     <span>Voucher Balanced Lines</span>
                                     <span>Created by: {entry.createdBy}</span>
                                   </div>
                                   <table className="w-full text-xs">
                                     <thead>
-                                      <tr className="border-b border-border/50 text-muted-foreground text-[10px]">
+                                      <tr className="border-b border-border/50 text-muted-foreground text-xs">
                                         <th className="text-left py-1 font-medium">
                                           Account Code & Title
                                         </th>
@@ -1622,12 +1622,12 @@ export function AccountsPanel() {
                                             </span>{' '}
                                             · {l.accountName}
                                           </td>
-                                          <td className="py-1 text-left text-muted-foreground text-[11px]">
+                                          <td className="py-1 text-left text-muted-foreground text-xs">
                                             {l.partyType
                                               ? `${l.partyType} (${l.partyId})`
                                               : l.costCenter || '—'}
                                           </td>
-                                          <td className="py-1 text-left text-muted-foreground text-[11px] font-sans">
+                                          <td className="py-1 text-left text-muted-foreground text-xs font-sans">
                                             {l.narration || '—'}
                                           </td>
                                           <td className="py-1 text-right text-emerald-600 dark:text-emerald-400">
@@ -1696,7 +1696,7 @@ export function AccountsPanel() {
                             <span className="text-xs font-medium text-foreground block">
                               {row.bsDate}
                             </span>
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               {row.postingDate.slice(0, 10)}
                             </span>
                           </TableCell>
@@ -1716,7 +1716,7 @@ export function AccountsPanel() {
                             <span className="font-mono text-xs font-bold text-foreground block">
                               {row.accountCode}
                             </span>
-                            <span className="text-[11px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               {row.accountName}
                             </span>
                           </TableCell>
@@ -1726,7 +1726,7 @@ export function AccountsPanel() {
                             </span>
                           </TableCell>
                           <TableCell>
-                            <span className="text-[11px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               {row.partyType
                                 ? `${row.partyType}: ${row.partyId}`
                                 : row.costCenter || '—'}
@@ -1803,7 +1803,7 @@ export function AccountsPanel() {
                           <span className="font-mono text-xs text-foreground block">
                             {item.id}
                           </span>
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {item.date}
                           </span>
                         </TableCell>
@@ -1813,7 +1813,7 @@ export function AccountsPanel() {
                             {item.memo}
                           </div>
                           {item.refId && (
-                            <span className="text-[11px] text-muted-foreground font-mono">
+                            <span className="text-xs text-muted-foreground font-mono">
                               Ref: {item.refId} ({item.refType})
                             </span>
                           )}
@@ -1822,7 +1822,7 @@ export function AccountsPanel() {
                         <TableCell>
                           <Badge
                             variant="secondary"
-                            className="text-[10px] font-normal capitalize"
+                            className="text-xs font-normal capitalize"
                           >
                             {item.category.replace('_', ' ')}
                           </Badge>
@@ -1981,7 +1981,7 @@ export function AccountsPanel() {
                         <span className="font-mono text-xs text-foreground block">
                           {tx.id}
                         </span>
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {tx.createdAt
                             ? new Date(tx.createdAt).toLocaleString()
                             : '-'}
@@ -2000,7 +2000,7 @@ export function AccountsPanel() {
                       <TableCell>
                         <Badge
                           variant="secondary"
-                          className="text-[10px] font-semibold uppercase"
+                          className="text-xs font-semibold uppercase"
                         >
                           {tx.gateway}
                         </Badge>
@@ -2022,7 +2022,7 @@ export function AccountsPanel() {
                                 ? 'destructive'
                                 : 'secondary'
                           }
-                          className="text-[10px] font-normal uppercase"
+                          className="text-xs font-normal uppercase"
                         >
                           {tx.status}
                         </Badge>
@@ -2084,7 +2084,7 @@ export function AccountsPanel() {
                 <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
                   Dealer Accounts &amp; Payables Overview
                 </h4>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Showing {dealerBalances.length} registered dealers
                 </p>
               </div>
@@ -2129,12 +2129,12 @@ export function AccountsPanel() {
                             {dealer.name}
                           </span>
                           {!dealer.isActive && (
-                            <Badge variant="outline" className="text-[9px]">
+                            <Badge variant="outline" className="text-xs">
                               Inactive
                             </Badge>
                           )}
                         </div>
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {dealer.city} · PAN/VAT: {dealer.pan || 'N/A'}
                         </p>
                       </div>
@@ -2144,7 +2144,7 @@ export function AccountsPanel() {
                         onClick={() =>
                           setSelectedDealerId(isSelected ? 'all' : dealer.id)
                         }
-                        className="h-6 px-2 text-[10px]"
+                        className="h-6 px-2 text-xs"
                       >
                         {isSelected ? 'Selected' : 'Filter'}
                       </Button>
@@ -2152,7 +2152,7 @@ export function AccountsPanel() {
 
                     <div className="mt-3 grid grid-cols-3 gap-2 rounded-md bg-muted/30 p-2 text-center text-xs">
                       <div>
-                        <span className="text-[10px] text-muted-foreground block">
+                        <span className="text-xs text-muted-foreground block">
                           Procured
                         </span>
                         <span className="font-mono font-medium text-foreground">
@@ -2160,7 +2160,7 @@ export function AccountsPanel() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-muted-foreground block">
+                        <span className="text-xs text-muted-foreground block">
                           Paid
                         </span>
                         <span className="font-mono font-medium text-success">
@@ -2168,7 +2168,7 @@ export function AccountsPanel() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-muted-foreground block">
+                        <span className="text-xs text-muted-foreground block">
                           Payable
                         </span>
                         <span
@@ -2180,7 +2180,7 @@ export function AccountsPanel() {
                     </div>
 
                     <div className="mt-3 flex items-center justify-between pt-1">
-                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <Phone className="h-3 w-3" />
                         <span>{dealer.contact}</span>
                       </div>
@@ -2192,7 +2192,7 @@ export function AccountsPanel() {
                             setBatchDealerId(dealer.id)
                             setIsBatchDealerSettlementOpen(true)
                           }}
-                          className="h-6 px-2 text-[10px] gap-1"
+                          className="h-6 px-2 text-xs gap-1"
                           title="Select and settle delivered items for this dealer"
                         >
                           <Receipt className="h-3 w-3 text-amber-500" />
@@ -2204,7 +2204,7 @@ export function AccountsPanel() {
                           onClick={() =>
                             handleOpenDealerPayout(dealer, balance)
                           }
-                          className="h-6 px-2 text-[10px] gap-1"
+                          className="h-6 px-2 text-xs gap-1"
                         >
                           <Plus className="h-3 w-3" />
                           Payout
@@ -2304,7 +2304,7 @@ export function AccountsPanel() {
                           >
                             {p.orderNumber}
                           </Link>
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {p.orderDate
                               ? new Date(p.orderDate).toLocaleDateString()
                               : '-'}
@@ -2320,7 +2320,7 @@ export function AccountsPanel() {
                         <TableCell>
                           <Badge
                             variant="secondary"
-                            className="text-[10px] font-normal capitalize"
+                            className="text-xs font-normal capitalize"
                           >
                             {p.catalogType}
                           </Badge>
@@ -2331,7 +2331,7 @@ export function AccountsPanel() {
                             {p.dealerName}
                           </div>
                           {p.dealerPan && (
-                            <span className="text-[10px] text-muted-foreground font-mono">
+                            <span className="text-xs text-muted-foreground font-mono">
                               PAN: {p.dealerPan}
                             </span>
                           )}
@@ -2391,7 +2391,7 @@ export function AccountsPanel() {
                           <span className="font-mono text-xs text-foreground block">
                             {v.voucherNo || v.id}
                           </span>
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {v.date}
                           </span>
                         </TableCell>
@@ -2484,7 +2484,7 @@ export function AccountsPanel() {
               <CardHeader className="p-0 pb-2 border-b border-border">
                 <CardTitle className="text-xs font-semibold flex items-center justify-between">
                   <span>Catalog Performance Breakdown</span>
-                  <span className="text-[11px] font-normal text-muted-foreground">
+                  <span className="text-xs font-normal text-muted-foreground">
                     Liquor vs Grocery Revenue
                   </span>
                 </CardTitle>
@@ -2540,7 +2540,7 @@ export function AccountsPanel() {
               <CardHeader className="p-0 pb-2 border-b border-border">
                 <CardTitle className="text-xs font-semibold flex items-center justify-between">
                   <span>Payment Method Distribution</span>
-                  <span className="text-[11px] font-normal text-muted-foreground">
+                  <span className="text-xs font-normal text-muted-foreground">
                     Cash on Delivery vs Digital Pre-paid
                   </span>
                 </CardTitle>
@@ -2687,7 +2687,7 @@ export function AccountsPanel() {
                           >
                             {order.number}
                           </Link>
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {order.events[0]?.at
                               ? new Date(
                                   order.events[0].at,
@@ -2700,7 +2700,7 @@ export function AccountsPanel() {
                           <div className="font-medium text-xs text-foreground">
                             {order.customerName}
                           </div>
-                          <span className="text-[11px] text-muted-foreground font-mono">
+                          <span className="text-xs text-muted-foreground font-mono">
                             {order.customerPhone}
                           </span>
                         </TableCell>
@@ -2714,7 +2714,7 @@ export function AccountsPanel() {
                         <TableCell>
                           <Badge
                             variant="secondary"
-                            className="text-[10px] font-semibold uppercase"
+                            className="text-xs font-semibold uppercase"
                           >
                             {order.paymentMethod}
                           </Badge>
@@ -2745,7 +2745,7 @@ export function AccountsPanel() {
                                   ? 'destructive'
                                   : 'secondary'
                             }
-                            className="text-[10px] font-normal capitalize"
+                            className="text-xs font-normal capitalize"
                           >
                             {order.status}
                           </Badge>
@@ -2809,7 +2809,7 @@ export function AccountsPanel() {
                   <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
                     Rider Accounts &amp; COD Cash Balances
                   </h4>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {rawRiderAccounts.length} active couriers
                   </p>
                 </div>
@@ -2850,7 +2850,7 @@ export function AccountsPanel() {
                         <span className="font-semibold text-xs text-foreground block">
                           {r.riderName}
                         </span>
-                        <span className="text-[11px] text-muted-foreground font-mono">
+                        <span className="text-xs text-muted-foreground font-mono">
                           {r.phone || 'No phone'}
                         </span>
                       </div>
@@ -2864,7 +2864,7 @@ export function AccountsPanel() {
                             r.cashOnHand,
                           )
                         }
-                        className="h-6 px-2 text-[10px] gap-1"
+                        className="h-6 px-2 text-xs gap-1"
                       >
                         <ArrowDownLeft className="h-3 w-3 text-emerald-500" />
                         Receive
@@ -2872,7 +2872,7 @@ export function AccountsPanel() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/30 p-2 text-center text-xs">
                       <div>
-                        <span className="text-[10px] text-muted-foreground block">
+                        <span className="text-xs text-muted-foreground block">
                           Cash in Hand
                         </span>
                         <span className="font-mono font-bold text-foreground">
@@ -2880,7 +2880,7 @@ export function AccountsPanel() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] text-muted-foreground block">
+                        <span className="text-xs text-muted-foreground block">
                           Commission Payable
                         </span>
                         <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
@@ -2982,7 +2982,7 @@ export function AccountsPanel() {
                             variant={
                               set.status === 'paid' ? 'success' : 'secondary'
                             }
-                            className="text-[10px] font-normal uppercase"
+                            className="text-xs font-normal uppercase"
                           >
                             {set.status}
                           </Badge>
@@ -3067,7 +3067,7 @@ export function AccountsPanel() {
                           <span className="font-mono text-xs text-foreground block">
                             {v.id}
                           </span>
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {v.date}
                           </span>
                         </TableCell>
@@ -3305,7 +3305,7 @@ export function AccountsPanel() {
                             {isGroup && (
                               <Badge
                                 variant="outline"
-                                className="text-[9px] px-1.5 py-0"
+                                className="text-xs px-1.5 py-0"
                               >
                                 GROUP
                               </Badge>
@@ -3318,7 +3318,7 @@ export function AccountsPanel() {
                         <TableCell>
                           <Badge
                             variant="secondary"
-                            className={`text-[10px] capitalize ${
+                            className={`text-xs capitalize ${
                               acc.rootType === 'asset'
                                 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
                                 : acc.rootType === 'liability'
@@ -3334,7 +3334,7 @@ export function AccountsPanel() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {acc.ownerType
                               ? `${acc.ownerType} ledger`
                               : isGroup
@@ -3498,7 +3498,7 @@ export function AccountsPanel() {
                     <Label className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                       Debit Line (Dr.) *
                     </Label>
-                    <span className="text-[10px] text-muted-foreground font-mono">
+                    <span className="text-xs text-muted-foreground font-mono">
                       Rs.{' '}
                       {Number(
                         manualVoucherForm.amountInRs || 0,
@@ -3531,7 +3531,7 @@ export function AccountsPanel() {
                     <Label className="text-xs font-medium text-blue-600 dark:text-blue-400">
                       Credit Line (Cr.) *
                     </Label>
-                    <span className="text-[10px] text-muted-foreground font-mono">
+                    <span className="text-xs text-muted-foreground font-mono">
                       Rs.{' '}
                       {Number(
                         manualVoucherForm.amountInRs || 0,
@@ -3597,7 +3597,7 @@ export function AccountsPanel() {
 
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
               <div className="rounded-md border border-border bg-muted/30 p-3 text-xs space-y-1">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wide block">
+                <span className="text-xs text-muted-foreground uppercase tracking-wide block">
                   Dealer / Supplier
                 </span>
                 <span className="font-semibold text-foreground text-sm block">
@@ -3993,7 +3993,7 @@ export function AccountsPanel() {
                 <span className="text-xs font-semibold text-foreground uppercase block">
                   Audited financial report
                 </span>
-                <div className="text-muted-foreground text-[10px]">
+                <div className="text-muted-foreground text-xs">
                   Date: {new Date().toLocaleDateString()}
                 </div>
               </div>

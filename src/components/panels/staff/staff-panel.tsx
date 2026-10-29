@@ -760,13 +760,13 @@ export function StaffPanel() {
                           {isSelf && (
                             <Badge
                               variant="outline"
-                              className="text-[10px] py-0 px-1 font-mono text-muted-foreground"
+                              className="text-xs py-0 px-1 font-mono text-muted-foreground"
                             >
                               You
                             </Badge>
                           )}
                         </div>
-                        <span className="font-mono text-[11px] text-muted-foreground">
+                        <span className="font-mono text-xs text-muted-foreground">
                           ID: {staff.id.slice(0, 10)}...
                         </span>
                       </TableCell>
@@ -782,7 +782,7 @@ export function StaffPanel() {
                           variant={
                             staff.role === 'admin' ? 'default' : 'secondary'
                           }
-                          className="text-[11px] font-normal capitalize"
+                          className="text-xs font-normal capitalize"
                         >
                           {staff.role}
                         </Badge>
@@ -878,7 +878,7 @@ export function StaffPanel() {
                               ? 'default'
                               : 'secondary'
                           }
-                          className="text-[10px] py-0 px-1.5 capitalize font-normal"
+                          className="text-xs py-0 px-1.5 capitalize font-normal"
                         >
                           {selectedStaff.role}
                         </Badge>
@@ -886,21 +886,21 @@ export function StaffPanel() {
                         {selectedStaff.role === 'admin' ? (
                           <Badge
                             variant="default"
-                            className="text-[10px] py-0 px-1.5"
+                            className="text-xs py-0 px-1.5"
                           >
                             Super Admin
                           </Badge>
                         ) : hasCustomPermissions ? (
                           <Badge
                             variant="outline"
-                            className="text-[10px] py-0 px-1.5 text-amber-600 dark:text-amber-400 border-amber-500/30 bg-amber-500/10"
+                            className="text-xs py-0 px-1.5 text-amber-600 dark:text-amber-400 border-amber-500/30 bg-amber-500/10"
                           >
                             Custom overrides active
                           </Badge>
                         ) : (
                           <Badge
                             variant="outline"
-                            className="text-[10px] py-0 px-1.5 text-muted-foreground border-border"
+                            className="text-xs py-0 px-1.5 text-muted-foreground border-border"
                           >
                             Role defaults active
                           </Badge>
@@ -909,7 +909,7 @@ export function StaffPanel() {
                         {isDirty && (
                           <Badge
                             variant="outline"
-                            className="text-[10px] py-0 px-1.5 text-info border-info/40 bg-info/10 animate-pulse"
+                            className="text-xs py-0 px-1.5 text-info border-info/40 bg-info/10 animate-pulse"
                           >
                             Unsaved changes (+{grantDiffStats.added} / -
                             {grantDiffStats.removed})
@@ -918,7 +918,7 @@ export function StaffPanel() {
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {selectedStaff.email} • ID:{' '}
-                        <span className="font-mono text-[11px]">
+                        <span className="font-mono text-xs">
                           {selectedStaff.id.slice(0, 12)}...
                         </span>
                       </p>
@@ -1021,7 +1021,7 @@ export function StaffPanel() {
                           size="sm"
                           onClick={handlePresetReadOnly}
                           disabled={isSavingMatrix || isResettingDefaults}
-                          className="h-7 px-2 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
+                          className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
                           title="Grant 'view' privilege across all system modules"
                         >
                           <Eye className="h-3 w-3" />
@@ -1032,7 +1032,7 @@ export function StaffPanel() {
                           size="sm"
                           onClick={handlePresetFullAccess}
                           disabled={isSavingMatrix || isResettingDefaults}
-                          className="h-7 px-2 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
+                          className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
                           title="Grant all 6 actions across all system modules"
                         >
                           <CheckCheck className="h-3 w-3" />
@@ -1043,7 +1043,7 @@ export function StaffPanel() {
                           size="sm"
                           onClick={handlePresetClearAll}
                           disabled={isSavingMatrix || isResettingDefaults}
-                          className="h-7 px-2 text-[11px] gap-1 text-muted-foreground hover:text-destructive"
+                          className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-destructive"
                           title="Revoke all privileges across all system modules"
                         >
                           <XCircle className="h-3 w-3" />
@@ -1052,7 +1052,7 @@ export function StaffPanel() {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/40 border border-border text-[11px] text-muted-foreground">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/40 border border-border text-xs text-muted-foreground">
                       <span className="font-semibold text-foreground">
                         {matrixStats.totalEnabled}
                       </span>
@@ -1117,12 +1117,12 @@ export function StaffPanel() {
                               </h4>
                               <Badge
                                 variant="outline"
-                                className="text-[10px] py-0 px-1.5 h-4.5 font-normal border-border bg-background"
+                                className="text-xs py-0 px-1.5 h-4.5 font-normal border-border bg-background"
                               >
                                 {sectionEnabled} / {sectionTotal} granted
                               </Badge>
                             </div>
-                            <p className="text-[11px] text-muted-foreground line-clamp-1">
+                            <p className="text-xs text-muted-foreground line-clamp-1">
                               {section.description}
                             </p>
                           </div>
@@ -1138,7 +1138,7 @@ export function StaffPanel() {
                                 handleSectionGrantAll(sectionModuleKeys)
                               }
                               disabled={isSavingMatrix || isResettingDefaults}
-                              className="h-6 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+                              className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
                               title={`Grant all permissions in ${section.name}`}
                             >
                               Grant all
@@ -1151,7 +1151,7 @@ export function StaffPanel() {
                                 handleSectionViewOnly(sectionModuleKeys)
                               }
                               disabled={isSavingMatrix || isResettingDefaults}
-                              className="h-6 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+                              className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
                               title={`Set ${section.name} modules to View only`}
                             >
                               View only
@@ -1164,7 +1164,7 @@ export function StaffPanel() {
                                 handleSectionClearAll(sectionModuleKeys)
                               }
                               disabled={isSavingMatrix || isResettingDefaults}
-                              className="h-6 px-2 text-[10px] text-muted-foreground hover:text-destructive"
+                              className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
                               title={`Clear all permissions in ${section.name}`}
                             >
                               Clear
@@ -1188,7 +1188,7 @@ export function StaffPanel() {
                                   title={`${act.toUpperCase()}: ${ACTION_DESCRIPTIONS[act]}`}
                                 >
                                   <div>{act}</div>
-                                  <div className="text-[9px] font-normal text-muted-foreground tracking-tight lowercase">
+                                  <div className="text-xs font-normal text-muted-foreground tracking-tight lowercase">
                                     {act === 'view'
                                       ? 'browse'
                                       : act === 'create'
@@ -1235,7 +1235,7 @@ export function StaffPanel() {
                                           <span className="font-semibold text-xs text-foreground">
                                             {modDef.label}
                                           </span>
-                                          <span className="font-mono text-[10px] text-muted-foreground/80">
+                                          <span className="font-mono text-xs text-muted-foreground/80">
                                             /{modDef.key}
                                           </span>
 
@@ -1244,28 +1244,28 @@ export function StaffPanel() {
                                           isAllChecked ? (
                                             <Badge
                                               variant="default"
-                                              className="text-[9px] py-0 px-1 h-3.5 font-normal bg-emerald-600/90 hover:bg-emerald-600 text-white"
+                                              className="text-xs py-0 px-1 h-3.5 font-normal bg-emerald-600/90 hover:bg-emerald-600 text-white"
                                             >
                                               Full access
                                             </Badge>
                                           ) : isViewOnly ? (
                                             <Badge
                                               variant="secondary"
-                                              className="text-[9px] py-0 px-1 h-3.5 font-normal"
+                                              className="text-xs py-0 px-1 h-3.5 font-normal"
                                             >
                                               Read only
                                             </Badge>
                                           ) : currentModGrants.length > 0 ? (
                                             <Badge
                                               variant="outline"
-                                              className="text-[9px] py-0 px-1 h-3.5 font-normal text-amber-600 dark:text-amber-400 border-amber-500/30"
+                                              className="text-xs py-0 px-1 h-3.5 font-normal text-amber-600 dark:text-amber-400 border-amber-500/30"
                                             >
                                               {currentModGrants.length} of 6
                                             </Badge>
                                           ) : (
                                             <Badge
                                               variant="outline"
-                                              className="text-[9px] py-0 px-1 h-3.5 font-normal text-muted-foreground border-border"
+                                              className="text-xs py-0 px-1 h-3.5 font-normal text-muted-foreground border-border"
                                             >
                                               No access
                                             </Badge>
@@ -1285,7 +1285,7 @@ export function StaffPanel() {
                                                 isSavingMatrix ||
                                                 isResettingDefaults
                                               }
-                                              className="h-4.5 px-1 text-[10px] text-muted-foreground hover:text-foreground ml-auto"
+                                              className="h-4.5 px-1 text-xs text-muted-foreground hover:text-foreground ml-auto"
                                             >
                                               {isAllChecked
                                                 ? 'Deselect all'
@@ -1293,7 +1293,7 @@ export function StaffPanel() {
                                             </Button>
                                           )}
                                         </div>
-                                        <p className="text-[11px] text-muted-foreground line-clamp-1 leading-normal">
+                                        <p className="text-xs text-muted-foreground line-clamp-1 leading-normal">
                                           {modDef.description}
                                         </p>
                                       </div>
@@ -1395,7 +1395,7 @@ export function StaffPanel() {
                       <TableCell>
                         <Badge
                           variant="outline"
-                          className="text-[10px] font-mono uppercase"
+                          className="text-xs font-mono uppercase"
                         >
                           {log.action}
                         </Badge>

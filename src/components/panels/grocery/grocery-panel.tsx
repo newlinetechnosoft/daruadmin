@@ -419,7 +419,7 @@ export function GroceryPanel() {
             <Button
               size="sm"
               onClick={openAddModal}
-              className="h-8 gap-1.5 text-xs"
+              className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
             >
               <Plus className="h-3.5 w-3.5" />
               Add grocery SKU
@@ -444,7 +444,7 @@ export function GroceryPanel() {
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
           size="sm"
-          className="h-8 text-xs"
+          className="h-9 text-xs sm:text-sm font-medium"
         >
           <NativeSelectOption value="all">
             All categories ({taxonomy.groceryCategories.length})
@@ -461,7 +461,7 @@ export function GroceryPanel() {
             value={selectedBrand}
             onChange={(e) => setSelectedBrand(e.target.value)}
             size="sm"
-            className="h-8 text-xs"
+            className="h-9 text-xs sm:text-sm font-medium"
           >
             <NativeSelectOption value="all">
               All brands ({taxonomy.groceryBrands.length})
@@ -477,7 +477,7 @@ export function GroceryPanel() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-8 px-2 text-xs shrink-0"
+              className="h-9 px-3 text-xs shrink-0"
               title="Add new grocery brand"
               onClick={() => {
                 setEditingBrand(null)
@@ -491,17 +491,17 @@ export function GroceryPanel() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-muted/40">
             <TableRow>
-              <TableHead className="text-xs">Item</TableHead>
-              <TableHead className="text-xs">Brand &amp; Category</TableHead>
+              <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Item</TableHead>
+              <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Brand &amp; Category</TableHead>
               <TableHead className="text-xs">
                 Variants and pricing (NPR)
               </TableHead>
-              <TableHead className="text-center text-xs">Status</TableHead>
-              <TableHead className="text-right text-xs">Actions</TableHead>
+              <TableHead className="text-center text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Status</TableHead>
+              <TableHead className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -525,15 +525,15 @@ export function GroceryPanel() {
                           'https://images.unsplash.com/photo-1566478989037-eec170784d0b?auto=format&fit=crop&w=100&q=80'
                         }
                         alt={p.name}
-                        className="h-10 w-10 shrink-0 rounded-md bg-muted object-cover border border-border"
+                        className="h-12 w-12 shrink-0 rounded-xl bg-secondary object-cover border border-border shadow-xs"
                       />
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap font-medium text-xs text-foreground">
+                        <div className="flex items-center gap-2 flex-wrap font-bold text-sm sm:text-base text-foreground">
                           <span>{p.name}</span>
                           {(p as any).customBadge && (
                             <Badge
                               variant="default"
-                              className="text-[9px] px-1.5 py-0 font-medium"
+                              className="text-xs px-2 py-0.5 font-bold"
                             >
                               {(p as any).customBadge}
                             </Badge>
@@ -541,7 +541,7 @@ export function GroceryPanel() {
                           {!(p as any).customBadge && p.isFeatured && (
                             <Badge
                               variant="secondary"
-                              className="gap-1 text-[9px] px-1 py-0 font-normal"
+                              className="gap-1 text-xs px-2 py-0.5 font-medium"
                             >
                               <Sparkles className="h-2.5 w-2.5" /> Featured
                             </Badge>
@@ -549,13 +549,13 @@ export function GroceryPanel() {
                           {(p as any).customDiscountLabel && (
                             <Badge
                               variant="secondary"
-                              className="text-[9px] px-1.5 py-0 font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+                              className="text-xs px-2 py-0.5 font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
                             >
                               {(p as any).customDiscountLabel}
                             </Badge>
                           )}
                         </div>
-                        <div className="truncate font-mono text-[11px] text-muted-foreground">
+                        <div className="truncate font-mono text-xs text-muted-foreground mt-0.5">
                           /{p.slug}
                         </div>
                       </div>
@@ -570,12 +570,12 @@ export function GroceryPanel() {
                       {(p as any).brandName ? (
                         <Badge
                           variant="outline"
-                          className="text-[10px] px-1.5 py-0 font-normal text-muted-foreground"
+                          className="text-xs px-1.5 py-0 font-normal text-muted-foreground"
                         >
                           {(p as any).brandName}
                         </Badge>
                       ) : (
-                        <span className="text-[11px] text-muted-foreground block">
+                        <span className="text-xs text-muted-foreground block">
                           No brand
                         </span>
                       )}
@@ -583,7 +583,7 @@ export function GroceryPanel() {
                         <div className="flex items-center gap-1 mt-1">
                           <Badge
                             variant="outline"
-                            className="text-[10px] py-0 px-1.5 h-4 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20 font-normal flex items-center gap-1"
+                            className="text-xs py-0 px-1.5 h-4 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20 font-normal flex items-center gap-1"
                           >
                             <Store className="h-2.5 w-2.5" />
                             {(p as any).dealers.length}{' '}
@@ -607,18 +607,18 @@ export function GroceryPanel() {
                               : 'border-border bg-muted/30 text-foreground'
                           }`}
                         >
-                          <span className="font-medium text-[11px]">
+                          <span className="font-medium text-xs">
                             {v.name}
                           </span>
-                          <span className="font-mono font-semibold text-[11px] tabular-nums">
+                          <span className="font-mono font-semibold text-xs tabular-nums">
                             {formatNPR(v.price)}
                           </span>
                           {v.mrp && v.mrp > v.price && (
-                            <span className="font-mono text-[10px] text-muted-foreground line-through tabular-nums">
+                            <span className="font-mono text-xs text-muted-foreground line-through tabular-nums">
                               {formatNPR(v.mrp)}
                             </span>
                           )}
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {v.stock} in stock
                           </span>
                         </span>
@@ -633,7 +633,7 @@ export function GroceryPanel() {
                       onClick={() =>
                         handleToggleStatus(p.id, 'isActive', p.isActive)
                       }
-                      className="h-7 gap-1 text-[11px]"
+                      className="h-7 gap-1 text-xs"
                     >
                       {p.isActive ? (
                         <>
@@ -707,7 +707,7 @@ export function GroceryPanel() {
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="e.g. Lay's India's Magic Masala"
-                  className="h-8 text-xs"
+                  className="h-9 text-xs sm:text-sm font-medium"
                 />
               </div>
 
@@ -742,7 +742,7 @@ export function GroceryPanel() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-5 px-1.5 text-[11px] text-primary hover:text-primary gap-1"
+                        className="h-5 px-1.5 text-xs text-primary hover:text-primary gap-1"
                         onClick={() => {
                           setEditingBrand(null)
                           setBrandDialogOpen(true)
@@ -838,7 +838,7 @@ export function GroceryPanel() {
                       <Store className="h-3.5 w-3.5 text-emerald-600" />
                       Supplying Dealers
                     </Label>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground font-medium mt-0.5">
                       Select dealers who supply and fulfill this grocery item.
                     </p>
                   </div>
@@ -893,7 +893,7 @@ export function GroceryPanel() {
                             />
                             <span className="truncate">{d.name}</span>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0 text-[11px]">
+                          <div className="flex items-center gap-2 shrink-0 text-xs">
                             {d.pan && (
                               <span className="font-mono text-muted-foreground">
                                 PAN: {d.pan}
@@ -912,7 +912,7 @@ export function GroceryPanel() {
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Badge
                       variant="secondary"
-                      className="text-[11px] py-0 px-2 h-5"
+                      className="text-xs py-0 px-2 h-5"
                     >
                       {formDealerIds.length}{' '}
                       {formDealerIds.length === 1 ? 'dealer' : 'dealers'}{' '}
@@ -978,7 +978,7 @@ export function GroceryPanel() {
                     placeholder="e.g. Popular, Top Pick, Organic"
                     className="text-xs"
                   />
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     Overrides default "Popular" badge on storefront &amp; cart.
                   </p>
                 </div>
@@ -997,7 +997,7 @@ export function GroceryPanel() {
                     placeholder="e.g. 86% off, Special Offer, Save Rs 500"
                     className="text-xs"
                   />
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     Overrides auto-calculated percentage discount badge.
                   </p>
                 </div>
@@ -1043,7 +1043,7 @@ export function GroceryPanel() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label className="text-xs">Sizes / pack variants</Label>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Set selling price and optional MRP for strikethrough
                       discount display.
                     </p>
@@ -1059,7 +1059,7 @@ export function GroceryPanel() {
                   </Button>
                 </div>
 
-                <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-2 text-[10px] text-muted-foreground font-medium">
+                <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-2 text-xs text-muted-foreground font-medium">
                   <div className="col-span-3">Variant Name</div>
                   <div className="col-span-2">Unit</div>
                   <div className="col-span-2">Price (Rs.)</div>

@@ -308,19 +308,19 @@ export function PaymentsPanel() {
                           </CardTitle>
                           <Badge
                             variant="outline"
-                            className="text-[10px] font-mono capitalize"
+                            className="text-xs font-mono capitalize"
                           >
                             {gw.mode}
                           </Badge>
                         </div>
-                        <span className="text-[11px] text-muted-foreground font-mono">
+                        <span className="text-xs text-muted-foreground font-mono">
                           Channel: {meta.channel}
                         </span>
                       </div>
 
                       <Badge
                         variant={gw.enabled ? 'default' : 'secondary'}
-                        className="text-[10px] font-normal"
+                        className="text-xs font-normal"
                       >
                         {gw.enabled ? 'Enabled' : 'Disabled'}
                       </Badge>
@@ -357,11 +357,11 @@ export function PaymentsPanel() {
                   <CardFooter className="flex items-center justify-between border-t border-border/50 pt-3">
                     <div>
                       {ping?.latency ? (
-                        <span className="text-[11px] font-mono font-medium text-success">
+                        <span className="text-xs font-mono font-medium text-success">
                           {ping.latency}ms OK
                         </span>
                       ) : (
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           Ready
                         </span>
                       )}
@@ -465,7 +465,7 @@ export function PaymentsPanel() {
                           variant={
                             p.status === 'reconciled' ? 'outline' : 'secondary'
                           }
-                          className="text-[10px] font-normal uppercase"
+                          className="text-xs font-normal uppercase"
                         >
                           {p.status}
                         </Badge>

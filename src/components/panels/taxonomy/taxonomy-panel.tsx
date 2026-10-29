@@ -3,6 +3,7 @@ import type { FormEvent, ChangeEvent } from 'react'
 import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import {
   upsertCategoryFn,
+  toggleCategoryStatusFn,
   upsertBrandFn,
   deleteItemFn,
   createImageUploadFn,
@@ -19,6 +20,9 @@ import {
   UploadCloud,
   X,
   Loader2,
+  Eye,
+  EyeOff,
+  Sparkles,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -50,6 +54,7 @@ interface CategoryLike {
   imageUrl?: string | null
   sortOrder?: number | null
   isActive?: boolean
+  showOnLandingPage?: boolean
   productCount?: number
 }
 
@@ -85,6 +90,7 @@ export function TaxonomyPanel() {
   const [formOrigin, setFormOrigin] = useState('Nepal')
   const [formSortOrder, setFormSortOrder] = useState(0)
   const [formIsActive, setFormIsActive] = useState(true)
+  const [formShowOnLandingPage, setFormShowOnLandingPage] = useState(false)
 
   // Delete State
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -102,6 +108,7 @@ export function TaxonomyPanel() {
     setFormOrigin('Nepal')
     setFormSortOrder(0)
     setFormIsActive(true)
+    setFormShowOnLandingPage(false)
     setModalOpen(true)
   }
 
@@ -114,6 +121,7 @@ export function TaxonomyPanel() {
     setFormOrigin(item.origin ?? 'Nepal')
     setFormSortOrder(item.sortOrder ?? 0)
     setFormIsActive(item.isActive !== false)
+    setFormShowOnLandingPage(Boolean(item.showOnLandingPage))
     setModalOpen(true)
   }
 
@@ -182,6 +190,7 @@ export function TaxonomyPanel() {
             imageUrl: formImageUrl.trim() || null,
             sortOrder: Number(formSortOrder),
             isActive: formIsActive,
+          showOnLandingPage: formShowOnLandingPage,
           },
         })
         toast.success(
@@ -198,6 +207,7 @@ export function TaxonomyPanel() {
             imageUrl: formImageUrl.trim() || null,
             sortOrder: Number(formSortOrder),
             isActive: formIsActive,
+          showOnLandingPage: formShowOnLandingPage,
           },
         })
         toast.success(
@@ -305,6 +315,32 @@ export function TaxonomyPanel() {
         : 'brand'
   }`
 
+  
+  const handleToggleLandingPage = async (cat: CategoryLike) => {
+    try {
+      const catalogType = activeTab === 'liquor-cat' ? 'liquor' : 'grocery'
+      const nextVal = !cat.showOnLandingPage
+      await toggleCategoryStatusFn({
+        data: {
+          catalogType,
+          id: cat.id,
+          field: 'showOnLandingPage',
+          value: nextVal,
+        },
+      })
+      toast.success(
+        nextVal
+          ? `"${cat.name}" is now visible on the landing page`
+          : `"${cat.name}" removed from the landing page`,
+      )
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
+      await queryClient.invalidateQueries({ queryKey: ['catalog'] })
+      await queryClient.invalidateQueries({ queryKey: ['storefront'] })
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update landing page visibility')
+    }
+  }
+
   const renderCategoryCard = (cat: CategoryLike) => (
     <Card
       key={cat.id}
@@ -332,14 +368,26 @@ export function TaxonomyPanel() {
               <div className="text-xs font-semibold text-foreground truncate">
                 {cat.name}
               </div>
-              <Badge
-                variant={cat.isActive !== false ? 'default' : 'secondary'}
-                className="text-[10px] px-1.5 py-0 h-4 font-normal shrink-0"
-              >
-                {cat.isActive !== false ? 'Active' : 'Inactive'}
-              </Badge>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {cat.showOnLandingPage && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs px-1.5 py-0 h-4 font-medium border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 gap-1 flex items-center"
+                    title="Visible on customer landing page"
+                  >
+                    <Eye className="h-2.5 w-2.5" />
+                    Landing Page
+                  </Badge>
+                )}
+                <Badge
+                  variant={cat.isActive !== false ? 'default' : 'secondary'}
+                  className="text-xs px-1.5 py-0 h-4 font-normal shrink-0"
+                >
+                  {cat.isActive !== false ? 'Active' : 'Inactive'}
+                </Badge>
+              </div>
             </div>
-            <div className="font-mono text-[11px] text-muted-foreground">
+            <div className="font-mono text-xs text-muted-foreground">
               /{cat.slug}
             </div>
             {cat.description && (
@@ -355,16 +403,43 @@ export function TaxonomyPanel() {
         <div className="flex items-center gap-2">
           <Badge
             variant="outline"
-            className="text-[10px] font-mono px-1.5 py-0 h-4"
+            className="text-xs font-mono px-1.5 py-0 h-4"
           >
             {cat.productCount ?? 0}{' '}
             {cat.productCount === 1 ? 'product' : 'products'}
           </Badge>
-          <span className="font-mono text-[11px] text-muted-foreground">
+          <span className="font-mono text-xs text-muted-foreground">
             Order {cat.sortOrder ?? 0}
           </span>
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleToggleLandingPage(cat)}
+            className={`h-7 px-2 text-xs gap-1 ${
+              cat.showOnLandingPage
+                ? 'text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 bg-emerald-500/10 hover:bg-emerald-500/20'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            title={
+              cat.showOnLandingPage
+                ? 'Visible on landing page (Click to hide)'
+                : 'Hidden from landing page (Click to show)'
+            }
+          >
+            {cat.showOnLandingPage ? (
+              <>
+                <Eye className="h-3 w-3" />
+                <span>On Landing</span>
+              </>
+            ) : (
+              <>
+                <EyeOff className="h-3 w-3" />
+                <span>Off Landing</span>
+              </>
+            )}
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -397,48 +472,48 @@ export function TaxonomyPanel() {
   const renderBrandCard = (brand: BrandLike) => (
     <Card
       key={brand.id}
-      className="flex flex-col justify-between overflow-hidden border-border transition-all hover:shadow-sm"
+      className="flex flex-col justify-between overflow-hidden rounded-xl border border-border bg-card shadow-xs transition-all hover:border-primary/40 hover:shadow-md"
     >
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
+      <CardContent className="p-5">
+        <div className="flex items-start gap-3.5">
           {brand.logoUrl ? (
             <img
               src={brand.logoUrl}
               alt={brand.name}
-              className="h-12 w-12 shrink-0 rounded-md bg-muted object-cover border border-border"
+              className="h-14 w-14 shrink-0 rounded-xl bg-secondary object-cover border border-border"
             />
           ) : (
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground border border-border">
-              <Award className="h-5 w-5" />
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-secondary text-muted-foreground border border-border">
+              <Award className="h-6 w-6 text-primary" />
             </div>
           )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <div className="text-xs font-semibold text-foreground truncate">
+              <div className="text-sm sm:text-base font-bold text-foreground truncate">
                 {brand.name}
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 {brand.origin && (
                   <Badge
                     variant="outline"
-                    className="text-[10px] font-normal px-1.5 py-0 h-4"
+                    className="text-xs font-semibold px-2 py-0.5 border-border"
                   >
                     {brand.origin}
                   </Badge>
                 )}
                 <Badge
                   variant={brand.isActive !== false ? 'default' : 'secondary'}
-                  className="text-[10px] px-1.5 py-0 h-4 font-normal"
+                  className="text-xs px-2 py-0.5 font-semibold"
                 >
                   {brand.isActive !== false ? 'Active' : 'Inactive'}
                 </Badge>
               </div>
             </div>
-            <div className="font-mono text-[11px] text-muted-foreground">
+            <div className="font-mono text-xs text-muted-foreground mt-0.5">
               /{brand.slug}
             </div>
             {brand.description && (
-              <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
+              <p className="mt-2 line-clamp-2 text-xs sm:text-sm text-muted-foreground leading-relaxed">
                 {brand.description}
               </p>
             )}
@@ -446,23 +521,23 @@ export function TaxonomyPanel() {
         </div>
       </CardContent>
 
-      <CardFooter className="flex items-center justify-between border-t border-border/50 px-4 py-2.5 bg-muted/20">
+      <CardFooter className="flex items-center justify-between border-t border-border px-5 py-3 bg-muted/30">
         <Badge
           variant="outline"
-          className="text-[10px] font-mono px-1.5 py-0 h-4"
+          className="text-xs font-mono font-medium px-2 py-0.5 border-border bg-card"
         >
           {brand.productCount ?? 0}{' '}
           {brand.productCount === 1 ? 'product' : 'products'}
         </Badge>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => openEditModal(brand)}
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
             title="Edit brand"
           >
-            <Edit2 className="h-3.5 w-3.5" />
+            <Edit2 className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
@@ -474,10 +549,10 @@ export function TaxonomyPanel() {
                 productCount: brand.productCount ?? 0,
               })
             }
-            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
             title="Delete brand"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </CardFooter>
@@ -494,9 +569,9 @@ export function TaxonomyPanel() {
           <Button
             size="sm"
             onClick={openAddModal}
-            className="h-8 gap-1.5 text-xs"
+            className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-4 w-4" />
             {addLabel}
           </Button>
         }
@@ -507,14 +582,14 @@ export function TaxonomyPanel() {
         value={activeTab}
         onValueChange={(val) => setActiveTab(val as ActiveTab)}
       >
-        <TabsList className="h-9">
+        <TabsList className="h-10 p-1 bg-muted/60 rounded-xl">
           {tabs.map((tab) => {
             const Icon = tab.icon
             return (
               <TabsTrigger
                 key={tab.id}
                 value={tab.id}
-                className="gap-2 text-xs"
+                className="gap-2 text-xs sm:text-sm font-semibold px-4 rounded-lg"
               >
                 <Icon className="h-3.5 w-3.5" />
                 <span>
@@ -677,6 +752,54 @@ export function TaxonomyPanel() {
                 />
               </div>
 
+              {/* Category-specific: Landing Page Visibility Section */}
+              {activeTab !== 'brands' && (
+                <div className="rounded-lg border border-border/80 bg-muted/40 p-3.5 space-y-2.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <Label
+                        htmlFor="tax-landing-visible"
+                        className="text-xs font-semibold cursor-pointer flex items-center gap-1.5 text-foreground"
+                      >
+                        <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                        Visible on Landing Page
+                      </Label>
+                      <p className="text-xs text-muted-foreground leading-snug">
+                        Check this button to feature and display this category on the main customer landing page showcase.
+                      </p>
+                    </div>
+                    <Checkbox
+                      id="tax-landing-visible"
+                      checked={formShowOnLandingPage}
+                      onCheckedChange={(checked) =>
+                        setFormShowOnLandingPage(Boolean(checked))
+                      }
+                      className="h-5 w-5 rounded data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 shrink-0 mt-0.5"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs pt-1 border-t border-border/40 font-medium">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        formShowOnLandingPage
+                          ? 'bg-emerald-500 animate-pulse'
+                          : 'bg-muted-foreground/40'
+                      }`}
+                    />
+                    <span
+                      className={
+                        formShowOnLandingPage
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-muted-foreground'
+                      }
+                    >
+                      {formShowOnLandingPage
+                        ? 'Active: Category will appear on the landing page'
+                        : 'Hidden: Category will NOT appear on the landing page'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-2 border-t border-border pt-3">
                 <Checkbox
                   id="tax-is-active"
@@ -689,7 +812,7 @@ export function TaxonomyPanel() {
                   htmlFor="tax-is-active"
                   className="text-xs cursor-pointer font-normal"
                 >
-                  Active on storefront
+                  Active in catalog
                 </Label>
               </div>
             </div>

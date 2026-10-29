@@ -175,7 +175,7 @@ export function ProductVelocityDialog({
           </div>
           <div className="flex items-center gap-2">
             {/* Period Selector */}
-            <div className="flex items-center rounded-md border border-border bg-muted/40 p-0.5 text-[11px]">
+            <div className="flex items-center rounded-md border border-border bg-muted/40 p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => setDaysFilter(null)}
@@ -237,54 +237,54 @@ export function ProductVelocityDialog({
           {/* Executive Sourcing Overview Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-muted/40 border border-border rounded-lg p-3 space-y-1">
-              <div className="flex items-center justify-between text-muted-foreground text-[11px]">
+              <div className="flex items-center justify-between text-muted-foreground text-xs">
                 <span>Top Revenue Item</span>
                 <Flame className="h-3.5 w-3.5 text-amber-500" />
               </div>
               <p className="font-semibold text-xs text-foreground truncate">
                 {report?.summary.topProductByRevenue || 'None recorded'}
               </p>
-              <p className="font-mono text-[11px] text-muted-foreground">
+              <p className="font-mono text-xs text-muted-foreground">
                 {formatNPR(report?.summary.totalRevenue ?? 0)} total turn
               </p>
             </div>
 
             <div className="bg-muted/40 border border-border rounded-lg p-3 space-y-1">
-              <div className="flex items-center justify-between text-muted-foreground text-[11px]">
+              <div className="flex items-center justify-between text-muted-foreground text-xs">
                 <span>Dead Stock Risk</span>
                 <TrendingDown className="h-3.5 w-3.5 text-destructive" />
               </div>
               <p className="font-semibold text-xs text-destructive">
                 {report?.summary.zeroSalesCount ?? 0} zero-sale products
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 +{report?.summary.slowMoversCount ?? 0} slow movers
               </p>
             </div>
 
             <div className="bg-muted/40 border border-border rounded-lg p-3 space-y-1">
-              <div className="flex items-center justify-between text-muted-foreground text-[11px]">
+              <div className="flex items-center justify-between text-muted-foreground text-xs">
                 <span>Most-Unavailable</span>
                 <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
               </div>
               <p className="font-semibold text-xs text-foreground truncate">
                 {report?.summary.mostUnavailableProduct || 'Zero stockouts'}
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {report?.mostUnavailable.length ?? 0} items experienced
                 stockouts
               </p>
             </div>
 
             <div className="bg-muted/40 border border-border rounded-lg p-3 space-y-1">
-              <div className="flex items-center justify-between text-muted-foreground text-[11px]">
+              <div className="flex items-center justify-between text-muted-foreground text-xs">
                 <span>Substitution Rate</span>
                 <RefreshCw className="h-3.5 w-3.5 text-blue-500" />
               </div>
               <p className="font-semibold text-xs text-foreground font-mono">
                 {report?.summary.networkSubstitutionRatePercent ?? 0}% network
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {report?.summary.totalSubstitutedDealerItems ?? 0} of{' '}
                 {report?.summary.totalAssignedDealerItems ?? 0} re-routed
               </p>
@@ -414,8 +414,8 @@ export function ProductVelocityDialog({
                             variant="outline"
                             className={
                               p.marginPercent >= 20
-                                ? 'border-emerald-500 text-emerald-500 bg-emerald-500/10 text-[10px]'
-                                : 'border-amber-500 text-amber-500 bg-amber-500/10 text-[10px]'
+                                ? 'border-emerald-500 text-emerald-500 bg-emerald-500/10 text-xs'
+                                : 'border-amber-500 text-amber-500 bg-amber-500/10 text-xs'
                             }
                           >
                             {p.marginPercent}%
@@ -436,10 +436,10 @@ export function ProductVelocityDialog({
           {activeTab === 'slow' && (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   Status Filter:
                 </span>
-                <div className="flex items-center rounded-md border border-border bg-muted/40 p-0.5 text-[11px]">
+                <div className="flex items-center rounded-md border border-border bg-muted/40 p-0.5 text-xs">
                   <button
                     type="button"
                     onClick={() => setSlowMoverSubFilter('all')}
@@ -525,14 +525,14 @@ export function ProductVelocityDialog({
                             {s.status === 'zero_sales' ? (
                               <Badge
                                 variant="outline"
-                                className="border-destructive/40 text-destructive bg-destructive/10 text-[10px]"
+                                className="border-destructive/40 text-destructive bg-destructive/10 text-xs"
                               >
                                 Dead Stock Risk
                               </Badge>
                             ) : (
                               <Badge
                                 variant="outline"
-                                className="border-amber-500/40 text-amber-500 bg-amber-500/10 text-[10px]"
+                                className="border-amber-500/40 text-amber-500 bg-amber-500/10 text-xs"
                               >
                                 Low Movement
                               </Badge>
@@ -636,8 +636,8 @@ export function ProductVelocityDialog({
                               variant="outline"
                               className={
                                 u.unavailabilityRatePercent >= 30
-                                  ? 'border-destructive text-destructive bg-destructive/10 text-[10px]'
-                                  : 'border-amber-500 text-amber-500 bg-amber-500/10 text-[10px]'
+                                  ? 'border-destructive text-destructive bg-destructive/10 text-xs'
+                                  : 'border-amber-500 text-amber-500 bg-amber-500/10 text-xs'
                               }
                             >
                               {u.unavailabilityRatePercent}%
@@ -725,10 +725,10 @@ export function ProductVelocityDialog({
                               variant="outline"
                               className={
                                 d.severity === 'high'
-                                  ? 'border-destructive text-destructive bg-destructive/10 text-[10px]'
+                                  ? 'border-destructive text-destructive bg-destructive/10 text-xs'
                                   : d.severity === 'moderate'
-                                    ? 'border-amber-500 text-amber-500 bg-amber-500/10 text-[10px]'
-                                    : 'border-emerald-500 text-emerald-500 bg-emerald-500/10 text-[10px]'
+                                    ? 'border-amber-500 text-amber-500 bg-amber-500/10 text-xs'
+                                    : 'border-emerald-500 text-emerald-500 bg-emerald-500/10 text-xs'
                               }
                             >
                               {d.substitutionRatePercent}%

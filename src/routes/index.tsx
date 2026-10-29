@@ -12,15 +12,16 @@ import {
   Award,
   Sparkles,
   Utensils,
+  Wine,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/')({
   loader: async ({ context }) => {
-    const [frontpage, groceryCategories] = await Promise.all([
-      context.queryClient.ensureQueryData(storefrontQueries.frontpage()),
+    const [groceryCategories, liquorCategories] = await Promise.all([
       context.queryClient.ensureQueryData(storefrontQueries.groceryCategories()),
+      context.queryClient.ensureQueryData(storefrontQueries.liquorCategories()),
     ])
-    return { frontpage, groceryCategories }
+    return { groceryCategories, liquorCategories }
   },
   component: HomePage,
 })
@@ -76,6 +77,7 @@ type GroceryCategoryItem = {
   slug: string
   description?: string | null
   imageUrl?: string | null
+  showOnLandingPage?: boolean
 }
 
 function FoodCategoryCard({
@@ -83,11 +85,13 @@ function FoodCategoryCard({
   index,
   isFeatured = false,
   totalCount = 1,
+  className = '',
 }: {
   category: GroceryCategoryItem
   index: number
   isFeatured?: boolean
   totalCount?: number
+  className?: string
 }) {
   const imgSrc =
     category.imageUrl && category.imageUrl.trim() !== ''
@@ -99,41 +103,42 @@ function FoodCategoryCard({
       <Link
         to="/grocery"
         search={{ category: category.slug }}
-        className="group relative isolate block overflow-hidden rounded-3xl border border-border/80 bg-card/60 shadow-xl transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 animate-in fade-in-0 slide-in-from-bottom-6 duration-700 fill-mode-both"
+        className="group relative isolate block overflow-hidden rounded-2xl sm:rounded-3xl border border-border/80 bg-card/60 shadow-xl transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 animate-in fade-in-0 slide-in-from-bottom-6 duration-700 fill-mode-both"
       >
-        <div className="grid grid-cols-1 items-center lg:grid-cols-12 min-h-[400px] sm:min-h-[440px]">
+        <div className="grid grid-cols-1 items-center lg:grid-cols-12 min-h-[340px] sm:min-h-[440px]">
           {/* Left Details */}
-          <div className="z-10 flex flex-col justify-between p-7 sm:p-10 lg:col-span-5 h-full">
+          <div className="z-10 flex flex-col justify-between p-5 sm:p-10 lg:col-span-5 h-full">
             <div>
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary">
-                <Sparkles className="h-3.5 w-3.5" />
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-primary">
+                <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 Featured Category
               </div>
-              <h3 className="mt-4 text-3xl font-black uppercase tracking-tight text-foreground sm:text-5xl group-hover:text-primary transition-colors duration-300">
+              <h3 className="mt-3 sm:mt-4 text-2xl font-black uppercase tracking-tight text-foreground sm:text-5xl group-hover:text-primary transition-colors duration-300">
                 {category.name}
               </h3>
-              <p className="mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed line-clamp-3">
+              <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed line-clamp-3">
                 {category.description ||
                   'Explore delicious handcrafted dishes and essential kitchen items, freshly prepared and delivered within 30 minutes.'}
               </p>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-border/60 flex items-center justify-between">
+            <div className="mt-5 sm:mt-8 pt-4 sm:pt-6 border-t border-border/60 flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-foreground group-hover:text-primary transition-colors">
                 Order {category.name} →
               </span>
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-primary/30">
-                <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5" />
+              <span className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-primary/30">
+                <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:translate-x-0.5" />
               </span>
             </div>
           </div>
 
           {/* Right Big Image */}
-          <div className="relative h-72 sm:h-88 lg:h-full lg:col-span-7 overflow-hidden">
+          <div className="relative h-60 sm:h-88 lg:h-full lg:col-span-7 overflow-hidden">
             <img
               src={imgSrc}
               alt={category.name}
               loading="lazy"
+              decoding="async"
               onError={(e) => {
                 const target = e.currentTarget
                 const fallback = getCategoryFallbackImage(
@@ -151,26 +156,27 @@ function FoodCategoryCard({
     )
   }
 
-  // Adaptive height based on layout density
+  // Adaptive height based on layout density & 2-column mobile
   const cardHeightClass =
     totalCount === 2
-      ? 'min-h-[380px] sm:min-h-[440px]'
+      ? 'min-h-[220px] sm:min-h-[380px] md:min-h-[440px]'
       : totalCount === 3
-        ? 'min-h-[360px] sm:min-h-[420px]'
-        : 'min-h-[340px] sm:min-h-[380px]'
+        ? 'min-h-[200px] sm:min-h-[360px] md:min-h-[420px]'
+        : 'min-h-[190px] sm:min-h-[320px] md:min-h-[380px]'
 
   return (
     <Link
       to="/grocery"
       search={{ category: category.slug }}
       style={{ animationDelay: `${index * 120}ms` }}
-      className={`group relative isolate flex flex-col justify-end overflow-hidden rounded-3xl border border-border/80 bg-card/60 p-6 sm:p-7 ${cardHeightClass} shadow-lg transition-all duration-500 hover:-translate-y-2 hover:border-primary/60 hover:shadow-2xl hover:shadow-primary/15 animate-in fade-in-0 slide-in-from-bottom-6 duration-700 fill-mode-both`}
+      className={`group relative isolate flex flex-col justify-end overflow-hidden rounded-2xl sm:rounded-3xl border border-border/80 bg-card/60 p-3.5 sm:p-6 md:p-7 ${cardHeightClass} shadow-lg transition-all duration-500 hover:-translate-y-2 hover:border-primary/60 hover:shadow-2xl hover:shadow-primary/15 animate-in fade-in-0 slide-in-from-bottom-6 duration-700 fill-mode-both ${className}`}
     >
       {/* Big Image Background with Smooth Zoom */}
       <img
         src={imgSrc}
         alt={category.name}
         loading="lazy"
+        decoding="async"
         onError={(e) => {
           const target = e.currentTarget
           const fallback = getCategoryFallbackImage(
@@ -187,29 +193,29 @@ function FoodCategoryCard({
 
       {/* Top badges */}
       <div className="relative z-10 mb-auto flex items-center justify-between w-full">
-        <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/40 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-white shadow-sm">
+        <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/40 backdrop-blur-md px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-[11px] font-bold text-white shadow-sm">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
           {String(index + 1).padStart(2, '0')}
         </span>
 
-        <span className="grid h-10 w-10 place-items-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-white transition-all duration-300 group-hover:bg-primary group-hover:border-primary group-hover:text-primary-foreground group-hover:scale-110 group-hover:rotate-[-45deg] shadow-md">
-          <ArrowRight className="h-4 w-4" />
+        <span className="grid h-7 w-7 sm:h-10 sm:w-10 place-items-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-white transition-all duration-300 group-hover:bg-primary group-hover:border-primary group-hover:text-primary-foreground group-hover:scale-110 group-hover:rotate-[-45deg] shadow-md">
+          <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
         </span>
       </div>
 
       {/* Bottom Content */}
-      <div className="relative z-10 pt-6">
-        <h3 className="text-2xl font-black uppercase tracking-tight text-white drop-shadow-md sm:text-3xl transition-transform duration-300 group-hover:translate-x-1">
+      <div className="relative z-10 pt-2 sm:pt-6">
+        <h3 className="text-sm sm:text-2xl md:text-3xl font-black uppercase tracking-tight text-white drop-shadow-md transition-transform duration-300 group-hover:translate-x-1 line-clamp-1 sm:line-clamp-none">
           {category.name}
         </h3>
         {category.description && (
-          <p className="mt-2 text-xs text-gray-300/90 line-clamp-2 leading-relaxed drop-shadow">
+          <p className="hidden sm:block mt-2 text-xs text-gray-300/90 line-clamp-2 leading-relaxed drop-shadow">
             {category.description}
           </p>
         )}
-        <div className="mt-4 flex items-center gap-2 text-xs font-bold text-amber-300 group-hover:text-amber-200 transition-colors uppercase tracking-wider">
-          <span>Explore Category</span>
-          <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
+        <div className="mt-1.5 sm:mt-4 flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold text-amber-300 group-hover:text-amber-200 transition-colors uppercase tracking-wider">
+          <span>Explore</span>
+          <ArrowRight className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
         </div>
       </div>
     </Link>
@@ -262,6 +268,118 @@ const LABEL_SIZE = {
 
 type LabelSize = keyof typeof LABEL_SIZE
 
+function getDrinkCategoryImage(category: {
+  imageUrl?: string | null
+  slug?: string
+  name?: string
+}): string {
+  if (category.imageUrl && category.imageUrl.trim() !== '') {
+    return category.imageUrl
+  }
+  const s = `${category.slug ?? ''} ${category.name ?? ''}`.toLowerCase()
+  if (
+    s.includes('beer') ||
+    s.includes('cider') ||
+    s.includes('lager') ||
+    s.includes('ale')
+  ) {
+    return '/images/beer.webp'
+  }
+  if (
+    s.includes('whiskey') ||
+    s.includes('whisky') ||
+    s.includes('scotch') ||
+    s.includes('bourbon')
+  ) {
+    return '/images/whiskey.webp'
+  }
+  if (s.includes('vodka')) {
+    return '/images/vodka.webp'
+  }
+  if (
+    s.includes('wine') ||
+    s.includes('champagne') ||
+    s.includes('prosecco') ||
+    s.includes('sparkling')
+  ) {
+    return '/images/wine.webp'
+  }
+  if (
+    s.includes('tobacco') ||
+    s.includes('cigarette') ||
+    s.includes('cigar') ||
+    s.includes('smoke')
+  ) {
+    return '/images/tobacco.webp'
+  }
+  if (
+    s.includes('spirit') ||
+    s.includes('domestic') ||
+    s.includes('rum') ||
+    s.includes('gin') ||
+    s.includes('tequila') ||
+    s.includes('brandy') ||
+    s.includes('liqueur')
+  ) {
+    return '/images/spirits.webp'
+  }
+  return '/images/spirits.webp'
+}
+
+function splitDrinkCategoryName(name: string): string[] {
+  const trimmed = name.trim()
+  const words = trimmed.split(/\s+/)
+  if (words.length <= 2) return words
+  const mid = Math.ceil(words.length / 2)
+  return [words.slice(0, mid).join(' '), words.slice(mid).join(' ')]
+}
+
+const DRINK_BENTO_SLOTS = [
+  // Slot 0: Top Left (Domestic Spirits)
+  {
+    className:
+      'col-span-2 lg:col-span-4 lg:col-start-1 lg:row-start-1 bg-secondary/40',
+    size: 'md' as LabelSize,
+    chip: 'bg-primary text-primary-foreground',
+  },
+  // Slot 1: Bottom Left 1 (Vodka)
+  {
+    className:
+      'col-span-1 lg:col-span-2 lg:col-start-1 lg:row-start-2 bg-secondary/40',
+    size: 'sm' as LabelSize,
+    chip: 'bg-primary text-primary-foreground',
+  },
+  // Slot 2: Bottom Left 2 (Whiskey)
+  {
+    className:
+      'col-span-1 lg:col-span-2 lg:col-start-3 lg:row-start-2 bg-secondary/40',
+    size: 'sm' as LabelSize,
+    chip: 'bg-primary text-primary-foreground',
+  },
+  // Slot 3: Center Featured Tall (Beer)
+  {
+    className:
+      'col-span-2 row-span-2 lg:col-span-4 lg:col-start-5 lg:row-start-1 bg-secondary/60',
+    size: 'lg' as LabelSize,
+    chip: 'bg-primary text-primary-foreground',
+  },
+  // Slot 4: Top Right (Tobacco)
+  {
+    className:
+      'col-span-1 lg:col-span-4 lg:col-start-9 lg:row-start-1 bg-secondary/40',
+    size: 'md' as LabelSize,
+    chip: 'bg-primary text-primary-foreground',
+  },
+  // Slot 5: Bottom Right (Wine)
+  {
+    className:
+      'col-span-1 lg:col-span-4 lg:col-start-9 lg:row-start-2 bg-secondary/40',
+    size: 'md' as LabelSize,
+    chip: 'bg-primary text-primary-foreground',
+  },
+]
+
+
 function DrinkTileBody({
   lines,
   src,
@@ -287,6 +405,7 @@ function DrinkTileBody({
         src={src}
         alt={alt}
         loading="lazy"
+        decoding="async"
         className="absolute inset-y-0 right-0 h-full w-[calc(100%-2.5rem)] object-contain p-2 drop-shadow-md transition-transform duration-500 ease-out  group-hover:-rotate-2 sm:w-[calc(100%-3rem)] sm:p-3"
       />
 
@@ -334,11 +453,29 @@ function SearchIcon({ className = 'h-5 w-5' }: { className?: string }) {
 function HomePage() {
   const navigate = useNavigate()
   const loaderData = Route.useLoaderData()
-  const { data: groceryCategories = loaderData?.groceryCategories ?? [] } =
+    const { data: allGroceryCategories = loaderData?.groceryCategories ?? [] } =
     useQuery({
       ...storefrontQueries.groceryCategories(),
       initialData: loaderData?.groceryCategories,
     })
+
+  // Smart landing page category visibility:
+  // Show categories that have the "Visible on landing page" check button enabled
+  const groceryCategories = allGroceryCategories.filter(
+    (cat: any) => Boolean(cat.showOnLandingPage) && cat.isActive !== false,
+  )
+
+  const { data: allLiquorCategories = loaderData?.liquorCategories ?? [] } =
+    useQuery({
+      ...storefrontQueries.liquorCategories(),
+      initialData: loaderData?.liquorCategories,
+    })
+
+  // Smart landing page drinks category visibility:
+  // Show drinks categories where showOnLandingPage is checked in the admin panel
+  const drinksCategories = allLiquorCategories.filter(
+    (cat: any) => Boolean(cat.showOnLandingPage) && cat.isActive !== false,
+  )
 
   const [searchQuery, setSearchQuery] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
@@ -406,6 +543,8 @@ function HomePage() {
                   src={slideImg}
                   alt={`Food & Drinks Delivery Background ${idx + 1}`}
                   loading={idx === 0 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  fetchPriority={idx === 0 ? 'high' : 'auto'}
                   className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${idx === currentSlide ? 'scale-110' : 'scale-100'
                     }`}
                 />
@@ -532,92 +671,146 @@ function HomePage() {
               </Link>
             </div>
 
-            <div className="group/bento grid auto-rows-[11rem] grid-cols-2 gap-3 sm:auto-rows-[13rem] sm:gap-4 lg:auto-rows-[18.5rem] lg:grid-cols-12">
-              <Link
-                to="/drinks"
-                search={{ category: 'whiskey' }}
-                className={`${drinkTile} col-span-2 lg:col-span-4 lg:col-start-1 lg:row-start-1 bg-secondary/40`}
-              >
-                <DrinkTileBody
-                  lines={['Domestic', 'Spirits']}
-                  src="/images/spirits.webp"
-                  alt="Domestic Spirits"
-                  tone="text-foreground"
-                  size="md"
-                />
-              </Link>
+            {/* Dynamic Responsive Drinks Grid */}
+            {drinksCategories.length === 0 ? (
+              <div className="rounded-3xl border border-dashed border-border bg-card/40 p-12 text-center animate-in fade-in-0 duration-500">
+                <Wine className="mx-auto h-12 w-12 text-muted-foreground/60" />
+                <h3 className="mt-4 text-lg font-bold text-foreground">
+                  Curated Drink Menu Coming Up
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Browse our full chilled beer, premier spirits and wine catalog.
+                </p>
+                <Link
+                  to="/drinks"
+                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all"
+                >
+                  Browse Drinks
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            ) : drinksCategories.length === 1 ? (
+              <div className="mx-auto max-w-4xl">
+                <Link
+                  to="/drinks"
+                  search={{ category: drinksCategories[0].slug }}
+                  className={`${drinkTile} min-h-[380px] sm:min-h-[440px] bg-secondary/50`}
+                >
+                  <DrinkTileBody
+                    lines={splitDrinkCategoryName(drinksCategories[0].name)}
+                    src={getDrinkCategoryImage(drinksCategories[0])}
+                    alt={drinksCategories[0].name}
+                    tone="text-foreground"
+                    size="lg"
+                  />
+                </Link>
+              </div>
+            ) : drinksCategories.length === 2 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 auto-rows-[15rem] sm:auto-rows-[19rem]">
+                {drinksCategories.map((cat: any) => (
+                  <Link
+                    key={cat.id}
+                    to="/drinks"
+                    search={{ category: cat.slug }}
+                    className={`${drinkTile} bg-secondary/40`}
+                  >
+                    <DrinkTileBody
+                      lines={splitDrinkCategoryName(cat.name)}
+                      src={getDrinkCategoryImage(cat)}
+                      alt={cat.name}
+                      tone="text-foreground"
+                      size="md"
+                    />
+                  </Link>
+                ))}
+              </div>
+            ) : drinksCategories.length === 3 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-[14rem] sm:auto-rows-[18rem]">
+                {drinksCategories.map((cat: any) => (
+                  <Link
+                    key={cat.id}
+                    to="/drinks"
+                    search={{ category: cat.slug }}
+                    className={`${drinkTile} bg-secondary/40`}
+                  >
+                    <DrinkTileBody
+                      lines={splitDrinkCategoryName(cat.name)}
+                      src={getDrinkCategoryImage(cat)}
+                      alt={cat.name}
+                      tone="text-foreground"
+                      size="md"
+                    />
+                  </Link>
+                ))}
+              </div>
+            ) : drinksCategories.length === 4 ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 auto-rows-[13rem] sm:auto-rows-[17rem]">
+                {drinksCategories.map((cat: any) => (
+                  <Link
+                    key={cat.id}
+                    to="/drinks"
+                    search={{ category: cat.slug }}
+                    className={`${drinkTile} bg-secondary/40`}
+                  >
+                    <DrinkTileBody
+                      lines={splitDrinkCategoryName(cat.name)}
+                      src={getDrinkCategoryImage(cat)}
+                      alt={cat.name}
+                      tone="text-foreground"
+                      size="md"
+                    />
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* 6-Slot Bento Grid (Matching Exact Iconic Layout) */}
+                <div className="group/bento grid auto-rows-[11rem] grid-cols-2 gap-3 sm:auto-rows-[13rem] sm:gap-4 lg:auto-rows-[18.5rem] lg:grid-cols-12">
+                  {drinksCategories.slice(0, 6).map((cat: any, idx: number) => {
+                    const slot = DRINK_BENTO_SLOTS[idx] ?? DRINK_BENTO_SLOTS[0]
+                    return (
+                      <Link
+                        key={cat.id}
+                        to={cat.slug === 'party-essentials' ? '/grocery' : '/drinks'}
+                        search={{ category: cat.slug }}
+                        className={`${drinkTile} ${slot.className}`}
+                      >
+                        <DrinkTileBody
+                          lines={splitDrinkCategoryName(cat.name)}
+                          src={getDrinkCategoryImage(cat)}
+                          alt={cat.name}
+                          tone="text-foreground"
+                          chip={slot.chip}
+                          size={slot.size}
+                        />
+                      </Link>
+                    )
+                  })}
+                </div>
 
-              <Link
-                to="/drinks"
-                search={{ category: 'vodka' }}
-                className={`${drinkTile} lg:col-span-2 lg:col-start-1 lg:row-start-2 bg-secondary/40`}
-              >
-                <DrinkTileBody
-                  lines={['Vodka']}
-                  src="/images/vodka.webp"
-                  alt="Vodka"
-                  tone="text-foreground"
-                  size="sm"
-                />
-              </Link>
-
-              <Link
-                to="/drinks"
-                search={{ category: 'whiskey' }}
-                className={`${drinkTile} lg:col-span-2 lg:col-start-3 lg:row-start-2 bg-secondary/40`}
-              >
-                <DrinkTileBody
-                  lines={['Whiskey']}
-                  src="/images/whiskey.webp"
-                  alt="Whiskey"
-                  tone="text-foreground"
-                  size="sm"
-                />
-              </Link>
-
-              <Link
-                to="/drinks"
-                search={{ category: 'beer-cider' }}
-                className={`${drinkTile} col-span-2 row-span-2 lg:col-span-4 lg:col-start-5 lg:row-start-1 bg-secondary/60`}
-              >
-                <DrinkTileBody
-                  lines={['Beer']}
-                  src="/images/beer.webp"
-                  alt="Beer"
-                  tone="text-foreground"
-                  chip="bg-primary text-primary-foreground"
-                  size="lg"
-                />
-              </Link>
-
-              <Link
-                to="/grocery"
-                search={{ category: 'party-essentials' }}
-                className={`${drinkTile} lg:col-span-4 lg:col-start-9 lg:row-start-1 bg-secondary/40`}
-              >
-                <DrinkTileBody
-                  lines={['Tobacco']}
-                  src="/images/tobacco.webp"
-                  alt="Tobacco"
-                  tone="text-foreground"
-                  size="md"
-                />
-              </Link>
-
-              <Link
-                to="/drinks"
-                search={{ category: 'wine' }}
-                className={`${drinkTile} lg:col-span-4 lg:col-start-9 lg:row-start-2 bg-secondary/40`}
-              >
-                <DrinkTileBody
-                  lines={['Wine']}
-                  src="/images/wine.webp"
-                  alt="Wine"
-                  tone="text-foreground"
-                  size="md"
-                />
-              </Link>
-            </div>
+                {/* Overflow categories beyond 6 in complementary responsive tiles */}
+                {drinksCategories.length > 6 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 auto-rows-[11rem] sm:auto-rows-[13rem] lg:auto-rows-[15rem] pt-1">
+                    {drinksCategories.slice(6).map((cat: any) => (
+                      <Link
+                        key={cat.id}
+                        to="/drinks"
+                        search={{ category: cat.slug }}
+                        className={`${drinkTile} bg-secondary/40`}
+                      >
+                        <DrinkTileBody
+                          lines={splitDrinkCategoryName(cat.name)}
+                          src={getDrinkCategoryImage(cat)}
+                          alt={cat.name}
+                          tone="text-foreground"
+                          size="md"
+                        />
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </section>
 
@@ -690,7 +883,7 @@ function HomePage() {
                 />
               </div>
             ) : groceryCategories.length === 2 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+              <div className="grid grid-cols-2 gap-3 sm:gap-6 md:gap-8">
                 {groceryCategories.map((cat, i) => (
                   <FoodCategoryCard
                     key={cat.id}
@@ -701,18 +894,19 @@ function HomePage() {
                 ))}
               </div>
             ) : groceryCategories.length === 3 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 md:gap-8">
                 {groceryCategories.map((cat, i) => (
                   <FoodCategoryCard
                     key={cat.id}
                     category={cat}
                     index={i}
                     totalCount={3}
+                    className={i === 2 ? 'col-span-2 md:col-span-1' : ''}
                   />
                 ))}
               </div>
             ) : groceryCategories.length === 4 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                 {groceryCategories.map((cat, i) => (
                   <FoodCategoryCard
                     key={cat.id}
@@ -723,7 +917,7 @@ function HomePage() {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                 {groceryCategories.map((cat, i) => (
                   <FoodCategoryCard
                     key={cat.id}

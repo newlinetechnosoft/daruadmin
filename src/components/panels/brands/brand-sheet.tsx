@@ -204,7 +204,7 @@ export function BrandSheet({
                     autoFocus
                   />
                 </FormControl>
-                <FormMessage className="text-[11px]" />
+                <FormMessage className="text-xs" />
               </FormItem>
             )}
           />
@@ -223,7 +223,7 @@ export function BrandSheet({
                     className="h-8 text-xs font-mono"
                   />
                 </FormControl>
-                <FormMessage className="text-[11px]" />
+                <FormMessage className="text-xs" />
               </FormItem>
             )}
           />
@@ -244,7 +244,7 @@ export function BrandSheet({
                     className="h-8 text-xs"
                   />
                 </FormControl>
-                <FormMessage className="text-[11px]" />
+                <FormMessage className="text-xs" />
               </FormItem>
             )}
           />
@@ -287,7 +287,7 @@ export function BrandSheet({
                     <span className="text-xs font-medium text-foreground">
                       Click to upload brand logo
                     </span>
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       PNG, WebP up to 5MB
                     </span>
                   </>
@@ -317,7 +317,7 @@ export function BrandSheet({
                     className="text-xs resize-none h-18"
                   />
                 </FormControl>
-                <FormMessage className="text-[11px]" />
+                <FormMessage className="text-xs" />
               </FormItem>
             )}
           />

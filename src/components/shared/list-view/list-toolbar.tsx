@@ -91,17 +91,17 @@ export function ListToolbar<TData>({
         {/* Left side: Search & Filter controls */}
         <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0">
           <div className="relative flex-1 sm:max-w-xs min-w-[200px]">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
             <Input
               ref={searchInputRef}
               type="text"
               placeholder={searchPlaceholder}
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="h-8 pl-8 pr-8 text-xs bg-background"
+              className="h-9 pl-9 pr-9 text-xs sm:text-sm bg-card border-border shadow-xs"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 hidden sm:flex items-center pointer-events-none">
-              <Kbd className="text-[10px] px-1 py-0.5">/</Kbd>
+              <Kbd className="text-xs px-1.5 py-0.5 font-mono">/</Kbd>
             </div>
           </div>
 
@@ -135,7 +135,7 @@ export function ListToolbar<TData>({
                 density === 'comfortable' ? 'compact' : 'comfortable',
               )
             }
-            className="size-8 text-muted-foreground hover:text-foreground hidden sm:inline-flex"
+            className="size-9 text-muted-foreground hover:text-foreground hidden sm:inline-flex"
             aria-label={`Toggle table density (current: ${density})`}
             title={`Toggle density: ${density}`}
           >
@@ -153,7 +153,7 @@ export function ListToolbar<TData>({
               size="icon"
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="size-8 text-muted-foreground hover:text-foreground"
+              className="size-9 text-muted-foreground hover:text-foreground"
               aria-label="Refresh list"
               title="Refresh"
             >

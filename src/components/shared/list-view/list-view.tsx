@@ -142,7 +142,7 @@ export function ListView<TData extends Record<string, unknown>>({
   const rows = table.getRowModel().rows
 
   // Density padding classes
-  const cellPaddingClass = density === 'compact' ? 'py-1.5 px-3' : 'py-2.5 px-3'
+  const cellPaddingClass = density === 'compact' ? 'py-2 px-3.5' : 'py-3.5 px-4'
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -205,7 +205,7 @@ export function ListView<TData extends Record<string, unknown>>({
                         <TableHead
                           key={header.id}
                           className={cn(
-                            'text-[11px] font-medium text-muted-foreground select-none h-9 px-3',
+                            'text-xs font-bold uppercase tracking-wider text-muted-foreground select-none h-10 px-4 bg-muted/40',
                             alignClass,
                             priorityClasses,
                             meta?.headerClassName,
@@ -290,7 +290,7 @@ export function ListView<TData extends Record<string, unknown>>({
                           <TableCell
                             key={cell.id}
                             className={cn(
-                              'text-xs text-foreground',
+                              'text-sm text-foreground',
                               cellPaddingClass,
                               alignClass,
                               priorityClasses,
@@ -352,7 +352,7 @@ export function ListView<TData extends Record<string, unknown>>({
                 value={String(table.getState().pagination.pageSize)}
                 onValueChange={(val) => table.setPageSize(Number(val))}
               >
-                <SelectTrigger className="h-7 w-[68px] text-xs font-mono">
+                <SelectTrigger className="h-8 w-[72px] text-xs font-mono">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -374,7 +374,7 @@ export function ListView<TData extends Record<string, unknown>>({
                 type="button"
                 variant="outline"
                 size="icon"
-                className="size-7"
+                className="size-8"
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
                 aria-label="First page"
@@ -385,7 +385,7 @@ export function ListView<TData extends Record<string, unknown>>({
                 type="button"
                 variant="outline"
                 size="icon"
-                className="size-7"
+                className="size-8"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
                 aria-label="Previous page"
@@ -400,7 +400,7 @@ export function ListView<TData extends Record<string, unknown>>({
                 type="button"
                 variant="outline"
                 size="icon"
-                className="size-7"
+                className="size-8"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
                 aria-label="Next page"
@@ -411,7 +411,7 @@ export function ListView<TData extends Record<string, unknown>>({
                 type="button"
                 variant="outline"
                 size="icon"
-                className="size-7"
+                className="size-8"
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
                 aria-label="Last page"

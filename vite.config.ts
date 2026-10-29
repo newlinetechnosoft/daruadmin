@@ -12,6 +12,10 @@ const isAnalyze = process.env.ANALYZE === 'true'
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
+  build: {
+    cssMinify: true,
+    reportCompressedSize: false,
+  },
   plugins: [
     devtools(),
     nitro(),

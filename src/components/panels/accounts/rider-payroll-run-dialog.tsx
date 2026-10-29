@@ -159,7 +159,7 @@ export function RiderPayrollRunDialog({
 
             {/* Computation Options */}
             <Card className="p-3 bg-muted/30 border-dashed space-y-2.5">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
                 Payroll Components
               </span>
 

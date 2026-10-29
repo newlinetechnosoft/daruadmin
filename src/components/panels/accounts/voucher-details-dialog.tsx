@@ -87,7 +87,7 @@ export function VoucherDetailsDialog({
                           ? 'secondary'
                           : 'outline'
                   }
-                  className="text-[10px] uppercase font-mono"
+                  className="text-xs uppercase font-mono"
                 >
                   {entry.voucherType === 'SV' && 'Sales Voucher'}
                   {entry.voucherType === 'PV' && 'Payment Voucher'}
@@ -97,7 +97,7 @@ export function VoucherDetailsDialog({
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="text-[10px] text-emerald-600 dark:text-emerald-400 border-emerald-500/40"
+                  className="text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/40"
                 >
                   {entry.postingStatus}
                 </Badge>
@@ -136,7 +136,7 @@ export function VoucherDetailsDialog({
           {/* Metadata Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 rounded-lg border border-border bg-card/60">
             <div>
-              <span className="text-[10px] uppercase text-muted-foreground font-semibold block">
+              <span className="text-xs uppercase text-muted-foreground font-semibold block">
                 Posting Date (BS)
               </span>
               <span className="font-medium text-foreground text-xs">
@@ -144,7 +144,7 @@ export function VoucherDetailsDialog({
               </span>
             </div>
             <div>
-              <span className="text-[10px] uppercase text-muted-foreground font-semibold block">
+              <span className="text-xs uppercase text-muted-foreground font-semibold block">
                 Gregorian (AD)
               </span>
               <span className="font-mono text-muted-foreground text-xs">
@@ -152,7 +152,7 @@ export function VoucherDetailsDialog({
               </span>
             </div>
             <div>
-              <span className="text-[10px] uppercase text-muted-foreground font-semibold block">
+              <span className="text-xs uppercase text-muted-foreground font-semibold block">
                 Reference
               </span>
               <span className="font-mono text-foreground text-xs">
@@ -162,7 +162,7 @@ export function VoucherDetailsDialog({
               </span>
             </div>
             <div>
-              <span className="text-[10px] uppercase text-muted-foreground font-semibold block">
+              <span className="text-xs uppercase text-muted-foreground font-semibold block">
                 Posted By
               </span>
               <span className="text-foreground text-xs">
@@ -174,7 +174,7 @@ export function VoucherDetailsDialog({
           {/* Narration */}
           {entry.narration && (
             <div className="p-3 rounded-md bg-muted/40 border border-border/60">
-              <span className="text-[10px] uppercase font-semibold text-muted-foreground block mb-0.5">
+              <span className="text-xs uppercase font-semibold text-muted-foreground block mb-0.5">
                 Narration / Memo
               </span>
               <p className="text-xs text-foreground font-medium">
@@ -190,12 +190,12 @@ export function VoucherDetailsDialog({
                 Accounting Legs ({entry.lines.length} lines)
               </span>
               {isBalanced ? (
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   Balanced (Zero Variance)
                 </span>
               ) : (
-                <span className="text-[11px] font-semibold text-destructive">
+                <span className="text-xs font-semibold text-destructive">
                   Unbalanced! Variance: {formatNPR(variance)}
                 </span>
               )}
@@ -229,7 +229,7 @@ export function VoucherDetailsDialog({
                         <span className="font-mono text-xs font-bold text-foreground block">
                           {line.accountCode}
                         </span>
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {line.accountName}
                         </span>
                       </TableCell>
@@ -241,7 +241,7 @@ export function VoucherDetailsDialog({
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {line.narration || '—'}
                         </span>
                       </TableCell>
@@ -281,7 +281,7 @@ export function VoucherDetailsDialog({
                   <span className="text-xs font-semibold text-foreground block">
                     Public Shareable Voucher Slug
                   </span>
-                  <span className="text-[11px] font-mono text-muted-foreground">
+                  <span className="text-xs font-mono text-muted-foreground">
                     /voucher/{publicSlug}
                   </span>
                 </div>

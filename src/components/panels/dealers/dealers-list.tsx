@@ -187,13 +187,13 @@ export function DealersList() {
                 >
                   {d.name}
                 </Link>
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
                   <MapPin className="size-2.5 shrink-0" />
                   <span className="truncate">{d.city}</span>
                   {d.lat == null || d.lng == null ? (
                     <Badge
                       variant="outline"
-                      className="border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10 text-[9px] px-1.5 py-0 h-4 font-normal shrink-0"
+                      className="border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10 text-xs px-1.5 py-0 h-4 font-normal shrink-0"
                     >
                       No location
                     </Badge>
@@ -207,7 +207,7 @@ export function DealersList() {
                       })}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[10px] text-primary hover:underline inline-flex items-center gap-0.5 font-sans shrink-0"
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-0.5 font-sans shrink-0"
                       title="View pinned coordinates on map"
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -232,7 +232,7 @@ export function DealersList() {
             <div className="flex flex-col text-xs font-mono">
               <span className="text-foreground">{d.pan || '—'}</span>
               {d.providesVatBill && (
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans">
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-sans">
                   VAT Registered
                 </span>
               )}
@@ -439,7 +439,7 @@ export function DealersList() {
                 className="h-7 text-xs gap-1.5 data-[state=active]:bg-background"
               >
                 <span>All Dealers</span>
-                <span className="font-mono text-[10px] text-muted-foreground ml-1">
+                <span className="font-mono text-xs text-muted-foreground ml-1">
                   ({totalCount})
                 </span>
               </TabsTrigger>
@@ -448,7 +448,7 @@ export function DealersList() {
                 className="h-7 text-xs gap-1.5 data-[state=active]:bg-background"
               >
                 <span>Active Hubs</span>
-                <span className="font-mono text-[10px] text-muted-foreground ml-1">
+                <span className="font-mono text-xs text-muted-foreground ml-1">
                   ({activeCount})
                 </span>
               </TabsTrigger>
@@ -457,7 +457,7 @@ export function DealersList() {
                 className="h-7 text-xs gap-1.5 data-[state=active]:bg-background"
               >
                 <span>Inactive</span>
-                <span className="font-mono text-[10px] text-muted-foreground ml-1">
+                <span className="font-mono text-xs text-muted-foreground ml-1">
                   ({inactiveCount})
                 </span>
               </TabsTrigger>

@@ -81,6 +81,14 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     ],
     links: [
       {
+        rel: 'preconnect',
+        href: 'https://images.unsplash.com',
+      },
+      {
+        rel: 'dns-prefetch',
+        href: 'https://images.unsplash.com',
+      },
+      {
         rel: 'stylesheet',
         href: appCss,
       },

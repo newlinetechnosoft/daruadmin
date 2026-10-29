@@ -119,6 +119,14 @@ export const upsertCategorySchema = z.object({
   imageUrl: z.string().optional().nullable(),
   sortOrder: z.number().int().default(0),
   isActive: z.boolean().default(true),
+  showOnLandingPage: z.boolean().default(false),
+})
+
+export const toggleCategoryStatusSchema = z.object({
+  catalogType: z.enum(['liquor', 'grocery']),
+  id: z.string().uuid(),
+  field: z.enum(['isActive', 'showOnLandingPage']),
+  value: z.boolean(),
 })
 
 export const upsertBrandSchema = z.object({
@@ -165,6 +173,9 @@ export type UpsertGroceryProductInput = z.infer<
   typeof upsertGroceryProductSchema
 >
 export type ToggleProductStatusInput = z.infer<typeof toggleProductStatusSchema>
+export type ToggleCategoryStatusInput = z.infer<
+  typeof toggleCategoryStatusSchema
+>
 export type UpsertCategoryInput = z.infer<typeof upsertCategorySchema>
 export type UpsertBrandInput = z.infer<typeof upsertBrandSchema>
 export type DeleteItemInput = z.infer<typeof deleteItemSchema>

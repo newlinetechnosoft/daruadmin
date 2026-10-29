@@ -212,7 +212,7 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
             <CardHeader className="bg-muted/15 border-b border-border p-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
                     Order Reference
                   </span>
                   <CardTitle className="text-xl font-black font-mono text-foreground mt-0.5">
@@ -233,7 +233,7 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
                       href={getWhatsAppShareUrl()}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline ml-1"
+                      className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:underline ml-1"
                       title="Share tracking link via WhatsApp"
                     >
                       <MessageCircle className="h-3 w-3" />
@@ -289,7 +289,7 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
               {/* Delivery Destination & Contact Details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-lg border border-border bg-muted/10 p-4">
                 <div className="space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                  <span className="text-xs uppercase font-bold text-muted-foreground flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5 text-primary" />
                     Delivery Destination
                   </span>
@@ -303,7 +303,7 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
                       {order.address}
                     </p>
                     {order.lat && order.lng && (
-                      <p className="text-[11px] font-mono text-muted-foreground group-hover:text-primary transition-colors">
+                      <p className="text-xs font-mono text-muted-foreground group-hover:text-primary transition-colors">
                         Coordinates: {order.lat.toFixed(6)}° N,{' '}
                         {order.lng.toFixed(6)}° E ↗
                       </p>
@@ -312,14 +312,14 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                  <span className="text-xs uppercase font-bold text-muted-foreground flex items-center gap-1">
                     <Phone className="h-3.5 w-3.5 text-primary" />
                     Contact Recipient
                   </span>
                   <p className="text-xs font-semibold text-foreground">
                     {order.customerName}
                   </p>
-                  <p className="text-[11px] font-mono text-muted-foreground">
+                  <p className="text-xs font-mono text-muted-foreground">
                     +977 {order.customerPhone}
                   </p>
                 </div>
@@ -344,7 +344,7 @@ export function OrderConfirmationPanel({ orderId }: { orderId: string }) {
                           <p className="font-semibold text-foreground">
                             {item.name}
                           </p>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             {item.variantName}
                           </p>
                         </div>

@@ -90,7 +90,7 @@ export function RiderSettlementApprovalDialog({
                 <Receipt className="h-4 w-4 text-emerald-500" />
                 Approve & Disburse Courier Settlement
               </span>
-              <Badge variant="outline" className="font-mono text-[10px]">
+              <Badge variant="outline" className="font-mono text-xs">
                 {settlement.voucherNo || settlement.id}
               </Badge>
             </DialogTitle>
@@ -114,7 +114,7 @@ export function RiderSettlementApprovalDialog({
 
               <div className="flex items-center justify-between border-b border-border/50 pb-1.5">
                 <span className="text-muted-foreground">Period:</span>
-                <span className="font-mono text-[11px] text-foreground">
+                <span className="font-mono text-xs text-foreground">
                   {settlement.periodStart?.slice(0, 10)} →{' '}
                   {settlement.periodEnd?.slice(0, 10)}
                 </span>

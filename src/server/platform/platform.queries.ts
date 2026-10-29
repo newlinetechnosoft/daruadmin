@@ -1,3 +1,4 @@
+import { moveToRecycleBin } from '#/server/recycle-bin/recycle-bin.queries'
 import { db } from '#/db'
 import {
   notifications,
@@ -67,11 +68,11 @@ export function defaultStoreSettings(): StoreSettings {
 // NOTIFICATIONS
 // -------------------------------------------------------------
 
-export async function getAllNotificationsQuery(): Promise<NotificationItem[]> {
-  const rows = await db
-    .select()
-    .from(notifications)
-    .orderBy(desc(notifications.createdAt))
+export async function getAllNotificationsQuery(
+  limit?: number,
+): Promise<NotificationItem[]> {
+  const q = db.select().from(notifications).orderBy(desc(notifications.createdAt))
+  const rows = limit ? await q.limit(limit) : await q
   return rows.map((n) => ({
     id: n.id,
     title: n.title,
@@ -111,11 +112,9 @@ export async function insertNotificationQuery(item: {
 // AUDIT LOGS
 // -------------------------------------------------------------
 
-export async function getAllAuditLogsQuery(): Promise<AuditLog[]> {
-  const rows = await db
-    .select()
-    .from(auditLogs)
-    .orderBy(desc(auditLogs.createdAt))
+export async function getAllAuditLogsQuery(limit?: number): Promise<AuditLog[]> {
+  const q = db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt))
+  const rows = limit ? await q.limit(limit) : await q
   return rows.map((a) => ({
     id: a.id,
     at: a.createdAt.toISOString(),
@@ -143,21 +142,37 @@ export async function insertAuditLogQuery(entry: {
 }
 
 // -------------------------------------------------------------
-// SITE SETTINGS
+// SITE SETTINGS (IN-MEMORY CACHED)
 // -------------------------------------------------------------
 
+let storeSettingsMemoryCache: { data: StoreSettings; expires: number } | null =
+  null
+
+export function invalidateStoreSettingsCache() {
+  storeSettingsMemoryCache = null
+}
+
 export async function getStoreSettingsQuery(): Promise<StoreSettings> {
+  if (
+    storeSettingsMemoryCache &&
+    Date.now() < storeSettingsMemoryCache.expires
+  ) {
+    return storeSettingsMemoryCache.data
+  }
+
   const rows = await db
     .select()
     .from(siteSettings)
     .where(eq(siteSettings.key, 'general'))
     .limit(1)
 
-  if (!rows[0] || typeof rows[0].value !== 'object') {
-    return defaultStoreSettings()
-  }
+  const result =
+    !rows[0] || typeof rows[0].value !== 'object'
+      ? defaultStoreSettings()
+      : { ...defaultStoreSettings(), ...(rows[0].value as any) }
 
-  return { ...defaultStoreSettings(), ...(rows[0].value as any) }
+  storeSettingsMemoryCache = { data: result, expires: Date.now() + 60_000 }
+  return result
 }
 
 export async function saveStoreSettingsQuery(
@@ -174,6 +189,7 @@ export async function saveStoreSettingsQuery(
       set: { value: next, updatedAt: new Date() },
     })
 
+  invalidateStoreSettingsCache()
   return next
 }
 
@@ -292,6 +308,22 @@ export async function upsertCouponQuery(c: Coupon) {
 }
 
 export async function deleteCouponQuery(id: string) {
+  const [coupon] = await db
+    .select()
+    .from(coupons)
+    .where(eq(coupons.id, id))
+    .limit(1)
+
+  if (coupon) {
+    await moveToRecycleBin({
+      entityType: 'coupon',
+      entityId: coupon.id,
+      name: coupon.code,
+      description: `${coupon.type === 'percent' ? coupon.value + '%' : 'Rs. ' + (coupon.value / 100)} discount`,
+      data: { coupon },
+    })
+  }
+
   await db.delete(coupons).where(eq(coupons.id, id))
 }
 
@@ -456,6 +488,22 @@ export async function upsertBannerQuery(banner: Banner) {
 }
 
 export async function deleteBannerQuery(id: string) {
+  const [banner] = await db
+    .select()
+    .from(banners)
+    .where(eq(banners.id, id))
+    .limit(1)
+
+  if (banner) {
+    await moveToRecycleBin({
+      entityType: 'banner',
+      entityId: banner.id,
+      name: banner.title,
+      description: banner.placement,
+      data: { banner },
+    })
+  }
+
   await db.delete(banners).where(eq(banners.id, id))
 }
 
@@ -649,6 +697,22 @@ export async function upsertOfferQuery(data: {
 }
 
 export async function deleteOfferQuery(id: string) {
+  const [offer] = await db
+    .select()
+    .from(offers)
+    .where(eq(offers.id, id))
+    .limit(1)
+
+  if (offer) {
+    await moveToRecycleBin({
+      entityType: 'offer',
+      entityId: offer.id,
+      name: offer.title,
+      description: offer.slug,
+      data: { offer },
+    })
+  }
+
   await db.delete(offers).where(eq(offers.id, id))
 }
 

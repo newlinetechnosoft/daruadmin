@@ -20,6 +20,7 @@ export const liquorCategories = pgTable(
     imageUrl: text('image_url'),
     sortOrder: integer('sort_order').default(0).notNull(),
     isActive: boolean('is_active').default(true).notNull(),
+    showOnLandingPage: boolean('show_on_landing_page').default(false).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),

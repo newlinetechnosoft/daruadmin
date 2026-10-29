@@ -59,14 +59,14 @@ export function RiderLayout() {
               </span>
               <Badge
                 variant="outline"
-                className="ml-1.5 text-[10px] py-0 px-1 font-mono"
+                className="ml-1.5 text-xs py-0 px-1 font-mono"
               >
                 RIDER
               </Badge>
               {!isOnline && (
                 <Badge
                   variant="destructive"
-                  className="ml-1.5 text-[10px] py-0 px-1 gap-1"
+                  className="ml-1.5 text-xs py-0 px-1 gap-1"
                 >
                   <CloudOff className="h-2.5 w-2.5" />
                   Offline
@@ -75,7 +75,7 @@ export function RiderLayout() {
               {pendingCount > 0 && (
                 <Badge
                   variant="secondary"
-                  className="ml-1.5 text-[10px] py-0 px-1 cursor-pointer gap-1"
+                  className="ml-1.5 text-xs py-0 px-1 cursor-pointer gap-1"
                   onClick={() => flushOutbox()}
                   title="Click to sync now"
                 >
@@ -126,7 +126,7 @@ export function RiderLayout() {
             <Link
               key={item.to}
               to={item.to}
-              className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-lg text-[10px] font-medium transition-colors ${
+              className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-lg text-xs font-medium transition-colors ${
                 item.active
                   ? 'text-primary font-semibold'
                   : 'text-muted-foreground hover:text-foreground'

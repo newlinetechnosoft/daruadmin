@@ -337,7 +337,7 @@ export function DealerDialog({
                   placeholder="e.g. 601234567"
                   className="h-10 font-mono text-sm"
                 />
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   9-digit Tax Identification or VAT certificate number
                 </p>
               </div>
@@ -358,7 +358,7 @@ export function DealerDialog({
                   required
                   className="h-10"
                 />
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Primary phone number for dispatch and order alerts
                 </p>
               </div>
@@ -390,7 +390,7 @@ export function DealerDialog({
                   placeholder="e.g. +977-9841234567"
                   className="h-10"
                 />
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   For instant dispatch notifications, bill images, and order
                   coordination
                 </p>
@@ -680,7 +680,7 @@ export function DealerDialog({
                           {item.brandName && (
                             <Badge
                               variant="outline"
-                              className="text-[10px] py-0 px-1.5 h-4 font-normal"
+                              className="text-xs py-0 px-1.5 h-4 font-normal"
                             >
                               {item.brandName}
                             </Badge>
@@ -688,7 +688,7 @@ export function DealerDialog({
                           {item.categoryName && (
                             <Badge
                               variant="secondary"
-                              className="text-[10px] py-0 px-1.5 h-4 font-normal"
+                              className="text-xs py-0 px-1.5 h-4 font-normal"
                             >
                               {item.categoryName}
                             </Badge>

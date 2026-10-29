@@ -178,7 +178,7 @@ export function BrandsPanel() {
                   {b.name}
                 </span>
                 {b.description && (
-                  <p className="text-[11px] text-muted-foreground truncate max-w-xs">
+                  <p className="text-xs text-muted-foreground truncate max-w-xs">
                     {b.description}
                   </p>
                 )}
@@ -193,7 +193,7 @@ export function BrandsPanel() {
         header: 'URL Slug',
         meta: { priority: 2 },
         cell: ({ row }) => (
-          <span className="font-mono text-[11px] text-muted-foreground">
+          <span className="font-mono text-xs text-muted-foreground">
             {row.original.slug}
           </span>
         ),
@@ -330,7 +330,7 @@ export function BrandsPanel() {
               >
                 <Wine className="size-3.5" />
                 <span>Liquor Brands</span>
-                <span className="font-mono text-[10px] text-muted-foreground ml-1">
+                <span className="font-mono text-xs text-muted-foreground ml-1">
                   ({liquorBrands.length})
                 </span>
               </TabsTrigger>
@@ -340,7 +340,7 @@ export function BrandsPanel() {
               >
                 <ShoppingBag className="size-3.5" />
                 <span>Grocery Brands</span>
-                <span className="font-mono text-[10px] text-muted-foreground ml-1">
+                <span className="font-mono text-xs text-muted-foreground ml-1">
                   ({groceryBrands.length})
                 </span>
               </TabsTrigger>

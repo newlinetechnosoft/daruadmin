@@ -1,3 +1,4 @@
+import { moveToRecycleBin } from '#/server/recycle-bin/recycle-bin.queries'
 import { db } from '#/db'
 import {
   dealers,
@@ -426,6 +427,27 @@ export async function upsertDealerQuery(
 export async function deleteDealerQuery(
   id: string,
 ): Promise<{ success: boolean; id: string }> {
+  const [dealer] = await db
+    .select()
+    .from(dealers)
+    .where(eq(dealers.id, id))
+    .limit(1)
+
+  if (dealer) {
+    const dItems = await db
+      .select()
+      .from(dealerItems)
+      .where(eq(dealerItems.dealerId, id))
+
+    await moveToRecycleBin({
+      entityType: 'dealer',
+      entityId: dealer.id,
+      name: dealer.name,
+      description: dealer.contact,
+      data: { dealer, dealerItems: dItems },
+    })
+  }
+
   await db.delete(dealerItems).where(eq(dealerItems.dealerId, id))
   await db.delete(dealers).where(eq(dealers.id, id))
   return { success: true, id }

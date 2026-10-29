@@ -655,7 +655,7 @@ export function OrdersPanel() {
             >
               <span>{st.label}</span>
               <span
-                className={`inline-flex items-center justify-center px-1.5 py-0.2 rounded-full text-[10px] font-mono font-semibold ${
+                className={`inline-flex items-center justify-center px-1.5 py-0.2 rounded-full text-xs font-mono font-semibold ${
                   isActive
                     ? 'bg-primary-foreground/20 text-primary-foreground'
                     : 'bg-muted text-muted-foreground'
@@ -678,7 +678,7 @@ export function OrdersPanel() {
               placeholder="Search by order #, customer, phone, city..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 text-xs"
+              className="pl-9 text-xs sm:text-sm h-9"
             />
           </div>
 
@@ -687,7 +687,7 @@ export function OrdersPanel() {
             <NativeSelect
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs"
+              className="text-xs sm:text-sm h-9"
             >
               {ORDER_STATUSES.map((st) => (
                 <option key={st.value} value={st.value}>
@@ -703,16 +703,16 @@ export function OrdersPanel() {
       <Card>
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order # & Date</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead>Total (NPR)</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>Assigned Rider</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+            <TableHeader className="bg-muted/40">
+              <TableRow className="border-b border-border">
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Order # & Date</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Customer</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Items</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Total (NPR)</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Status</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Payment</TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Assigned Rider</TableHead>
+                <TableHead className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -748,7 +748,7 @@ export function OrdersPanel() {
                         <div className="flex items-center gap-2 pt-1 text-xs">
                           <a
                             href={`tel:${order.customerPhone}`}
-                            className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline font-mono"
+                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-mono"
                             title={`Call ${order.customerPhone}`}
                           >
                             <Phone className="h-3 w-3" />
@@ -759,7 +759,7 @@ export function OrdersPanel() {
                               href={`https://wa.me/${order.customerPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Namaste ${order.customerName}, this is regarding your order ${order.number} from Mezmani.`)}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-0.5 text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline"
+                              className="inline-flex items-center gap-0.5 text-xs text-emerald-600 dark:text-emerald-400 hover:underline"
                               title="WhatsApp Customer"
                             >
                               <MessageCircle className="h-3 w-3" />
@@ -769,7 +769,7 @@ export function OrdersPanel() {
                             href={getGoogleMapsUrl(order)}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground"
+                            className="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
                             title={`${order.address}, ${order.city}`}
                           >
                             <MapPin className="h-3 w-3 text-amber-500" />
@@ -800,7 +800,7 @@ export function OrdersPanel() {
                       <TableCell>
                         <Badge
                           variant="outline"
-                          className="font-mono text-[11px] uppercase"
+                          className="font-mono text-xs uppercase"
                         >
                           {order.paymentMethod}
                         </Badge>
@@ -813,7 +813,7 @@ export function OrdersPanel() {
                               <Bike className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                               <span>{assignedRider.name}</span>
                             </div>
-                            <div className="text-[10px] text-muted-foreground font-mono flex items-center gap-1">
+                            <div className="text-xs text-muted-foreground font-mono flex items-center gap-1">
                               <span>
                                 Float: {formatNPR(assignedRider.cashOnHand)}
                               </span>
@@ -840,7 +840,7 @@ export function OrdersPanel() {
                           if (totalCount === 0) return null
                           if (assignedCount === totalCount) {
                             return (
-                              <div className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">
+                              <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">
                                 <Store className="h-3 w-3 shrink-0" />
                                 <span>
                                   {assignedCount === 1
@@ -851,7 +851,7 @@ export function OrdersPanel() {
                             )
                           }
                           return (
-                            <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-1">
+                            <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
                               <Store className="h-3 w-3 shrink-0" />
                               <span>
                                 {assignedCount}/{totalCount} Dealers
@@ -974,7 +974,7 @@ export function OrdersPanel() {
 
                 {/* Visual Progress Stepper */}
                 {selectedOrder.status === 'cancelled' ? (
-                  <div className="rounded-md border border-destructive/20 bg-destructive/10 p-2.5 text-destructive text-[11px] flex items-center gap-2">
+                  <div className="rounded-md border border-destructive/20 bg-destructive/10 p-2.5 text-destructive text-xs flex items-center gap-2">
                     <AlertTriangle className="size-4 shrink-0" />
                     <span>
                       <strong>Order Cancelled:</strong>{' '}
@@ -983,7 +983,7 @@ export function OrdersPanel() {
                     </span>
                   </div>
                 ) : selectedOrder.status === 'delivery_failed' ? (
-                  <div className="rounded-md border border-amber-500/20 bg-amber-500/10 p-2.5 text-amber-700 dark:text-amber-400 text-[11px] flex items-center gap-2">
+                  <div className="rounded-md border border-amber-500/20 bg-amber-500/10 p-2.5 text-amber-700 dark:text-amber-400 text-xs flex items-center gap-2">
                     <AlertTriangle className="size-4 shrink-0" />
                     <span>
                       <strong>Delivery Attempt Failed:</strong>{' '}
@@ -993,7 +993,7 @@ export function OrdersPanel() {
                   </div>
                 ) : (
                   <div className="pt-2 border-t border-border/60">
-                    <div className="grid grid-cols-4 gap-2 text-center text-[11px]">
+                    <div className="grid grid-cols-4 gap-2 text-center text-xs">
                       {[
                         { key: 'placed', label: '1. Placed', done: true },
                         {
@@ -1028,7 +1028,7 @@ export function OrdersPanel() {
                         <div
                           key={step.key}
                           className={cn(
-                            'rounded-md py-1.5 px-2 border text-[11px] font-medium transition-colors',
+                            'rounded-md py-1.5 px-2 border text-xs font-medium transition-colors',
                             step.done
                               ? 'border-primary/40 bg-primary/10 text-primary font-semibold'
                               : 'border-border bg-muted/20 text-muted-foreground',
@@ -1046,7 +1046,7 @@ export function OrdersPanel() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Card>
                   <CardContent className="p-3.5 space-y-1.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
                       Customer Details
                     </span>
                     <div className="font-semibold text-foreground">
@@ -1077,7 +1077,7 @@ export function OrdersPanel() {
                 <Card>
                   <CardContent className="p-3.5 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block">
                         Fleet Dispatch
                       </span>
                       {(() => {
@@ -1122,7 +1122,7 @@ export function OrdersPanel() {
                               type="button"
                               variant="outline"
                               size="sm"
-                              className="h-6 text-[10px] px-2 text-primary border-primary/30 hover:bg-primary/5"
+                              className="h-6 text-xs px-2 text-primary border-primary/30 hover:bg-primary/5"
                               onClick={() =>
                                 handleAssignRider(selectedOrder.id, best.id)
                               }
@@ -1228,7 +1228,7 @@ export function OrdersPanel() {
                         if (!r) return null
                         if (r.cashOnHand >= 2000000) {
                           return (
-                            <div className="p-2 rounded bg-destructive/10 border border-destructive/20 text-destructive text-[11px] font-medium flex items-center gap-1.5 mt-1.5">
+                            <div className="p-2 rounded bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium flex items-center gap-1.5 mt-1.5">
                               <span>⚠️</span>
                               <span>
                                 Courier holds{' '}
@@ -1259,7 +1259,7 @@ export function OrdersPanel() {
                     <h4 className="text-xs font-semibold text-foreground">
                       Ordered Items & Sourcing Stations
                     </h4>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Assign nearest verified dealers to each order line
                     </p>
                   </div>
@@ -1329,7 +1329,7 @@ export function OrdersPanel() {
                                   {item.sourcingStatus && (
                                     <Badge
                                       variant="outline"
-                                      className={`text-[9px] px-1 py-0 uppercase font-mono ${
+                                      className={`text-xs px-1 py-0 uppercase font-mono ${
                                         item.sourcingStatus === 'picked_up'
                                           ? 'border-emerald-500/30 text-emerald-600 bg-emerald-500/10'
                                           : item.sourcingStatus ===
@@ -1344,7 +1344,7 @@ export function OrdersPanel() {
                                     </Badge>
                                   )}
                                 </div>
-                                <span className="block text-[11px] text-muted-foreground">
+                                <span className="block text-xs text-muted-foreground">
                                   {item.variantName}
                                 </span>
                               </TableCell>
@@ -1407,7 +1407,7 @@ export function OrdersPanel() {
                                   </NativeSelect>
 
                                   {item.dealer ? (
-                                    <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground pt-0.5">
+                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground pt-0.5">
                                       <a
                                         href={`tel:${item.dealer.contact}`}
                                         className="flex items-center gap-0.5 text-primary hover:underline font-mono"
@@ -1464,7 +1464,7 @@ export function OrdersPanel() {
                                       </a>
                                     </div>
                                   ) : (
-                                    <span className="text-[10px] text-amber-600 dark:text-amber-400 block">
+                                    <span className="text-xs text-amber-600 dark:text-amber-400 block">
                                       ⚠️ Needs dealer for rider pickup
                                     </span>
                                   )}
@@ -1473,15 +1473,15 @@ export function OrdersPanel() {
                               <TableCell className="text-right font-mono text-xs">
                                 {item.dealerCostPrice ? (
                                   <div className="space-y-0.5">
-                                    <div className="text-muted-foreground text-[11px]">
+                                    <div className="text-muted-foreground text-xs">
                                       {formatNPR(totalCost)}
                                     </div>
-                                    <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                    <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                                       +{formatNPR(profit)} ({marginPct}%)
                                     </div>
                                   </div>
                                 ) : (
-                                  <span className="text-muted-foreground text-[10px]">
+                                  <span className="text-muted-foreground text-xs">
                                     Pending
                                   </span>
                                 )}
@@ -1536,7 +1536,7 @@ export function OrdersPanel() {
                       <h4 className="text-xs font-semibold text-foreground">
                         Dealer Pickup Stations (Rider Route)
                       </h4>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         Rider collects items from these stations before
                         delivering to customer
                       </p>
@@ -1548,7 +1548,7 @@ export function OrdersPanel() {
                         ? 'secondary'
                         : 'outline'
                     }
-                    className="text-[10px]"
+                    className="text-xs"
                   >
                     {selectedOrder.items.filter((it) => it.dealerId).length} /{' '}
                     {selectedOrder.items.length} Items Assigned
@@ -1582,7 +1582,7 @@ export function OrdersPanel() {
                             <Store className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
                             <span className="truncate">{dealer.name}</span>
                           </div>
-                          <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                             <MapPin className="h-3 w-3 shrink-0" />
                             <span className="truncate">
                               {dealer.address}, {dealer.city}
@@ -1594,7 +1594,7 @@ export function OrdersPanel() {
                             variant="outline"
                             size="sm"
                             asChild
-                            className="h-6 px-1.5 text-[10px]"
+                            className="h-6 px-1.5 text-xs"
                           >
                             <a href={`tel:${dealer.contact}`}>
                               <Phone className="h-2.5 w-2.5 mr-0.5 text-primary" />
@@ -1606,7 +1606,7 @@ export function OrdersPanel() {
                               variant="outline"
                               size="sm"
                               asChild
-                              className="h-6 px-1.5 text-[10px] text-emerald-600 dark:text-emerald-400"
+                              className="h-6 px-1.5 text-xs text-emerald-600 dark:text-emerald-400"
                             >
                               <a
                                 href={`https://wa.me/${(dealer.whatsappNumber || dealer.contact).replace(/[^0-9]/g, '')}`}
@@ -1622,7 +1622,7 @@ export function OrdersPanel() {
                             variant="outline"
                             size="sm"
                             asChild
-                            className="h-6 px-1.5 text-[10px] text-amber-600 dark:text-amber-400"
+                            className="h-6 px-1.5 text-xs text-amber-600 dark:text-amber-400"
                           >
                             <a
                               href={
@@ -1639,7 +1639,7 @@ export function OrdersPanel() {
                           </Button>
                         </div>
                       </div>
-                      <div className="text-[10px] text-muted-foreground pt-1 border-t border-border/50">
+                      <div className="text-xs text-muted-foreground pt-1 border-t border-border/50">
                         <strong>Items:</strong>{' '}
                         {items.map((it) => `${it.qty}x ${it.name}`).join(', ')}
                       </div>
@@ -1651,13 +1651,13 @@ export function OrdersPanel() {
                       <div className="font-semibold text-amber-800 dark:text-amber-400 flex items-center gap-1">
                         <span>⚠️ Unassigned Items</span>
                       </div>
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {selectedOrder.items
                           .filter((it) => !it.dealerId)
                           .map((it) => `${it.qty}x ${it.name}`)
                           .join(', ')}
                       </div>
-                      <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
                         Assign dealers in the items table so rider has complete
                         pickup instructions.
                       </p>
@@ -1675,7 +1675,7 @@ export function OrdersPanel() {
                       Order Lifecycle History & Audit Trail
                     </h4>
                   </div>
-                  <span className="text-[10px] text-muted-foreground font-mono">
+                  <span className="text-xs text-muted-foreground font-mono">
                     {selectedOrder.events?.length ?? 0} events recorded
                   </span>
                 </div>
@@ -1689,22 +1689,22 @@ export function OrdersPanel() {
                       >
                         <div className="absolute left-2 top-1.5 h-2 w-2 rounded-full border border-background bg-primary -translate-x-1/2" />
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-foreground font-mono uppercase text-[11px]">
+                          <span className="font-semibold text-foreground font-mono uppercase text-xs">
                             {evt.toStatus || evt.status}
                           </span>
                           {evt.fromStatus && (
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               (from {evt.fromStatus})
                             </span>
                           )}
-                          <span className="text-[10px] text-muted-foreground font-mono">
+                          <span className="text-xs text-muted-foreground font-mono">
                             &bull; {new Date(evt.at).toLocaleString()}
                           </span>
                         </div>
-                        <p className="text-muted-foreground text-[11px]">
+                        <p className="text-muted-foreground text-xs">
                           {evt.note}
                         </p>
-                        <div className="text-[10px] text-muted-foreground/80">
+                        <div className="text-xs text-muted-foreground/80">
                           By:{' '}
                           <span className="font-medium text-foreground">
                             {evt.actor}
@@ -1746,7 +1746,7 @@ export function OrdersPanel() {
 
                   return (
                     <div className="rounded-lg border border-border bg-emerald-500/5 p-3 space-y-1.5 text-xs text-right">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-left flex items-center justify-between pb-1 border-b border-border/50">
+                      <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground text-left flex items-center justify-between pb-1 border-b border-border/50">
                         <span>Sourcing Margin</span>
                         <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
                           {marginPct}% Margin
@@ -1974,20 +1974,20 @@ export function OrdersPanel() {
                       <div className="font-bold text-sm tracking-tight">
                         {ops.settings.legalName || 'MEZMANI LIQUOR & GROCERY'}
                       </div>
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {ops.settings.address || 'Traffic Chowk, Butwal, Nepal'}
                       </div>
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         PAN / VAT:{' '}
                         <strong>{ops.settings.pan || '609823415'}</strong>
                       </div>
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         Tel: {ops.settings.phone || '+977-71-540000'}
                       </div>
                     </div>
 
                     {/* Slip Meta */}
-                    <div className="space-y-1 text-[11px] pb-2 border-b border-dashed border-border">
+                    <div className="space-y-1 text-xs pb-2 border-b border-dashed border-border">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">
                           Slip Type:
@@ -2017,8 +2017,8 @@ export function OrdersPanel() {
                     </div>
 
                     {/* Customer Information */}
-                    <div className="space-y-1 text-[11px] pb-2 border-b border-dashed border-border">
-                      <div className="font-bold uppercase text-[10px] text-muted-foreground">
+                    <div className="space-y-1 text-xs pb-2 border-b border-dashed border-border">
+                      <div className="font-bold uppercase text-xs text-muted-foreground">
                         Deliver To Customer:
                       </div>
                       <div className="font-bold text-sm text-foreground">
@@ -2031,7 +2031,7 @@ export function OrdersPanel() {
                         Address: {selectedOrder.address}, {selectedOrder.city}
                       </div>
                       {selectedOrder.notes && (
-                        <div className="text-[10px] italic text-muted-foreground pt-0.5">
+                        <div className="text-xs italic text-muted-foreground pt-0.5">
                           Note: &ldquo;{selectedOrder.notes}&rdquo;
                         </div>
                       )}
@@ -2039,7 +2039,7 @@ export function OrdersPanel() {
 
                     {/* Dealer Pickup Checklist */}
                     <div className="space-y-2 pb-2 border-b border-dashed border-border">
-                      <div className="font-bold uppercase text-[10px] text-muted-foreground">
+                      <div className="font-bold uppercase text-xs text-muted-foreground">
                         Dealer Pickups (Rider Route):
                       </div>
                       {(() => {
@@ -2072,20 +2072,20 @@ export function OrdersPanel() {
                           ([key, group], idx) => (
                             <div
                               key={key}
-                              className="bg-muted/40 p-2 rounded border border-border/50 text-[11px] space-y-1"
+                              className="bg-muted/40 p-2 rounded border border-border/50 text-xs space-y-1"
                             >
                               <div className="font-bold flex items-center justify-between">
                                 <span>
                                   #{idx + 1} {group.name}
                                 </span>
                                 {group.phone && (
-                                  <span className="text-[10px] font-normal">
+                                  <span className="text-xs font-normal">
                                     {group.phone}
                                   </span>
                                 )}
                               </div>
                               {group.address && (
-                                <div className="text-[10px] text-muted-foreground truncate">
+                                <div className="text-xs text-muted-foreground truncate">
                                   {group.address}
                                 </div>
                               )}
@@ -2093,12 +2093,12 @@ export function OrdersPanel() {
                                 {group.items.map((it) => (
                                   <div
                                     key={it.id}
-                                    className="flex justify-between items-center text-[11px]"
+                                    className="flex justify-between items-center text-xs"
                                   >
                                     <span>
                                       [ ] {it.qty}x {it.name}
                                     </span>
-                                    <span className="text-[10px] text-muted-foreground">
+                                    <span className="text-xs text-muted-foreground">
                                       {it.variantName}
                                     </span>
                                   </div>
@@ -2111,8 +2111,8 @@ export function OrdersPanel() {
                     </div>
 
                     {/* Items List */}
-                    <div className="space-y-1 text-[11px] pb-2 border-b border-dashed border-border">
-                      <div className="font-bold uppercase text-[10px] text-muted-foreground">
+                    <div className="space-y-1 text-xs pb-2 border-b border-dashed border-border">
+                      <div className="font-bold uppercase text-xs text-muted-foreground">
                         Ordered Items:
                       </div>
                       {selectedOrder.items.map((it) => (
@@ -2124,7 +2124,7 @@ export function OrdersPanel() {
                             <div>
                               {it.qty}x {it.name}
                             </div>
-                            <div className="text-[10px] text-muted-foreground">
+                            <div className="text-xs text-muted-foreground">
                               {it.variantName}
                             </div>
                           </div>
@@ -2136,7 +2136,7 @@ export function OrdersPanel() {
                     </div>
 
                     {/* Financial Breakdown */}
-                    <div className="space-y-1 text-[11px] pb-2 border-b border-dashed border-border">
+                    <div className="space-y-1 text-xs pb-2 border-b border-dashed border-border">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Subtotal:</span>
                         <span className="font-mono">
@@ -2170,7 +2170,7 @@ export function OrdersPanel() {
                     {/* Big Callout: Cash to Collect / Paid Online */}
                     {selectedOrder.paymentMethod === 'cod' ? (
                       <div className="border-2 border-foreground p-2 rounded text-center my-2 space-y-0.5">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           CASH TO COLLECT (COD)
                         </div>
                         <div className="text-lg font-bold font-mono">
@@ -2179,7 +2179,7 @@ export function OrdersPanel() {
                       </div>
                     ) : (
                       <div className="border border-emerald-600 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 p-2 rounded text-center my-2 space-y-0.5 font-bold">
-                        <div className="text-[10px] uppercase tracking-wider">
+                        <div className="text-xs uppercase tracking-wider">
                           PREPAID ORDER (
                           {selectedOrder.paymentMethod.toUpperCase()})
                         </div>
@@ -2190,7 +2190,7 @@ export function OrdersPanel() {
                     )}
 
                     {/* Rider Assignment & Footer */}
-                    <div className="text-center pt-1 text-[10px] text-muted-foreground space-y-1">
+                    <div className="text-center pt-1 text-xs text-muted-foreground space-y-1">
                       <div>
                         Assigned Rider:{' '}
                         <strong className="text-foreground">
@@ -2245,7 +2245,7 @@ export function OrdersPanel() {
                   {/* Billed to */}
                   <div className="grid grid-cols-2 gap-4 bg-muted/30 p-3.5 rounded-lg border border-border">
                     <div>
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
                         Billed To Customer:
                       </span>
                       <div className="font-semibold text-foreground">
@@ -2259,7 +2259,7 @@ export function OrdersPanel() {
                       </div>
                     </div>
                     <div>
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
                         Delivery Destination:
                       </span>
                       <div className="font-medium text-foreground">
@@ -2315,7 +2315,7 @@ export function OrdersPanel() {
 
                   {/* Totals */}
                   <div className="flex justify-between items-start pt-2">
-                    <div className="max-w-xs space-y-1 text-[11px] text-muted-foreground">
+                    <div className="max-w-xs space-y-1 text-xs text-muted-foreground">
                       <p>Covered under manufacturer genuine warranty.</p>
                       <p>Subject to Butwal jurisdiction.</p>
                     </div>

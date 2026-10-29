@@ -255,7 +255,7 @@ export function BatchDealerSettlementDialog({
 
               <div className="flex items-center justify-between sm:justify-end gap-3 text-xs pt-2 sm:pt-4">
                 <div>
-                  <span className="text-muted-foreground block text-[11px]">
+                  <span className="text-muted-foreground block text-xs">
                     PAN / VAT No.
                   </span>
                   <span className="font-mono font-medium text-foreground">
@@ -263,7 +263,7 @@ export function BatchDealerSettlementDialog({
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-muted-foreground block text-[11px]">
+                  <span className="text-muted-foreground block text-xs">
                     Delivered Unsettled
                   </span>
                   <Badge variant="outline" className="font-mono text-xs">
@@ -286,7 +286,7 @@ export function BatchDealerSettlementDialog({
                     size="sm"
                     onClick={handleToggleAll}
                     disabled={items.length === 0 || isLoading}
-                    className="h-6 text-[11px] px-2 text-primary"
+                    className="h-6 text-xs px-2 text-primary"
                   >
                     {selectedItemIds.size === items.length
                       ? 'Deselect All'
@@ -404,7 +404,7 @@ export function BatchDealerSettlementDialog({
                     %
                   </span>
                 </div>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Withheld into TDS Payable (default 0% until confirmed).
                 </p>
               </div>

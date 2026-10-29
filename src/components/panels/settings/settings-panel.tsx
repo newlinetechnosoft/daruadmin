@@ -473,12 +473,12 @@ export function SettingsPanel() {
                     <p className="text-xs text-muted-foreground">
                       {form.address}, {form.city}
                     </p>
-                    <div className="pt-2 flex items-center justify-center gap-2 text-[11px] font-mono text-foreground font-semibold">
+                    <div className="pt-2 flex items-center justify-center gap-2 text-xs font-mono text-foreground font-semibold">
                       <span>PAN: {form.pan}</span>
                       <span>•</span>
                       <span>VAT: {form.vat}</span>
                     </div>
-                    <p className="pt-1 text-[11px] text-muted-foreground">
+                    <p className="pt-1 text-xs text-muted-foreground">
                       Tel: {form.phone} | Email: {form.email}
                     </p>
                   </div>
@@ -551,7 +551,7 @@ export function SettingsPanel() {
                           NPR
                         </span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         Set to 0 for free delivery during growth stage (default
                         Rs. 0).
                       </p>
@@ -584,7 +584,7 @@ export function SettingsPanel() {
                           NPR
                         </span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         Order total that qualifies for free delivery (0 = all
                         orders qualify).
                       </p>
@@ -597,7 +597,7 @@ export function SettingsPanel() {
                         <p className="font-semibold">
                           🚀 Growth Stage Active — 100% Free Delivery
                         </p>
-                        <p className="text-[11px] opacity-90">
+                        <p className="text-xs opacity-90">
                           All customer orders across Butwal &amp; Tilottama
                           enjoy zero delivery fees. Enter a fee above (e.g. Rs.
                           150) whenever you wish to resume delivery billing.
@@ -605,7 +605,7 @@ export function SettingsPanel() {
                       </div>
                       <Badge
                         variant="outline"
-                        className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-[10px]"
+                        className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-xs"
                       >
                         Free Delivery
                       </Badge>
@@ -639,7 +639,7 @@ export function SettingsPanel() {
                         NPR
                       </span>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       When a rider's outstanding collected cash reaches or
                       exceeds this limit (default Rs. 20,000), new COD
                       assignments are automatically blocked until a cash
@@ -697,7 +697,7 @@ export function SettingsPanel() {
                     <span className="font-semibold text-foreground block">
                       Rider Compensation Formula
                     </span>
-                    <p className="font-mono text-[11px] text-foreground">
+                    <p className="font-mono text-xs text-foreground">
                       Pay = Base Salary + Rs. 50/drop + (10% × Delivery Charge)
                     </p>
                   </div>
@@ -745,7 +745,7 @@ export function SettingsPanel() {
                           %
                         </span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         Statutory standard VAT rate in Nepal is 13%.
                       </p>
                     </div>
@@ -766,7 +766,7 @@ export function SettingsPanel() {
                         placeholder="e.g. MZ or DARU"
                         required
                       />
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         Sample generated invoice:{' '}
                         <span className="font-mono font-semibold text-primary">
                           {form.invoicePrefix || 'MZ'}-2026-0042
@@ -798,7 +798,7 @@ export function SettingsPanel() {
                           units
                         </span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         Items with inventory below this quantity trigger alerts
                         on dashboard.
                       </p>
@@ -937,7 +937,7 @@ export function SettingsPanel() {
                       <CheckCircle2 className="h-4 w-4" />
                       Excise License Valid
                     </div>
-                    <p className="mt-1 text-[11px] text-success">
+                    <p className="mt-1 text-xs text-success">
                       Compliant with Nepal Excise Act and Tobacco & Alcohol
                       Control Regulations.
                     </p>
@@ -1089,7 +1089,7 @@ export function SettingsPanel() {
                         </span>
                         <Badge
                           variant={gw.mode === 'live' ? 'success' : 'warning'}
-                          className="uppercase text-[10px]"
+                          className="uppercase text-xs"
                         >
                           {gw.mode}
                         </Badge>
@@ -1103,7 +1103,7 @@ export function SettingsPanel() {
                       <div className="flex-1 space-y-1">
                         <Label
                           htmlFor={`gw-${method}-id`}
-                          className="text-[11px] text-muted-foreground"
+                          className="text-xs text-muted-foreground"
                         >
                           {method === 'cod'
                             ? 'Float Account ID'
@@ -1118,7 +1118,7 @@ export function SettingsPanel() {
                               merchantId: e.target.value,
                             })
                           }
-                          className="h-8 font-mono text-xs"
+                          className="h-9 font-mono text-xs sm:text-sm"
                           placeholder={
                             method === 'cod'
                               ? 'COD-CUSTODY'
@@ -1130,7 +1130,7 @@ export function SettingsPanel() {
                       <div className="w-28 space-y-1">
                         <Label
                           htmlFor={`gw-${method}-mode`}
-                          className="text-[11px] text-muted-foreground"
+                          className="text-xs text-muted-foreground"
                         >
                           Environment
                         </Label>
@@ -1142,7 +1142,7 @@ export function SettingsPanel() {
                               mode: e.target.value as 'sandbox' | 'live',
                             })
                           }
-                          className="h-8 text-xs"
+                          className="h-9 text-xs sm:text-sm"
                         >
                           <option value="sandbox">Sandbox</option>
                           <option value="live">Live</option>

@@ -326,7 +326,7 @@ export function InventoryPanel() {
                       <span className="font-mono text-xs font-semibold text-foreground block">
                         {item.sku}
                       </span>
-                      <span className="text-[11px] text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {item.variantName}
                       </span>
                     </TableCell>
@@ -335,7 +335,7 @@ export function InventoryPanel() {
                       <div className="font-medium text-xs text-foreground">
                         {item.name}
                       </div>
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {item.brand} · {item.category}
                       </div>
                     </TableCell>
@@ -343,7 +343,7 @@ export function InventoryPanel() {
                     <TableCell>
                       <Badge
                         variant="secondary"
-                        className="gap-1 text-[11px] font-normal capitalize"
+                        className="gap-1 text-xs font-normal capitalize"
                       >
                         {item.type === 'liquor' ? (
                           <Wine className="h-3 w-3 text-muted-foreground" />
@@ -372,14 +372,14 @@ export function InventoryPanel() {
                       {isLow ? (
                         <Badge
                           variant="destructive"
-                          className="gap-1 text-[10px] font-normal"
+                          className="gap-1 text-xs font-normal"
                         >
                           <AlertTriangle className="h-3 w-3" /> Low stock
                         </Badge>
                       ) : (
                         <Badge
                           variant="outline"
-                          className="text-[10px] font-normal text-muted-foreground"
+                          className="text-xs font-normal text-muted-foreground"
                         >
                           Adequate
                         </Badge>
@@ -453,7 +453,7 @@ export function InventoryPanel() {
                     onChange={(e) => setCostPerUnit(Number(e.target.value))}
                     className="h-8 text-xs font-mono"
                   />
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     Automatically logged as COGS purchase bill in the general
                     ledger
                   </span>

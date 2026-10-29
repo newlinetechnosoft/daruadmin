@@ -346,7 +346,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
           <span className="font-medium text-foreground truncate">
             {row.productName}
           </span>
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {row.catalogType.toUpperCase()} · {row.categoryName || 'General'}
           </span>
         </div>
@@ -559,7 +559,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
                         autoFocus={!dealerId}
                       />
                     </FormControl>
-                    <FormMessage className="text-[11px]" />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
@@ -577,7 +577,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
                         className="h-8 text-xs"
                       />
                     </FormControl>
-                    <FormMessage className="text-[11px]" />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
@@ -597,7 +597,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
                         className="h-8 text-xs font-mono"
                       />
                     </FormControl>
-                    <FormMessage className="text-[11px]" />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
@@ -618,10 +618,10 @@ export function DealerForm({ dealerId }: DealerFormProps) {
                         className="h-8 text-xs font-mono"
                       />
                     </FormControl>
-                    <FormDescription className="text-[10px]">
+                    <FormDescription className="text-xs">
                       Used for automated order sourcing notifications
                     </FormDescription>
-                    <FormMessage className="text-[11px]" />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
@@ -642,7 +642,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
                           className="h-8 text-xs"
                         />
                       </FormControl>
-                      <FormMessage className="text-[11px]" />
+                      <FormMessage className="text-xs" />
                     </FormItem>
                   )}
                 />
@@ -682,7 +682,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
               <AlertTitle className="text-xs font-semibold text-amber-900 dark:text-amber-200">
                 No shop location set
               </AlertTitle>
-              <AlertDescription className="text-[11px] text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
+              <AlertDescription className="text-xs text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
                 This dealer does not have a physical shop location pinned on the
                 map. Set coordinates below to enable automated nearest-dealer
                 routing and delivery sourcing.
@@ -708,7 +708,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
                     {isLocationDirty && (
                       <Badge
                         variant="outline"
-                        className="border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-500/10 text-[10px] font-normal"
+                        className="border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-500/10 text-xs font-normal"
                       >
                         Unsaved coordinates
                       </Badge>
@@ -779,7 +779,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
                         className="h-8 text-xs font-mono"
                       />
                     </FormControl>
-                    <FormMessage className="text-[11px]" />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
@@ -813,7 +813,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
                         </SelectContent>
                       </Select>
                     </FormControl>
-                    <FormMessage className="text-[11px]" />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
@@ -840,7 +840,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
                         className="h-8 text-xs font-mono"
                       />
                     </FormControl>
-                    <FormMessage className="text-[11px]" />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
@@ -865,10 +865,10 @@ export function DealerForm({ dealerId }: DealerFormProps) {
                         className="h-8 text-xs font-mono"
                       />
                     </FormControl>
-                    <FormDescription className="text-[10px]">
+                    <FormDescription className="text-xs">
                       Agreed settlement cycle (e.g. 7 days, 15 days)
                     </FormDescription>
-                    <FormMessage className="text-[11px]" />
+                    <FormMessage className="text-xs" />
                   </FormItem>
                 )}
               />
@@ -999,7 +999,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
                       <div className="font-medium text-foreground truncate">
                         {p.name}
                       </div>
-                      <div className="text-[10px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {p.catalogType.toUpperCase()} ·{' '}
                         {p.categoryName || 'General'}
                       </div>

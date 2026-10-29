@@ -12,7 +12,7 @@ export interface PageShellProps {
 
 /**
  * Standard page frame for Mezmani ERP Desk.
- * Enforces responsive padding, zero horizontal scroll, and max-width 1440px on large displays.
+ * Enforces responsive padding, zero horizontal scroll, and spacious layout on large displays.
  */
 export function PageShell({
   children,
@@ -23,7 +23,7 @@ export function PageShell({
     <div
       className={cn(
         'w-full min-w-0 space-y-6',
-        !fullWidth && 'max-w-7xl mx-auto',
+        !fullWidth && 'max-w-[1600px] mx-auto',
         className,
       )}
     >

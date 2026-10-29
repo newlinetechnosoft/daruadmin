@@ -27,7 +27,7 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
       />
 
       {/* Customer Coordinates Display Bar */}
-      <div className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-1.5 text-[11px] font-mono text-muted-foreground">
+      <div className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-1.5 text-xs font-mono text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <MapPin className="h-3.5 w-3.5 text-primary" />
           <span>Coordinates (Butwal):</span>

@@ -160,7 +160,7 @@ export function DeliveryProofDialog({
                 <span className="text-xs font-bold block">
                   Cash on Delivery
                 </span>
-                <span className="text-[11px] opacity-80">
+                <span className="text-xs opacity-80">
                   Collect cash from customer
                 </span>
               </div>
@@ -179,7 +179,7 @@ export function DeliveryProofDialog({
             </div>
             <Badge
               variant="outline"
-              className="text-[11px] bg-emerald-500/20 border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
+              className="text-xs bg-emerald-500/20 border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
             >
               No Cash Collection
             </Badge>
@@ -196,7 +196,7 @@ export function DeliveryProofDialog({
               </span>
               <Badge
                 variant="destructive"
-                className="text-[10px] uppercase font-bold py-0"
+                className="text-xs uppercase font-bold py-0"
               >
                 Mandatory
               </Badge>
@@ -230,7 +230,7 @@ export function DeliveryProofDialog({
               <button
                 type="button"
                 onClick={() => setActiveProofMode('otp')}
-                className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all ${
+                className={`text-xs font-semibold px-2.5 py-1 rounded-md transition-all ${
                   activeProofMode === 'otp'
                     ? 'bg-primary text-primary-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
@@ -241,7 +241,7 @@ export function DeliveryProofDialog({
               <button
                 type="button"
                 onClick={() => setActiveProofMode('photo')}
-                className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all ${
+                className={`text-xs font-semibold px-2.5 py-1 rounded-md transition-all ${
                   activeProofMode === 'photo'
                     ? 'bg-primary text-primary-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
@@ -268,7 +268,7 @@ export function DeliveryProofDialog({
                 placeholder="e.g. 4821"
                 className="h-10 text-center font-mono text-lg font-bold tracking-widest"
               />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Ask the customer for the PIN displayed on their live tracking
                 page.
               </p>

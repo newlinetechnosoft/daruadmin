@@ -47,12 +47,12 @@ export function RiderDealerPickups({ order }: RiderDealerPickupsProps) {
 
   return (
     <div className="space-y-2.5">
-      <div className="flex items-center justify-between text-[11px] font-semibold text-foreground">
+      <div className="flex items-center justify-between text-xs font-semibold text-foreground">
         <div className="flex items-center gap-1.5 text-primary">
           <Store className="h-3.5 w-3.5" />
           <span>Dealer Pickup Stations ({groups.length})</span>
         </div>
-        <span className="text-[10px] text-muted-foreground font-normal">
+        <span className="text-xs text-muted-foreground font-normal">
           Collect items before delivery
         </span>
       </div>
@@ -88,12 +88,12 @@ export function RiderDealerPickups({ order }: RiderDealerPickupsProps) {
                     </span>
                     <Badge
                       variant="outline"
-                      className="text-[10px] py-0 px-1 border-amber-500/30 text-amber-700 dark:text-amber-400"
+                      className="text-xs py-0 px-1 border-amber-500/30 text-amber-700 dark:text-amber-400"
                     >
                       Station #{idx + 1}
                     </Badge>
                   </div>
-                  <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                  <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                     <MapPin className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
                     <span className="truncate">
                       {dealer.address}, {dealer.city}
@@ -156,7 +156,7 @@ export function RiderDealerPickups({ order }: RiderDealerPickupsProps) {
 
             {/* Items to collect from this dealer */}
             <div className="pt-2 border-t border-amber-500/15">
-              <div className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+              <div className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-1 flex items-center justify-between">
                 <span>Collect from {dealer.name}:</span>
                 <span className="font-mono">
                   {group.items.reduce((s, it) => s + it.qty, 0)} pcs
@@ -166,14 +166,14 @@ export function RiderDealerPickups({ order }: RiderDealerPickupsProps) {
                 {group.items.map((it) => (
                   <li
                     key={it.id}
-                    className="flex justify-between items-center text-[11px] bg-background/70 border border-border/50 rounded px-2.5 py-1"
+                    className="flex justify-between items-center text-xs bg-background/70 border border-border/50 rounded px-2.5 py-1"
                   >
                     <span className="font-medium text-foreground">
                       <span className="font-bold text-amber-600 dark:text-amber-400 mr-1.5">
                         {it.qty}x
                       </span>
                       {it.name}{' '}
-                      <span className="text-muted-foreground text-[10px]">
+                      <span className="text-muted-foreground text-xs">
                         ({it.variantName})
                       </span>
                     </span>
@@ -181,7 +181,7 @@ export function RiderDealerPickups({ order }: RiderDealerPickupsProps) {
                       {it.sourcingStatus && (
                         <Badge
                           variant="outline"
-                          className={`text-[9px] py-0 px-1 font-mono uppercase ${
+                          className={`text-xs py-0 px-1 font-mono uppercase ${
                             it.sourcingStatus === 'picked_up'
                               ? 'border-emerald-500/30 text-emerald-600 bg-emerald-500/10'
                               : it.sourcingStatus === 'unavailable'
@@ -194,7 +194,7 @@ export function RiderDealerPickups({ order }: RiderDealerPickupsProps) {
                       )}
                       <Badge
                         variant="secondary"
-                        className="text-[9px] py-0 px-1 font-mono uppercase"
+                        className="text-xs py-0 px-1 font-mono uppercase"
                       >
                         {it.catalogType}
                       </Badge>
@@ -210,12 +210,12 @@ export function RiderDealerPickups({ order }: RiderDealerPickupsProps) {
       {/* Unassigned items if any */}
       {unassignedItems.length > 0 && (
         <div className="rounded-lg border border-border bg-muted/40 p-2.5 space-y-1.5 text-xs">
-          <div className="flex items-center justify-between text-muted-foreground text-[11px] font-medium">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
             <div className="flex items-center gap-1.5">
               <Package className="h-3.5 w-3.5" />
               <span>Central Warehouse / Unassigned Dealer</span>
             </div>
-            <span className="text-[10px]">
+            <span className="text-xs">
               {unassignedItems.reduce((s, it) => s + it.qty, 0)} pcs
             </span>
           </div>
@@ -223,14 +223,14 @@ export function RiderDealerPickups({ order }: RiderDealerPickupsProps) {
             {unassignedItems.map((it) => (
               <li
                 key={it.id}
-                className="flex justify-between items-center text-[11px] text-muted-foreground px-2 py-0.5"
+                className="flex justify-between items-center text-xs text-muted-foreground px-2 py-0.5"
               >
                 <span>
                   {it.qty}x {it.name} ({it.variantName})
                 </span>
                 <Badge
                   variant="outline"
-                  className="text-[9px] py-0 px-1 font-mono uppercase"
+                  className="text-xs py-0 px-1 font-mono uppercase"
                 >
                   {it.catalogType}
                 </Badge>

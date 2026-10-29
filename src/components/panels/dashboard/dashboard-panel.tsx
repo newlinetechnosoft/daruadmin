@@ -69,7 +69,7 @@ export function DashboardPanel() {
   const attentionItems = [
     {
       id: 'pending_orders',
-      title: 'Orders awaiting confirmation',
+      title: 'Awaiting confirmation',
       count: pendingOrders,
       tone: pendingOrders > 0 ? 'warning' : 'neutral',
       href: '/admin/orders',
@@ -78,7 +78,7 @@ export function DashboardPanel() {
     },
     {
       id: 'unassigned_orders',
-      title: 'Orders awaiting dealer & rider dispatch',
+      title: 'Awaiting dispatch',
       count: confirmedOrders,
       tone: confirmedOrders > 0 ? 'info' : 'neutral',
       href: '/admin/orders',
@@ -87,7 +87,7 @@ export function DashboardPanel() {
     },
     {
       id: 'in_transit',
-      title: 'Orders out for delivery',
+      title: 'Out for delivery',
       count: outForDelivery,
       tone: outForDelivery > 0 ? 'info' : 'neutral',
       href: '/admin/orders',
@@ -96,7 +96,7 @@ export function DashboardPanel() {
     },
     {
       id: 'rider_cash',
-      title: 'Rider cash handovers & settlements',
+      title: 'Riders & fleet',
       count: data.ridersOnline,
       tone: 'neutral',
       href: '/admin/riders',
@@ -106,8 +106,8 @@ export function DashboardPanel() {
   ]
 
   const shortcuts = [
-    { label: 'New order', href: '/admin/orders/new', icon: PlusCircle },
-    { label: 'New dealer', href: '/admin/dealers/new', icon: Store },
+    { label: 'New Order', href: '/admin/orders/new', icon: PlusCircle },
+    { label: 'New Dealer', href: '/admin/dealers/new', icon: Store },
     { label: 'Riders & Fleet', href: '/admin/riders', icon: Bike },
     { label: 'Accounts & Ledger', href: '/admin/accounts', icon: Wallet },
     { label: 'Catalog Directory', href: '/admin/liquor', icon: Sparkles },
@@ -121,7 +121,7 @@ export function DashboardPanel() {
         title="Workspace"
         description="Action-first hub for order desk dispatch, dealer sourcing, rider handovers, and cash reconciliation in Butwal."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <Select
               value={range}
               onValueChange={(val) =>
@@ -130,7 +130,7 @@ export function DashboardPanel() {
                 })
               }
             >
-              <SelectTrigger className="h-8 w-[145px] text-xs">
+              <SelectTrigger className="h-9 w-[160px] text-xs sm:text-sm font-medium bg-card">
                 <SelectValue placeholder="Date range" />
               </SelectTrigger>
               <SelectContent>
@@ -142,9 +142,9 @@ export function DashboardPanel() {
               </SelectContent>
             </Select>
 
-            <Button asChild size="sm" className="h-8 gap-1.5 text-xs">
+            <Button asChild size="sm" className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs">
               <Link to="/admin/orders">
-                <PlusCircle className="size-3.5" /> New order
+                <PlusCircle className="size-4" /> New Order
               </Link>
             </Button>
           </div>
@@ -154,16 +154,16 @@ export function DashboardPanel() {
       {/* 1. Needs Attention Work Queues */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <AlertCircle className="size-3.5 text-amber-500" />
+          <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <AlertCircle className="size-4 text-amber-500" />
             <span>Needs Attention</span>
           </h2>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground font-medium">
             Actionable work queues
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {attentionItems.map((item) => {
             const Icon = item.icon
             const isUrgent = item.count > 0 && item.tone !== 'neutral'
@@ -172,37 +172,37 @@ export function DashboardPanel() {
               <Link
                 key={item.id}
                 to={item.href}
-                className="group relative flex flex-col justify-between p-4 rounded-lg border border-border bg-card hover:bg-muted/30 hover:border-primary/40 transition-all shadow-xs"
+                className="group relative flex flex-col justify-between p-4 sm:p-5 rounded-xl border border-border bg-card hover:bg-muted/30 hover:border-primary/50 transition-all shadow-xs hover:shadow-sm"
               >
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <div className="p-2 rounded-md bg-muted/60 text-foreground group-hover:text-primary transition-colors">
-                      <Icon className="size-4" />
+                    <div className="p-2.5 rounded-lg bg-secondary text-foreground group-hover:text-primary transition-colors">
+                      <Icon className="size-5" />
                     </div>
                     <Badge
                       variant="outline"
-                      className={`font-mono text-xs px-2 py-0.5 ${
+                      className={`font-mono text-xs font-bold px-2.5 py-0.5 ${
                         isUrgent
                           ? 'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10'
-                          : 'text-muted-foreground'
+                          : 'text-muted-foreground border-border bg-muted/40'
                       }`}
                     >
                       {item.count}
                     </Badge>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors">
+                    <h3 className="font-bold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors">
                       {item.title}
                     </h3>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
                       {item.description}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center text-[11px] font-medium text-muted-foreground group-hover:text-foreground pt-3 border-t border-border/40 mt-3">
+                <div className="flex items-center text-xs font-semibold text-primary pt-3 border-t border-border/50 mt-4">
                   <span>Open queue</span>
-                  <ArrowRight className="size-3 ml-1 group-hover:translate-x-0.5 transition-transform" />
+                  <ArrowRight className="size-3.5 ml-1.5 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
             )
@@ -212,19 +212,19 @@ export function DashboardPanel() {
 
       {/* 2. Quick Shortcuts */}
       <div className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground">
           Quick Shortcuts
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
           {shortcuts.map((sc) => {
             const Icon = sc.icon
             return (
               <Link
                 key={sc.label}
                 to={sc.href}
-                className="flex items-center gap-2 p-2.5 rounded-md border border-border/70 bg-card hover:bg-muted/40 transition-colors text-xs font-medium text-foreground group"
+                className="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-card hover:bg-muted/40 hover:border-border/80 transition-all text-xs sm:text-sm font-semibold text-foreground group shadow-xs"
               >
-                <Icon className="size-3.5 text-muted-foreground group-hover:text-foreground" />
+                <Icon className="size-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                 <span className="truncate">{sc.label}</span>
               </Link>
             )
@@ -233,55 +233,55 @@ export function DashboardPanel() {
       </div>
 
       {/* 3. Primary Secondary KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-        <Card className="p-4 border-border/80">
-          <div className="flex items-center justify-between text-muted-foreground text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="p-5 border-border bg-card rounded-xl shadow-xs">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider">
             <span>Delivered Revenue</span>
-            <Wallet className="size-4" />
+            <Wallet className="size-4 text-primary" />
           </div>
-          <div className="text-lg font-bold font-mono text-foreground mt-1.5">
+          <div className="text-xl sm:text-2xl font-bold font-mono text-foreground mt-2">
             <MoneyText paisa={data.kpis.revenue} />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1.5">
             In selected range
           </p>
         </Card>
 
-        <Card className="p-4 border-border/80">
-          <div className="flex items-center justify-between text-muted-foreground text-xs">
+        <Card className="p-5 border-border bg-card rounded-xl shadow-xs">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider">
             <span>Total Orders</span>
-            <ShoppingCart className="size-4" />
+            <ShoppingCart className="size-4 text-primary" />
           </div>
-          <div className="text-lg font-bold font-mono text-foreground mt-1.5">
+          <div className="text-xl sm:text-2xl font-bold font-mono text-foreground mt-2">
             {data.kpis.orders}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1.5">
             {data.kpis.sales} delivered
           </p>
         </Card>
 
-        <Card className="p-4 border-border/80">
-          <div className="flex items-center justify-between text-muted-foreground text-xs">
+        <Card className="p-5 border-border bg-card rounded-xl shadow-xs">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider">
             <span>Realized Profit</span>
-            <TrendingUp className="size-4 text-emerald-600" />
+            <TrendingUp className="size-4 text-emerald-500" />
           </div>
-          <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1.5">
+          <div className="text-xl sm:text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-2">
             <MoneyText paisa={data.kpis.profit} />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1.5">
             After dealer payouts & COGS
           </p>
         </Card>
 
-        <Card className="p-4 border-border/80">
-          <div className="flex items-center justify-between text-muted-foreground text-xs">
+        <Card className="p-5 border-border bg-card rounded-xl shadow-xs">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider">
             <span>Active Sourcing Hubs</span>
-            <Store className="size-4" />
+            <Store className="size-4 text-primary" />
           </div>
-          <div className="text-lg font-bold font-mono text-foreground mt-1.5">
+          <div className="text-xl sm:text-2xl font-bold font-mono text-foreground mt-2">
             {data.kpis.dealers}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1.5">
             {data.kpis.activeDealers} online in Butwal
           </p>
         </Card>
@@ -289,66 +289,66 @@ export function DashboardPanel() {
 
       {/* 4. Sales Trend & Live Feed */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border-border/80 p-4">
-          <CardHeader className="p-0 pb-3 flex flex-row items-center justify-between space-y-0">
+        <Card className="lg:col-span-2 border-border bg-card p-5 rounded-xl shadow-xs">
+          <CardHeader className="p-0 pb-4 flex flex-row items-center justify-between space-y-0">
             <div>
-              <CardTitle className="text-sm font-semibold">
+              <CardTitle className="text-base font-bold text-foreground">
                 Sales & Revenue Trend
               </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">
+              <CardDescription className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                 Revenue progression in NPR over {range}
               </CardDescription>
             </div>
-            <span className="text-xs text-muted-foreground font-mono">NPR</span>
+            <span className="text-xs font-mono font-bold text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-md">NPR</span>
           </CardHeader>
           <CardContent className="p-0 pt-2">
             <LineChart data={data.salesTrend} money />
           </CardContent>
         </Card>
 
-        <Card className="border-border/80 overflow-hidden flex flex-col">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 px-4 py-3 space-y-0">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <Card className="border-border bg-card overflow-hidden flex flex-col rounded-xl shadow-xs">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 px-5 py-4 space-y-0">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Recent Orders
             </CardTitle>
             <Link
               to="/admin/orders"
-              className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
+              className="text-xs text-primary font-bold hover:underline flex items-center gap-1"
             >
               <span>View all</span>
-              <ArrowRight className="size-3" />
+              <ArrowRight className="size-3.5" />
             </Link>
           </CardHeader>
           <div className="flex-1 overflow-x-auto">
             <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow>
-                  <TableHead className="text-[11px]">Order</TableHead>
-                  <TableHead className="text-[11px]">Status</TableHead>
-                  <TableHead className="text-right text-[11px]">
+              <TableHeader className="bg-muted/40">
+                <TableRow className="border-b border-border">
+                  <TableHead className="text-xs font-bold uppercase tracking-wider py-3 px-4">Order</TableHead>
+                  <TableHead className="text-xs font-bold uppercase tracking-wider py-3 px-4">Status</TableHead>
+                  <TableHead className="text-right text-xs font-bold uppercase tracking-wider py-3 px-4">
                     Total
                   </TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="divide-y divide-border/60">
                 {data.recentOrders.slice(0, 5).map((o) => (
-                  <TableRow key={o.id} className="hover:bg-muted/20">
-                    <TableCell className="py-2">
+                  <TableRow key={o.id} className="hover:bg-muted/30 transition-colors">
+                    <TableCell className="py-3 px-4">
                       <Link
                         to="/admin/orders"
-                        className="font-mono text-xs font-medium text-foreground hover:underline"
+                        className="font-mono text-sm font-bold text-foreground hover:text-primary transition-colors"
                       >
                         {o.number}
                       </Link>
-                      <div className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                      <div className="text-xs text-muted-foreground truncate max-w-[140px] mt-0.5">
                         {o.customerName}
                       </div>
                     </TableCell>
-                    <TableCell className="py-2">
+                    <TableCell className="py-3 px-4">
                       <StatusIndicator status={o.status} />
                     </TableCell>
-                    <TableCell className="text-right py-2">
-                      <MoneyText paisa={o.total} className="text-xs" />
+                    <TableCell className="text-right py-3 px-4">
+                      <MoneyText paisa={o.total} className="text-sm font-bold" />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -359,35 +359,35 @@ export function DashboardPanel() {
       </div>
 
       {/* 5. Recent Activity Feed */}
-      <Card className="border-border/80 p-4">
-        <CardHeader className="p-0 pb-3 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <Card className="border-border bg-card p-5 rounded-xl shadow-xs">
+        <CardHeader className="p-0 pb-4 flex flex-row items-center justify-between space-y-0 border-b border-border/50 pb-3">
+          <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground">
             Recent Audit & Operations Activity
           </CardTitle>
-          <span className="text-[11px] text-muted-foreground font-mono">
+          <span className="text-xs text-muted-foreground font-mono font-medium">
             Live events
           </span>
         </CardHeader>
-        <CardContent className="p-0">
-          <ul className="divide-y divide-border/40">
+        <CardContent className="p-0 pt-3">
+          <ul className="divide-y divide-border/50">
             {data.activities.slice(0, 6).map((a) => (
               <li
                 key={a.id}
-                className="flex items-center justify-between py-2 text-xs"
+                className="flex items-center justify-between py-3 text-xs sm:text-sm"
               >
-                <div className="flex items-center gap-2.5 min-w-0 pr-3">
-                  <span className="size-1.5 rounded-full bg-primary/70 shrink-0" />
-                  <span className="font-medium text-foreground truncate">
+                <div className="flex items-center gap-3 min-w-0 pr-3">
+                  <span className="size-2 rounded-full bg-primary shrink-0" />
+                  <span className="font-semibold text-foreground truncate">
                     {a.detail}
                   </span>
-                  <span className="text-[11px] text-muted-foreground hidden sm:inline">
-                    · {a.actor} ({a.module})
+                  <span className="text-xs text-muted-foreground hidden sm:inline">
+                    · <strong className="font-medium text-foreground/70">{a.actor}</strong> ({a.module})
                   </span>
                 </div>
                 <DateText
                   date={a.at}
                   showRelative
-                  className="text-[11px] text-muted-foreground shrink-0"
+                  className="text-xs text-muted-foreground font-medium shrink-0"
                 />
               </li>
             ))}
