@@ -453,7 +453,7 @@ function SearchIcon({ className = 'h-5 w-5' }: { className?: string }) {
 function HomePage() {
   const navigate = useNavigate()
   const loaderData = Route.useLoaderData()
-    const { data: allGroceryCategories = loaderData?.groceryCategories ?? [] } =
+  const { data: allGroceryCategories = loaderData?.groceryCategories ?? [] } =
     useQuery({
       ...storefrontQueries.groceryCategories(),
       initialData: loaderData?.groceryCategories,
@@ -936,34 +936,13 @@ function HomePage() {
           <div
             className={`${wrap} grid items-center gap-14 py-16 sm:py-24 lg:grid-cols-2`}
           >
-            <div className="flex justify-center lg:justify-start">
-              <div className="w-60 rounded-[2.5rem] bg-foreground text-background p-2.5 shadow-2xl sm:w-72">
-                <div className="relative flex aspect-[9/17] flex-col justify-between overflow-hidden rounded-[2rem] bg-card border border-border p-6 text-card-foreground">
-                  <div>
-                    <span className="text-xs font-black uppercase tracking-tighter">
-                      <img
-                        src="/mezmani_logo.webp"
-                        alt="LOGO"
-                        width="180"
-                        height="180"
-                        loading="lazy"
-                        className="-ml-2"
-                      />
-                    </span>
-                    <strong className="mt-4 block text-3xl font-black uppercase leading-[0.92] tracking-tighter">
-                      Good times
-                      <br />
-                      delivered.
-                    </strong>
-                  </div>
-                  <img
-                    src="/images/wine.webp"
-                    alt=""
-                    aria-hidden="true"
-                    className="mx-auto h-[55%] w-full object-contain"
-                  />
-                </div>
-              </div>
+            <div className="flex items-center justify-center lg:justify-start">
+              <img
+                src="/images/rider.jpeg"
+                alt="Mezmani delivery rider"
+                loading="lazy"
+                className="w-full max-w-md rounded-2xl object-cover"
+              />
             </div>
 
             <div>
