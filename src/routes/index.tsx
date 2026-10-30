@@ -957,10 +957,9 @@ function HomePage() {
                     </strong>
                   </div>
                   <img
-                    src="/images/wine.webp"
-                    alt=""
-                    aria-hidden="true"
-                    className="mx-auto h-[55%] w-full object-contain"
+                    src="/images/riderimage.jpeg"
+                    alt="Delivery rider"
+                    className="mx-auto h-[60%] w-full object-cover object-center"
                   />
                 </div>
               </div>
