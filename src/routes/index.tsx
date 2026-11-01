@@ -18,7 +18,9 @@ import {
 export const Route = createFileRoute('/')({
   loader: async ({ context }) => {
     const [groceryCategories, liquorCategories] = await Promise.all([
-      context.queryClient.ensureQueryData(storefrontQueries.groceryCategories()),
+      context.queryClient.ensureQueryData(
+        storefrontQueries.groceryCategories(),
+      ),
       context.queryClient.ensureQueryData(storefrontQueries.liquorCategories()),
     ])
     return { groceryCategories, liquorCategories }
@@ -379,7 +381,6 @@ const DRINK_BENTO_SLOTS = [
   },
 ]
 
-
 function DrinkTileBody({
   lines,
   src,
@@ -545,8 +546,9 @@ function HomePage() {
                   loading={idx === 0 ? 'eager' : 'lazy'}
                   decoding="async"
                   fetchPriority={idx === 0 ? 'high' : 'auto'}
-                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${idx === currentSlide ? 'scale-110' : 'scale-100'
-                    }`}
+                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${
+                    idx === currentSlide ? 'scale-110' : 'scale-100'
+                  }`}
                 />
               </div>
             ))}
@@ -621,10 +623,11 @@ function HomePage() {
                   key={idx}
                   type="button"
                   onClick={() => setCurrentSlide(idx)}
-                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${idx === currentSlide
-                    ? 'w-8 bg-primary shadow-md shadow-primary/50'
-                    : 'w-2.5 bg-white/70 hover:bg-white'
-                    }`}
+                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                    idx === currentSlide
+                      ? 'w-8 bg-primary shadow-md shadow-primary/50'
+                      : 'w-2.5 bg-white/70 hover:bg-white'
+                  }`}
                   aria-label={`Go to slide ${idx + 1}`}
                 />
               ))}
@@ -679,7 +682,8 @@ function HomePage() {
                   Curated Drink Menu Coming Up
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Browse our full chilled beer, premier spirits and wine catalog.
+                  Browse our full chilled beer, premier spirits and wine
+                  catalog.
                 </p>
                 <Link
                   to="/drinks"
@@ -771,7 +775,11 @@ function HomePage() {
                     return (
                       <Link
                         key={cat.id}
-                        to={cat.slug === 'party-essentials' ? '/grocery' : '/drinks'}
+                        to={
+                          cat.slug === 'party-essentials'
+                            ? '/grocery'
+                            : '/drinks'
+                        }
                         search={{ category: cat.slug }}
                         className={`${drinkTile} ${slot.className}`}
                       >
@@ -842,7 +850,8 @@ function HomePage() {
                   Shop by food
                 </h2>
                 <p className="mt-2.5 max-w-xl text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Hot meals, late-night bites, and essential snacks delivered fresh to your doorstep in 30 minutes.
+                  Hot meals, late-night bites, and essential snacks delivered
+                  fresh to your doorstep in 30 minutes.
                 </p>
               </div>
 

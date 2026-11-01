@@ -1,8 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import {
-  generateEsewaSignature,
-  getEsewaConfig,
-} from './order.functions'
+import { generateEsewaSignature, getEsewaConfig } from './order.functions'
 
 describe('eSewa Production Guard & Configuration', () => {
   const originalEnv = { ...process.env }
@@ -98,18 +95,32 @@ describe('eSewa Production Guard & Configuration', () => {
       expect(config.isLive).toBe(true)
       expect(config.productCode).toBe('PROD_MERCHANT')
       expect(config.secretKey).toBe('secret_live_key')
-      expect(config.gatewayUrl).toBe('https://epay.esewa.com.np/api/epay/main/v2/form')
-      expect(config.statusUrl).toBe('https://epay.esewa.com.np/api/epay/transaction/status/')
+      expect(config.gatewayUrl).toBe(
+        'https://epay.esewa.com.np/api/epay/main/v2/form',
+      )
+      expect(config.statusUrl).toBe(
+        'https://epay.esewa.com.np/api/epay/transaction/status/',
+      )
     })
   })
 
   describe('generateEsewaSignature', () => {
     it('generates valid HMAC-SHA256 signature', () => {
-      const sig = generateEsewaSignature('100.00', 'uuid-1234', 'EPAYTEST', '8gBm/:&EnhH.1/q')
+      const sig = generateEsewaSignature(
+        '100.00',
+        'uuid-1234',
+        'EPAYTEST',
+        '8gBm/:&EnhH.1/q',
+      )
       expect(sig).toBeTruthy()
       expect(typeof sig).toBe('string')
       // Same inputs must produce deterministic output
-      const sig2 = generateEsewaSignature('100.00', 'uuid-1234', 'EPAYTEST', '8gBm/:&EnhH.1/q')
+      const sig2 = generateEsewaSignature(
+        '100.00',
+        'uuid-1234',
+        'EPAYTEST',
+        '8gBm/:&EnhH.1/q',
+      )
       expect(sig).toBe(sig2)
     })
   })

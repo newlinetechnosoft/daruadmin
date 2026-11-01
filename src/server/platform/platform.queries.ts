@@ -71,7 +71,10 @@ export function defaultStoreSettings(): StoreSettings {
 export async function getAllNotificationsQuery(
   limit?: number,
 ): Promise<NotificationItem[]> {
-  const q = db.select().from(notifications).orderBy(desc(notifications.createdAt))
+  const q = db
+    .select()
+    .from(notifications)
+    .orderBy(desc(notifications.createdAt))
   const rows = limit ? await q.limit(limit) : await q
   return rows.map((n) => ({
     id: n.id,
@@ -112,7 +115,9 @@ export async function insertNotificationQuery(item: {
 // AUDIT LOGS
 // -------------------------------------------------------------
 
-export async function getAllAuditLogsQuery(limit?: number): Promise<AuditLog[]> {
+export async function getAllAuditLogsQuery(
+  limit?: number,
+): Promise<AuditLog[]> {
   const q = db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt))
   const rows = limit ? await q.limit(limit) : await q
   return rows.map((a) => ({
@@ -319,7 +324,7 @@ export async function deleteCouponQuery(id: string) {
       entityType: 'coupon',
       entityId: coupon.id,
       name: coupon.code,
-      description: `${coupon.type === 'percent' ? coupon.value + '%' : 'Rs. ' + (coupon.value / 100)} discount`,
+      description: `${coupon.type === 'percent' ? coupon.value + '%' : 'Rs. ' + coupon.value / 100} discount`,
       data: { coupon },
     })
   }

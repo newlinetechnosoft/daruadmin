@@ -196,7 +196,7 @@ export function TaxonomyPanel() {
             imageUrl: formImageUrl.trim() || null,
             sortOrder: Number(formSortOrder),
             isActive: formIsActive,
-          showOnLandingPage: formShowOnLandingPage,
+            showOnLandingPage: formShowOnLandingPage,
           },
         })
         toast.success(
@@ -213,7 +213,7 @@ export function TaxonomyPanel() {
             imageUrl: formImageUrl.trim() || null,
             sortOrder: Number(formSortOrder),
             isActive: formIsActive,
-          showOnLandingPage: formShowOnLandingPage,
+            showOnLandingPage: formShowOnLandingPage,
           },
         })
         toast.success(
@@ -321,7 +321,6 @@ export function TaxonomyPanel() {
         : 'brand'
   }`
 
-  
   const handleToggleLandingPage = async (cat: CategoryLike) => {
     try {
       const catalogType = activeTab === 'liquor-cat' ? 'liquor' : 'grocery'
@@ -784,7 +783,8 @@ export function TaxonomyPanel() {
                         Visible on Landing Page
                       </Label>
                       <p className="text-xs text-muted-foreground leading-snug">
-                        Check this button to feature and display this category on the main customer landing page showcase.
+                        Check this button to feature and display this category
+                        on the main customer landing page showcase.
                       </p>
                     </div>
                     <Checkbox

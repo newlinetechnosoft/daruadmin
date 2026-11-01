@@ -4,7 +4,10 @@ import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
-import { DateRangeFilter, useDateFilter } from '#/components/shared/date-range-filter'
+import {
+  DateRangeFilter,
+  useDateFilter,
+} from '#/components/shared/date-range-filter'
 import {
   saveSettingsFn,
   reconcilePaymentFn,
@@ -83,9 +86,11 @@ const GATEWAY_INFO: Record<
 export function PaymentsPanel() {
   const queryClient = useQueryClient()
   const router = useRouter()
-  const { data: paymentsData, isFetching, refetch } = useSuspenseQuery(
-    adminQueries.payments(),
-  )
+  const {
+    data: paymentsData,
+    isFetching,
+    refetch,
+  } = useSuspenseQuery(adminQueries.payments())
   const ops = paymentsData.ops
 
   const invalidatePayments = async () => {
@@ -298,7 +303,10 @@ export function PaymentsPanel() {
 
       {/* Tabs */}
       <DataSection isRefreshing={isFetching}>
-        <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(val) => setActiveTab(val as any)}
+        >
           <TabsList className="h-9">
             <TabsTrigger value="gateways" className="gap-2 text-xs">
               <CreditCard className="h-3.5 w-3.5" />
@@ -311,254 +319,256 @@ export function PaymentsPanel() {
           </TabsList>
         </Tabs>
 
-      {activeTab === 'gateways' ? (
-        /* Gateway Cards Grid */
-        <div className="space-y-4">
-          <div className="rounded-lg border border-border bg-muted/30 p-3.5 flex items-start gap-3 text-xs">
-            <Shield className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
-            <div>
-              <strong className="block font-medium text-foreground">
-                Nepal Domestic Financial Gateway Standard
-              </strong>
-              <p className="text-muted-foreground mt-0.5">
-                Configured with IPN callback endpoints, SHA256 HMAC digital
-                signatures, and dynamic QR terminal generation.
-              </p>
+        {activeTab === 'gateways' ? (
+          /* Gateway Cards Grid */
+          <div className="space-y-4">
+            <div className="rounded-lg border border-border bg-muted/30 p-3.5 flex items-start gap-3 text-xs">
+              <Shield className="h-4 w-4 text-foreground shrink-0 mt-0.5" />
+              <div>
+                <strong className="block font-medium text-foreground">
+                  Nepal Domestic Financial Gateway Standard
+                </strong>
+                <p className="text-muted-foreground mt-0.5">
+                  Configured with IPN callback endpoints, SHA256 HMAC digital
+                  signatures, and dynamic QR terminal generation.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(Object.keys(GATEWAY_INFO) as PaymentMethod[]).map((method) => {
+                const meta = GATEWAY_INFO[method]
+                const gw = gateways[method] || {
+                  enabled: true,
+                  merchantId: 'TEST',
+                  mode: 'sandbox',
+                }
+                const ping = pingStatus[method]
+
+                return (
+                  <Card key={method} className="flex flex-col justify-between">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-sm font-semibold">
+                              {meta.name}
+                            </CardTitle>
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-mono capitalize"
+                            >
+                              {gw.mode}
+                            </Badge>
+                          </div>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            Channel: {meta.channel}
+                          </span>
+                        </div>
+
+                        <Badge
+                          variant={gw.enabled ? 'default' : 'secondary'}
+                          className="text-xs font-normal"
+                        >
+                          {gw.enabled ? 'Enabled' : 'Disabled'}
+                        </Badge>
+                      </div>
+
+                      <div className="mt-3 space-y-1.5 text-xs">
+                        <div className="flex justify-between py-1 border-b border-border/40">
+                          <span className="text-muted-foreground">
+                            Merchant code:
+                          </span>
+                          <span className="font-mono text-foreground font-medium">
+                            {gw.merchantId}
+                          </span>
+                        </div>
+                        <div className="flex justify-between py-1 border-b border-border/40">
+                          <span className="text-muted-foreground">
+                            Processing fee:
+                          </span>
+                          <span className="text-foreground">
+                            {meta.defaultFee}
+                          </span>
+                        </div>
+                        <div className="flex justify-between py-1">
+                          <span className="text-muted-foreground">
+                            Settlement SLA:
+                          </span>
+                          <span className="text-foreground">
+                            T+1 Business Day (Nabil)
+                          </span>
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    <CardFooter className="flex items-center justify-between border-t border-border/50 pt-3">
+                      <div>
+                        {ping?.latency ? (
+                          <span className="text-xs font-mono font-medium text-success">
+                            {ping.latency}ms OK
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Ready
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePing(method)}
+                          disabled={ping?.loading}
+                          className="h-7 gap-1 px-2 text-xs"
+                        >
+                          <Activity
+                            className={`h-3 w-3 ${ping?.loading ? 'animate-spin' : ''}`}
+                          />
+                          {ping?.loading ? 'Pinging...' : 'Test ping'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenEdit(method)}
+                          className="h-7 gap-1 px-2 text-xs"
+                        >
+                          <Settings className="h-3 w-3" />
+                          Configure
+                        </Button>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                )
+              })}
             </div>
           </div>
+        ) : (
+          /* Reconciliation Table */
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-lg border border-border bg-card p-3">
+              <div className="relative w-full max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search reference, order number..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 pl-9 text-xs"
+                />
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {(Object.keys(GATEWAY_INFO) as PaymentMethod[]).map((method) => {
-              const meta = GATEWAY_INFO[method]
-              const gw = gateways[method] || {
-                enabled: true,
-                merchantId: 'TEST',
-                mode: 'sandbox',
-              }
-              const ping = pingStatus[method]
-
-              return (
-                <Card key={method} className="flex flex-col justify-between">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-sm font-semibold">
-                            {meta.name}
-                          </CardTitle>
-                          <Badge
-                            variant="outline"
-                            className="text-xs font-mono capitalize"
-                          >
-                            {gw.mode}
-                          </Badge>
-                        </div>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          Channel: {meta.channel}
-                        </span>
-                      </div>
-
-                      <Badge
-                        variant={gw.enabled ? 'default' : 'secondary'}
-                        className="text-xs font-normal"
-                      >
-                        {gw.enabled ? 'Enabled' : 'Disabled'}
-                      </Badge>
-                    </div>
-
-                    <div className="mt-3 space-y-1.5 text-xs">
-                      <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">
-                          Merchant code:
-                        </span>
-                        <span className="font-mono text-foreground font-medium">
-                          {gw.merchantId}
-                        </span>
-                      </div>
-                      <div className="flex justify-between py-1 border-b border-border/40">
-                        <span className="text-muted-foreground">
-                          Processing fee:
-                        </span>
-                        <span className="text-foreground">
-                          {meta.defaultFee}
-                        </span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-muted-foreground">
-                          Settlement SLA:
-                        </span>
-                        <span className="text-foreground">
-                          T+1 Business Day (Nabil)
-                        </span>
-                      </div>
-                    </div>
-                  </CardHeader>
-
-                  <CardFooter className="flex items-center justify-between border-t border-border/50 pt-3">
-                    <div>
-                      {ping?.latency ? (
-                        <span className="text-xs font-mono font-medium text-success">
-                          {ping.latency}ms OK
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          Ready
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePing(method)}
-                        disabled={ping?.loading}
-                        className="h-7 gap-1 px-2 text-xs"
-                      >
-                        <Activity
-                          className={`h-3 w-3 ${ping?.loading ? 'animate-spin' : ''}`}
-                        />
-                        {ping?.loading ? 'Pinging...' : 'Test ping'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenEdit(method)}
-                        className="h-7 gap-1 px-2 text-xs"
-                      >
-                        <Settings className="h-3 w-3" />
-                        Configure
-                      </Button>
-                    </div>
-                  </CardFooter>
-                </Card>
-              )
-            })}
-          </div>
-        </div>
-      ) : (
-        /* Reconciliation Table */
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-lg border border-border bg-card p-3">
-            <div className="relative w-full max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Search reference, order number..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 pl-9 text-xs"
+              <DateRangeFilter
+                value={dateFilter}
+                onChange={setDateFilter}
+                size="sm"
+                filteredCount={filteredPayments.length}
+                totalCount={ops.payments.length}
               />
             </div>
 
-            <DateRangeFilter
-              value={dateFilter}
-              onChange={setDateFilter}
-              size="sm"
-              filteredCount={filteredPayments.length}
-              totalCount={ops.payments.length}
-            />
-          </div>
-
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Reference</TableHead>
-                  <TableHead className="text-xs">Order linked</TableHead>
-                  <TableHead className="text-xs">Gateway provider</TableHead>
-                  <TableHead className="text-xs">Amount (NPR)</TableHead>
-                  <TableHead className="text-xs">Status</TableHead>
-                  <TableHead className="text-right text-xs">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPayments.length === 0 ? (
+            <div className="overflow-hidden rounded-lg border border-border bg-card">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="p-0">
-                      <EmptyState
-                        title={`No payment records found for ${bounds.label}`}
-                        description={
-                          bounds.isFiltered
-                            ? `There are no transactions recorded for ${bounds.secondaryLabel}. You can switch to All Dates or pick another range.`
-                            : 'Try adjusting your search query.'
-                        }
-                        action={
-                          bounds.isFiltered ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setDateFilter({ preset: 'all' })}
-                              className="mt-2 text-xs"
-                            >
-                              View All Time Payments ({ops.payments.length})
-                            </Button>
-                          ) : undefined
-                        }
-                      />
-                    </TableCell>
+                    <TableHead className="text-xs">Reference</TableHead>
+                    <TableHead className="text-xs">Order linked</TableHead>
+                    <TableHead className="text-xs">Gateway provider</TableHead>
+                    <TableHead className="text-xs">Amount (NPR)</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-right text-xs">Action</TableHead>
                   </TableRow>
-                ) : (
-                  filteredPayments.map((p) => (
-                    <TableRow
-                      key={p.id}
-                      className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
-                    >
-                      <TableCell>
-                        <span className="font-mono text-xs font-semibold text-foreground">
-                          {p.reference}
-                        </span>
-                      </TableCell>
-
-                      <TableCell>
-                        <span className="font-mono text-xs text-primary">
-                          {p.orderId}
-                        </span>
-                      </TableCell>
-
-                      <TableCell>
-                        <span className="font-medium text-xs uppercase text-foreground">
-                          {p.gateway}
-                        </span>
-                      </TableCell>
-
-                      <TableCell>
-                        <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
-                          {formatNPR(p.amount)}
-                        </span>
-                      </TableCell>
-
-                      <TableCell>
-                        <Badge
-                          variant={
-                            p.status === 'reconciled' ? 'outline' : 'secondary'
+                </TableHeader>
+                <TableBody>
+                  {filteredPayments.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="p-0">
+                        <EmptyState
+                          title={`No payment records found for ${bounds.label}`}
+                          description={
+                            bounds.isFiltered
+                              ? `There are no transactions recorded for ${bounds.secondaryLabel}. You can switch to All Dates or pick another range.`
+                              : 'Try adjusting your search query.'
                           }
-                          className="text-xs font-normal uppercase"
-                        >
-                          {p.status}
-                        </Badge>
-                      </TableCell>
-
-                      <TableCell className="text-right">
-                        {p.status !== 'reconciled' && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleReconcile(p.id)}
-                            disabled={isUpdating}
-                            className="h-7 px-2 text-xs"
-                          >
-                            Reconcile match
-                          </Button>
-                        )}
+                          action={
+                            bounds.isFiltered ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setDateFilter({ preset: 'all' })}
+                                className="mt-2 text-xs"
+                              >
+                                View All Time Payments ({ops.payments.length})
+                              </Button>
+                            ) : undefined
+                          }
+                        />
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    filteredPayments.map((p) => (
+                      <TableRow
+                        key={p.id}
+                        className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
+                      >
+                        <TableCell>
+                          <span className="font-mono text-xs font-semibold text-foreground">
+                            {p.reference}
+                          </span>
+                        </TableCell>
+
+                        <TableCell>
+                          <span className="font-mono text-xs text-primary">
+                            {p.orderId}
+                          </span>
+                        </TableCell>
+
+                        <TableCell>
+                          <span className="font-medium text-xs uppercase text-foreground">
+                            {p.gateway}
+                          </span>
+                        </TableCell>
+
+                        <TableCell>
+                          <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+                            {formatNPR(p.amount)}
+                          </span>
+                        </TableCell>
+
+                        <TableCell>
+                          <Badge
+                            variant={
+                              p.status === 'reconciled'
+                                ? 'outline'
+                                : 'secondary'
+                            }
+                            className="text-xs font-normal uppercase"
+                          >
+                            {p.status}
+                          </Badge>
+                        </TableCell>
+
+                        <TableCell className="text-right">
+                          {p.status !== 'reconciled' && (
+                            <Button
+                              size="sm"
+                              onClick={() => handleReconcile(p.id)}
+                              disabled={isUpdating}
+                              className="h-7 px-2 text-xs"
+                            >
+                              Reconcile match
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
-        </div>
-      )}
+        )}
       </DataSection>
 
       {/* Configure Gateway Dialog */}

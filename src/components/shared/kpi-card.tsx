@@ -28,7 +28,9 @@ export function KpiCard({
     >
       <CardContent className="p-0">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+          <p className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            {label}
+          </p>
           {Icon && (
             <div className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-muted-foreground">
               <Icon className="h-4 w-4" />

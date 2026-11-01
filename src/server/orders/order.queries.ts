@@ -202,9 +202,8 @@ export async function getAllOrdersQuery(dateRange?: {
   }
 
   const query = db.select().from(orders)
-  const orderRows = await (conditions.length > 0
-    ? query.where(and(...conditions))
-    : query
+  const orderRows = await (
+    conditions.length > 0 ? query.where(and(...conditions)) : query
   ).orderBy(desc(orders.createdAt))
 
   if (orderRows.length === 0) return []

@@ -1242,11 +1242,23 @@ export async function deleteItemQuery(input: DeleteItemInput) {
 
     if (prod) {
       const [variants, images, dItems] = await Promise.all([
-        db.select().from(liquorVariants).where(eq(liquorVariants.productId, input.id)),
-        db.select().from(liquorImages).where(eq(liquorImages.productId, input.id)),
-        db.select().from(dealerItems).where(
-          and(eq(dealerItems.catalogType, 'liquor'), eq(dealerItems.productId, input.id)),
-        ),
+        db
+          .select()
+          .from(liquorVariants)
+          .where(eq(liquorVariants.productId, input.id)),
+        db
+          .select()
+          .from(liquorImages)
+          .where(eq(liquorImages.productId, input.id)),
+        db
+          .select()
+          .from(dealerItems)
+          .where(
+            and(
+              eq(dealerItems.catalogType, 'liquor'),
+              eq(dealerItems.productId, input.id),
+            ),
+          ),
       ])
 
       await moveToRecycleBin({
@@ -1291,11 +1303,23 @@ export async function deleteItemQuery(input: DeleteItemInput) {
 
     if (prod) {
       const [variants, images, dItems] = await Promise.all([
-        db.select().from(groceryVariants).where(eq(groceryVariants.productId, input.id)),
-        db.select().from(groceryImages).where(eq(groceryImages.productId, input.id)),
-        db.select().from(dealerItems).where(
-          and(eq(dealerItems.catalogType, 'grocery'), eq(dealerItems.productId, input.id)),
-        ),
+        db
+          .select()
+          .from(groceryVariants)
+          .where(eq(groceryVariants.productId, input.id)),
+        db
+          .select()
+          .from(groceryImages)
+          .where(eq(groceryImages.productId, input.id)),
+        db
+          .select()
+          .from(dealerItems)
+          .where(
+            and(
+              eq(dealerItems.catalogType, 'grocery'),
+              eq(dealerItems.productId, input.id),
+            ),
+          ),
       ])
 
       await moveToRecycleBin({
@@ -1492,8 +1516,11 @@ export async function deleteItemQuery(input: DeleteItemInput) {
   return { success: true }
 }
 
-export async function toggleCategoryStatusQuery(input: ToggleCategoryStatusInput) {
-  const table = input.catalogType === 'liquor' ? liquorCategories : groceryCategories
+export async function toggleCategoryStatusQuery(
+  input: ToggleCategoryStatusInput,
+) {
+  const table =
+    input.catalogType === 'liquor' ? liquorCategories : groceryCategories
   await db
     .update(table)
     .set({

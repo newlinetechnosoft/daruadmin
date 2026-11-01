@@ -11,5 +11,7 @@ export const permanentDeleteRecycleBinSchema = z.object({
 export const emptyRecycleBinSchema = z.object({}).optional()
 
 export type RestoreRecycleBinInput = z.infer<typeof restoreRecycleBinSchema>
-export type PermanentDeleteRecycleBinInput = z.infer<typeof permanentDeleteRecycleBinSchema>
+export type PermanentDeleteRecycleBinInput = z.infer<
+  typeof permanentDeleteRecycleBinSchema
+>
 export type EmptyRecycleBinInput = z.infer<typeof emptyRecycleBinSchema>

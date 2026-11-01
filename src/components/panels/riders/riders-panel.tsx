@@ -1,6 +1,10 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from '@tanstack/react-router'
-import { useQuery, useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery,
+  useSuspenseQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
 import {
@@ -60,9 +64,11 @@ import { EmptyState } from '#/components/shared/empty-state'
 export function RidersPanel() {
   const queryClient = useQueryClient()
   const router = useRouter()
-  const { data: ridersData, isFetching, refetch } = useSuspenseQuery(
-    adminQueries.riders(),
-  )
+  const {
+    data: ridersData,
+    isFetching,
+    refetch,
+  } = useSuspenseQuery(adminQueries.riders())
   const ops = ridersData.ops
 
   const invalidateRiders = async () => {
@@ -80,7 +86,9 @@ export function RidersPanel() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [zoneFilter, setZoneFilter] = useState('all')
-  const [statusTab, setStatusTab] = useState<'all' | 'available' | 'busy' | 'offline'>('all')
+  const [statusTab, setStatusTab] = useState<
+    'all' | 'available' | 'busy' | 'offline'
+  >('all')
 
   // Rider Dialog state (for both Create & Edit)
   const [isRiderDialogOpen, setIsRiderDialogOpen] = useState(false)
@@ -154,7 +162,8 @@ export function RidersPanel() {
       await invalidateRiders()
       setDeleteTarget(null)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to delete courier'
+      const msg =
+        err instanceof Error ? err.message : 'Failed to delete courier'
       toast.error(msg)
     } finally {
       setIsDeleting(false)
@@ -484,228 +493,236 @@ export function RidersPanel() {
                     key={rider.id}
                     className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
                   >
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="min-w-0">
-                        <button
-                          type="button"
-                          onClick={() => canEdit && handleOpenEdit(rider)}
-                          className={`text-left font-medium text-xs text-foreground ${canEdit ? 'hover:underline cursor-pointer' : ''}`}
-                        >
-                          {rider.name}
-                        </button>
-                        <div className="text-xs text-muted-foreground font-mono">
-                          {rider.phone}
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => canEdit && handleOpenEdit(rider)}
+                            className={`text-left font-medium text-xs text-foreground ${canEdit ? 'hover:underline cursor-pointer' : ''}`}
+                          >
+                            {rider.name}
+                          </button>
+                          <div className="text-xs text-muted-foreground font-mono">
+                            {rider.phone}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </TableCell>
+                    </TableCell>
 
-                  <TableCell>
-                    <div className="text-xs font-medium text-foreground">
-                      {rider.zone}
-                    </div>
-                    <span className="text-xs text-muted-foreground capitalize">
-                      {rider.vehicle} · Plate: {rider.licenseNo || 'LU-2-PA'}
-                    </span>
-                  </TableCell>
-
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleToggleKyc(rider)}
-                      disabled={isSubmitting}
-                      className="h-6 p-0 hover:bg-transparent"
-                      title={rider.verified ? 'Revoke KYC Verification' : 'Approve KYC Verification'}
-                    >
-                      {rider.verified ? (
-                        <Badge
-                          variant="success"
-                          className="gap-1 text-xs font-normal"
-                        >
-                          <ShieldCheck className="h-3 w-3" />
-                          Verified
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="warning"
-                          className="text-xs font-normal"
-                        >
-                          Pending
-                        </Badge>
-                      )}
-                    </Button>
-                  </TableCell>
-
-                  <TableCell>
-                    <Badge
-                      variant={
-                        rider.status === 'available'
-                          ? 'success'
-                          : rider.status === 'busy'
-                            ? 'warning'
-                            : 'secondary'
-                      }
-                      className="text-xs font-normal capitalize"
-                    >
-                      {rider.status}
-                    </Badge>
-                  </TableCell>
-
-                  <TableCell>
-                    <div className="flex items-center gap-1 font-mono text-xs text-foreground">
-                      <Star className="h-3 w-3 fill-warning text-warning" />
-                      <span>{rider.rating.toFixed(1)}</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {rider.deliveries} deliveries
-                    </span>
-                  </TableCell>
-
-                  <TableCell>
-                    <span
-                      className={`font-mono text-xs font-semibold block tabular-nums ${
-                        rider.cashOnHand >= 2000000
-                          ? 'text-destructive font-bold'
-                          : rider.cashOnHand > 0
-                            ? 'text-warning'
-                            : 'text-foreground'
-                      }`}
-                    >
-                      {formatNPR(rider.cashOnHand)}
-                    </span>
-                    {rider.cashOnHand >= 2000000 ? (
-                      <span className="text-xs text-destructive font-medium block">
-                        ⚠️ Limit exceeded (&gt;20k)
+                    <TableCell>
+                      <div className="text-xs font-medium text-foreground">
+                        {rider.zone}
+                      </div>
+                      <span className="text-xs text-muted-foreground capitalize">
+                        {rider.vehicle} · Plate: {rider.licenseNo || 'LU-2-PA'}
                       </span>
-                    ) : rider.cashOnHand > 0 ? (
+                    </TableCell>
+
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleToggleKyc(rider)}
+                        disabled={isSubmitting}
+                        className="h-6 p-0 hover:bg-transparent"
+                        title={
+                          rider.verified
+                            ? 'Revoke KYC Verification'
+                            : 'Approve KYC Verification'
+                        }
+                      >
+                        {rider.verified ? (
+                          <Badge
+                            variant="success"
+                            className="gap-1 text-xs font-normal"
+                          >
+                            <ShieldCheck className="h-3 w-3" />
+                            Verified
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="warning"
+                            className="text-xs font-normal"
+                          >
+                            Pending
+                          </Badge>
+                        )}
+                      </Button>
+                    </TableCell>
+
+                    <TableCell>
+                      <Badge
+                        variant={
+                          rider.status === 'available'
+                            ? 'success'
+                            : rider.status === 'busy'
+                              ? 'warning'
+                              : 'secondary'
+                        }
+                        className="text-xs font-normal capitalize"
+                      >
+                        {rider.status}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell>
+                      <div className="flex items-center gap-1 font-mono text-xs text-foreground">
+                        <Star className="h-3 w-3 fill-warning text-warning" />
+                        <span>{rider.rating.toFixed(1)}</span>
+                      </div>
                       <span className="text-xs text-muted-foreground">
-                        Pending handover
+                        {rider.deliveries} deliveries
                       </span>
-                    ) : null}
-                  </TableCell>
+                    </TableCell>
 
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      {rider.cashOnHand > 0 && (
-                        <Button
-                          variant={rider.cashOnHand >= 2000000 ? 'destructive' : 'default'}
-                          size="sm"
-                          disabled={isSubmitting}
-                          onClick={() => handleSettleRiderCash(rider)}
-                          className="h-7 gap-1 px-2 text-xs"
-                          title="Settle COD Cash Handover"
-                        >
-                          <Coins className="h-3 w-3" />
-                          <span className="hidden sm:inline">Settle</span>
-                        </Button>
-                      )}
+                    <TableCell>
+                      <span
+                        className={`font-mono text-xs font-semibold block tabular-nums ${
+                          rider.cashOnHand >= 2000000
+                            ? 'text-destructive font-bold'
+                            : rider.cashOnHand > 0
+                              ? 'text-warning'
+                              : 'text-foreground'
+                        }`}
+                      >
+                        {formatNPR(rider.cashOnHand)}
+                      </span>
+                      {rider.cashOnHand >= 2000000 ? (
+                        <span className="text-xs text-destructive font-medium block">
+                          ⚠️ Limit exceeded (&gt;20k)
+                        </span>
+                      ) : rider.cashOnHand > 0 ? (
+                        <span className="text-xs text-muted-foreground">
+                          Pending handover
+                        </span>
+                      ) : null}
+                    </TableCell>
 
-                      {canEdit && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenEdit(rider)}
-                          className="size-7 text-muted-foreground hover:text-foreground"
-                          title={`Edit ${rider.name}`}
-                          aria-label={`Edit ${rider.name}`}
-                        >
-                          <Edit2 className="size-3.5" />
-                        </Button>
-                      )}
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {rider.cashOnHand > 0 && (
                           <Button
-                            type="button"
+                            variant={
+                              rider.cashOnHand >= 2000000
+                                ? 'destructive'
+                                : 'default'
+                            }
+                            size="sm"
+                            disabled={isSubmitting}
+                            onClick={() => handleSettleRiderCash(rider)}
+                            className="h-7 gap-1 px-2 text-xs"
+                            title="Settle COD Cash Handover"
+                          >
+                            <Coins className="h-3 w-3" />
+                            <span className="hidden sm:inline">Settle</span>
+                          </Button>
+                        )}
+
+                        {canEdit && (
+                          <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => handleOpenEdit(rider)}
                             className="size-7 text-muted-foreground hover:text-foreground"
-                            aria-label={`More actions for ${rider.name}`}
+                            title={`Edit ${rider.name}`}
+                            aria-label={`Edit ${rider.name}`}
                           >
-                            <MoreHorizontal className="size-3.5" />
+                            <Edit2 className="size-3.5" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44">
-                          {canEdit && (
+                        )}
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="size-7 text-muted-foreground hover:text-foreground"
+                              aria-label={`More actions for ${rider.name}`}
+                            >
+                              <MoreHorizontal className="size-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44">
+                            {canEdit && (
+                              <DropdownMenuItem
+                                onSelect={() => handleOpenEdit(rider)}
+                                className="text-xs gap-2 cursor-pointer"
+                              >
+                                <Edit2 className="size-3.5" />
+                                <span>Edit courier</span>
+                              </DropdownMenuItem>
+                            )}
+
+                            {rider.phone && (
+                              <>
+                                <DropdownMenuItem
+                                  onSelect={() =>
+                                    window.open(
+                                      `https://wa.me/977${rider.phone.replace(/\D/g, '').slice(-10)}`,
+                                      '_blank',
+                                    )
+                                  }
+                                  className="text-xs gap-2 cursor-pointer"
+                                >
+                                  <MessageCircle className="size-3.5 text-emerald-600" />
+                                  <span>WhatsApp courier</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() =>
+                                    window.open(`tel:${rider.phone}`, '_self')
+                                  }
+                                  className="text-xs gap-2 cursor-pointer"
+                                >
+                                  <Phone className="size-3.5" />
+                                  <span>Call courier</span>
+                                </DropdownMenuItem>
+                              </>
+                            )}
+
                             <DropdownMenuItem
-                              onSelect={() => handleOpenEdit(rider)}
+                              onSelect={() => handleToggleKyc(rider)}
                               className="text-xs gap-2 cursor-pointer"
                             >
-                              <Edit2 className="size-3.5" />
-                              <span>Edit courier</span>
+                              <ShieldCheck className="size-3.5" />
+                              <span>
+                                {rider.verified ? 'Revoke KYC' : 'Verify KYC'}
+                              </span>
                             </DropdownMenuItem>
-                          )}
 
-                          {rider.phone && (
-                            <>
+                            {rider.cashOnHand > 0 && (
                               <DropdownMenuItem
-                                onSelect={() =>
-                                  window.open(
-                                    `https://wa.me/977${rider.phone.replace(/\D/g, '').slice(-10)}`,
-                                    '_blank',
-                                  )
-                                }
-                                className="text-xs gap-2 cursor-pointer"
+                                onSelect={() => handleSettleRiderCash(rider)}
+                                className="text-xs gap-2 cursor-pointer text-amber-600 focus:text-amber-600"
                               >
-                                <MessageCircle className="size-3.5 text-emerald-600" />
-                                <span>WhatsApp courier</span>
+                                <Coins className="size-3.5" />
+                                <span>Settle COD float</span>
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={() =>
-                                  window.open(`tel:${rider.phone}`, '_self')
-                                }
-                                className="text-xs gap-2 cursor-pointer"
-                              >
-                                <Phone className="size-3.5" />
-                                <span>Call courier</span>
-                              </DropdownMenuItem>
-                            </>
-                          )}
+                            )}
 
-                          <DropdownMenuItem
-                            onSelect={() => handleToggleKyc(rider)}
-                            className="text-xs gap-2 cursor-pointer"
-                          >
-                            <ShieldCheck className="size-3.5" />
-                            <span>
-                              {rider.verified ? 'Revoke KYC' : 'Verify KYC'}
-                            </span>
-                          </DropdownMenuItem>
-
-                          {rider.cashOnHand > 0 && (
-                            <DropdownMenuItem
-                              onSelect={() => handleSettleRiderCash(rider)}
-                              className="text-xs gap-2 cursor-pointer text-amber-600 focus:text-amber-600"
-                            >
-                              <Coins className="size-3.5" />
-                              <span>Settle COD float</span>
-                            </DropdownMenuItem>
-                          )}
-
-                          {canDelete && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onSelect={() => setDeleteTarget(rider)}
-                                className="text-xs gap-2 text-rose-600 focus:text-rose-600 cursor-pointer"
-                              >
-                                <Trash2 className="size-3.5" />
-                                <span>Delete courier</span>
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                            {canDelete && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onSelect={() => setDeleteTarget(rider)}
+                                  className="text-xs gap-2 text-rose-600 focus:text-rose-600 cursor-pointer"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                  <span>Delete courier</span>
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </DataSection>
 
       {/* Shared Rider Modal Dialog (Create & Edit) */}
@@ -729,7 +746,9 @@ export function RidersPanel() {
         cancelLabel="Keep Courier"
         danger
         isLoading={isDeleting}
-        disabled={Boolean(deleteTarget?.cashOnHand && deleteTarget.cashOnHand > 0)}
+        disabled={Boolean(
+          deleteTarget?.cashOnHand && deleteTarget.cashOnHand > 0,
+        )}
         onConfirm={handleDeleteRider}
       />
     </div>

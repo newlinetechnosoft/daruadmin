@@ -1,7 +1,7 @@
 # PROMPT.md — Accounting System Build Prompt (for the AI coding agent)
 
 > Give this whole file to the agent at the start of a session, then add a **task line** from §10.
-> Companion file: **`ACCOUNT_GUIDE.md`** (the map and roadmap). This prompt tells you *how to work*; the guide tells you *what to build and in what order*.
+> Companion file: **`ACCOUNT_GUIDE.md`** (the map and roadmap). This prompt tells you _how to work_; the guide tells you _what to build and in what order_.
 
 ---
 
@@ -98,18 +98,23 @@ Keep it factual. If something failed or was skipped, say so plainly.
 Use one of these forms after pasting this prompt:
 
 **A. Single task**
+
 > Do `ACC-<phase.task>` from `ACCOUNT_GUIDE.md`. Follow `PROMPT.md`. Stop after the report.
 
 **B. Task group**
+
 > Do `ACC-1.1` then `ACC-1.2`, in order, one report each. Stop and ask before `ACC-1.3`.
 
 **C. First session (recommended)**
+
 > Do `ACC-0.1` (truth audit) only. No code changes. Fill `ACCOUNT_GUIDE.md` §14.1, re-mark statuses, list questions for me, and propose the order for the remaining Phase 0 tasks.
 
 **D. Review only**
+
 > Review the diff for `ACC-x.y` against `ACCOUNT_GUIDE.md` §13 and `PROMPT.md` §4/§6. Don't change code; list defects by severity.
 
 **E. Continue**
+
 > Read `ACCOUNT_GUIDE.md` §14 and continue with the next unfinished task in the current phase. Confirm which task you picked before starting.
 
 If no task line is given, **do form C**.

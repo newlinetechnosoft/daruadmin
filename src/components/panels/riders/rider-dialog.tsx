@@ -64,14 +64,18 @@ export function RiderDialog({
   const [vehicle, setVehicle] = useState<'bike' | 'scooter' | 'car'>('bike')
   const [licenseNo, setLicenseNo] = useState('')
   const [zone, setZone] = useState('Butwal Core')
-  const [status, setStatus] = useState<'available' | 'busy' | 'offline'>('available')
+  const [status, setStatus] = useState<'available' | 'busy' | 'offline'>(
+    'available',
+  )
   const [commissionRate, setCommissionRate] = useState('10')
   const [baseSalaryNpr, setBaseSalaryNpr] = useState('0')
   const [perDropRateNpr, setPerDropRateNpr] = useState('50')
   const [verified, setVerified] = useState(true)
   const [available, setAvailable] = useState(true)
 
-  const [activeTab, setActiveTab] = useState<'profile' | 'dispatch' | 'payout'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'dispatch' | 'payout'>(
+    'profile',
+  )
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Initialize or reset form values whenever rider or open state changes
@@ -88,8 +92,12 @@ export function RiderDialog({
         setZone(rider.zone || 'Butwal Core')
         setStatus(rider.status)
         setCommissionRate(String(rider.commissionRate))
-        setBaseSalaryNpr(rider.baseSalary ? String(fromPaisa(rider.baseSalary)) : '0')
-        setPerDropRateNpr(rider.perDropRate ? String(fromPaisa(rider.perDropRate)) : '50')
+        setBaseSalaryNpr(
+          rider.baseSalary ? String(fromPaisa(rider.baseSalary)) : '0',
+        )
+        setPerDropRateNpr(
+          rider.perDropRate ? String(fromPaisa(rider.perDropRate)) : '50',
+        )
         setVerified(Boolean(rider.verified))
         setAvailable(Boolean(rider.available))
       } else {
@@ -132,13 +140,17 @@ export function RiderDialog({
     }
 
     if (!trimmedEmail || !trimmedEmail.includes('@')) {
-      toast.error('Please enter a valid email address for courier portal access')
+      toast.error(
+        'Please enter a valid email address for courier portal access',
+      )
       setActiveTab('profile')
       return
     }
 
     if (!isEditing && (!password || password.length < 8)) {
-      toast.error('Password must be at least 8 characters long for new couriers')
+      toast.error(
+        'Password must be at least 8 characters long for new couriers',
+      )
       setActiveTab('profile')
       return
     }
@@ -241,7 +253,9 @@ export function RiderDialog({
                 </div>
                 <div>
                   <DialogTitle className="text-sm font-semibold tracking-tight">
-                    {isEditing ? `Edit courier: ${rider?.name}` : 'Onboard fleet courier'}
+                    {isEditing
+                      ? `Edit courier: ${rider?.name}`
+                      : 'Onboard fleet courier'}
                   </DialogTitle>
                   <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                     {isEditing
@@ -301,7 +315,10 @@ export function RiderDialog({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="rider-phone" className="text-xs font-medium">
+                    <Label
+                      htmlFor="rider-phone"
+                      className="text-xs font-medium"
+                    >
                       Contact mobile phone *
                     </Label>
                     <div className="relative">
@@ -318,7 +335,10 @@ export function RiderDialog({
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="rider-email" className="text-xs font-medium">
+                    <Label
+                      htmlFor="rider-email"
+                      className="text-xs font-medium"
+                    >
                       Email address (Login) *
                     </Label>
                     <div className="relative">
@@ -338,7 +358,10 @@ export function RiderDialog({
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="rider-password" className="text-xs font-medium">
+                    <Label
+                      htmlFor="rider-password"
+                      className="text-xs font-medium"
+                    >
                       {isEditing ? 'Change login password' : 'Login password *'}
                     </Label>
                     {isEditing && (
@@ -355,14 +378,20 @@ export function RiderDialog({
                       required={!isEditing}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder={isEditing ? 'Enter new password (optional)' : 'Minimum 8 characters'}
+                      placeholder={
+                        isEditing
+                          ? 'Enter new password (optional)'
+                          : 'Minimum 8 characters'
+                      }
                       className="pl-8 pr-8 h-8 font-mono text-xs"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-label={
+                        showPassword ? 'Hide password' : 'Show password'
+                      }
                     >
                       {showPassword ? (
                         <EyeOff className="h-3.5 w-3.5" />
@@ -378,8 +407,12 @@ export function RiderDialog({
                     <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300">
                       <Coins className="size-4 shrink-0" />
                       <div>
-                        <span className="font-semibold">Unremitted COD Custody: </span>
-                        <span className="font-mono">{formatNPR(rider.cashOnHand)}</span>
+                        <span className="font-semibold">
+                          Unremitted COD Custody:{' '}
+                        </span>
+                        <span className="font-mono">
+                          {formatNPR(rider.cashOnHand)}
+                        </span>
                       </div>
                     </div>
                     <span className="text-xs text-muted-foreground">
@@ -394,24 +427,38 @@ export function RiderDialog({
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="rider-vehicle" className="text-xs font-medium">
+                    <Label
+                      htmlFor="rider-vehicle"
+                      className="text-xs font-medium"
+                    >
                       Vehicle transport mode
                     </Label>
                     <NativeSelect
                       id="rider-vehicle"
                       value={vehicle}
-                      onChange={(e) => setVehicle(e.target.value as 'bike' | 'scooter' | 'car')}
+                      onChange={(e) =>
+                        setVehicle(e.target.value as 'bike' | 'scooter' | 'car')
+                      }
                       size="sm"
                       className="w-full text-xs"
                     >
-                      <NativeSelectOption value="bike">Motorcycle</NativeSelectOption>
-                      <NativeSelectOption value="scooter">Scooter</NativeSelectOption>
-                      <NativeSelectOption value="car">Delivery Van / Car</NativeSelectOption>
+                      <NativeSelectOption value="bike">
+                        Motorcycle
+                      </NativeSelectOption>
+                      <NativeSelectOption value="scooter">
+                        Scooter
+                      </NativeSelectOption>
+                      <NativeSelectOption value="car">
+                        Delivery Van / Car
+                      </NativeSelectOption>
                     </NativeSelect>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="rider-plate" className="text-xs font-medium">
+                    <Label
+                      htmlFor="rider-plate"
+                      className="text-xs font-medium"
+                    >
                       Vehicle plate / license no.
                     </Label>
                     <Input
@@ -436,7 +483,9 @@ export function RiderDialog({
                       size="sm"
                       className="w-full text-xs"
                     >
-                      <NativeSelectOption value="Butwal Core">Butwal Core</NativeSelectOption>
+                      <NativeSelectOption value="Butwal Core">
+                        Butwal Core
+                      </NativeSelectOption>
                       <NativeSelectOption value="Tilottama / Manigram">
                         Tilottama / Manigram
                       </NativeSelectOption>
@@ -447,14 +496,19 @@ export function RiderDialog({
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="rider-status" className="text-xs font-medium">
+                    <Label
+                      htmlFor="rider-status"
+                      className="text-xs font-medium"
+                    >
                       Live duty status
                     </Label>
                     <NativeSelect
                       id="rider-status"
                       value={status}
                       onChange={(e) =>
-                        setStatus(e.target.value as 'available' | 'busy' | 'offline')
+                        setStatus(
+                          e.target.value as 'available' | 'busy' | 'offline',
+                        )
                       }
                       size="sm"
                       className="w-full text-xs"
@@ -487,7 +541,8 @@ export function RiderDialog({
                       Dispatchable on duty roster
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      When enabled, this courier appears in the automated sourcing radar and dispatcher queue.
+                      When enabled, this courier appears in the automated
+                      sourcing radar and dispatcher queue.
                     </p>
                   </div>
                 </div>
@@ -498,7 +553,10 @@ export function RiderDialog({
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="rider-commission" className="text-xs font-medium">
+                    <Label
+                      htmlFor="rider-commission"
+                      className="text-xs font-medium"
+                    >
                       Commission rate (%)
                     </Label>
                     <Input
@@ -518,7 +576,10 @@ export function RiderDialog({
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="rider-base-salary" className="text-xs font-medium">
+                    <Label
+                      htmlFor="rider-base-salary"
+                      className="text-xs font-medium"
+                    >
                       Base monthly salary (NPR)
                     </Label>
                     <Input
@@ -537,7 +598,10 @@ export function RiderDialog({
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="rider-per-drop" className="text-xs font-medium">
+                    <Label
+                      htmlFor="rider-per-drop"
+                      className="text-xs font-medium"
+                    >
                       Per-drop rate (NPR)
                     </Label>
                     <Input
@@ -574,7 +638,9 @@ export function RiderDialog({
                       <ShieldCheck className="size-3.5 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Rider citizenship, driver license, and emergency contacts are validated. Authorizes cash-on-delivery handling up to Rs. 20,000.
+                      Rider citizenship, driver license, and emergency contacts
+                      are validated. Authorizes cash-on-delivery handling up to
+                      Rs. 20,000.
                     </p>
                   </div>
                 </div>

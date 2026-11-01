@@ -1,8 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import {
-  requirePermission,
-  logAudit,
-} from '#/server/auth/permissions'
+import { requirePermission, logAudit } from '#/server/auth/permissions'
 import {
   getRecycleBinItemsQuery,
   restoreRecycleBinItemQuery,
@@ -14,11 +11,12 @@ import {
   permanentDeleteRecycleBinSchema,
 } from './recycle-bin.schemas'
 
-export const getRecycleBinFn = createServerFn({ method: 'GET' })
-  .handler(async () => {
+export const getRecycleBinFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
     await requirePermission('settings', 'view')
     return getRecycleBinItemsQuery()
-  })
+  },
+)
 
 export const restoreRecycleBinItemFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => restoreRecycleBinSchema.parse(d))
@@ -34,7 +32,9 @@ export const restoreRecycleBinItemFn = createServerFn({ method: 'POST' })
     return result
   })
 
-export const permanentDeleteRecycleBinItemFn = createServerFn({ method: 'POST' })
+export const permanentDeleteRecycleBinItemFn = createServerFn({
+  method: 'POST',
+})
   .validator((d: unknown) => permanentDeleteRecycleBinSchema.parse(d))
   .handler(async ({ data }) => {
     const { user } = await requirePermission('settings', 'delete')
@@ -48,8 +48,8 @@ export const permanentDeleteRecycleBinItemFn = createServerFn({ method: 'POST' }
     return result
   })
 
-export const emptyRecycleBinFn = createServerFn({ method: 'POST' })
-  .handler(async () => {
+export const emptyRecycleBinFn = createServerFn({ method: 'POST' }).handler(
+  async () => {
     const { user } = await requirePermission('settings', 'delete')
     const result = await emptyRecycleBinQuery()
     await logAudit(
@@ -59,4 +59,5 @@ export const emptyRecycleBinFn = createServerFn({ method: 'POST' })
       'Emptied all items in Recycle Bin',
     )
     return result
-  })
+  },
+)

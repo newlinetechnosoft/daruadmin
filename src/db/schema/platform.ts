@@ -359,7 +359,6 @@ export const customerAddressesRelations = relations(
   }),
 )
 
-
 export const recycleBin = pgTable(
   'recycle_bin',
   {

@@ -90,9 +90,17 @@ export async function getRecycleBinItemsQuery() {
       urgency = 'expired'
     } else if (remainingDays > 1) {
       remainingLabel = `${remainingDays} days left`
-      urgency = remainingDays <= 3 ? 'critical' : remainingDays <= 7 ? 'warning' : 'safe'
+      urgency =
+        remainingDays <= 3
+          ? 'critical'
+          : remainingDays <= 7
+            ? 'warning'
+            : 'safe'
     } else {
-      remainingLabel = remainingHours > 1 ? `${remainingHours} hours left` : 'Less than an hour left'
+      remainingLabel =
+        remainingHours > 1
+          ? `${remainingHours} hours left`
+          : 'Less than an hour left'
       urgency = 'critical'
     }
 
@@ -112,9 +120,19 @@ export async function getRecycleBinItemsQuery() {
       urgency,
       preview: {
         category: rdata.category?.name || rdata.product?.categoryName,
-        slug: rdata.product?.slug || rdata.category?.slug || rdata.brand?.slug || rdata.coupon?.code || rdata.offer?.slug,
-        price: rdata.product?.variants?.[0]?.price || rdata.variants?.[0]?.price,
-        image: rdata.images?.[0]?.url || rdata.product?.imageUrl || rdata.category?.imageUrl || rdata.banner?.imageUrl,
+        slug:
+          rdata.product?.slug ||
+          rdata.category?.slug ||
+          rdata.brand?.slug ||
+          rdata.coupon?.code ||
+          rdata.offer?.slug,
+        price:
+          rdata.product?.variants?.[0]?.price || rdata.variants?.[0]?.price,
+        image:
+          rdata.images?.[0]?.url ||
+          rdata.product?.imageUrl ||
+          rdata.category?.imageUrl ||
+          rdata.banner?.imageUrl,
       },
     }
   })
@@ -554,7 +572,9 @@ export async function restoreRecycleBinItemQuery(id: string) {
         perCustomerLimit: coupon.perCustomerLimit || 1,
         firstOrderOnly: Boolean(coupon.firstOrderOnly),
         active: Boolean(coupon.active),
-        expiresAt: coupon.expiresAt ? new Date(coupon.expiresAt) : new Date(Date.now() + 30 * 86400000),
+        expiresAt: coupon.expiresAt
+          ? new Date(coupon.expiresAt)
+          : new Date(Date.now() + 30 * 86400000),
         createdAt: coupon.createdAt ? new Date(coupon.createdAt) : new Date(),
       })
       break

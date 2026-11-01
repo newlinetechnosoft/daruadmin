@@ -32,22 +32,28 @@ export const dbTx = drizzlePool(new Pool({ connectionString: url }), { schema })
 ## Migrations & Schema Safety (Neon Only)
 
 ### Non-negotiable Rules
+
 1. **Never run migrations or DB writes from coding agents.** The database is Neon only. You write SQL and code; the owner runs SQL in the Neon SQL Editor.
 2. **Always backup first.** Take a Neon branch backup before applying any schema modification or migration tracking SQL.
 3. **No `db:push` or unreviewed `db:generate`.** `db:push` is prohibited on shared/production branches. `drizzle-kit generate` is currently disconnected (see below); migrations are authored as reviewed, idempotent SQL.
 4. **Safety guards on scripts:** `src/db/clean.ts` and `src/db/seed.ts` refuse to run unless explicitly passed `--confirm`. They print the DB host (never secrets/passwords) and check `NEON_BRANCH`.
 
 ### The Drizzle Migrator Mechanism & Journal Invariant
+
 Drizzle ORM's migrator checks the tracking table `drizzle.__drizzle_migrations`:
+
 ```sql
 SELECT "id", "hash", "created_at" FROM "drizzle"."__drizzle_migrations" ORDER BY "created_at" DESC LIMIT 1
 ```
+
 It compares the newest `created_at` timestamp with the `when` field of each entry in `drizzle/meta/_journal.json`. Any migration whose `when` is greater than that database timestamp will be executed. The `hash` stored in the tracking table is the SHA-256 hex digest of the exact file contents:
+
 ```ts
-crypto.createHash("sha256").update(sqlFileContent).digest("hex")
+crypto.createHash('sha256').update(sqlFileContent).digest('hex')
 ```
 
 **Every migration file `drizzle/XXXX_*.sql` MUST be registered in `drizzle/meta/_journal.json`** with:
+
 - `idx` equal to the migration index.
 - `when` strictly increasing and greater than the previous entry.
 - File name matching `drizzle/XXXX_*.sql`.
@@ -55,10 +61,12 @@ crypto.createHash("sha256").update(sqlFileContent).digest("hex")
 Automated verification is enforced via `bun test src/db/migrations.test.ts`, which asserts journal/file parity, strictly increasing timestamps, error-free execution on an in-memory Postgres (PGlite), and 100% column/table coverage against `src/db/schema`.
 
 ### Why Snapshots Stop at `0001`
-The directory `drizzle/meta/` only contains snapshots for `0000_snapshot.json` and `0001_snapshot.json`. Historical migrations `0002` through `0015` were authored directly as SQL without updating the snapshot meta files. As a result, running `drizzle-kit generate` compares against snapshot `0001` and attempts to re-generate hundreds of lines of conflicting changes. 
+
+The directory `drizzle/meta/` only contains snapshots for `0000_snapshot.json` and `0001_snapshot.json`. Historical migrations `0002` through `0015` were authored directly as SQL without updating the snapshot meta files. As a result, running `drizzle-kit generate` compares against snapshot `0001` and attempts to re-generate hundreds of lines of conflicting changes.
 **Do not edit snapshots manually without an approved schema snapshot regeneration plan.**
 
 ### Analysis of Historical Migrations on Populated Databases
+
 - `0000_dusty_lyja.sql` through `0004_order_items_dealer_id.sql`: Schema baseline and additive changes.
 - `0005_order_state_machine.sql`: **Mild.** Flags existing orders that have `rider_id IS NOT NULL AND dealer_id IS NULL` as `is_legacy = true`. Does not touch products.
 - `0006_dealer_sourcing.sql`: **DANGEROUS on populated data.** Unconditionally resets `sourcing_status = 'assigned'` and recalculates `dealer_cost_price` for all order items where `dealer_id IS NOT NULL`.
@@ -69,7 +77,9 @@ The directory `drizzle/meta/` only contains snapshots for `0000_snapshot.json` a
 Because of `0006` and `0008`, migrations must never be blindly re-run across existing branches. Tracking alignment via `tracking-sql.ts` is required.
 
 ### Neon Tracking Repair Procedure
+
 When Neon's `drizzle.__drizzle_migrations` table contains corrupted rows or has fallen behind the journal (e.g. malformed row 8 storing tag name `'0007_double_entry_accounting'` with an older timestamp `1792148989282`):
+
 1. Run `bun run src/db/tools/tracking-sql.ts` to output the exact corrective Neon transaction.
 2. In the Neon Console SQL Editor (after taking a branch backup), run the generated transaction inside `BEGIN; ... COMMIT;`. This deletes the bad row and inserts valid SHA-256 hashes and monotonic timestamps for `0007` through `0017`.
 3. Run `bun run src/db/tools/schema-check.ts` to generate the schema completeness verification query. Run that query in Neon SQL Editor; returning 0 rows verifies that Neon already has 100% of expected tables and columns.

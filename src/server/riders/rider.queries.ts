@@ -257,10 +257,7 @@ export async function deleteRiderQuery(
   }
 
   // Detach riderId from historical orders so order records remain intact
-  await db
-    .update(orders)
-    .set({ riderId: null })
-    .where(eq(orders.riderId, id))
+  await db.update(orders).set({ riderId: null }).where(eq(orders.riderId, id))
 
   // If rider had a linked user account, revoke rider role
   if (rider.userId) {
