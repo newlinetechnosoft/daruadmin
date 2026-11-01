@@ -48,6 +48,7 @@ import {
   FileText,
   ExternalLink,
   FileSpreadsheet,
+  SlidersHorizontal,
   ArrowRight,
   X,
   Calendar,
@@ -83,6 +84,7 @@ import { RiderPayrollRunDialog } from './rider-payroll-run-dialog'
 import { RiderSettlementApprovalDialog } from './rider-settlement-approval-dialog'
 import { VoucherDetailsDialog } from './voucher-details-dialog'
 import { FinancialReportsTab } from './financial-reports-tab'
+import { AccountDefaultsTab } from './account-defaults-tab'
 import type { DetailedJournalEntry } from '#/server/finance/finance.queries'
 
 const routeApi = getRouteApi('/admin/accounts')
@@ -95,6 +97,8 @@ type SubAccountTab =
   | 'salary-account'
   | 'chart-of-accounts'
   | 'financial-reports'
+  | 'account-defaults'
+  | 'settings'
 
 export function AccountsPanel() {
   const queryClient = useQueryClient()
@@ -1088,6 +1092,14 @@ export function AccountsPanel() {
               >
                 <FileSpreadsheet className="h-3.5 w-3.5" />
                 <span>Financial Reports</span>
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="account-defaults"
+                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>Account Defaults</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -3465,6 +3477,13 @@ export function AccountsPanel() {
               rawFiscalYears.find((fy: any) => !fy.isClosed)?.name || '2083/84'
             }
           />
+        )}
+
+        {/* ==================================================== */}
+        {/* 8. SUB-ACCOUNT: ACCOUNT DEFAULTS & POSTING RULES     */}
+        {/* ==================================================== */}
+        {(activeTab === 'account-defaults' || activeTab === 'settings') && (
+          <AccountDefaultsTab />
         )}
       </DataSection>
 

@@ -102,6 +102,32 @@ export const ledgerAccounts = pgTable(
 )
 
 /**
+ * Default Accounts (Accounting Settings)
+ * Maps semantic business account keys to default Ledger Accounts in Chart of Accounts.
+ * Allows dynamic remapping of sales, taxes, payables, and expenses.
+ * Specification: ACCOUNT_GUIDE.md §5.3 & ACC-1.1
+ */
+export const accountDefaults = pgTable(
+  'account_defaults',
+  {
+    id: text('id').primaryKey(), // e.g. 'def_SALES'
+    key: text('key').notNull().unique(), // e.g. 'SALES'
+    accountId: text('account_id')
+      .notNull()
+      .references(() => ledgerAccounts.id),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    updatedBy: text('updated_by'),
+  },
+  (table) => [
+    index('account_defaults_account_id_idx').on(table.accountId),
+    index('account_defaults_key_idx').on(table.key),
+  ],
+)
+
+/**
  * Journal entries header.
  * Immutable / append-only. Corrections require a reversal journal entry.
  */
@@ -291,6 +317,17 @@ export const ledgerAccountsRelations = relations(
     }),
     children: many(ledgerAccounts),
     lines: many(journalLines),
+    defaults: many(accountDefaults),
+  }),
+)
+
+export const accountDefaultsRelations = relations(
+  accountDefaults,
+  ({ one }) => ({
+    account: one(ledgerAccounts, {
+      fields: [accountDefaults.accountId],
+      references: [ledgerAccounts.id],
+    }),
   }),
 )
 

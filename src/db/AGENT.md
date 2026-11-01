@@ -103,7 +103,7 @@ When Neon's `drizzle.__drizzle_migrations` table contains corrupted rows or has 
 | `orders.ts`    | `orders` (totals, address + lat/lng, `riderId`, `dealerId`, `paymentMethod/Status`, `ageVerifiedAtDelivery`, `idempotencyKey`), `order_items`, `order_status_history` | ✅        |
 | `riders.ts`    | `riders` (profile linked to `user.id`), `rider_cash_handovers`, `settlements`                                                                                         | ✅        |
 | `inventory.ts` | `dealers`, `dealer_stock`, `stock_movements` (append-only)                                                                                                            | ✅        |
-| `finance.ts`   | `ledger_entries` (append-only double entry), `payments`                                                                                                               | ✅        |
+| `finance.ts`   | `fiscal_years`, `voucher_sequences`, `ledger_accounts`, `account_defaults`, `journal_entries`, `journal_lines`, `dealer_settlements`, `payments`, `legacy_ledger_archive` | ✅        |
 | `platform.ts`  | `notifications`, `audit_logs`, `site_settings`, `user_permissions`, `coupons`, `complaints`, `banners`, `campaigns`, `reviews`, `shipping_zones`                      | ✅        |
 | `commerce.ts`  | `ops_kv` legacy single-JSON blob                                                                                                                                      | 🗑 Dropped |
 

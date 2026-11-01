@@ -7,7 +7,7 @@ import {
   ledgerAccounts,
 } from '#/db/schema'
 import { getNepalFiscalYear } from '#/lib/nepal-date'
-import { ACCOUNT_KEYS, PARTY_CONTROLLED_ACCOUNTS } from './account-keys'
+import { PARTY_CONTROLLED_ACCOUNTS, resolveAllAccounts } from './account-keys'
 import { ALLOWED_PARTY_TYPES } from './types'
 import type {
   CostCenter,
@@ -404,6 +404,7 @@ export async function postOrderDeliveredTx(
 ): Promise<PostJournalResult> {
   const { order, items, actor, rider } = params
   const isCOD = order.paymentMethod === 'cod'
+  const accounts = await resolveAllAccounts(tx)
 
   // Calculate VAT breakdown:
   // Prices in Nepal are 13% VAT inclusive.
@@ -419,7 +420,7 @@ export async function postOrderDeliveredTx(
   if (isCOD) {
     // Dr. Rider Undeposited COD Cash (Asset) with rider party
     lines.push({
-      accountId: ACCOUNT_KEYS.RIDER_COD_CASH,
+      accountId: accounts.RIDER_COD_CASH,
       debit: order.total,
       partyType: 'rider',
       partyId: order.riderId,
@@ -429,7 +430,7 @@ export async function postOrderDeliveredTx(
   } else {
     // Dr. eSewa Clearing Account (Asset)
     lines.push({
-      accountId: ACCOUNT_KEYS.ESEWA_CLEARING,
+      accountId: accounts.ESEWA_CLEARING,
       debit: order.total,
       partyType: 'customer',
       partyId: order.customerId || null,
@@ -441,7 +442,7 @@ export async function postOrderDeliveredTx(
   // B. Debit Discounts Allowed if any discount was given
   if (order.discount > 0) {
     lines.push({
-      accountId: ACCOUNT_KEYS.DISCOUNTS,
+      accountId: accounts.DISCOUNTS,
       debit: order.discount,
       costCenter: 'general',
       narration: `Discount allowed on order ${order.number}`,
@@ -450,7 +451,7 @@ export async function postOrderDeliveredTx(
 
   // C. Credit Sales Revenue Net (Income)
   lines.push({
-    accountId: ACCOUNT_KEYS.SALES,
+    accountId: accounts.SALES,
     credit: netSales,
     costCenter: 'general',
     narration: `Net sales revenue from order ${order.number}`,
@@ -459,7 +460,7 @@ export async function postOrderDeliveredTx(
   // D. Credit VAT Output Payable 13% (Liability)
   if (vatAmount > 0) {
     lines.push({
-      accountId: ACCOUNT_KEYS.VAT_OUTPUT,
+      accountId: accounts.VAT_OUTPUT,
       credit: vatAmount,
       costCenter: 'general',
       narration: `13% Output VAT on order ${order.number}`,
@@ -469,7 +470,7 @@ export async function postOrderDeliveredTx(
   // E. Credit Delivery Fee Income (Income)
   if (order.deliveryCharge > 0) {
     lines.push({
-      accountId: ACCOUNT_KEYS.DELIVERY_INCOME,
+      accountId: accounts.DELIVERY_INCOME,
       credit: order.deliveryCharge,
       costCenter: 'delivery',
       narration: `Delivery fee charged on order ${order.number}`,
@@ -505,7 +506,7 @@ export async function postOrderDeliveredTx(
     if (totalDealerCost > 0) {
       if (g.liquorCost > 0) {
         lines.push({
-          accountId: ACCOUNT_KEYS.COGS_LIQUOR,
+          accountId: accounts.COGS_LIQUOR,
           debit: g.liquorCost,
           costCenter: 'liquor',
           narration: `COGS Liquor sourced for order ${order.number}`,
@@ -513,14 +514,14 @@ export async function postOrderDeliveredTx(
       }
       if (g.groceryCost > 0) {
         lines.push({
-          accountId: ACCOUNT_KEYS.COGS_GROCERY,
+          accountId: accounts.COGS_GROCERY,
           debit: g.groceryCost,
           costCenter: 'grocery',
           narration: `COGS Grocery sourced for order ${order.number}`,
         })
       }
       lines.push({
-        accountId: ACCOUNT_KEYS.DEALER_PAYABLE,
+        accountId: accounts.DEALER_PAYABLE,
         credit: totalDealerCost,
         partyType: 'dealer',
         partyId: g.dealerId,
@@ -539,7 +540,7 @@ export async function postOrderDeliveredTx(
 
     if (riderCompensation > 0) {
       lines.push({
-        accountId: ACCOUNT_KEYS.RIDER_EXPENSE,
+        accountId: accounts.RIDER_EXPENSE,
         debit: riderCompensation,
         partyType: 'rider',
         partyId: rider.id,
@@ -547,7 +548,7 @@ export async function postOrderDeliveredTx(
         narration: `Delivery compensation accrued for rider ${rider.name} on order ${order.number}`,
       })
       lines.push({
-        accountId: ACCOUNT_KEYS.RIDER_PAYABLE,
+        accountId: accounts.RIDER_PAYABLE,
         credit: riderCompensation,
         partyType: 'rider',
         partyId: rider.id,
@@ -588,6 +589,7 @@ export async function postCashHandoverTx(
   if (amount <= 0) {
     throw new Error('Cash handover amount must be greater than zero.')
   }
+  const accounts = await resolveAllAccounts(tx)
 
   return postJournalTx(tx, {
     voucherType: 'RV', // Receipt Voucher
@@ -600,13 +602,13 @@ export async function postCashHandoverTx(
     metadata: { riderId, riderName, amount },
     lines: [
       {
-        accountId: ACCOUNT_KEYS.CASH_IN_HAND,
+        accountId: accounts.CASH_IN_HAND,
         debit: amount,
         costCenter: 'general',
         narration: `Cash deposited by rider ${riderName}`,
       },
       {
-        accountId: ACCOUNT_KEYS.RIDER_COD_CASH,
+        accountId: accounts.RIDER_COD_CASH,
         credit: amount,
         partyType: 'rider',
         partyId: riderId,
@@ -619,9 +621,9 @@ export async function postCashHandoverTx(
 
 /**
  * Standard Posting 3: Dealer Settlement Payment.
- * Dr. Dealer Procurement Payable (ACCOUNT_KEYS.DEALER_PAYABLE) [Gross Amount]
- * Cr. Main Operating Bank Account (ACCOUNT_KEYS.BANK_MAIN) / Cash (ACCOUNT_KEYS.CASH_IN_HAND) [Net Payout]
- * Cr. TDS Withholding Tax Payable (ACCOUNT_KEYS.TDS_PAYABLE) [TDS Amount if applicable]
+ * Dr. Dealer Procurement Payable (DEALER_PAYABLE) [Gross Amount]
+ * Cr. Main Operating Bank Account (BANK_MAIN) / Cash (CASH_IN_HAND) [Net Payout]
+ * Cr. TDS Withholding Tax Payable (TDS_PAYABLE) [TDS Amount if applicable]
  */
 export async function postDealerSettlementTx(
   tx: DbTx,
@@ -641,16 +643,15 @@ export async function postDealerSettlementTx(
     throw new Error('Settlement gross amount must be greater than zero.')
   }
 
+  const accounts = await resolveAllAccounts(tx)
   const tdsAmount = tdsRate > 0 ? Math.round(grossAmount * (tdsRate / 100)) : 0
   const netPaid = grossAmount - tdsAmount
   const payoutAccountId =
-    paymentAccount === 'cash'
-      ? ACCOUNT_KEYS.CASH_IN_HAND
-      : ACCOUNT_KEYS.BANK_MAIN
+    paymentAccount === 'cash' ? accounts.CASH_IN_HAND : accounts.BANK_MAIN
 
   const lines: JournalLineInput[] = [
     {
-      accountId: ACCOUNT_KEYS.DEALER_PAYABLE,
+      accountId: accounts.DEALER_PAYABLE,
       debit: grossAmount,
       partyType: 'dealer',
       partyId: dealerId,
@@ -667,7 +668,7 @@ export async function postDealerSettlementTx(
 
   if (tdsAmount > 0) {
     lines.push({
-      accountId: ACCOUNT_KEYS.TDS_PAYABLE,
+      accountId: accounts.TDS_PAYABLE,
       credit: tdsAmount,
       costCenter: 'general',
       narration: `TDS withholding (${tdsRate}%) deducted on payment to ${dealerName}`,
@@ -700,6 +701,7 @@ export async function postRiderSalaryAccrualTx(
   if (baseSalaryAmount <= 0) {
     throw new Error('Base salary accrual must be greater than zero.')
   }
+  const accounts = await resolveAllAccounts(tx)
 
   return postJournalTx(tx, {
     voucherType: 'JV',
@@ -712,7 +714,7 @@ export async function postRiderSalaryAccrualTx(
     metadata: { riderId, riderName, baseSalaryAmount },
     lines: [
       {
-        accountId: ACCOUNT_KEYS.RIDER_EXPENSE,
+        accountId: accounts.RIDER_EXPENSE,
         debit: baseSalaryAmount,
         partyType: 'rider',
         partyId: riderId,
@@ -720,7 +722,7 @@ export async function postRiderSalaryAccrualTx(
         narration: `Monthly fixed base salary for rider ${riderName}`,
       },
       {
-        accountId: ACCOUNT_KEYS.RIDER_PAYABLE,
+        accountId: accounts.RIDER_PAYABLE,
         credit: baseSalaryAmount,
         partyType: 'rider',
         partyId: riderId,
@@ -733,10 +735,10 @@ export async function postRiderSalaryAccrualTx(
 
 /**
  * Standard Posting 4: Rider Salary / Commission Payout & Deductions.
- * Dr. Rider Payable (ACCOUNT_KEYS.RIDER_PAYABLE) [Gross Amount]
- * Cr. Cash in Hand (ACCOUNT_KEYS.CASH_IN_HAND) / Bank (ACCOUNT_KEYS.BANK_MAIN) [Net Payout]
- * Cr. Rider Undeposited COD Cash (ACCOUNT_KEYS.RIDER_COD_CASH) [Cash Shortage Deducted]
- * Cr. Staff & Rider Advances (ACCOUNT_KEYS.STAFF_RIDER_ADVANCES) [Advances Deducted]
+ * Dr. Rider Payable (RIDER_PAYABLE) [Gross Amount]
+ * Cr. Cash in Hand (CASH_IN_HAND) / Bank (BANK_MAIN) [Net Payout]
+ * Cr. Rider Undeposited COD Cash (RIDER_COD_CASH) [Cash Shortage Deducted]
+ * Cr. Staff & Rider Advances (STAFF_RIDER_ADVANCES) [Advances Deducted]
  */
 export async function postRiderPayoutTx(
   tx: DbTx,
@@ -763,14 +765,13 @@ export async function postRiderPayoutTx(
     throw new Error('Payout gross amount must be greater than zero.')
   }
 
+  const accounts = await resolveAllAccounts(tx)
   const payoutAccountId =
-    paymentAccount === 'cash'
-      ? ACCOUNT_KEYS.CASH_IN_HAND
-      : ACCOUNT_KEYS.BANK_MAIN
+    paymentAccount === 'cash' ? accounts.CASH_IN_HAND : accounts.BANK_MAIN
 
   const lines: JournalLineInput[] = [
     {
-      accountId: ACCOUNT_KEYS.RIDER_PAYABLE,
+      accountId: accounts.RIDER_PAYABLE,
       debit: gross,
       partyType: 'rider',
       partyId: riderId,
@@ -790,7 +791,7 @@ export async function postRiderPayoutTx(
 
   if (shortage > 0) {
     lines.push({
-      accountId: ACCOUNT_KEYS.RIDER_COD_CASH,
+      accountId: accounts.RIDER_COD_CASH,
       credit: shortage,
       partyType: 'rider',
       partyId: riderId,
@@ -801,7 +802,7 @@ export async function postRiderPayoutTx(
 
   if (advances > 0) {
     lines.push({
-      accountId: ACCOUNT_KEYS.STAFF_RIDER_ADVANCES,
+      accountId: accounts.STAFF_RIDER_ADVANCES,
       credit: advances,
       partyType: 'rider',
       partyId: riderId,

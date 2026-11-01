@@ -8,6 +8,7 @@ import {
 } from '#/db/schema'
 import { requirePermission, logAudit } from '#/server/auth/permissions'
 import {
+  getAccountDefaultsQuery,
   getChartOfAccountsWithBalancesQuery,
   getDealerPayablesSummaryQuery,
   getFiscalYearsQuery,
@@ -16,6 +17,7 @@ import {
   getPublicVoucherBySlugQuery,
   getRiderAccountsSummaryQuery,
   getUnsettledDealerItemsQuery,
+  updateAccountDefaultsQuery,
 } from '#/server/finance/finance.queries'
 import {
   postCashHandoverTx,
@@ -506,4 +508,73 @@ export const reverseJournalVoucherFn = createServerFn({ method: 'POST' })
     )
 
     return result
+  })
+
+/**
+ * Loads default account mappings and eligible leaf accounts for Settings tab (ACC-1.1).
+ * Requires accounts.view permission.
+ */
+export const getAccountDefaultsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    await requirePermission('accounts', 'view')
+
+    const [defaults, allAccounts] = await Promise.all([
+      getAccountDefaultsQuery(),
+      getChartOfAccountsWithBalancesQuery(),
+    ])
+
+    const availableAccounts = allAccounts
+      .filter((a) => !a.isGroup && a.isActive)
+      .map((a) => ({
+        id: a.id,
+        code: a.code,
+        name: a.name,
+        rootType: a.rootType,
+      }))
+
+    return {
+      defaults,
+      accounts: availableAccounts,
+    }
+  },
+)
+
+/**
+ * Updates default account mappings (Admin only, requires accounts:approve or settings:edit).
+ * Enforces non-group, active accounts and logs an audit record.
+ */
+export const updateAccountDefaultsFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        updates: z
+          .array(
+            z.object({
+              key: z.string().min(1),
+              accountId: z.string().min(1),
+            }),
+          )
+          .min(1),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('accounts', 'approve')
+
+    const result = await updateAccountDefaultsQuery(
+      data.updates as any,
+      user.name,
+    )
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'edit',
+      `Updated ${result.updatedCount} accounting default account mapping(s)`,
+    )
+
+    return {
+      success: true,
+      count: result.updatedCount,
+    }
   })
