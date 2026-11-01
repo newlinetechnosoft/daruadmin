@@ -17,10 +17,7 @@ import {
   assignDealerItemsQuery,
   assignItemDealersQuery,
 } from '#/server/inventory/inventory.queries'
-import {
-  restoreRecycleBinItemQuery,
-  moveToRecycleBin,
-} from '#/server/recycle-bin/recycle-bin.queries'
+import { restoreRecycleBinItemQuery } from '#/server/recycle-bin/recycle-bin.queries'
 import { deleteRiderQuery } from '#/server/riders/rider.queries'
 import { saveUserPermissionsQuery } from '#/server/platform/platform.queries'
 
@@ -198,6 +195,47 @@ describe('Transaction Safety for Multi-Step Writes (INFRA-1)', () => {
         .from(schema.liquorImages)
         .where(eq(schema.liquorImages.productId, createdProdId!))
       expect(imageRows.length).toBe(1)
+    })
+
+    it('deleteItemQuery rolls back deletion and recycle bin archiving when aborted', async () => {
+      const prodId = crypto.randomUUID()
+      await db.insert(schema.liquorProducts).values({
+        id: prodId,
+        name: 'Product To Delete Safely',
+        slug: 'prod-to-delete-safely',
+        categoryId: catWhiskyId,
+      })
+
+      let errorThrown = false
+      try {
+        await db.transaction(async (tx) => {
+          await deleteItemQuery(
+            { id: prodId, catalogType: 'liquor' },
+            tx as unknown as DbTx,
+          )
+          throw new Error('Catalog delete aborted mid-transaction')
+        })
+      } catch (err: any) {
+        if (err.message === 'Catalog delete aborted mid-transaction') {
+          errorThrown = true
+        }
+      }
+
+      expect(errorThrown).toBe(true)
+
+      // Product must still exist
+      const prodRows = await db
+        .select()
+        .from(schema.liquorProducts)
+        .where(eq(schema.liquorProducts.id, prodId))
+      expect(prodRows.length).toBe(1)
+
+      // Recycle bin must NOT have this item
+      const rbRows = await db
+        .select()
+        .from(schema.recycleBin)
+        .where(eq(schema.recycleBin.entityId, prodId))
+      expect(rbRows.length).toBe(0)
     })
   })
 
