@@ -56,9 +56,11 @@ import { toast } from 'sonner'
 export function MarketingPanel() {
   const queryClient = useQueryClient()
   const router = useRouter()
-  const { data: marketingData, isFetching, refetch } = useSuspenseQuery(
-    adminQueries.marketing(),
-  )
+  const {
+    data: marketingData,
+    isFetching,
+    refetch,
+  } = useSuspenseQuery(adminQueries.marketing())
   const ops = marketingData.ops
 
   const invalidateMarketing = async () => {
@@ -205,7 +207,9 @@ export function MarketingPanel() {
     try {
       setIsSubmitting(true)
       await deleteBannerFn({ data: { id: deleteBannerTarget.id } })
-      toast.success(`Banner "${deleteBannerTarget.title}" removed from database`)
+      toast.success(
+        `Banner "${deleteBannerTarget.title}" removed from database`,
+      )
       setDeleteBannerTarget(null)
       await invalidateMarketing()
     } catch {
@@ -302,12 +306,18 @@ export function MarketingPanel() {
               variant="button"
             />
             {activeTab === 'coupons' ? (
-              <Button onClick={() => setIsAddCouponOpen(true)} className="gap-2">
+              <Button
+                onClick={() => setIsAddCouponOpen(true)}
+                className="gap-2"
+              >
                 <Plus className="h-4 w-4" />
                 Create Coupon
               </Button>
             ) : activeTab === 'banners' ? (
-              <Button onClick={() => setIsAddBannerOpen(true)} className="gap-2">
+              <Button
+                onClick={() => setIsAddBannerOpen(true)}
+                className="gap-2"
+              >
                 <Plus className="h-4 w-4" />
                 Add Banner
               </Button>
@@ -360,383 +370,389 @@ export function MarketingPanel() {
         <Tabs
           value={activeTab}
           onValueChange={(val) =>
-            setActiveTab(val as 'coupons' | 'banners' | 'reviews' | 'redemptions')
+            setActiveTab(
+              val as 'coupons' | 'banners' | 'reviews' | 'redemptions',
+            )
           }
           className="w-full space-y-4"
         >
-        <TabsList>
-          <TabsTrigger value="coupons" className="gap-2">
-            <Tag className="h-3.5 w-3.5" />
-            <span>Discount Coupons ({ops.coupons.length})</span>
-          </TabsTrigger>
-          <TabsTrigger value="redemptions" className="gap-2">
-            <History className="h-3.5 w-3.5" />
-            <span>Usage History ({redemptions.length})</span>
-          </TabsTrigger>
-          <TabsTrigger value="banners" className="gap-2">
-            <Megaphone className="h-3.5 w-3.5" />
-            <span>Campaign Banners ({ops.banners.length})</span>
-          </TabsTrigger>
-          <TabsTrigger value="reviews" className="gap-2">
-            <Star className="h-3.5 w-3.5" />
-            <span>Review Moderation ({ops.reviews.length})</span>
-          </TabsTrigger>
-        </TabsList>
+          <TabsList>
+            <TabsTrigger value="coupons" className="gap-2">
+              <Tag className="h-3.5 w-3.5" />
+              <span>Discount Coupons ({ops.coupons.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="redemptions" className="gap-2">
+              <History className="h-3.5 w-3.5" />
+              <span>Usage History ({redemptions.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="banners" className="gap-2">
+              <Megaphone className="h-3.5 w-3.5" />
+              <span>Campaign Banners ({ops.banners.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="reviews" className="gap-2">
+              <Star className="h-3.5 w-3.5" />
+              <span>Review Moderation ({ops.reviews.length})</span>
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="coupons" className="space-y-4">
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Promo Code</TableHead>
-                    <TableHead>Discount Value</TableHead>
-                    <TableHead>Min Cart Spend</TableHead>
-                    <TableHead>Redemption Usage</TableHead>
-                    <TableHead>Expires</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {ops.coupons.length === 0 ? (
+          <TabsContent value="coupons" className="space-y-4">
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="py-8 text-center text-muted-foreground"
-                      >
-                        No coupons found.
-                      </TableCell>
+                      <TableHead>Promo Code</TableHead>
+                      <TableHead>Discount Value</TableHead>
+                      <TableHead>Min Cart Spend</TableHead>
+                      <TableHead>Redemption Usage</TableHead>
+                      <TableHead>Expires</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ) : (
-                    ops.coupons.map((coupon) => {
-                      const usagePercent = Math.round(
-                        (coupon.used / (coupon.usageLimit || 1)) * 100,
-                      )
-                      return (
-                        <TableRow key={coupon.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded border border-border bg-muted">
-                                {coupon.code}
+                  </TableHeader>
+                  <TableBody>
+                    {ops.coupons.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          className="py-8 text-center text-muted-foreground"
+                        >
+                          No coupons found.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      ops.coupons.map((coupon) => {
+                        const usagePercent = Math.round(
+                          (coupon.used / (coupon.usageLimit || 1)) * 100,
+                        )
+                        return (
+                          <TableRow key={coupon.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded border border-border bg-muted">
+                                  {coupon.code}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                  onClick={() => handleCopyCode(coupon.code)}
+                                  title="Copy coupon code"
+                                >
+                                  <Copy className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+
+                            <TableCell>
+                              <span className="font-medium text-foreground">
+                                {coupon.type === 'percent'
+                                  ? `${coupon.value}% off`
+                                  : `Flat ${formatNPR(coupon.value)} off`}
                               </span>
+                            </TableCell>
+
+                            <TableCell>
+                              <span className="font-mono text-muted-foreground">
+                                {formatNPR(coupon.minOrder)}
+                              </span>
+                            </TableCell>
+
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="w-20 bg-muted h-1.5 rounded-full overflow-hidden">
+                                  <div
+                                    className="bg-primary h-full rounded-full"
+                                    style={{
+                                      width: `${Math.min(100, usagePercent)}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-xs text-muted-foreground font-mono">
+                                  {coupon.used} / {coupon.usageLimit}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            <TableCell>
+                              <span className="text-xs text-muted-foreground font-mono">
+                                {coupon.expiresAt}
+                              </span>
+                            </TableCell>
+
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  coupon.active ? 'success' : 'secondary'
+                                }
+                              >
+                                {coupon.active ? 'Active' : 'Expired'}
+                              </Badge>
+                            </TableCell>
+
+                            <TableCell className="text-right">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                onClick={() => handleCopyCode(coupon.code)}
-                                title="Copy coupon code"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer"
+                                onClick={() =>
+                                  setDeleteCouponTarget({
+                                    id: coupon.id,
+                                    code: coupon.code,
+                                  })
+                                }
+                                title="Delete coupon"
                               >
-                                <Copy className="h-3.5 w-3.5" />
+                                <Trash2 className="h-4 w-4" />
                               </Button>
-                            </div>
-                          </TableCell>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                          <TableCell>
-                            <span className="font-medium text-foreground">
-                              {coupon.type === 'percent'
-                                ? `${coupon.value}% off`
-                                : `Flat ${formatNPR(coupon.value)} off`}
-                            </span>
-                          </TableCell>
-
-                          <TableCell>
-                            <span className="font-mono text-muted-foreground">
-                              {formatNPR(coupon.minOrder)}
-                            </span>
-                          </TableCell>
-
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className="w-20 bg-muted h-1.5 rounded-full overflow-hidden">
-                                <div
-                                  className="bg-primary h-full rounded-full"
-                                  style={{
-                                    width: `${Math.min(100, usagePercent)}%`,
-                                  }}
-                                />
-                              </div>
-                              <span className="text-xs text-muted-foreground font-mono">
-                                {coupon.used} / {coupon.usageLimit}
-                              </span>
-                            </div>
-                          </TableCell>
-
-                          <TableCell>
-                            <span className="text-xs text-muted-foreground font-mono">
-                              {coupon.expiresAt}
-                            </span>
-                          </TableCell>
-
-                          <TableCell>
-                            <Badge
-                              variant={coupon.active ? 'success' : 'secondary'}
-                            >
-                              {coupon.active ? 'Active' : 'Expired'}
-                            </Badge>
-                          </TableCell>
-
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer"
-                              onClick={() =>
-                                setDeleteCouponTarget({
-                                  id: coupon.id,
-                                  code: coupon.code,
-                                })
-                              }
-                              title="Delete coupon"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="redemptions" className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by customer, phone, code..."
-                value={redemptionSearch}
-                onChange={(e) => setRedemptionSearch(e.target.value)}
-                className="pl-8 text-xs"
-              />
+          <TabsContent value="redemptions" className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by customer, phone, code..."
+                  value={redemptionSearch}
+                  onChange={(e) => setRedemptionSearch(e.target.value)}
+                  className="pl-8 text-xs"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs gap-1.5"
+                onClick={exportRedemptionsCSV}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export CSV
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs gap-1.5"
-              onClick={exportRedemptionsCSV}
-            >
-              <Download className="h-3.5 w-3.5" />
-              Export CSV
-            </Button>
-          </div>
 
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Promo Code</TableHead>
-                    <TableHead>Order Total</TableHead>
-                    <TableHead>Discount</TableHead>
-                    <TableHead>Redeemed At</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRedemptions.length === 0 ? (
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="text-center py-8 text-xs text-muted-foreground"
-                      >
-                        {redemptionSearch
-                          ? 'No redemptions matching search query.'
-                          : 'No promo codes redeemed yet.'}
-                      </TableCell>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Promo Code</TableHead>
+                      <TableHead>Order Total</TableHead>
+                      <TableHead>Discount</TableHead>
+                      <TableHead>Redeemed At</TableHead>
                     </TableRow>
-                  ) : (
-                    filteredRedemptions.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell>
-                          <div className="font-semibold text-foreground text-xs">
-                            {r.customerName}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-xs font-mono">
-                            {r.customerPhone}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {r.customerEmail}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className="font-mono font-bold text-xs uppercase"
-                          >
-                            {r.couponCode}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs font-medium">
-                          {formatNPR(r.orderTotal)}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          -{formatNPR(r.discountAmount)}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {new Date(r.createdAt).toLocaleString('en-US', {
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          })}
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRedemptions.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          className="text-center py-8 text-xs text-muted-foreground"
+                        >
+                          {redemptionSearch
+                            ? 'No redemptions matching search query.'
+                            : 'No promo codes redeemed yet.'}
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    ) : (
+                      filteredRedemptions.map((r) => (
+                        <TableRow key={r.id}>
+                          <TableCell>
+                            <div className="font-semibold text-foreground text-xs">
+                              {r.customerName}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-xs font-mono">
+                              {r.customerPhone}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {r.customerEmail}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className="font-mono font-bold text-xs uppercase"
+                            >
+                              {r.couponCode}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs font-medium">
+                            {formatNPR(r.orderTotal)}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                            -{formatNPR(r.discountAmount)}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {new Date(r.createdAt).toLocaleString('en-US', {
+                              dateStyle: 'medium',
+                              timeStyle: 'short',
+                            })}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="banners" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {ops.banners.length === 0 ? (
-              <div className="col-span-2 py-12 text-center text-muted-foreground text-sm">
-                No campaign banners currently published.
-              </div>
-            ) : (
-              ops.banners.map((banner) => (
-                <Card
-                  key={banner.id}
-                  className="overflow-hidden flex flex-col justify-between"
-                >
-                  <div className="relative h-44 bg-muted">
-                    <img
-                      src={banner.imageUrl}
-                      alt={banner.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent flex flex-col justify-end p-4 text-foreground">
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary text-primary-foreground w-fit mb-1">
-                        Placement: {banner.placement}
-                      </span>
-                      <h4 className="text-sm font-semibold text-foreground">
-                        {banner.title}
-                      </h4>
-                      <p className="text-xs text-muted-foreground font-mono">
-                        Link: {banner.href}
-                      </p>
+          <TabsContent value="banners" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {ops.banners.length === 0 ? (
+                <div className="col-span-2 py-12 text-center text-muted-foreground text-sm">
+                  No campaign banners currently published.
+                </div>
+              ) : (
+                ops.banners.map((banner) => (
+                  <Card
+                    key={banner.id}
+                    className="overflow-hidden flex flex-col justify-between"
+                  >
+                    <div className="relative h-44 bg-muted">
+                      <img
+                        src={banner.imageUrl}
+                        alt={banner.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent flex flex-col justify-end p-4 text-foreground">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary text-primary-foreground w-fit mb-1">
+                          Placement: {banner.placement}
+                        </span>
+                        <h4 className="text-sm font-semibold text-foreground">
+                          {banner.title}
+                        </h4>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          Link: {banner.href}
+                        </p>
+                      </div>
                     </div>
-                  </div>
 
-                  <CardContent className="p-3.5 flex items-center justify-between text-xs border-t border-border">
-                    <Badge variant={banner.active ? 'success' : 'secondary'}>
-                      {banner.active ? 'Active on store' : 'Inactive'}
-                    </Badge>
+                    <CardContent className="p-3.5 flex items-center justify-between text-xs border-t border-border">
+                      <Badge variant={banner.active ? 'success' : 'secondary'}>
+                        {banner.active ? 'Active on store' : 'Inactive'}
+                      </Badge>
 
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer"
-                      onClick={() =>
-                        setDeleteBannerTarget({
-                          id: banner.id,
-                          title: banner.title,
-                        })
-                      }
-                      title="Delete banner"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        </TabsContent>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer"
+                        onClick={() =>
+                          setDeleteBannerTarget({
+                            id: banner.id,
+                            title: banner.title,
+                          })
+                        }
+                        title="Delete banner"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
 
-        <TabsContent value="reviews" className="space-y-4">
-          <Card>
-            <CardContent className="p-4 space-y-4">
-              <div className="divide-y divide-border">
-                {ops.reviews.length === 0 ? (
-                  <div className="py-8 text-center text-muted-foreground text-sm">
-                    No customer reviews to moderate.
-                  </div>
-                ) : (
-                  ops.reviews.map((rev) => (
-                    <div
-                      key={rev.id}
-                      className="py-3.5 first:pt-0 last:pb-0 space-y-2 text-xs"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="font-semibold text-foreground">
-                            {rev.customerName}
-                          </span>
-                          <span className="text-muted-foreground ml-2">
-                            on {rev.productName}
-                          </span>
-                          <span className="text-muted-foreground ml-2 font-mono">
-                            {rev.createdAt}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center text-warning font-bold">
-                            {'★'.repeat(rev.rating)}
-                            <span className="text-muted-foreground/30">
-                              {'★'.repeat(5 - rev.rating)}
+          <TabsContent value="reviews" className="space-y-4">
+            <Card>
+              <CardContent className="p-4 space-y-4">
+                <div className="divide-y divide-border">
+                  {ops.reviews.length === 0 ? (
+                    <div className="py-8 text-center text-muted-foreground text-sm">
+                      No customer reviews to moderate.
+                    </div>
+                  ) : (
+                    ops.reviews.map((rev) => (
+                      <div
+                        key={rev.id}
+                        className="py-3.5 first:pt-0 last:pb-0 space-y-2 text-xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="font-semibold text-foreground">
+                              {rev.customerName}
+                            </span>
+                            <span className="text-muted-foreground ml-2">
+                              on {rev.productName}
+                            </span>
+                            <span className="text-muted-foreground ml-2 font-mono">
+                              {rev.createdAt}
                             </span>
                           </div>
-                          <Badge
-                            variant={
-                              rev.status === 'published'
-                                ? 'success'
-                                : rev.status === 'hidden'
-                                  ? 'destructive'
-                                  : 'warning'
-                            }
-                          >
-                            {rev.status}
-                          </Badge>
+
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center text-warning font-bold">
+                              {'★'.repeat(rev.rating)}
+                              <span className="text-muted-foreground/30">
+                                {'★'.repeat(5 - rev.rating)}
+                              </span>
+                            </div>
+                            <Badge
+                              variant={
+                                rev.status === 'published'
+                                  ? 'success'
+                                  : rev.status === 'hidden'
+                                    ? 'destructive'
+                                    : 'warning'
+                              }
+                            >
+                              {rev.status}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <p className="text-muted-foreground italic">
+                          &ldquo;{rev.body}&rdquo;
+                        </p>
+
+                        <div className="pt-1 flex justify-end gap-2">
+                          {rev.status !== 'published' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1"
+                              onClick={() =>
+                                handleUpdateReview(rev.id, 'published')
+                              }
+                            >
+                              <Check className="h-3.5 w-3.5 text-success" />
+                              Approve
+                            </Button>
+                          )}
+                          {rev.status !== 'hidden' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
+                              onClick={() =>
+                                handleUpdateReview(rev.id, 'hidden')
+                              }
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                              Hide
+                            </Button>
+                          )}
                         </div>
                       </div>
-
-                      <p className="text-muted-foreground italic">
-                        &ldquo;{rev.body}&rdquo;
-                      </p>
-
-                      <div className="pt-1 flex justify-end gap-2">
-                        {rev.status !== 'published' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs gap-1"
-                            onClick={() =>
-                              handleUpdateReview(rev.id, 'published')
-                            }
-                          >
-                            <Check className="h-3.5 w-3.5 text-success" />
-                            Approve
-                          </Button>
-                        )}
-                        {rev.status !== 'hidden' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
-                            onClick={() => handleUpdateReview(rev.id, 'hidden')}
-                          >
-                            <XCircle className="h-3.5 w-3.5" />
-                            Hide
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </DataSection>
 
       {/* Create Coupon Dialog */}

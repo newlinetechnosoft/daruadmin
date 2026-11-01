@@ -12,6 +12,12 @@
 - Archive instead of delete (`archivedAt`/`isActive`); never delete variants referenced by orders/stock.
 - `resolveVariant(catalogType, id)` → returns variant + product snapshot data; used by orders/inventory (no DB FK across catalogs).
 
+## Transaction Safety (INFRA-1)
+
+- Multi-statement catalog writes (`upsertLiquorProductQuery`, `upsertGroceryProductQuery`, `deleteItemQuery`) execute inside `dbTx.transaction()` with atomic rollbacks.
+- Each function accepts optional `externalTx?: DbTx` allowing callers to participate in parent transactions.
+- Automated rollback tests in `src/server/db-transactions.test.ts`.
+
 ## Images
 
 - Storage via `#/lib/storage` adapter (Neon Object Storage, beta). Flow: `createImageUpload` returns a **presigned PUT** → client uploads directly (≤5 MB; jpeg/png/webp) → `confirmImageUpload` triggers `sharp` to make **WebP at 400/800/1200 px** → keys saved in `*_images` (`alt`, `sortOrder`, `isPrimary`). Don't stream files through server functions (Vercel ~4.5 MB body limit).

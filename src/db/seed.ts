@@ -1,3 +1,4 @@
+import { config } from 'dotenv'
 import { db } from './index'
 import {
   liquorCategories,
@@ -16,7 +17,41 @@ import {
 import { eq } from 'drizzle-orm'
 import { toPaisa } from '../lib/money'
 
+config({ path: ['.env.local', '.env'] })
+
 export async function seed() {
+  const rawUrl = process.env.DATABASE_URL || ''
+  if (!rawUrl.trim()) {
+    console.error('❌ SAFETY ABORT: DATABASE_URL is empty or not set.')
+    process.exit(1)
+  }
+
+  let host = ''
+  try {
+    const parsed = new URL(rawUrl)
+    host = parsed.hostname
+    if (!host) {
+      throw new Error('No hostname in DATABASE_URL')
+    }
+  } catch {
+    console.error('❌ SAFETY ABORT: DATABASE_URL is malformed.')
+    process.exit(1)
+  }
+
+  const neonBranch = process.env.NEON_BRANCH || 'unknown'
+
+  console.log(`Target database host: ${host}`)
+  console.log(`Neon branch:          ${neonBranch}`)
+
+  const isConfirmed = process.argv.includes('--confirm')
+  if (!isConfirmed) {
+    console.error(
+      '\n❌ SAFETY ABORT: Refusing to seed database without explicit --confirm flag.',
+    )
+    console.error('To seed this database, pass --confirm explicitly.\n')
+    process.exit(1)
+  }
+
   console.log('🌱 Starting database seed...')
 
   // 1. Upgrade Admin Role

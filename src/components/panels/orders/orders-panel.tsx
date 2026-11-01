@@ -5,7 +5,10 @@ import { adminQueries } from '#/queries/admin'
 import { cn } from '#/lib/utils'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
-import { DateRangeFilter, useDateFilter } from '#/components/shared/date-range-filter'
+import {
+  DateRangeFilter,
+  useDateFilter,
+} from '#/components/shared/date-range-filter'
 import {
   updateOrderFn,
   createOrderFn,
@@ -96,9 +99,11 @@ const ORDER_STATUSES: { value: string; label: string }[] = [
 export function OrdersPanel() {
   const queryClient = useQueryClient()
   const router = useRouter()
-  const { data: ordersData, isFetching, refetch } = useSuspenseQuery(
-    adminQueries.orders(),
-  )
+  const {
+    data: ordersData,
+    isFetching,
+    refetch,
+  } = useSuspenseQuery(adminQueries.orders())
   const { ops, liquor, grocery, dealers } = ordersData
   const dealersList = dealers
 
@@ -741,220 +746,236 @@ export function OrdersPanel() {
         <Card className="overflow-hidden">
           <CardContent className="p-0">
             <Table>
-            <TableHeader className="bg-muted/40">
-              <TableRow className="border-b border-border">
-                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Order # & Date</TableHead>
-                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Customer</TableHead>
-                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Items</TableHead>
-                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Total (NPR)</TableHead>
-                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Status</TableHead>
-                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Payment</TableHead>
-                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Assigned Rider</TableHead>
-                <TableHead className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredOrders.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={8}
-                    className="py-12 text-center text-muted-foreground text-sm"
-                  >
-                    <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto">
-                      <span className="font-semibold text-foreground">
-                        No orders found for {bounds.label}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {bounds.isFiltered
-                          ? `There are no orders recorded for ${bounds.secondaryLabel}. You can switch to All Time or pick another date.`
-                          : 'Try adjusting your search query or status filter.'}
-                      </span>
-                      {bounds.isFiltered && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDateFilter({ preset: 'all' })}
-                          className="mt-2 text-xs"
-                        >
-                          View All Time Orders ({ops.orders.length})
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
+              <TableHeader className="bg-muted/40">
+                <TableRow className="border-b border-border">
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                    Order # & Date
+                  </TableHead>
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                    Customer
+                  </TableHead>
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                    Items
+                  </TableHead>
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                    Total (NPR)
+                  </TableHead>
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                    Status
+                  </TableHead>
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                    Payment
+                  </TableHead>
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                    Assigned Rider
+                  </TableHead>
+                  <TableHead className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                    Actions
+                  </TableHead>
                 </TableRow>
-              ) : (
-                filteredOrders.map((order) => {
-                  const assignedRider = ops.riders.find(
-                    (r) => r.id === order.riderId,
-                  )
-                  return (
-                    <TableRow
-                      key={order.id}
-                      className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
+              </TableHeader>
+              <TableBody>
+                {filteredOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={8}
+                      className="py-12 text-center text-muted-foreground text-sm"
                     >
-                      <TableCell>
-                        <span className="font-mono font-medium text-foreground block">
-                          {order.number}
+                      <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto">
+                        <span className="font-semibold text-foreground">
+                          No orders found for {bounds.label}
                         </span>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {new Date(order.createdAt).toLocaleDateString()}
+                        <span className="text-xs text-muted-foreground">
+                          {bounds.isFiltered
+                            ? `There are no orders recorded for ${bounds.secondaryLabel}. You can switch to All Time or pick another date.`
+                            : 'Try adjusting your search query or status filter.'}
                         </span>
-                      </TableCell>
-
-                      <TableCell>
-                        <div className="font-medium text-foreground">
-                          {order.customerName}
-                        </div>
-                        <div className="flex items-center gap-2 pt-1 text-xs">
-                          <a
-                            href={`tel:${order.customerPhone}`}
-                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-mono"
-                            title={`Call ${order.customerPhone}`}
+                        {bounds.isFiltered && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDateFilter({ preset: 'all' })}
+                            className="mt-2 text-xs"
                           >
-                            <Phone className="h-3 w-3" />
-                            <span>{order.customerPhone}</span>
-                          </a>
-                          {order.customerPhone && (
+                            View All Time Orders ({ops.orders.length})
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredOrders.map((order) => {
+                    const assignedRider = ops.riders.find(
+                      (r) => r.id === order.riderId,
+                    )
+                    return (
+                      <TableRow
+                        key={order.id}
+                        className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
+                      >
+                        <TableCell>
+                          <span className="font-mono font-medium text-foreground block">
+                            {order.number}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {new Date(order.createdAt).toLocaleDateString()}
+                          </span>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="font-medium text-foreground">
+                            {order.customerName}
+                          </div>
+                          <div className="flex items-center gap-2 pt-1 text-xs">
                             <a
-                              href={`https://wa.me/${order.customerPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Namaste ${order.customerName}, this is regarding your order ${order.number} from Mezmani.`)}`}
+                              href={`tel:${order.customerPhone}`}
+                              className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-mono"
+                              title={`Call ${order.customerPhone}`}
+                            >
+                              <Phone className="h-3 w-3" />
+                              <span>{order.customerPhone}</span>
+                            </a>
+                            {order.customerPhone && (
+                              <a
+                                href={`https://wa.me/${order.customerPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Namaste ${order.customerName}, this is regarding your order ${order.number} from Mezmani.`)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-0.5 text-xs text-emerald-600 dark:text-emerald-400 hover:underline"
+                                title="WhatsApp Customer"
+                              >
+                                <MessageCircle className="h-3 w-3" />
+                              </a>
+                            )}
+                            <a
+                              href={getGoogleMapsUrl(order)}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-0.5 text-xs text-emerald-600 dark:text-emerald-400 hover:underline"
-                              title="WhatsApp Customer"
+                              className="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
+                              title={`${order.address}, ${order.city}`}
                             >
-                              <MessageCircle className="h-3 w-3" />
+                              <MapPin className="h-3 w-3 text-amber-500" />
                             </a>
-                          )}
-                          <a
-                            href={getGoogleMapsUrl(order)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
-                            title={`${order.address}, ${order.city}`}
-                          >
-                            <MapPin className="h-3 w-3 text-amber-500" />
-                          </a>
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <span className="font-medium text-foreground">
-                          {order.items.length}{' '}
-                          {order.items.length === 1 ? 'item' : 'items'}
-                        </span>
-                        <div className="text-xs text-muted-foreground truncate max-w-[160px]">
-                          {order.items.map((i) => i.name).join(', ')}
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <span className="font-semibold text-foreground font-mono">
-                          {formatNPR(order.total)}
-                        </span>
-                      </TableCell>
-
-                      <TableCell>
-                        <StatusBadge value={order.status} />
-                      </TableCell>
-
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className="font-mono text-xs uppercase"
-                        >
-                          {order.paymentMethod}
-                        </Badge>
-                      </TableCell>
-
-                      <TableCell>
-                        {assignedRider ? (
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-1.5 text-xs text-foreground font-medium">
-                              <Bike className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              <span>{assignedRider.name}</span>
-                            </div>
-                            <div className="text-xs text-muted-foreground font-mono flex items-center gap-1">
-                              <span>
-                                Float: {formatNPR(assignedRider.cashOnHand)}
-                              </span>
-                              {assignedRider.cashOnHand >= 2000000 && (
-                                <span
-                                  className="text-destructive font-semibold"
-                                  title="COD cash limit exceeded (Rs. 20,000)"
-                                >
-                                  ⚠️ Limit
-                                </span>
-                              )}
-                            </div>
                           </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground italic block">
-                            No Courier
+                        </TableCell>
+
+                        <TableCell>
+                          <span className="font-medium text-foreground">
+                            {order.items.length}{' '}
+                            {order.items.length === 1 ? 'item' : 'items'}
                           </span>
-                        )}
-                        {(() => {
-                          const assignedCount = order.items.filter(
-                            (it) => it.dealerId,
-                          ).length
-                          const totalCount = order.items.length
-                          if (totalCount === 0) return null
-                          if (assignedCount === totalCount) {
+                          <div className="text-xs text-muted-foreground truncate max-w-[160px]">
+                            {order.items.map((i) => i.name).join(', ')}
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          <span className="font-semibold text-foreground font-mono">
+                            {formatNPR(order.total)}
+                          </span>
+                        </TableCell>
+
+                        <TableCell>
+                          <StatusBadge value={order.status} />
+                        </TableCell>
+
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className="font-mono text-xs uppercase"
+                          >
+                            {order.paymentMethod}
+                          </Badge>
+                        </TableCell>
+
+                        <TableCell>
+                          {assignedRider ? (
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-1.5 text-xs text-foreground font-medium">
+                                <Bike className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                <span>{assignedRider.name}</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground font-mono flex items-center gap-1">
+                                <span>
+                                  Float: {formatNPR(assignedRider.cashOnHand)}
+                                </span>
+                                {assignedRider.cashOnHand >= 2000000 && (
+                                  <span
+                                    className="text-destructive font-semibold"
+                                    title="COD cash limit exceeded (Rs. 20,000)"
+                                  >
+                                    ⚠️ Limit
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic block">
+                              No Courier
+                            </span>
+                          )}
+                          {(() => {
+                            const assignedCount = order.items.filter(
+                              (it) => it.dealerId,
+                            ).length
+                            const totalCount = order.items.length
+                            if (totalCount === 0) return null
+                            if (assignedCount === totalCount) {
+                              return (
+                                <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">
+                                  <Store className="h-3 w-3 shrink-0" />
+                                  <span>
+                                    {assignedCount === 1
+                                      ? 'Dealer Assigned'
+                                      : `${assignedCount} Dealers`}
+                                  </span>
+                                </div>
+                              )
+                            }
                             return (
-                              <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">
+                              <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
                                 <Store className="h-3 w-3 shrink-0" />
                                 <span>
-                                  {assignedCount === 1
-                                    ? 'Dealer Assigned'
-                                    : `${assignedCount} Dealers`}
+                                  {assignedCount}/{totalCount} Dealers
                                 </span>
                               </div>
                             )
-                          }
-                          return (
-                            <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
-                              <Store className="h-3 w-3 shrink-0" />
-                              <span>
-                                {assignedCount}/{totalCount} Dealers
-                              </span>
-                            </div>
-                          )
-                        })()}
-                      </TableCell>
+                          })()}
+                        </TableCell>
 
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            onClick={() => {
-                              setSelectedOrder(order)
-                              setIsInvoiceOpen(true)
-                            }}
-                            title="Print Tax Invoice"
-                          >
-                            <Receipt className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 gap-1.5 text-xs"
-                            onClick={() => setSelectedOrder(order)}
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                            Details
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                              onClick={() => {
+                                setSelectedOrder(order)
+                                setIsInvoiceOpen(true)
+                              }}
+                              title="Print Tax Invoice"
+                            >
+                              <Receipt className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 gap-1.5 text-xs"
+                              onClick={() => setSelectedOrder(order)}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              Details
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </DataSection>
 
       {/* Order Details Dialog */}

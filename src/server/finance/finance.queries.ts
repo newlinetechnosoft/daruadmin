@@ -1,5 +1,6 @@
-import { db } from '#/db'
+import { db, dbTx } from '#/db'
 import {
+  accountDefaults,
   dealers,
   dealerSettlements,
   fiscalYears,
@@ -15,7 +16,24 @@ import {
 } from '#/db/schema'
 import { formatBS, formatDualDate } from '#/lib/nepal-date'
 import type { LedgerEntry, PaymentTxn } from '#/server/operations/types'
-import { and, asc, desc, eq, gte, isNotNull, lte, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  lte,
+  sql,
+} from 'drizzle-orm'
+import {
+  ACCOUNT_KEY_METADATA,
+  invalidateAccountDefaultsCache,
+  resolveAccount,
+} from './account-keys'
+import type { AccountKey, AccountKeyMetadata } from './account-keys'
+import type { DbTx, JournalMetadata } from './types'
 
 // ---------------------------------------------------------
 // Legacy Single-Entry Mappers (backward compatibility)
@@ -26,11 +44,11 @@ function mapLedgerRecord(l: typeof ledgerEntries.$inferSelect): LedgerEntry {
     id: l.id,
     date: l.date,
     type: l.type as 'debit' | 'credit',
-    category: l.category as any,
+    category: l.category as LedgerEntry['category'],
     account: l.account,
     memo: l.memo,
     amount: l.amount,
-    refType: l.refType as any,
+    refType: l.refType as LedgerEntry['refType'],
     refId: l.refId,
     createdAt: l.createdAt.toISOString(),
   }
@@ -40,9 +58,9 @@ function mapPaymentRecord(p: typeof payments.$inferSelect): PaymentTxn {
   return {
     id: p.id,
     orderId: p.orderId,
-    gateway: p.gateway as any,
+    gateway: p.gateway as PaymentTxn['gateway'],
     amount: p.amount,
-    status: p.status as any,
+    status: p.status as PaymentTxn['status'],
     reference: p.reference,
     createdAt: p.createdAt.toISOString(),
   }
@@ -61,9 +79,8 @@ export async function getAllLedgerEntriesQuery(dateRange?: {
   }
 
   const query = db.select().from(ledgerEntries)
-  const rows = await (conditions.length > 0
-    ? query.where(and(...conditions))
-    : query
+  const rows = await (
+    conditions.length > 0 ? query.where(and(...conditions)) : query
   ).orderBy(desc(ledgerEntries.createdAt))
   return rows.map(mapLedgerRecord)
 }
@@ -81,9 +98,8 @@ export async function getAllPaymentsQuery(dateRange?: {
   }
 
   const query = db.select().from(payments)
-  const rows = await (conditions.length > 0
-    ? query.where(and(...conditions))
-    : query
+  const rows = await (
+    conditions.length > 0 ? query.where(and(...conditions)) : query
   ).orderBy(desc(payments.createdAt))
   return rows.map(mapPaymentRecord)
 }
@@ -131,7 +147,9 @@ export interface DetailedJournalEntry {
   event: string | null
   postingStatus: string
   reversalOf: string | null
-  metadata: any
+  isReversed: boolean
+  reversedBy: string | null
+  metadata: JournalMetadata | null
   createdBy: string
   totalDebit: number
   totalCredit: number
@@ -234,7 +252,9 @@ export async function getJournalEntriesQuery(params?: {
       event: e.event,
       postingStatus: e.postingStatus,
       reversalOf: e.reversalOf,
-      metadata: e.metadata,
+      isReversed: e.isReversed,
+      reversedBy: e.reversedBy,
+      metadata: e.metadata as JournalMetadata | null,
       createdBy: e.createdBy,
       totalDebit,
       totalCredit,
@@ -446,8 +466,8 @@ export interface DealerPayableSummary {
   pan: string | null
   city: string | null
   phone: string | null
-  totalProcured: number // credit to acc_2011
-  totalPaid: number // debit to acc_2011
+  totalProcured: number // credit to DEALER_PAYABLE (2011)
+  totalPaid: number // debit to DEALER_PAYABLE (2011)
   outstandingPayable: number // totalProcured - totalPaid
 }
 
@@ -455,6 +475,7 @@ export async function getDealerPayablesSummaryQuery(): Promise<
   DealerPayableSummary[]
 > {
   const allDealers = await db.select().from(dealers).orderBy(asc(dealers.name))
+  const payableAccountId = await resolveAccount(db, 'DEALER_PAYABLE')
 
   const payableLines = await db
     .select({
@@ -465,7 +486,7 @@ export async function getDealerPayablesSummaryQuery(): Promise<
     .from(journalLines)
     .where(
       and(
-        eq(journalLines.accountId, 'acc_2011'),
+        eq(journalLines.accountId, payableAccountId),
         eq(journalLines.partyType, 'dealer'),
       ),
     )
@@ -503,14 +524,16 @@ export interface RiderAccountSummary {
   riderName: string
   phone: string | null
   cashOnHand: number // in riders table
-  undepositedCodCash: number // net debit on acc_1031
-  commissionPayable: number // net credit on acc_2031
+  undepositedCodCash: number // net debit on RIDER_COD_CASH (1031)
+  commissionPayable: number // net credit on RIDER_PAYABLE (2031)
 }
 
 export async function getRiderAccountsSummaryQuery(): Promise<
   RiderAccountSummary[]
 > {
   const allRiders = await db.select().from(riders).orderBy(asc(riders.name))
+  const codCashAccountId = await resolveAccount(db, 'RIDER_COD_CASH')
+  const payableAccountId = await resolveAccount(db, 'RIDER_PAYABLE')
 
   const riderLines = await db
     .select({
@@ -528,10 +551,10 @@ export async function getRiderAccountsSummaryQuery(): Promise<
 
   for (const rl of riderLines) {
     if (!rl.partyId) continue
-    if (rl.accountId === 'acc_1031') {
+    if (rl.accountId === codCashAccountId) {
       // Asset: Dr increases, Cr decreases
       codMap.set(rl.partyId, Number(rl.totalDebit) - Number(rl.totalCredit))
-    } else if (rl.accountId === 'acc_2031') {
+    } else if (rl.accountId === payableAccountId) {
       // Liability: Cr increases, Dr decreases
       commMap.set(rl.partyId, Number(rl.totalCredit) - Number(rl.totalDebit))
     }
@@ -545,6 +568,74 @@ export async function getRiderAccountsSummaryQuery(): Promise<
     undepositedCodCash: codMap.get(r.id) || 0,
     commissionPayable: commMap.get(r.id) || 0,
   }))
+}
+
+export interface RiderLedgerBalance {
+  riderId: string
+  commissionPayable: number // net credit on RIDER_PAYABLE (acc_2031)
+  undepositedCodCash: number // net debit on RIDER_COD_CASH (acc_1031)
+  outstandingAdvances: number // net debit on STAFF_RIDER_ADVANCES (acc_1042)
+}
+
+/**
+ * Returns a rider's real-time sub-ledger balances across control accounts.
+ * Option A (ACC-0.10): The ledger balance on RIDER_PAYABLE is the source of truth for payroll payouts.
+ */
+export async function getRiderLedgerBalanceQuery(
+  d: DbTx | typeof db,
+  riderId: string,
+  asOfDate?: Date,
+): Promise<RiderLedgerBalance> {
+  const conditions = [
+    eq(journalLines.partyType, 'rider'),
+    eq(journalLines.partyId, riderId),
+  ]
+
+  if (asOfDate) {
+    conditions.push(lte(journalEntries.postingDate, asOfDate))
+  }
+
+  const rows = await d
+    .select({
+      accountId: journalLines.accountId,
+      totalDebit: sql<number>`COALESCE(SUM(${journalLines.debit}), 0)`,
+      totalCredit: sql<number>`COALESCE(SUM(${journalLines.credit}), 0)`,
+    })
+    .from(journalLines)
+    .innerJoin(
+      journalEntries,
+      eq(journalLines.journalEntryId, journalEntries.id),
+    )
+    .where(and(...conditions))
+    .groupBy(journalLines.accountId)
+
+  let commissionPayable = 0
+  let undepositedCodCash = 0
+  let outstandingAdvances = 0
+
+  const payableAccountId = await resolveAccount(d, 'RIDER_PAYABLE')
+  const codCashAccountId = await resolveAccount(d, 'RIDER_COD_CASH')
+  const advancesAccountId = await resolveAccount(d, 'STAFF_RIDER_ADVANCES')
+
+  for (const r of rows) {
+    const debit = Number(r.totalDebit)
+    const credit = Number(r.totalCredit)
+
+    if (r.accountId === payableAccountId) {
+      commissionPayable = credit - debit
+    } else if (r.accountId === codCashAccountId) {
+      undepositedCodCash = debit - credit
+    } else if (r.accountId === advancesAccountId) {
+      outstandingAdvances = debit - credit
+    }
+  }
+
+  return {
+    riderId,
+    commissionPayable,
+    undepositedCodCash,
+    outstandingAdvances,
+  }
 }
 
 export interface PublicVoucherData {
@@ -720,4 +811,196 @@ export async function getAllDealerSettlementsQuery() {
     journalEntryId: r.journalEntryId,
     createdAt: r.createdAt.toISOString(),
   }))
+}
+
+// ---------------------------------------------------------
+// Account Defaults Queries (ACC-1.1)
+// ---------------------------------------------------------
+
+export interface AccountDefaultItem {
+  id: string
+  key: AccountKey
+  accountId: string
+  accountName: string
+  accountCode: string
+  accountRootType: string
+  isGroup: boolean
+  isActive: boolean
+  updatedAt: string
+  updatedBy: string | null
+  metadata: AccountKeyMetadata
+}
+
+/**
+ * Loads all 25 account defaults joined with their current ledger accounts.
+ * If defaults are not yet persisted in the database, falls back seamlessly to seeded defaults.
+ */
+export async function getAccountDefaultsQuery(
+  d: DbTx | typeof db = db,
+): Promise<AccountDefaultItem[]> {
+  let rows: Array<{
+    id: string
+    key: string
+    accountId: string
+    updatedAt: Date
+    updatedBy: string | null
+    accountName: string | null
+    accountCode: string | null
+    accountRootType: string | null
+    isGroup: boolean | null
+    isActive: boolean | null
+  }> = []
+
+  try {
+    rows = await d
+      .select({
+        id: accountDefaults.id,
+        key: accountDefaults.key,
+        accountId: accountDefaults.accountId,
+        updatedAt: accountDefaults.updatedAt,
+        updatedBy: accountDefaults.updatedBy,
+        accountName: ledgerAccounts.name,
+        accountCode: ledgerAccounts.code,
+        accountRootType: ledgerAccounts.rootType,
+        isGroup: ledgerAccounts.isGroup,
+        isActive: ledgerAccounts.isActive,
+      })
+      .from(accountDefaults)
+      .leftJoin(
+        ledgerAccounts,
+        eq(accountDefaults.accountId, ledgerAccounts.id),
+      )
+  } catch (_err) {
+    // If table doesn't exist yet, gracefully use empty rows
+    rows = []
+  }
+
+  const existingMap = new Map(rows.map((r) => [r.key, r]))
+  const allKeys = Object.keys(ACCOUNT_KEY_METADATA) as AccountKey[]
+  const result: AccountDefaultItem[] = []
+
+  for (const key of allKeys) {
+    const meta = ACCOUNT_KEY_METADATA[key]
+    const row = existingMap.get(key)
+    if (row && row.accountName) {
+      result.push({
+        id: row.id,
+        key,
+        accountId: row.accountId,
+        accountName: row.accountName,
+        accountCode: row.accountCode || '',
+        accountRootType: row.accountRootType || meta.rootType,
+        isGroup: !!row.isGroup,
+        isActive: row.isActive !== false,
+        updatedAt: row.updatedAt
+          ? row.updatedAt.toISOString()
+          : new Date().toISOString(),
+        updatedBy: row.updatedBy || null,
+        metadata: meta,
+      })
+    } else {
+      result.push({
+        id: `def_${key}`,
+        key,
+        accountId: meta.defaultAccountId,
+        accountName: meta.label,
+        accountCode: meta.defaultAccountId.replace('acc_', ''),
+        accountRootType: meta.rootType,
+        isGroup: false,
+        isActive: true,
+        updatedAt: new Date().toISOString(),
+        updatedBy: null,
+        metadata: meta,
+      })
+    }
+  }
+
+  return result
+}
+
+export interface UpdateAccountDefaultInput {
+  key: AccountKey
+  accountId: string
+}
+
+/**
+ * Updates default account mappings.
+ * Validates that each account exists, is active, and is NOT a group account.
+ * Updates the database and invalidates the resolver memory cache.
+ */
+export async function updateAccountDefaultsQuery(
+  updates: UpdateAccountDefaultInput[],
+  updatedBy: string,
+  externalTx?: DbTx,
+): Promise<{ updatedCount: number }> {
+  if (updates.length === 0) {
+    return { updatedCount: 0 }
+  }
+
+  const runWithTx = async (tx: DbTx) => {
+    // 1. Validate all target accounts exist, are active, and are NOT group accounts
+    const accountIds = Array.from(new Set(updates.map((u) => u.accountId)))
+    const foundAccounts = await tx
+      .select({
+        id: ledgerAccounts.id,
+        name: ledgerAccounts.name,
+        isGroup: ledgerAccounts.isGroup,
+        isActive: ledgerAccounts.isActive,
+      })
+      .from(ledgerAccounts)
+      .where(inArray(ledgerAccounts.id, accountIds))
+
+    const accountMap = new Map(foundAccounts.map((a) => [a.id, a]))
+
+    for (const update of updates) {
+      const acc = accountMap.get(update.accountId)
+      if (!acc) {
+        throw new Error(
+          `Cannot map "${update.key}": Target account "${update.accountId}" does not exist in Chart of Accounts.`,
+        )
+      }
+      if (acc.isGroup) {
+        throw new Error(
+          `Cannot map "${update.key}": Account "${acc.name}" (${acc.id}) is a group folder. Defaults must map to non-group leaf accounts.`,
+        )
+      }
+      if (!acc.isActive) {
+        throw new Error(
+          `Cannot map "${update.key}": Account "${acc.name}" (${acc.id}) is inactive. Defaults cannot map to disabled accounts.`,
+        )
+      }
+    }
+
+    // 2. Perform upserts
+    for (const update of updates) {
+      await tx
+        .insert(accountDefaults)
+        .values({
+          id: `def_${update.key}`,
+          key: update.key,
+          accountId: update.accountId,
+          updatedBy,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: accountDefaults.key,
+          set: {
+            accountId: update.accountId,
+            updatedBy,
+            updatedAt: new Date(),
+          },
+        })
+    }
+
+    // 3. Invalidate resolver cache
+    invalidateAccountDefaultsCache()
+
+    return { updatedCount: updates.length }
+  }
+
+  if (externalTx) {
+    return runWithTx(externalTx)
+  }
+
+  return dbTx.transaction(async (tx) => runWithTx(tx))
 }

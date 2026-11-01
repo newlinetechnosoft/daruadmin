@@ -1,45 +1,51 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import {
   fiscalYears,
   voucherSequences,
   journalEntries,
   journalLines,
+  ledgerAccounts,
 } from '#/db/schema'
 import { getNepalFiscalYear } from '#/lib/nepal-date'
-import type { Order, OrderItem } from '#/server/operations/types'
-import type { SessionUser } from '#/server/auth/permissions'
+import { PARTY_CONTROLLED_ACCOUNTS, resolveAllAccounts } from './account-keys'
+import { ALLOWED_PARTY_TYPES } from './types'
+import type {
+  CostCenter,
+  DbTx,
+  FinanceActor,
+  JournalLineInput,
+  PartyType,
+  PostCashHandoverParams,
+  PostDealerSettlementParams,
+  PostJournalParams,
+  PostJournalResult,
+  PostOrderDeliveredParams,
+  PostRiderPayoutParams,
+  PostRiderSalaryAccrualParams,
+  ReverseJournalParams,
+  VoucherType,
+} from './types'
+
+export type {
+  CostCenter,
+  DbTx,
+  FinanceActor,
+  JournalLineInput,
+  PartyType,
+  PostCashHandoverParams,
+  PostDealerSettlementParams,
+  PostJournalParams,
+  PostJournalResult,
+  PostOrderDeliveredParams,
+  PostRiderPayoutParams,
+  PostRiderSalaryAccrualParams,
+  ReverseJournalParams,
+  VoucherType,
+}
 
 // Helper for unique ID generation
 function nid(prefix = 'id'): string {
   return `${prefix}_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`
-}
-
-export interface JournalLineInput {
-  accountId: string
-  debit?: number // paisa
-  credit?: number // paisa
-  partyType?: 'dealer' | 'rider' | 'customer' | 'supplier' | null
-  partyId?: string | null
-  costCenter?: 'liquor' | 'grocery' | 'delivery' | 'general' | null
-  narration?: string | null
-}
-
-export interface PostJournalParams {
-  voucherType?: 'JV' | 'PV' | 'RV' | 'CV' | 'SV'
-  postingDate?: Date
-  narration: string
-  refType?: string | null
-  refId?: string | null
-  event?: string | null
-  createdBy: string
-  metadata?: Record<string, any> | null
-  lines: JournalLineInput[]
-}
-
-export interface PostJournalResult {
-  journalEntryId: string
-  voucherNo: string
-  isDuplicate?: boolean
 }
 
 /**
@@ -54,7 +60,7 @@ export interface PostJournalResult {
  *  6. Idempotency on (refType, refId, event).
  */
 export async function postJournalTx(
-  tx: any,
+  tx: DbTx,
   params: PostJournalParams,
 ): Promise<PostJournalResult> {
   const lines = params.lines
@@ -81,6 +87,24 @@ export async function postJournalTx(
       throw new Error(
         `Line ${idx + 1}: Exactly one of debit or credit must be positive (debit: ${debit}, credit: ${credit}).`,
       )
+    }
+
+    // Party validation: allowed partyType (ACC-0.3)
+    if (line.partyType && !ALLOWED_PARTY_TYPES.includes(line.partyType)) {
+      throw new Error(
+        `Line ${idx + 1}: Invalid partyType "${line.partyType}". Allowed party types are: ${ALLOWED_PARTY_TYPES.join(', ')}.`,
+      )
+    }
+
+    // Party-controlled accounts require both partyType and partyId (ACC-0.3 / G1)
+    if (
+      (PARTY_CONTROLLED_ACCOUNTS as readonly string[]).includes(line.accountId)
+    ) {
+      if (!line.partyType || !line.partyId || line.partyId.trim() === '') {
+        throw new Error(
+          `Line ${idx + 1}: Account "${line.accountId}" is a party-controlled account and requires both partyType and partyId.`,
+        )
+      }
     }
 
     totalDebit += debit
@@ -120,6 +144,40 @@ export async function postJournalTx(
         voucherNo: existing[0].voucherNo,
         isDuplicate: true,
       }
+    }
+  }
+
+  // Validate Chart of Accounts: reject unknown, group, and inactive accounts (ACC-0.3 / G1)
+  const uniqueAccountIds = Array.from(new Set(lines.map((l) => l.accountId)))
+  const dbAccounts = await tx
+    .select({
+      id: ledgerAccounts.id,
+      name: ledgerAccounts.name,
+      isGroup: ledgerAccounts.isGroup,
+      isActive: ledgerAccounts.isActive,
+    })
+    .from(ledgerAccounts)
+    .where(inArray(ledgerAccounts.id, uniqueAccountIds))
+
+  const accountMap = new Map(dbAccounts.map((a) => [a.id, a]))
+
+  for (let idx = 0; idx < lines.length; idx++) {
+    const line = lines[idx]
+    const acc = accountMap.get(line.accountId)
+    if (!acc) {
+      throw new Error(
+        `Line ${idx + 1}: Account "${line.accountId}" does not exist in Chart of Accounts.`,
+      )
+    }
+    if (acc.isGroup) {
+      throw new Error(
+        `Line ${idx + 1}: Cannot post to group account "${acc.name}" (${acc.id}). Journal lines must use non-group leaf accounts.`,
+      )
+    }
+    if (!acc.isActive) {
+      throw new Error(
+        `Line ${idx + 1}: Cannot post to inactive account "${acc.name}" (${acc.id}).`,
+      )
     }
   }
 
@@ -222,14 +280,18 @@ export async function postJournalTx(
 
 /**
  * Creates an exact reversing journal entry for an existing transaction (Admin only).
+ * Hardened per ACC-0.4 (G2):
+ * - Blocks reversing an entry that has already been reversed.
+ * - Blocks reversing an entry that is itself a reversal.
+ * - Guarantees idempotency on (refType: 'journal_reversal', refId: original.id, event: 'reversed').
+ * - Implements reversal date policy per ACCOUNT_GUIDE.md §5.4:
+ *   defaults to original posting date if its fiscal year is open, otherwise today.
+ * - Marks original entry with isReversed: true, reversedBy: reversalEntryId.
+ * - Marks reversal entry with reversalOf: original.id.
  */
 export async function reverseJournalTx(
-  tx: any,
-  params: {
-    originalEntryId: string
-    narration: string
-    createdBy: string
-  },
+  tx: DbTx,
+  params: ReverseJournalParams,
 ): Promise<PostJournalResult> {
   const original = await tx
     .select()
@@ -241,8 +303,39 @@ export async function reverseJournalTx(
     throw new Error('Original journal entry not found.')
   }
 
+  // Guard 1: Cannot reverse a reversal entry
   if (original[0].reversalOf) {
-    throw new Error('Cannot reverse an entry that is already a reversal.')
+    throw new Error(
+      `Cannot reverse journal entry "${original[0].voucherNo}" because it is already a reversal of "${original[0].reversalOf}".`,
+    )
+  }
+
+  // Guard 2: Cannot reverse an entry that has already been reversed (ACC-0.4)
+  if (original[0].isReversed || original[0].reversedBy) {
+    throw new Error(
+      `Journal entry "${original[0].voucherNo}" has already been reversed by "${original[0].reversedBy || 'another reversal'}". Duplicate reversals are prohibited.`,
+    )
+  }
+
+  // Reversal date policy per ACCOUNT_GUIDE.md §5.4:
+  // Default to original posting date if that Nepal Fiscal Year is still open, otherwise today.
+  let targetPostingDate: Date
+  if (params.postingDate) {
+    targetPostingDate = params.postingDate
+  } else {
+    const origFy = getNepalFiscalYear(new Date(original[0].postingDate))
+    const fyRows = await tx
+      .select({ id: fiscalYears.id, isClosed: fiscalYears.isClosed })
+      .from(fiscalYears)
+      .where(eq(fiscalYears.id, origFy.id))
+      .limit(1)
+
+    // If original fiscal year is closed, default to current date; otherwise retain original posting date
+    if (fyRows[0]?.isClosed) {
+      targetPostingDate = new Date()
+    } else {
+      targetPostingDate = new Date(original[0].postingDate)
+    }
   }
 
   const originalLines = await tx
@@ -255,32 +348,47 @@ export async function reverseJournalTx(
   }
 
   // Invert debit and credit
-  const reversedLines: JournalLineInput[] = originalLines.map((l: any) => ({
+  const reversedLines: JournalLineInput[] = originalLines.map((l) => ({
     accountId: l.accountId,
     debit: l.credit, // invert
     credit: l.debit, // invert
-    partyType: l.partyType,
+    partyType: l.partyType as JournalLineInput['partyType'],
     partyId: l.partyId,
-    costCenter: l.costCenter,
+    costCenter: l.costCenter as JournalLineInput['costCenter'],
     narration: `Reversal: ${l.narration || original[0].narration}`,
   }))
 
   const res = await postJournalTx(tx, {
     voucherType: 'JV',
-    postingDate: new Date(),
+    postingDate: targetPostingDate,
     narration: params.narration,
-    refType: original[0].refType,
-    refId: original[0].refId,
-    event: `${original[0].event || 'entry'}_reversed`,
+    refType: 'journal_reversal',
+    refId: original[0].id,
+    event: 'reversed',
     createdBy: params.createdBy,
-    metadata: { reversedEntryId: original[0].id },
+    metadata: {
+      reversedEntryId: original[0].id,
+      reversedVoucherNo: original[0].voucherNo,
+      originalPostingDate: original[0].postingDate.toISOString(),
+    },
     lines: reversedLines,
   })
+
+  // Mark original entry as reversed and record the reversing entry ID
+  await tx
+    .update(journalEntries)
+    .set({
+      isReversed: true,
+      reversedBy: res.journalEntryId,
+    })
+    .where(eq(journalEntries.id, original[0].id))
 
   // Link reversal on new entry
   await tx
     .update(journalEntries)
-    .set({ reversalOf: original[0].id })
+    .set({
+      reversalOf: original[0].id,
+    })
     .where(eq(journalEntries.id, res.journalEntryId))
 
   return res
@@ -291,21 +399,12 @@ export async function reverseJournalTx(
  * Posts both customer revenue (COD or Online) and Dealer Procurement COGS in ONE atomic transaction.
  */
 export async function postOrderDeliveredTx(
-  tx: any,
-  params: {
-    order: Order
-    items: OrderItem[]
-    actor: SessionUser | { id: string; name: string; role: string }
-    rider?: {
-      id: string
-      name: string
-      perDropRate?: number
-      commissionRate?: number
-    } | null
-  },
+  tx: DbTx,
+  params: PostOrderDeliveredParams,
 ): Promise<PostJournalResult> {
   const { order, items, actor, rider } = params
   const isCOD = order.paymentMethod === 'cod'
+  const accounts = await resolveAllAccounts(tx)
 
   // Calculate VAT breakdown:
   // Prices in Nepal are 13% VAT inclusive.
@@ -321,7 +420,7 @@ export async function postOrderDeliveredTx(
   if (isCOD) {
     // Dr. Rider Undeposited COD Cash (Asset) with rider party
     lines.push({
-      accountId: 'acc_1031',
+      accountId: accounts.RIDER_COD_CASH,
       debit: order.total,
       partyType: 'rider',
       partyId: order.riderId,
@@ -331,7 +430,7 @@ export async function postOrderDeliveredTx(
   } else {
     // Dr. eSewa Clearing Account (Asset)
     lines.push({
-      accountId: 'acc_1021',
+      accountId: accounts.ESEWA_CLEARING,
       debit: order.total,
       partyType: 'customer',
       partyId: order.customerId || null,
@@ -343,7 +442,7 @@ export async function postOrderDeliveredTx(
   // B. Debit Discounts Allowed if any discount was given
   if (order.discount > 0) {
     lines.push({
-      accountId: 'acc_5112',
+      accountId: accounts.DISCOUNTS,
       debit: order.discount,
       costCenter: 'general',
       narration: `Discount allowed on order ${order.number}`,
@@ -352,7 +451,7 @@ export async function postOrderDeliveredTx(
 
   // C. Credit Sales Revenue Net (Income)
   lines.push({
-    accountId: 'acc_4010',
+    accountId: accounts.SALES,
     credit: netSales,
     costCenter: 'general',
     narration: `Net sales revenue from order ${order.number}`,
@@ -361,7 +460,7 @@ export async function postOrderDeliveredTx(
   // D. Credit VAT Output Payable 13% (Liability)
   if (vatAmount > 0) {
     lines.push({
-      accountId: 'acc_2021',
+      accountId: accounts.VAT_OUTPUT,
       credit: vatAmount,
       costCenter: 'general',
       narration: `13% Output VAT on order ${order.number}`,
@@ -371,7 +470,7 @@ export async function postOrderDeliveredTx(
   // E. Credit Delivery Fee Income (Income)
   if (order.deliveryCharge > 0) {
     lines.push({
-      accountId: 'acc_4020',
+      accountId: accounts.DELIVERY_INCOME,
       credit: order.deliveryCharge,
       costCenter: 'delivery',
       narration: `Delivery fee charged on order ${order.number}`,
@@ -407,7 +506,7 @@ export async function postOrderDeliveredTx(
     if (totalDealerCost > 0) {
       if (g.liquorCost > 0) {
         lines.push({
-          accountId: 'acc_5011',
+          accountId: accounts.COGS_LIQUOR,
           debit: g.liquorCost,
           costCenter: 'liquor',
           narration: `COGS Liquor sourced for order ${order.number}`,
@@ -415,14 +514,14 @@ export async function postOrderDeliveredTx(
       }
       if (g.groceryCost > 0) {
         lines.push({
-          accountId: 'acc_5012',
+          accountId: accounts.COGS_GROCERY,
           debit: g.groceryCost,
           costCenter: 'grocery',
           narration: `COGS Grocery sourced for order ${order.number}`,
         })
       }
       lines.push({
-        accountId: 'acc_2011',
+        accountId: accounts.DEALER_PAYABLE,
         credit: totalDealerCost,
         partyType: 'dealer',
         partyId: g.dealerId,
@@ -441,7 +540,7 @@ export async function postOrderDeliveredTx(
 
     if (riderCompensation > 0) {
       lines.push({
-        accountId: 'acc_5111', // Rider Delivery Payout & Commission (Expense)
+        accountId: accounts.RIDER_EXPENSE,
         debit: riderCompensation,
         partyType: 'rider',
         partyId: rider.id,
@@ -449,7 +548,7 @@ export async function postOrderDeliveredTx(
         narration: `Delivery compensation accrued for rider ${rider.name} on order ${order.number}`,
       })
       lines.push({
-        accountId: 'acc_2031', // Rider Salary & Commission Payable (Liability)
+        accountId: accounts.RIDER_PAYABLE,
         credit: riderCompensation,
         partyType: 'rider',
         partyId: rider.id,
@@ -479,23 +578,18 @@ export async function postOrderDeliveredTx(
 
 /**
  * Standard Posting 2: Rider Cash Handover.
- * Dr. Cash in Hand (acc_1011)
- * Cr. Rider Undeposited COD Cash (acc_1031) with rider party
+ * Dr. Cash in Hand (ACCOUNT_KEYS.CASH_IN_HAND)
+ * Cr. Rider Undeposited COD Cash (ACCOUNT_KEYS.RIDER_COD_CASH) with rider party
  */
 export async function postCashHandoverTx(
-  tx: any,
-  params: {
-    handoverId: string
-    riderId: string
-    riderName: string
-    amount: number // paisa
-    actor: SessionUser | { id: string; name: string; role: string }
-  },
+  tx: DbTx,
+  params: PostCashHandoverParams,
 ): Promise<PostJournalResult> {
   const { handoverId, riderId, riderName, amount, actor } = params
   if (amount <= 0) {
     throw new Error('Cash handover amount must be greater than zero.')
   }
+  const accounts = await resolveAllAccounts(tx)
 
   return postJournalTx(tx, {
     voucherType: 'RV', // Receipt Voucher
@@ -508,13 +602,13 @@ export async function postCashHandoverTx(
     metadata: { riderId, riderName, amount },
     lines: [
       {
-        accountId: 'acc_1011', // Cash in Hand
+        accountId: accounts.CASH_IN_HAND,
         debit: amount,
         costCenter: 'general',
         narration: `Cash deposited by rider ${riderName}`,
       },
       {
-        accountId: 'acc_1031', // Rider Undeposited COD Cash
+        accountId: accounts.RIDER_COD_CASH,
         credit: amount,
         partyType: 'rider',
         partyId: riderId,
@@ -527,21 +621,13 @@ export async function postCashHandoverTx(
 
 /**
  * Standard Posting 3: Dealer Settlement Payment.
- * Dr. Dealer Procurement Payable (acc_2011) [Gross Amount]
- * Cr. Main Operating Bank Account (acc_1012) / Cash (acc_1011) [Net Payout]
- * Cr. TDS Withholding Tax Payable (acc_2023) [TDS Amount if applicable]
+ * Dr. Dealer Procurement Payable (DEALER_PAYABLE) [Gross Amount]
+ * Cr. Main Operating Bank Account (BANK_MAIN) / Cash (CASH_IN_HAND) [Net Payout]
+ * Cr. TDS Withholding Tax Payable (TDS_PAYABLE) [TDS Amount if applicable]
  */
 export async function postDealerSettlementTx(
-  tx: any,
-  params: {
-    settlementId: string
-    dealerId: string
-    dealerName: string
-    grossAmount: number // paisa
-    tdsRate?: number // e.g. 1.5%
-    paymentAccount?: 'bank' | 'cash'
-    actor: SessionUser | { id: string; name: string; role: string }
-  },
+  tx: DbTx,
+  params: PostDealerSettlementParams,
 ): Promise<PostJournalResult> {
   const {
     settlementId,
@@ -557,13 +643,15 @@ export async function postDealerSettlementTx(
     throw new Error('Settlement gross amount must be greater than zero.')
   }
 
+  const accounts = await resolveAllAccounts(tx)
   const tdsAmount = tdsRate > 0 ? Math.round(grossAmount * (tdsRate / 100)) : 0
   const netPaid = grossAmount - tdsAmount
-  const payoutAccountId = paymentAccount === 'cash' ? 'acc_1011' : 'acc_1012'
+  const payoutAccountId =
+    paymentAccount === 'cash' ? accounts.CASH_IN_HAND : accounts.BANK_MAIN
 
   const lines: JournalLineInput[] = [
     {
-      accountId: 'acc_2011', // Dealer Procurement Payable
+      accountId: accounts.DEALER_PAYABLE,
       debit: grossAmount,
       partyType: 'dealer',
       partyId: dealerId,
@@ -580,7 +668,7 @@ export async function postDealerSettlementTx(
 
   if (tdsAmount > 0) {
     lines.push({
-      accountId: 'acc_2023', // TDS Withholding Tax Payable
+      accountId: accounts.TDS_PAYABLE,
       credit: tdsAmount,
       costCenter: 'general',
       narration: `TDS withholding (${tdsRate}%) deducted on payment to ${dealerName}`,
@@ -602,23 +690,18 @@ export async function postDealerSettlementTx(
 
 /**
  * Standard Posting: Rider Monthly Fixed Base Salary Accrual.
- * Dr. Rider Compensation Expense (acc_5111)
- * Cr. Rider Payable (acc_2031)
+ * Dr. Rider Compensation Expense (ACCOUNT_KEYS.RIDER_EXPENSE)
+ * Cr. Rider Payable (ACCOUNT_KEYS.RIDER_PAYABLE)
  */
 export async function postRiderSalaryAccrualTx(
-  tx: any,
-  params: {
-    settlementId: string
-    riderId: string
-    riderName: string
-    baseSalaryAmount: number // paisa
-    actor: SessionUser | { id: string; name: string; role: string }
-  },
+  tx: DbTx,
+  params: PostRiderSalaryAccrualParams,
 ): Promise<PostJournalResult> {
   const { settlementId, riderId, riderName, baseSalaryAmount, actor } = params
   if (baseSalaryAmount <= 0) {
     throw new Error('Base salary accrual must be greater than zero.')
   }
+  const accounts = await resolveAllAccounts(tx)
 
   return postJournalTx(tx, {
     voucherType: 'JV',
@@ -631,7 +714,7 @@ export async function postRiderSalaryAccrualTx(
     metadata: { riderId, riderName, baseSalaryAmount },
     lines: [
       {
-        accountId: 'acc_5111', // Rider Compensation Expense
+        accountId: accounts.RIDER_EXPENSE,
         debit: baseSalaryAmount,
         partyType: 'rider',
         partyId: riderId,
@@ -639,7 +722,7 @@ export async function postRiderSalaryAccrualTx(
         narration: `Monthly fixed base salary for rider ${riderName}`,
       },
       {
-        accountId: 'acc_2031', // Rider Payable (Liability)
+        accountId: accounts.RIDER_PAYABLE,
         credit: baseSalaryAmount,
         partyType: 'rider',
         partyId: riderId,
@@ -652,25 +735,14 @@ export async function postRiderSalaryAccrualTx(
 
 /**
  * Standard Posting 4: Rider Salary / Commission Payout & Deductions.
- * Dr. Rider Payable (acc_2031) [Gross Amount]
- * Cr. Cash in Hand (acc_1011) / Bank (acc_1012) [Net Payout]
- * Cr. Rider Undeposited COD Cash (acc_1031) [Cash Shortage Deducted]
- * Cr. Staff & Rider Advances (acc_1042) [Advances Deducted]
+ * Dr. Rider Payable (RIDER_PAYABLE) [Gross Amount]
+ * Cr. Cash in Hand (CASH_IN_HAND) / Bank (BANK_MAIN) [Net Payout]
+ * Cr. Rider Undeposited COD Cash (RIDER_COD_CASH) [Cash Shortage Deducted]
+ * Cr. Staff & Rider Advances (STAFF_RIDER_ADVANCES) [Advances Deducted]
  */
 export async function postRiderPayoutTx(
-  tx: any,
-  params: {
-    settlementId: string
-    riderId: string
-    riderName: string
-    amount?: number // paisa (backward compatibility)
-    grossAmount?: number // paisa
-    netPaid?: number // paisa
-    cashShortageDeducted?: number // paisa
-    advancesDeducted?: number // paisa
-    paymentAccount?: 'bank' | 'cash'
-    actor: SessionUser | { id: string; name: string; role: string }
-  },
+  tx: DbTx,
+  params: PostRiderPayoutParams,
 ): Promise<PostJournalResult> {
   const {
     settlementId,
@@ -693,11 +765,13 @@ export async function postRiderPayoutTx(
     throw new Error('Payout gross amount must be greater than zero.')
   }
 
-  const payoutAccountId = paymentAccount === 'cash' ? 'acc_1011' : 'acc_1012'
+  const accounts = await resolveAllAccounts(tx)
+  const payoutAccountId =
+    paymentAccount === 'cash' ? accounts.CASH_IN_HAND : accounts.BANK_MAIN
 
   const lines: JournalLineInput[] = [
     {
-      accountId: 'acc_2031', // Rider Payable
+      accountId: accounts.RIDER_PAYABLE,
       debit: gross,
       partyType: 'rider',
       partyId: riderId,
@@ -717,7 +791,7 @@ export async function postRiderPayoutTx(
 
   if (shortage > 0) {
     lines.push({
-      accountId: 'acc_1031', // Rider Undeposited COD Cash
+      accountId: accounts.RIDER_COD_CASH,
       credit: shortage,
       partyType: 'rider',
       partyId: riderId,
@@ -728,7 +802,7 @@ export async function postRiderPayoutTx(
 
   if (advances > 0) {
     lines.push({
-      accountId: 'acc_1042', // Staff & Rider Advances
+      accountId: accounts.STAFF_RIDER_ADVANCES,
       credit: advances,
       partyType: 'rider',
       partyId: riderId,

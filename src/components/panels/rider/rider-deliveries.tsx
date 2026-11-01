@@ -11,7 +11,14 @@ import { Badge } from '#/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
-import { Package, Phone, MapPin, CheckCircle2, Truck, AlertTriangle } from 'lucide-react'
+import {
+  Package,
+  Phone,
+  MapPin,
+  CheckCircle2,
+  Truck,
+  AlertTriangle,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { RiderDealerPickups } from './rider-dealer-pickups'
 import { DeliveryProofDialog } from './delivery-proof-dialog'

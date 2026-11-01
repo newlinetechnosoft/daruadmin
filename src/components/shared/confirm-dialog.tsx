@@ -109,7 +109,9 @@ export function ConfirmDialog({
             className={cn('h-9 cursor-pointer gap-2')}
           >
             {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            {busy && typeof confirmLabel === 'string' && !confirmLabel.endsWith('...')
+            {busy &&
+            typeof confirmLabel === 'string' &&
+            !confirmLabel.endsWith('...')
               ? `${confirmLabel}...`
               : confirmLabel}
           </AlertDialogAction>

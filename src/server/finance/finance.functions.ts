@@ -8,6 +8,7 @@ import {
 } from '#/db/schema'
 import { requirePermission, logAudit } from '#/server/auth/permissions'
 import {
+  getAccountDefaultsQuery,
   getChartOfAccountsWithBalancesQuery,
   getDealerPayablesSummaryQuery,
   getFiscalYearsQuery,
@@ -16,6 +17,7 @@ import {
   getPublicVoucherBySlugQuery,
   getRiderAccountsSummaryQuery,
   getUnsettledDealerItemsQuery,
+  updateAccountDefaultsQuery,
 } from '#/server/finance/finance.queries'
 import {
   postCashHandoverTx,
@@ -112,7 +114,7 @@ export const postManualJournalVoucherFn = createServerFn({ method: 'POST' })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const { user } = await requirePermission('accounts', 'create')
+    const { user } = await requirePermission('accounts', 'approve')
 
     const totalDebit = data.lines.reduce((acc, l) => acc + l.debit, 0)
     const totalCredit = data.lines.reduce((acc, l) => acc + l.credit, 0)
@@ -175,7 +177,7 @@ export const recordDealerDisbursementFn = createServerFn({ method: 'POST' })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const { user } = await requirePermission('accounts', 'create')
+    const { user } = await requirePermission('accounts', 'approve')
 
     const dealerRow = await dbTx
       .select()
@@ -469,7 +471,12 @@ export const recordManagerCashHandoverFn = createServerFn({ method: 'POST' })
   })
 
 /**
- * Reverses a posted journal voucher (Admin only).
+ * Reverses a posted journal voucher (Admin only, requires accounts:approve).
+ * Hardened per ACC-0.4 (G2):
+ * - Requires accounts:approve permission.
+ * - Mandatory reason of min 5 chars.
+ * - Enforces append-only reversal with isReversed/reversedBy linking.
+ * - Audit logs the reversal.
  */
 export const reverseJournalVoucherFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>
@@ -477,6 +484,7 @@ export const reverseJournalVoucherFn = createServerFn({ method: 'POST' })
       .object({
         journalEntryId: z.string().min(1),
         reason: z.string().min(5),
+        postingDate: z.string().optional(),
       })
       .parse(d),
   )
@@ -488,6 +496,7 @@ export const reverseJournalVoucherFn = createServerFn({ method: 'POST' })
         originalEntryId: data.journalEntryId,
         narration: `Reversal: ${data.reason}`,
         createdBy: user.name,
+        postingDate: data.postingDate ? new Date(data.postingDate) : undefined,
       })
     })
 
@@ -499,4 +508,73 @@ export const reverseJournalVoucherFn = createServerFn({ method: 'POST' })
     )
 
     return result
+  })
+
+/**
+ * Loads default account mappings and eligible leaf accounts for Settings tab (ACC-1.1).
+ * Requires accounts.view permission.
+ */
+export const getAccountDefaultsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    await requirePermission('accounts', 'view')
+
+    const [defaults, allAccounts] = await Promise.all([
+      getAccountDefaultsQuery(),
+      getChartOfAccountsWithBalancesQuery(),
+    ])
+
+    const availableAccounts = allAccounts
+      .filter((a) => !a.isGroup && a.isActive)
+      .map((a) => ({
+        id: a.id,
+        code: a.code,
+        name: a.name,
+        rootType: a.rootType,
+      }))
+
+    return {
+      defaults,
+      accounts: availableAccounts,
+    }
+  },
+)
+
+/**
+ * Updates default account mappings (Admin only, requires accounts:approve or settings:edit).
+ * Enforces non-group, active accounts and logs an audit record.
+ */
+export const updateAccountDefaultsFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        updates: z
+          .array(
+            z.object({
+              key: z.string().min(1),
+              accountId: z.string().min(1),
+            }),
+          )
+          .min(1),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('accounts', 'approve')
+
+    const result = await updateAccountDefaultsQuery(
+      data.updates as any,
+      user.name,
+    )
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'edit',
+      `Updated ${result.updatedCount} accounting default account mapping(s)`,
+    )
+
+    return {
+      success: true,
+      count: result.updatedCount,
+    }
   })

@@ -1,5 +1,5 @@
 import { moveToRecycleBin } from '#/server/recycle-bin/recycle-bin.queries'
-import { db } from '#/db'
+import { db, dbTx, type DbTx } from '#/db'
 import { orders, riders, riderShifts, settlements, user } from '#/db/schema'
 import { and, desc, eq, gte, isNull, lte, or } from 'drizzle-orm'
 import type { Rider, RiderShift, Settlement } from '#/server/operations/types'
@@ -217,70 +217,78 @@ export async function getRiderAttendanceStatsQuery(
 
 export async function deleteRiderQuery(
   id: string,
+  externalTx?: DbTx,
 ): Promise<{ success: boolean; id: string }> {
-  const existing = await db
-    .select()
-    .from(riders)
-    .where(eq(riders.id, id))
-    .limit(1)
+  const run = async (tx: DbTx) => {
+    const existing = await tx
+      .select()
+      .from(riders)
+      .where(eq(riders.id, id))
+      .limit(1)
 
-  if (!existing[0]) {
-    throw new Error('Rider not found')
-  }
+    if (!existing[0]) {
+      throw new Error('Rider not found')
+    }
 
-  const rider = existing[0]
+    const rider = existing[0]
 
-  if (rider.cashOnHand > 0) {
-    throw new Error(
-      `Cannot delete courier with outstanding cash on hand (Rs. ${(rider.cashOnHand / 100).toFixed(2)}). Please settle COD cash remittance before deleting.`,
-    )
-  }
+    if (rider.cashOnHand > 0) {
+      throw new Error(
+        `Cannot delete courier with outstanding cash on hand (Rs. ${(rider.cashOnHand / 100).toFixed(2)}). Please settle COD cash remittance before deleting.`,
+      )
+    }
 
-  const activeOrders = await db
-    .select({ id: orders.id })
-    .from(orders)
-    .where(
-      and(
-        eq(orders.riderId, id),
-        or(
-          eq(orders.status, 'rider_assigned'),
-          eq(orders.status, 'picked_up'),
-          eq(orders.status, 'out_for_delivery'),
+    const activeOrders = await tx
+      .select({ id: orders.id })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.riderId, id),
+          or(
+            eq(orders.status, 'rider_assigned'),
+            eq(orders.status, 'picked_up'),
+            eq(orders.status, 'out_for_delivery'),
+          ),
         ),
-      ),
+      )
+
+    if (activeOrders.length > 0) {
+      throw new Error(
+        `Cannot delete courier with ${activeOrders.length} active delivery in progress. Reassign or complete deliveries before deleting.`,
+      )
+    }
+
+    // Detach riderId from historical orders so order records remain intact
+    await tx.update(orders).set({ riderId: null }).where(eq(orders.riderId, id))
+
+    // If rider had a linked user account, revoke rider role
+    if (rider.userId) {
+      await tx
+        .update(user)
+        .set({ role: 'customer' })
+        .where(eq(user.id, rider.userId))
+    }
+
+    // Move to recycle bin before deleting
+    await moveToRecycleBin(
+      {
+        entityType: 'rider',
+        entityId: rider.id,
+        name: rider.name,
+        description: `${rider.phone} • ${rider.zone}`,
+        data: { rider },
+      },
+      tx,
     )
 
-  if (activeOrders.length > 0) {
-    throw new Error(
-      `Cannot delete courier with ${activeOrders.length} active delivery in progress. Reassign or complete deliveries before deleting.`,
-    )
+    // Delete the rider record (cascades shifts, cash handovers, settlements)
+    await tx.delete(riders).where(eq(riders.id, id))
+
+    return { success: true, id }
   }
 
-  // Detach riderId from historical orders so order records remain intact
-  await db
-    .update(orders)
-    .set({ riderId: null })
-    .where(eq(orders.riderId, id))
-
-  // If rider had a linked user account, revoke rider role
-  if (rider.userId) {
-    await db
-      .update(user)
-      .set({ role: 'customer' })
-      .where(eq(user.id, rider.userId))
+  if (externalTx) {
+    return run(externalTx)
   }
-
-  // Move to recycle bin before deleting
-  await moveToRecycleBin({
-    entityType: 'rider',
-    entityId: rider.id,
-    name: rider.name,
-    description: `${rider.phone} • ${rider.zone}`,
-    data: { rider },
-  })
-
-  // Delete the rider record (cascades shifts, cash handovers, settlements)
-  await db.delete(riders).where(eq(riders.id, id))
-
-  return { success: true, id }
+  return dbTx.transaction((tx) => run(tx))
 }

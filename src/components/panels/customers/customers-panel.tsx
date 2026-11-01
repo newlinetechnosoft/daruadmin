@@ -45,9 +45,11 @@ import { EmptyState } from '#/components/shared/empty-state'
 export function CustomersPanel() {
   const queryClient = useQueryClient()
   const router = useRouter()
-  const { data: customersData, isFetching, refetch } = useSuspenseQuery(
-    adminQueries.customers(),
-  )
+  const {
+    data: customersData,
+    isFetching,
+    refetch,
+  } = useSuspenseQuery(adminQueries.customers())
   const { ops, users } = customersData
 
   const invalidateCustomers = async () => {
@@ -222,10 +224,7 @@ export function CustomersPanel() {
             <MessageSquare className="h-3.5 w-3.5" />
             <span>Support complaints ({ops.complaints.length})</span>
             {openComplaintsCount > 0 && (
-              <Badge
-                variant="secondary"
-                className="h-4 px-1 text-xs font-mono"
-              >
+              <Badge variant="secondary" className="h-4 px-1 text-xs font-mono">
                 {openComplaintsCount}
               </Badge>
             )}
@@ -281,147 +280,147 @@ export function CustomersPanel() {
                       key={cust.id}
                       className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
                     >
-                    <TableCell>
-                      <div className="font-medium text-xs text-foreground">
-                        {cust.name}
-                      </div>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        ID: {cust.id.slice(0, 10)}...
-                      </span>
-                    </TableCell>
+                      <TableCell>
+                        <div className="font-medium text-xs text-foreground">
+                          {cust.name}
+                        </div>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          ID: {cust.id.slice(0, 10)}...
+                        </span>
+                      </TableCell>
 
-                    <TableCell>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {cust.email}
-                      </span>
-                    </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {cust.email}
+                        </span>
+                      </TableCell>
 
-                    <TableCell>
-                      <span className="font-mono text-xs font-medium text-foreground">
-                        {cust.totalOrders}
-                      </span>
-                      <span className="text-xs text-muted-foreground ml-1">
-                        orders
-                      </span>
-                    </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-xs font-medium text-foreground">
+                          {cust.totalOrders}
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-1">
+                          orders
+                        </span>
+                      </TableCell>
 
-                    <TableCell>
-                      <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
-                        {formatNPR(cust.totalSpent)}
-                      </span>
-                    </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+                          {formatNPR(cust.totalSpent)}
+                        </span>
+                      </TableCell>
 
-                    <TableCell>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(cust.createdAt).toLocaleDateString()}
-                      </span>
-                    </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(cust.createdAt).toLocaleDateString()}
+                        </span>
+                      </TableCell>
 
-                    <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedCustomer(cust)}
-                        className="h-7 gap-1 px-2 text-xs"
-                      >
-                        <Eye className="h-3 w-3" />
-                        View history
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        /* Complaints Desk Table */
-        <div className="overflow-hidden rounded-lg border border-border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-xs">Date and ID</TableHead>
-                <TableHead className="text-xs">Customer</TableHead>
-                <TableHead className="text-xs">Subject</TableHead>
-                <TableHead className="text-xs">Issue summary</TableHead>
-                <TableHead className="text-xs">Status</TableHead>
-                <TableHead className="text-right text-xs">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredComplaints.length === 0 ? (
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedCustomer(cust)}
+                          className="h-7 gap-1 px-2 text-xs"
+                        >
+                          <Eye className="h-3 w-3" />
+                          View history
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          /* Complaints Desk Table */
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="p-0">
-                    <EmptyState
-                      title="No support complaints recorded"
-                      description="All customer issues are resolved."
-                    />
-                  </TableCell>
+                  <TableHead className="text-xs">Date and ID</TableHead>
+                  <TableHead className="text-xs">Customer</TableHead>
+                  <TableHead className="text-xs">Subject</TableHead>
+                  <TableHead className="text-xs">Issue summary</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-right text-xs">Actions</TableHead>
                 </TableRow>
-              ) : (
-                filteredComplaints.map((comp) => (
-                  <TableRow
-                    key={comp.id}
-                    className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
-                  >
-                    <TableCell>
-                      <span className="font-mono text-xs text-foreground block">
-                        {comp.id}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(comp.createdAt).toLocaleDateString()}
-                      </span>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="font-medium text-xs text-foreground">
-                        {comp.customerName}
-                      </div>
-                      {comp.orderNumber ? (
-                        <span className="font-mono text-xs text-primary block font-semibold">
-                          Order #{comp.orderNumber}
-                        </span>
-                      ) : comp.orderId ? (
-                        <span className="font-mono text-xs text-muted-foreground block">
-                          Ref: {comp.orderId}
-                        </span>
-                      ) : null}
-                    </TableCell>
-
-                    <TableCell>
-                      <span className="text-xs font-medium text-foreground">
-                        {comp.subject}
-                      </span>
-                    </TableCell>
-
-                    <TableCell>
-                      <p className="truncate max-w-xs text-xs text-muted-foreground">
-                        {comp.body}
-                      </p>
-                    </TableCell>
-
-                    <TableCell>
-                      <StatusBadge value={comp.status} />
-                    </TableCell>
-
-                    <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedComplaint(comp)}
-                        className="h-7 gap-1 px-2 text-xs"
-                      >
-                        <Eye className="h-3 w-3" />
-                        Resolve
-                      </Button>
+              </TableHeader>
+              <TableBody>
+                {filteredComplaints.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="p-0">
+                      <EmptyState
+                        title="No support complaints recorded"
+                        description="All customer issues are resolved."
+                      />
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+                ) : (
+                  filteredComplaints.map((comp) => (
+                    <TableRow
+                      key={comp.id}
+                      className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
+                    >
+                      <TableCell>
+                        <span className="font-mono text-xs text-foreground block">
+                          {comp.id}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(comp.createdAt).toLocaleDateString()}
+                        </span>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="font-medium text-xs text-foreground">
+                          {comp.customerName}
+                        </div>
+                        {comp.orderNumber ? (
+                          <span className="font-mono text-xs text-primary block font-semibold">
+                            Order #{comp.orderNumber}
+                          </span>
+                        ) : comp.orderId ? (
+                          <span className="font-mono text-xs text-muted-foreground block">
+                            Ref: {comp.orderId}
+                          </span>
+                        ) : null}
+                      </TableCell>
+
+                      <TableCell>
+                        <span className="text-xs font-medium text-foreground">
+                          {comp.subject}
+                        </span>
+                      </TableCell>
+
+                      <TableCell>
+                        <p className="truncate max-w-xs text-xs text-muted-foreground">
+                          {comp.body}
+                        </p>
+                      </TableCell>
+
+                      <TableCell>
+                        <StatusBadge value={comp.status} />
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedComplaint(comp)}
+                          className="h-7 gap-1 px-2 text-xs"
+                        >
+                          <Eye className="h-3 w-3" />
+                          Resolve
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </DataSection>
 
       {/* Customer Profile Dialog */}

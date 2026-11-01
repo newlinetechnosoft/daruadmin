@@ -14,7 +14,6 @@ import {
   orderStatusHistory,
   coupons,
   couponRedemptions,
-  ledgerEntries,
   payments,
   notifications,
   riders,
@@ -39,25 +38,53 @@ import {
   transitionOrderTx,
 } from '#/server/orders/order.transitions'
 
-// eSewa configuration defaults (UAT / Test credentials)
-const ESEWA_PRODUCT_CODE = process.env.ESEWA_PRODUCT_CODE || 'EPAYTEST'
-const ESEWA_SECRET_KEY = process.env.ESEWA_SECRET_KEY || '8gBm/:&EnhH.1/q'
-const ESEWA_GATEWAY_URL =
-  process.env.NODE_ENV === 'production' && process.env.ESEWA_LIVE === 'true'
-    ? 'https://epay.esewa.com.np/api/epay/main/v2/form'
-    : 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'
-const ESEWA_STATUS_URL =
-  process.env.NODE_ENV === 'production' && process.env.ESEWA_LIVE === 'true'
-    ? 'https://epay.esewa.com.np/api/epay/transaction/status/'
-    : 'https://rc.esewa.com.np/api/epay/transaction/status/'
+// eSewa configuration & guard
+export interface EsewaConfig {
+  productCode: string
+  secretKey: string
+  gatewayUrl: string
+  statusUrl: string
+  isLive: boolean
+}
 
-function generateEsewaSignature(
+export function getEsewaConfig(): EsewaConfig {
+  const isLive =
+    process.env.NODE_ENV === 'production' || process.env.ESEWA_LIVE === 'true'
+  const productCode = process.env.ESEWA_PRODUCT_CODE?.trim()
+  const secretKey = process.env.ESEWA_SECRET_KEY?.trim()
+
+  if (isLive) {
+    if (!productCode || !secretKey) {
+      throw new Error(
+        'eSewa configuration error: ESEWA_PRODUCT_CODE and ESEWA_SECRET_KEY must be configured in production / live mode.',
+      )
+    }
+    return {
+      productCode,
+      secretKey,
+      gatewayUrl: 'https://epay.esewa.com.np/api/epay/main/v2/form',
+      statusUrl: 'https://epay.esewa.com.np/api/epay/transaction/status/',
+      isLive: true,
+    }
+  }
+
+  return {
+    productCode: productCode || 'EPAYTEST',
+    secretKey: secretKey || '8gBm/:&EnhH.1/q',
+    gatewayUrl: 'https://rc-epay.esewa.com.np/api/epay/main/v2/form',
+    statusUrl: 'https://rc.esewa.com.np/api/epay/transaction/status/',
+    isLive: false,
+  }
+}
+
+export function generateEsewaSignature(
   totalAmount: string,
   transactionUuid: string,
   productCode: string,
+  secretKey: string,
 ): string {
   const message = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${productCode}`
-  const hmac = createHmac('sha256', ESEWA_SECRET_KEY)
+  const hmac = createHmac('sha256', secretKey)
   hmac.update(message)
   return hmac.digest('base64')
 }
@@ -454,20 +481,7 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         actorRole: sessionUser.role,
       })
 
-      // 6. Record in Legacy Ledger (for backward compatibility)
-      await tx.insert(ledgerEntries).values({
-        id: nid('led'),
-        date: now.toISOString().slice(0, 10),
-        type: 'credit',
-        category: 'sales',
-        account: 'Sales revenue',
-        memo: `Sale ${orderNumber}`,
-        amount: totals.totalPaisa,
-        refType: 'order',
-        refId: orderId,
-      })
-
-      // 7. Insert notification for admin
+      // 6. Insert notification for admin
       await tx.insert(notifications).values({
         id: nid('notif'),
         title: `New Order: ${orderNumber}`,
@@ -488,6 +502,7 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
     // Prepare payment flow data
     let esewaPayload: Record<string, string> | null = null
     if (data.paymentMethod === 'esewa') {
+      const esewaConfig = getEsewaConfig()
       const totalAmountNpr = fromPaisa(totals.totalPaisa).toFixed(2)
       const subtotalNpr = fromPaisa(totals.discountedSubtotalPaisa).toFixed(2)
       const deliveryChargeNpr = fromPaisa(totals.deliveryChargePaisa).toFixed(2)
@@ -495,7 +510,8 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
       const signature = generateEsewaSignature(
         totalAmountNpr,
         transactionUuid,
-        ESEWA_PRODUCT_CODE,
+        esewaConfig.productCode,
+        esewaConfig.secretKey,
       )
 
       esewaPayload = {
@@ -503,14 +519,14 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         tax_amount: '0.00',
         total_amount: totalAmountNpr,
         transaction_uuid: transactionUuid,
-        product_code: ESEWA_PRODUCT_CODE,
+        product_code: esewaConfig.productCode,
         product_service_charge: '0.00',
         product_delivery_charge: deliveryChargeNpr,
         success_url: `/checkout/payment/esewa/success?orderId=${orderId}`,
         failure_url: `/checkout/payment/esewa/failure?orderId=${orderId}`,
         signed_field_names: 'total_amount,transaction_uuid,product_code',
         signature,
-        actionUrl: ESEWA_GATEWAY_URL,
+        actionUrl: esewaConfig.gatewayUrl,
       }
     }
 
@@ -566,6 +582,7 @@ export const verifyEsewaPaymentFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const sessionUser = await getSessionUser()
+    const esewaConfig = getEsewaConfig()
     const order = await getOrderByIdQuery(data.orderId)
 
     if (!order) {
@@ -591,7 +608,7 @@ export const verifyEsewaPaymentFn = createServerFn({ method: 'POST' })
 
     // Server-side status check to eSewa API (never trust client payload alone)
     const totalAmount = fromPaisa(order.total).toFixed(2)
-    const verifyUrl = `${ESEWA_STATUS_URL}?product_code=${ESEWA_PRODUCT_CODE}&total_amount=${totalAmount}&transaction_uuid=${order.id}`
+    const verifyUrl = `${esewaConfig.statusUrl}?product_code=${esewaConfig.productCode}&total_amount=${totalAmount}&transaction_uuid=${order.id}`
 
     let isVerified = false
     try {
@@ -605,14 +622,14 @@ export const verifyEsewaPaymentFn = createServerFn({ method: 'POST' })
     } catch (err) {
       console.warn('[eSewa] Status API check error:', err)
       if (
-        process.env.NODE_ENV !== 'production' &&
+        !esewaConfig.isLive &&
         (esewaData.status === 'COMPLETE' || esewaData.transaction_code)
       ) {
         isVerified = true
       }
     }
 
-    if (!isVerified && process.env.NODE_ENV !== 'production') {
+    if (!isVerified && !esewaConfig.isLive) {
       isVerified = true
     }
 

@@ -8,7 +8,6 @@ import {
   riders,
   settlements,
   riderCashHandovers,
-  ledgerEntries,
   payments,
   complaints,
   reviews,
@@ -65,6 +64,7 @@ import {
   getFiscalYearsQuery,
   getDealerPayablesSummaryQuery,
   getRiderAccountsSummaryQuery,
+  getRiderLedgerBalanceQuery,
   getAllDealerSettlementsQuery,
 } from '#/server/finance/finance.queries'
 import {
@@ -372,21 +372,15 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
   )
   .handler(async ({ data }) => {
     await requirePermission('dashboard', 'view')
-    const [
-      stats,
-      allOrders,
-      riderList,
-      recentAudit,
-      notifs,
-      dealerList,
-    ] = await Promise.all([
-      getAdminStatsQuery(),
-      getAllOrdersQuery(),
-      getAllRidersQuery(),
-      getAllAuditLogsQuery(8),
-      getAllNotificationsQuery(20),
-      getAllDealersQuery(),
-    ])
+    const [stats, allOrders, riderList, recentAudit, notifs, dealerList] =
+      await Promise.all([
+        getAdminStatsQuery(),
+        getAllOrdersQuery(),
+        getAllRidersQuery(),
+        getAllAuditLogsQuery(8),
+        getAllNotificationsQuery(20),
+        getAllDealersQuery(),
+      ])
 
     const { start, end } = rangeBounds(data.range, data.from, data.to)
     const inRangeOrders = allOrders.filter((o) =>
@@ -1690,7 +1684,6 @@ export const createOrderFn = createServerFn({ method: 'POST' })
     const orderId = nid('ord')
     const trackingCode = `TRK${Math.floor(100000 + Math.random() * 900000)}`
     const deliveryOtp = String(Math.floor(1000 + Math.random() * 9000))
-    const now = new Date()
 
     await dbTx.transaction(async (tx) => {
       await tx.insert(orders).values({
@@ -1763,18 +1756,6 @@ export const createOrderFn = createServerFn({ method: 'POST' })
         actor: actor.name,
         actorId: actor.id,
         actorRole: actor.role,
-      })
-
-      await tx.insert(ledgerEntries).values({
-        id: nid('led'),
-        date: now.toISOString().slice(0, 10),
-        type: 'credit',
-        category: 'sales',
-        account: 'Sales revenue',
-        memo: `Sale ${orderNumber} (${data.customerName})`,
-        amount: total,
-        refType: 'order',
-        refId: orderId,
       })
     })
 
@@ -2099,61 +2080,6 @@ export const updateRiderLiveFn = createServerFn({ method: 'POST' })
     if (data.status !== undefined) updates.status = data.status
 
     await db.update(riders).set(updates).where(eq(riders.id, data.riderId))
-    return true
-  })
-
-export const addLedgerFn = createServerFn({ method: 'POST' })
-  .validator((d: unknown) =>
-    z
-      .object({
-        type: z.enum(['debit', 'credit']),
-        category: z.enum([
-          'sales',
-          'purchase',
-          'expense',
-          'refund',
-          'cod',
-          'settlement',
-          'tax',
-          'delivery',
-          'other',
-          'salary',
-          'dealer_payment',
-        ]),
-        account: z.string().min(2),
-        memo: z.string().min(2),
-        amount: z.number().int().positive(),
-        refType: z
-          .enum(['order', 'settlement', 'manual', 'refund', 'dealer', 'salary'])
-          .default('manual'),
-        refId: z.string().nullable().optional(),
-        date: z.string().optional(),
-      })
-      .parse(d),
-  )
-  .handler(async ({ data }) => {
-    const { user } = await requirePermission('accounts', 'create')
-    const date = data.date || new Date().toISOString().slice(0, 10)
-
-    await db.insert(ledgerEntries).values({
-      id: nid('led'),
-      date,
-      type: data.type,
-      category: data.category,
-      account: data.account,
-      memo: data.memo,
-      amount: data.amount,
-      refType: data.refType,
-      refId: data.refId || null,
-    })
-
-    await logAudit(
-      user.name,
-      'accounts',
-      'create',
-      `Manual ledger: ${data.type.toUpperCase()} Rs. ${(data.amount / 100).toFixed(2)} - ${data.memo}`,
-    )
-
     return true
   })
 
@@ -2517,12 +2443,23 @@ export const approveSettlementFn = createServerFn({ method: 'POST' })
 
     if (!row[0]) throw new Error('Settlement not found')
 
+    if (row[0].status === 'paid') {
+      throw new Error(
+        `Settlement "${row[0].voucherNo || row[0].id}" has already been paid and disbursed.`,
+      )
+    }
+
     const slug =
       row[0].slug || `vch_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`
     const now = new Date()
 
     const grossAmount =
       row[0].grossEarnings || row[0].payout || row[0].netPayout
+    if (grossAmount <= 0) {
+      throw new Error(
+        `Cannot approve settlement "${row[0].voucherNo || row[0].id}" with zero or negative gross earnings (${grossAmount} paisa).`,
+      )
+    }
     const netPayout = row[0].netPayout || row[0].payout
     const cashShortageDeducted = row[0].cashShortageDeducted || 0
     const advancesDeducted = row[0].advancesDeducted || 0
@@ -2575,18 +2512,6 @@ export const approveSettlementFn = createServerFn({ method: 'POST' })
         })
         .where(eq(settlements.id, data.id))
 
-      await tx.insert(ledgerEntries).values({
-        id: nid('led'),
-        date: now.toISOString().slice(0, 10),
-        type: 'debit',
-        category: 'settlement',
-        account: 'Fleet settlement payable',
-        memo: `Settlement approved for ${row[0].riderName} (${posting.voucherNo})`,
-        amount: netPayout,
-        refType: 'settlement',
-        refId: row[0].id,
-      })
-
       return {
         ...posting,
         slug,
@@ -2633,95 +2558,210 @@ export const generateMonthlyRiderPayrollRunFn = createServerFn({
     }
 
     const allOrders = await getAllOrdersQuery()
-    const createdDraftSettlements = []
 
-    for (const rider of targetRiders) {
-      const deliveredOrders = allOrders.filter(
-        (o) =>
-          o.riderId === rider.id &&
-          o.status === 'delivered' &&
-          new Date(o.createdAt) >= start &&
-          new Date(o.createdAt) <= end,
-      )
+    return await dbTx.transaction(async (tx) => {
+      const createdDraftSettlements = []
 
-      const deliveriesCount = deliveredOrders.length
-      const cashCollected = deliveredOrders
-        .filter((o) => o.paymentMethod === 'cod')
-        .reduce((sum, o) => sum + o.total, 0)
+      for (const rider of targetRiders) {
+        // 1. Order-history recalculation (Automated Reconciliation Check)
+        const deliveredOrders = allOrders.filter(
+          (o) =>
+            o.riderId === rider.id &&
+            o.status === 'delivered' &&
+            new Date(o.createdAt) >= start &&
+            new Date(o.createdAt) <= end,
+        )
 
-      const baseSalaryAmount = data.includeBaseSalary
-        ? rider.baseSalary || 0
-        : 0
-      const perDropRate = rider.perDropRate || 5000 // paisa
-      const perDropAmount = deliveriesCount * perDropRate
+        const deliveriesCount = deliveredOrders.length
+        const cashCollected = deliveredOrders
+          .filter((o) => o.paymentMethod === 'cod')
+          .reduce((sum, o) => sum + o.total, 0)
 
-      const commissionRate = rider.commissionRate ?? 10
-      const commissionAmount = Math.round(
-        deliveredOrders.reduce(
-          (sum, o) => sum + (o.deliveryCharge * commissionRate) / 100,
+        const perDropRate = rider.perDropRate || 5000 // paisa
+        const orderPerDropAmount = deliveriesCount * perDropRate
+
+        const commissionRate = rider.commissionRate
+        const orderCommissionAmount = Math.round(
+          deliveredOrders.reduce(
+            (sum, o) => sum + (o.deliveryCharge * commissionRate) / 100,
+            0,
+          ),
+        )
+        const orderCalculatedEarnings =
+          orderPerDropAmount + orderCommissionAmount
+
+        // 2. Double-entry ledger balance on RIDER_PAYABLE (acc_2031) is the source of truth (Option A / ACC-0.10)
+        const ledgerBalances = await getRiderLedgerBalanceQuery(
+          tx,
+          rider.id,
+          end,
+        )
+        const ledgerAccruedCommission = Math.max(
           0,
-        ),
+          ledgerBalances.commissionPayable,
+        )
+
+        // Reconciliation variance check: ledger vs order recalculation
+        const variance = ledgerAccruedCommission - orderCalculatedEarnings
+        const hasVariance = variance !== 0
+
+        const baseSalaryAmount = data.includeBaseSalary
+          ? rider.baseSalary || 0
+          : 0
+
+        // Payout debits RIDER_PAYABLE for actual ledger balance (+ base salary if accrued upon approval)
+        const grossEarnings = baseSalaryAmount + ledgerAccruedCommission
+
+        // Deductions from sub-ledgers (RIDER_COD_CASH and STAFF_RIDER_ADVANCES)
+        const maxShortageDeduction = Math.min(
+          grossEarnings,
+          Math.max(0, ledgerBalances.undepositedCodCash),
+        )
+        const cashShortageDeducted = data.deductCashShortages
+          ? maxShortageDeduction
+          : 0
+
+        const remainingAfterShortage = Math.max(
+          0,
+          grossEarnings - cashShortageDeducted,
+        )
+        const maxAdvanceDeduction = Math.min(
+          remainingAfterShortage,
+          Math.max(0, ledgerBalances.outstandingAdvances),
+        )
+        const advancesDeducted = data.deductAdvances ? maxAdvanceDeduction : 0
+
+        const netPayout = Math.max(
+          0,
+          grossEarnings - cashShortageDeducted - advancesDeducted,
+        )
+
+        // Breakdown attribution for reporting
+        const perDropAmount = Math.min(
+          ledgerAccruedCommission,
+          orderPerDropAmount,
+        )
+        const commissionAmount = Math.max(
+          0,
+          ledgerAccruedCommission - perDropAmount,
+        )
+
+        const notesParts = [
+          `Payroll run for period ${start.toISOString().slice(0, 10)} to ${end.toISOString().slice(0, 10)} (${deliveriesCount} drops)`,
+        ]
+        if (hasVariance) {
+          notesParts.push(
+            `[RECONCILIATION VARIANCE: Ledger accrued Rs. ${(ledgerAccruedCommission / 100).toFixed(2)} vs Order history Rs. ${(orderCalculatedEarnings / 100).toFixed(2)} (diff: Rs. ${(variance / 100).toFixed(2)})]`,
+          )
+        }
+
+        // Check if an unapproved draft already exists for this rider
+        const existingDraft = await tx
+          .select({
+            id: settlements.id,
+            voucherNo: settlements.voucherNo,
+            slug: settlements.slug,
+          })
+          .from(settlements)
+          .where(
+            and(
+              eq(settlements.riderId, rider.id),
+              eq(settlements.status, 'draft'),
+            ),
+          )
+          .limit(1)
+
+        let settlementId: string
+        let voucherNo: string
+        let slug: string
+
+        if (existingDraft[0]) {
+          settlementId = existingDraft[0].id
+          voucherNo =
+            existingDraft[0].voucherNo ||
+            `VCH-SET-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
+          slug =
+            existingDraft[0].slug ||
+            `vch_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`
+
+          await tx
+            .update(settlements)
+            .set({
+              periodStart: start,
+              periodEnd: end,
+              deliveries: deliveriesCount,
+              cashCollected,
+              baseSalaryAmount,
+              perDropAmount,
+              commissionAmount,
+              commission: ledgerAccruedCommission,
+              grossEarnings,
+              advancesDeducted,
+              cashShortageDeducted,
+              cashHeldDeducted: 0,
+              netPayout,
+              payout: netPayout,
+              notes: notesParts.join(' '),
+              updatedAt: new Date(),
+            })
+            .where(eq(settlements.id, settlementId))
+        } else {
+          slug = `vch_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`
+          voucherNo = `VCH-SET-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
+          settlementId = nid('set')
+
+          await tx.insert(settlements).values({
+            id: settlementId,
+            riderId: rider.id,
+            riderName: rider.name,
+            voucherNo,
+            slug,
+            periodStart: start,
+            periodEnd: end,
+            deliveries: deliveriesCount,
+            cashCollected,
+            baseSalaryAmount,
+            perDropAmount,
+            commissionAmount,
+            commission: ledgerAccruedCommission,
+            grossEarnings,
+            advancesDeducted,
+            cashShortageDeducted,
+            cashHeldDeducted: 0,
+            netPayout,
+            payout: netPayout,
+            status: 'draft',
+            notes: notesParts.join(' '),
+            proofUrls: [],
+          })
+        }
+
+        createdDraftSettlements.push({
+          id: settlementId,
+          riderId: rider.id,
+          riderName: rider.name,
+          voucherNo,
+          slug,
+          deliveries: deliveriesCount,
+          grossEarnings,
+          netPayout,
+          ledgerAccruedAmount: ledgerAccruedCommission,
+          orderCalculatedAmount: orderCalculatedEarnings,
+          variance,
+          hasVariance,
+          isUpdated: Boolean(existingDraft[0]),
+        })
+      }
+
+      await logAudit(
+        user.name,
+        'accounts',
+        'create',
+        `Generated monthly payroll run for ${createdDraftSettlements.length} couriers inside transaction`,
       )
 
-      const grossEarnings = baseSalaryAmount + perDropAmount + commissionAmount
-
-      const cashShortageDeducted = 0
-      const advancesDeducted = 0
-
-      const netPayout = Math.max(
-        0,
-        grossEarnings - cashShortageDeducted - advancesDeducted,
-      )
-
-      const slug = `vch_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`
-      const voucherNo = `VCH-SET-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
-      const settlementId = nid('set')
-
-      await db.insert(settlements).values({
-        id: settlementId,
-        riderId: rider.id,
-        riderName: rider.name,
-        voucherNo,
-        slug,
-        periodStart: start,
-        periodEnd: end,
-        deliveries: deliveriesCount,
-        cashCollected,
-        baseSalaryAmount,
-        perDropAmount,
-        commissionAmount,
-        commission: perDropAmount + commissionAmount,
-        grossEarnings,
-        advancesDeducted,
-        cashShortageDeducted,
-        cashHeldDeducted: 0,
-        netPayout,
-        payout: netPayout,
-        status: 'draft',
-        notes: `Payroll run for period ${start.toISOString().slice(0, 10)} to ${end.toISOString().slice(0, 10)} (${deliveriesCount} drops)`,
-        proofUrls: [],
-      })
-
-      createdDraftSettlements.push({
-        id: settlementId,
-        riderId: rider.id,
-        riderName: rider.name,
-        voucherNo,
-        slug,
-        deliveries: deliveriesCount,
-        grossEarnings,
-        netPayout,
-      })
-    }
-
-    await logAudit(
-      user.name,
-      'accounts',
-      'create',
-      `Generated monthly payroll run for ${createdDraftSettlements.length} couriers`,
-    )
-
-    return createdDraftSettlements
+      return createdDraftSettlements
+    })
   })
 
 export const reconcilePaymentFn = createServerFn({ method: 'POST' })
@@ -3119,18 +3159,6 @@ export const depositRiderCashFn = createServerFn({ method: 'POST' })
         riderName: rider.name,
         amount: data.amount,
         actor: user,
-      })
-
-      await tx.insert(ledgerEntries).values({
-        id: nid('led'),
-        date: now.toISOString().slice(0, 10),
-        type: 'credit',
-        category: 'settlement',
-        account: 'Cash In Hand (Fleet)',
-        memo: `Rider cash deposit: ${rider.name} (Rs. ${(data.amount / 100).toFixed(2)})`,
-        amount: data.amount,
-        refType: 'settlement',
-        refId: rider.id,
       })
     })
 

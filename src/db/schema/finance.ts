@@ -102,6 +102,32 @@ export const ledgerAccounts = pgTable(
 )
 
 /**
+ * Default Accounts (Accounting Settings)
+ * Maps semantic business account keys to default Ledger Accounts in Chart of Accounts.
+ * Allows dynamic remapping of sales, taxes, payables, and expenses.
+ * Specification: ACCOUNT_GUIDE.md §5.3 & ACC-1.1
+ */
+export const accountDefaults = pgTable(
+  'account_defaults',
+  {
+    id: text('id').primaryKey(), // e.g. 'def_SALES'
+    key: text('key').notNull().unique(), // e.g. 'SALES'
+    accountId: text('account_id')
+      .notNull()
+      .references(() => ledgerAccounts.id),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    updatedBy: text('updated_by'),
+  },
+  (table) => [
+    index('account_defaults_account_id_idx').on(table.accountId),
+    index('account_defaults_key_idx').on(table.key),
+  ],
+)
+
+/**
  * Journal entries header.
  * Immutable / append-only. Corrections require a reversal journal entry.
  */
@@ -123,6 +149,8 @@ export const journalEntries = pgTable(
     event: text('event'), // 'order_delivered', 'cash_handover', 'dealer_settlement', etc.
     postingStatus: text('posting_status').notNull().default('submitted'), // 'draft', 'submitted', 'cancelled'
     reversalOf: text('reversal_of'),
+    isReversed: boolean('is_reversed').notNull().default(false),
+    reversedBy: text('reversed_by'),
     metadata: jsonb('metadata'),
     createdBy: text('created_by').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -138,6 +166,8 @@ export const journalEntries = pgTable(
     index('journal_entries_date_idx').on(table.postingDate),
     index('journal_entries_status_idx').on(table.postingStatus),
     index('journal_entries_ref_idx').on(table.refType, table.refId),
+    index('journal_entries_is_reversed_idx').on(table.isReversed),
+    index('journal_entries_reversed_by_idx').on(table.reversedBy),
     uniqueIndex('journal_entries_ref_event_uniq_idx')
       .on(table.refType, table.refId, table.event)
       .where(
@@ -287,6 +317,17 @@ export const ledgerAccountsRelations = relations(
     }),
     children: many(ledgerAccounts),
     lines: many(journalLines),
+    defaults: many(accountDefaults),
+  }),
+)
+
+export const accountDefaultsRelations = relations(
+  accountDefaults,
+  ({ one }) => ({
+    account: one(ledgerAccounts, {
+      fields: [accountDefaults.accountId],
+      references: [ledgerAccounts.id],
+    }),
   }),
 )
 

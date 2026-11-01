@@ -1,5 +1,5 @@
 import { moveToRecycleBin } from '#/server/recycle-bin/recycle-bin.queries'
-import { db } from '#/db'
+import { db, dbTx, type DbTx } from '#/db'
 import {
   notifications,
   auditLogs,
@@ -71,7 +71,10 @@ export function defaultStoreSettings(): StoreSettings {
 export async function getAllNotificationsQuery(
   limit?: number,
 ): Promise<NotificationItem[]> {
-  const q = db.select().from(notifications).orderBy(desc(notifications.createdAt))
+  const q = db
+    .select()
+    .from(notifications)
+    .orderBy(desc(notifications.createdAt))
   const rows = limit ? await q.limit(limit) : await q
   return rows.map((n) => ({
     id: n.id,
@@ -112,7 +115,9 @@ export async function insertNotificationQuery(item: {
 // AUDIT LOGS
 // -------------------------------------------------------------
 
-export async function getAllAuditLogsQuery(limit?: number): Promise<AuditLog[]> {
+export async function getAllAuditLogsQuery(
+  limit?: number,
+): Promise<AuditLog[]> {
   const q = db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt))
   const rows = limit ? await q.limit(limit) : await q
   return rows.map((a) => ({
@@ -177,11 +182,13 @@ export async function getStoreSettingsQuery(): Promise<StoreSettings> {
 
 export async function saveStoreSettingsQuery(
   settings: Partial<StoreSettings>,
+  tx?: DbTx,
 ): Promise<StoreSettings> {
+  const client = tx ?? db
   const current = await getStoreSettingsQuery()
   const next = { ...current, ...settings }
 
-  await db
+  await client
     .insert(siteSettings)
     .values({ key: 'general', value: next })
     .onConflictDoUpdate({
@@ -212,23 +219,31 @@ export async function getAllUserPermissionsQuery(): Promise<PermissionMap> {
 export async function saveUserPermissionsQuery(
   userId: string,
   permissions: Partial<Record<string, string[]>>,
+  externalTx?: DbTx,
 ) {
-  for (const [mod, acts] of Object.entries(permissions)) {
-    const id = `perm_${userId}_${mod}`
-    const safeActs = acts ?? []
-    await db
-      .insert(userPermissions)
-      .values({
-        id,
-        userId,
-        module: mod,
-        actions: safeActs,
-      })
-      .onConflictDoUpdate({
-        target: [userPermissions.userId, userPermissions.module],
-        set: { actions: safeActs, updatedAt: new Date() },
-      })
+  const run = async (tx: DbTx) => {
+    for (const [mod, acts] of Object.entries(permissions)) {
+      const id = `perm_${userId}_${mod}`
+      const safeActs = acts ?? []
+      await tx
+        .insert(userPermissions)
+        .values({
+          id,
+          userId,
+          module: mod,
+          actions: safeActs,
+        })
+        .onConflictDoUpdate({
+          target: [userPermissions.userId, userPermissions.module],
+          set: { actions: safeActs, updatedAt: new Date() },
+        })
+    }
   }
+
+  if (externalTx) {
+    return run(externalTx)
+  }
+  return dbTx.transaction((tx) => run(tx))
 }
 
 export async function resetUserPermissionsQuery(userId: string) {
@@ -307,24 +322,34 @@ export async function upsertCouponQuery(c: Coupon) {
     })
 }
 
-export async function deleteCouponQuery(id: string) {
-  const [coupon] = await db
-    .select()
-    .from(coupons)
-    .where(eq(coupons.id, id))
-    .limit(1)
+export async function deleteCouponQuery(id: string, externalTx?: DbTx) {
+  const run = async (tx: DbTx) => {
+    const [coupon] = await tx
+      .select()
+      .from(coupons)
+      .where(eq(coupons.id, id))
+      .limit(1)
 
-  if (coupon) {
-    await moveToRecycleBin({
-      entityType: 'coupon',
-      entityId: coupon.id,
-      name: coupon.code,
-      description: `${coupon.type === 'percent' ? coupon.value + '%' : 'Rs. ' + (coupon.value / 100)} discount`,
-      data: { coupon },
-    })
+    if (coupon) {
+      await moveToRecycleBin(
+        {
+          entityType: 'coupon',
+          entityId: coupon.id,
+          name: coupon.code,
+          description: `${coupon.type === 'percent' ? coupon.value + '%' : 'Rs. ' + coupon.value / 100} discount`,
+          data: { coupon },
+        },
+        tx,
+      )
+    }
+
+    await tx.delete(coupons).where(eq(coupons.id, id))
   }
 
-  await db.delete(coupons).where(eq(coupons.id, id))
+  if (externalTx) {
+    return run(externalTx)
+  }
+  return dbTx.transaction((tx) => run(tx))
 }
 
 export async function getCouponRedemptionsQuery(
@@ -487,24 +512,34 @@ export async function upsertBannerQuery(banner: Banner) {
     })
 }
 
-export async function deleteBannerQuery(id: string) {
-  const [banner] = await db
-    .select()
-    .from(banners)
-    .where(eq(banners.id, id))
-    .limit(1)
+export async function deleteBannerQuery(id: string, externalTx?: DbTx) {
+  const run = async (tx: DbTx) => {
+    const [banner] = await tx
+      .select()
+      .from(banners)
+      .where(eq(banners.id, id))
+      .limit(1)
 
-  if (banner) {
-    await moveToRecycleBin({
-      entityType: 'banner',
-      entityId: banner.id,
-      name: banner.title,
-      description: banner.placement,
-      data: { banner },
-    })
+    if (banner) {
+      await moveToRecycleBin(
+        {
+          entityType: 'banner',
+          entityId: banner.id,
+          name: banner.title,
+          description: banner.placement,
+          data: { banner },
+        },
+        tx,
+      )
+    }
+
+    await tx.delete(banners).where(eq(banners.id, id))
   }
 
-  await db.delete(banners).where(eq(banners.id, id))
+  if (externalTx) {
+    return run(externalTx)
+  }
+  return dbTx.transaction((tx) => run(tx))
 }
 
 // -------------------------------------------------------------
@@ -696,24 +731,34 @@ export async function upsertOfferQuery(data: {
   return id
 }
 
-export async function deleteOfferQuery(id: string) {
-  const [offer] = await db
-    .select()
-    .from(offers)
-    .where(eq(offers.id, id))
-    .limit(1)
+export async function deleteOfferQuery(id: string, externalTx?: DbTx) {
+  const run = async (tx: DbTx) => {
+    const [offer] = await tx
+      .select()
+      .from(offers)
+      .where(eq(offers.id, id))
+      .limit(1)
 
-  if (offer) {
-    await moveToRecycleBin({
-      entityType: 'offer',
-      entityId: offer.id,
-      name: offer.title,
-      description: offer.slug,
-      data: { offer },
-    })
+    if (offer) {
+      await moveToRecycleBin(
+        {
+          entityType: 'offer',
+          entityId: offer.id,
+          name: offer.title,
+          description: offer.slug,
+          data: { offer },
+        },
+        tx,
+      )
+    }
+
+    await tx.delete(offers).where(eq(offers.id, id))
   }
 
-  await db.delete(offers).where(eq(offers.id, id))
+  if (externalTx) {
+    return run(externalTx)
+  }
+  return dbTx.transaction((tx) => run(tx))
 }
 
 // -------------------------------------------------------------

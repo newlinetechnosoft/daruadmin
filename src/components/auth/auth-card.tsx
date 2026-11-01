@@ -245,7 +245,9 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
     }
 
     if (signupPassword !== signupConfirmPassword) {
-      toast.error('Passwords do not match. Please verify your confirm password.')
+      toast.error(
+        'Passwords do not match. Please verify your confirm password.',
+      )
       return
     }
 
@@ -261,7 +263,9 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
       })
 
       if (phoneCheck.exists && phoneCheck.phoneVerified) {
-        toast.error('This mobile number is already registered and verified. Please sign in.')
+        toast.error(
+          'This mobile number is already registered and verified. Please sign in.',
+        )
         handleModeSwitch('login')
         setIsSignupLoading(false)
         return
@@ -317,17 +321,15 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
 
       {/* Main Auth Card Container */}
       <div className="relative w-full rounded-[28px] sm:rounded-[36px] bg-card dark:bg-[#1c2023] shadow-[0_20px_50px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-border dark:border-[#2a2f34] overflow-hidden flex flex-col md:flex-row transition-all duration-300">
-        
         {/* ==================== LEFT PANEL (Vibrant Blue Curve) ==================== */}
         <div className="relative w-full md:w-[56%] bg-gradient-to-br from-[#0062E0] via-[#0052D4] to-[#00389E] dark:from-[#004bb5] dark:via-[#003c9c] dark:to-[#002773] text-white p-6 sm:p-9 md:p-11 flex flex-col justify-center overflow-hidden z-10 transition-colors duration-300">
-          
           {/* Decorative Organic Shapes matching UI Mockup */}
           {/* Top-Right Dark Blue Circle */}
           <div className="w-52 h-52 rounded-full bg-[#00348D]/70 absolute -top-16 -right-12 pointer-events-none" />
-          
+
           {/* Bottom-Right Dark Blue Shape */}
           <div className="w-64 h-64 rounded-full bg-[#002777]/80 absolute -bottom-24 -right-16 pointer-events-none" />
-          
+
           {/* Bottom-Left Luminous Blue Glow */}
           <div className="w-56 h-56 rounded-full bg-[#388BFF]/35 blur-2xl absolute -bottom-16 -left-16 pointer-events-none" />
 
@@ -408,8 +410,12 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     type="button"
                     onClick={() => setShowLoginPassword(!showLoginPassword)}
                     className="p-1.5 text-gray-500 hover:text-gray-800 transition-colors shrink-0 cursor-pointer rounded-lg hover:bg-gray-100"
-                    aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
-                    title={showLoginPassword ? 'Hide password' : 'Show password'}
+                    aria-label={
+                      showLoginPassword ? 'Hide password' : 'Show password'
+                    }
+                    title={
+                      showLoginPassword ? 'Hide password' : 'Show password'
+                    }
                   >
                     {showLoginPassword ? (
                       <EyeOff className="h-5 w-5 text-gray-700" />
@@ -620,8 +626,12 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     type="button"
                     onClick={() => setShowSignupPassword(!showSignupPassword)}
                     className="p-1.5 text-gray-500 hover:text-gray-800 transition-colors shrink-0 cursor-pointer rounded-lg hover:bg-gray-100"
-                    aria-label={showSignupPassword ? 'Hide password' : 'Show password'}
-                    title={showSignupPassword ? 'Hide password' : 'Show password'}
+                    aria-label={
+                      showSignupPassword ? 'Hide password' : 'Show password'
+                    }
+                    title={
+                      showSignupPassword ? 'Hide password' : 'Show password'
+                    }
                   >
                     {showSignupPassword ? (
                       <EyeOff className="h-5 w-5 text-gray-700" />
@@ -754,7 +764,6 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
 
         {/* ==================== RIGHT PANEL (System Theme Card Surface with Bottom Blue Accent) ==================== */}
         <div className="relative w-full md:w-[44%] bg-card dark:bg-[#1c2023] flex flex-col items-center justify-center px-6 sm:px-10 py-10 sm:py-14 text-center overflow-hidden transition-colors duration-300">
-          
           {/* Decorative Bottom-Right Blue Accent Shape */}
           <div className="w-44 sm:w-52 h-44 sm:h-52 rounded-full bg-[#0062E0] dark:bg-[#004bb5] absolute -bottom-16 -right-16 pointer-events-none opacity-95 shadow-lg transition-colors duration-300" />
 
@@ -772,7 +781,8 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                   New Here?
                 </h2>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-3 mb-8 leading-relaxed font-normal">
-                  Get exclusive access to cool features and unlimited benefits. Sign up now and start exploring our new world
+                  Get exclusive access to cool features and unlimited benefits.
+                  Sign up now and start exploring our new world
                 </p>
                 <button
                   type="button"
@@ -788,7 +798,8 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                   One of Us?
                 </h2>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-3 mb-8 leading-relaxed font-normal">
-                  If you already have an account, just sign in to access your orders, saved addresses, and express delivery.
+                  If you already have an account, just sign in to access your
+                  orders, saved addresses, and express delivery.
                 </p>
                 <button
                   type="button"
@@ -801,7 +812,6 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
             )}
           </div>
         </div>
-
       </div>
 
       {/* Compliance & Trust Badges aligned to theme */}

@@ -30,6 +30,7 @@ import {
   getAdminDealersFn,
   getDealerByIdFn,
 } from '#/server/inventory/inventory.functions'
+import { getAccountDefaultsFn } from '#/server/finance/finance.functions'
 
 export const adminQueries = {
   access: () =>
@@ -64,6 +65,13 @@ export const adminQueries = {
     queryOptions({
       queryKey: ['admin', 'ledger'],
       queryFn: () => getLedgerFn(),
+      staleTime: 1000 * 60,
+    }),
+
+  accountDefaults: () =>
+    queryOptions({
+      queryKey: ['admin', 'account-defaults'],
+      queryFn: () => getAccountDefaultsFn(),
       staleTime: 1000 * 60,
     }),
 

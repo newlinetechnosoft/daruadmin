@@ -185,7 +185,9 @@ function VerifyPhonePage() {
               'Maximum attempts exceeded for this code. Please request a fresh code to continue.',
           )
         } else {
-          setErrorMessage(result.message || 'Invalid 6-digit verification code.')
+          setErrorMessage(
+            result.message || 'Invalid 6-digit verification code.',
+          )
         }
 
         setOtp('')
@@ -263,24 +265,21 @@ function VerifyPhonePage() {
 
       <main className="flex-1 flex items-center justify-center py-8 sm:py-12 md:py-16 px-4">
         <div className="w-full max-w-[960px] mx-auto relative z-10">
-          
           {/* Decorative ambient background glows aligned to system theme */}
           <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-blue-500/15 dark:bg-blue-600/10 blur-3xl pointer-events-none" />
           <div className="absolute -bottom-16 -right-16 w-80 h-80 rounded-full bg-amber-500/15 dark:bg-amber-600/10 blur-3xl pointer-events-none" />
 
           {/* Main Card Container with Split Design Format */}
           <div className="relative w-full rounded-[28px] sm:rounded-[36px] bg-card dark:bg-[#1c2023] shadow-[0_20px_50px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-border dark:border-[#2a2f34] overflow-hidden flex flex-col md:flex-row transition-all duration-300">
-            
             {/* ==================== LEFT PANEL (Vibrant Blue Curve) ==================== */}
             <div className="relative w-full md:w-[56%] bg-gradient-to-br from-[#0062E0] via-[#0052D4] to-[#00389E] dark:from-[#004bb5] dark:via-[#003c9c] dark:to-[#002773] text-white p-7 sm:p-10 md:p-12 flex flex-col justify-center overflow-hidden z-10 transition-colors duration-300">
-              
               {/* Decorative Organic Shapes matching UI Mockup */}
               {/* Top-Right Dark Blue Circle */}
               <div className="w-52 h-52 rounded-full bg-[#00348D]/70 absolute -top-16 -right-12 pointer-events-none" />
-              
+
               {/* Bottom-Right Dark Blue Shape */}
               <div className="w-64 h-64 rounded-full bg-[#002777]/80 absolute -bottom-24 -right-16 pointer-events-none" />
-              
+
               {/* Bottom-Left Luminous Blue Glow */}
               <div className="w-56 h-56 rounded-full bg-[#388BFF]/35 blur-2xl absolute -bottom-16 -left-16 pointer-events-none" />
 
@@ -433,7 +432,6 @@ function VerifyPhonePage() {
 
             {/* ==================== RIGHT PANEL (System Card Surface with Blue Accent) ==================== */}
             <div className="relative w-full md:w-[44%] bg-card dark:bg-[#1c2023] flex flex-col items-center justify-center px-6 sm:px-10 py-10 sm:py-14 text-center overflow-hidden transition-colors duration-300">
-              
               {/* Decorative Bottom-Right Blue Accent Shape */}
               <div className="w-44 sm:w-52 h-44 sm:h-52 rounded-full bg-[#0062E0] dark:bg-[#004bb5] absolute -bottom-16 -right-16 pointer-events-none opacity-95 shadow-lg transition-colors duration-300" />
 
@@ -443,7 +441,9 @@ function VerifyPhonePage() {
                   Security First
                 </h2>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-3 mb-6 leading-relaxed font-normal">
-                  Mobile SMS verification prevents unauthorized access, guarantees seamless 30-minute valley delivery coordination, and complies with Nepal regulations.
+                  Mobile SMS verification prevents unauthorized access,
+                  guarantees seamless 30-minute valley delivery coordination,
+                  and complies with Nepal regulations.
                 </p>
 
                 {/* Need Help Support Pill */}
@@ -467,7 +467,6 @@ function VerifyPhonePage() {
                 </div>
               </div>
             </div>
-
           </div>
 
           {/* Compliance & Trust Badges aligned to theme */}

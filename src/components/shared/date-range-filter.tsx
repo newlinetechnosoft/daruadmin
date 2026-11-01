@@ -32,17 +32,17 @@ export function useDateFilter(initialPreset: DateFilterPreset = 'today') {
     preset: initialPreset,
   })
 
-  const bounds = useMemo(
-    () => getDateRangeBounds(dateFilter),
-    [dateFilter],
-  )
+  const bounds = useMemo(() => getDateRangeBounds(dateFilter), [dateFilter])
 
   const filterItems = useMemo(() => {
     return <T,>(
       items: T[],
       getDate: (item: T) => Date | string | number | null | undefined,
     ): T[] => {
-      if (!bounds.isFiltered || (bounds.start === null && bounds.end === null)) {
+      if (
+        !bounds.isFiltered ||
+        (bounds.start === null && bounds.end === null)
+      ) {
         return items
       }
       return items.filter((item) =>
@@ -86,15 +86,17 @@ export function DateRangeFilter({
   totalCount,
 }: DateRangeFilterProps) {
   const [open, setOpen] = useState(false)
-  const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(() => {
-    if (value.preset === 'custom' && value.from) {
-      return {
-        from: new Date(value.from),
-        to: value.to ? new Date(value.to) : new Date(value.from),
+  const [selectedRange, setSelectedRange] = useState<DateRange | undefined>(
+    () => {
+      if (value.preset === 'custom' && value.from) {
+        return {
+          from: new Date(value.from),
+          to: value.to ? new Date(value.to) : new Date(value.from),
+        }
       }
-    }
-    return undefined
-  })
+      return undefined
+    },
+  )
 
   const bounds = useMemo(() => getDateRangeBounds(value), [value])
 
@@ -158,7 +160,9 @@ export function DateRangeFilter({
             size="sm"
             className={cn(
               'gap-2 border-border/80 bg-card hover:bg-accent/50 text-foreground font-medium cursor-pointer shadow-2xs transition-colors',
-              size === 'sm' ? 'h-8 text-xs px-2.5' : 'h-9 text-xs sm:text-sm px-3',
+              size === 'sm'
+                ? 'h-8 text-xs px-2.5'
+                : 'h-9 text-xs sm:text-sm px-3',
               !isToday && 'border-primary/40 bg-primary/5 text-primary',
             )}
           >

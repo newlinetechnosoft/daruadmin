@@ -13,12 +13,7 @@ import {
 import { formatBS } from './nepal-date'
 
 export type DateFilterPreset =
-  | 'today'
-  | 'yesterday'
-  | 'this_week'
-  | 'this_month'
-  | 'custom'
-  | 'all'
+  'today' | 'yesterday' | 'this_week' | 'this_month' | 'custom' | 'all'
 
 export interface DateFilterValue {
   preset: DateFilterPreset
@@ -182,7 +177,8 @@ export function stepPeriod(
 
     const isSingleDay = isSameDay(bounds.start, bounds.end)
     if (isSingleDay) {
-      const target = direction === 1 ? addDays(bounds.start, 1) : subDays(bounds.start, 1)
+      const target =
+        direction === 1 ? addDays(bounds.start, 1) : subDays(bounds.start, 1)
       if (isSameDay(target, referenceDate)) {
         return { preset: 'today' }
       }
@@ -215,9 +211,21 @@ export const DATE_FILTER_PRESET_OPTIONS: {
   description?: string
 }[] = [
   { value: 'today', label: 'Today', description: 'Records created today' },
-  { value: 'yesterday', label: 'Yesterday', description: 'Records from yesterday' },
+  {
+    value: 'yesterday',
+    label: 'Yesterday',
+    description: 'Records from yesterday',
+  },
   { value: 'this_week', label: 'This Week', description: 'Monday to Sunday' },
-  { value: 'this_month', label: 'This Month', description: 'Current calendar month' },
-  { value: 'custom', label: 'Custom Range...', description: 'Select start & end date' },
+  {
+    value: 'this_month',
+    label: 'This Month',
+    description: 'Current calendar month',
+  },
+  {
+    value: 'custom',
+    label: 'Custom Range...',
+    description: 'Select start & end date',
+  },
   { value: 'all', label: 'All Dates', description: 'Show all recorded data' },
 ]

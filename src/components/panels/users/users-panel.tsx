@@ -47,9 +47,11 @@ const ROLES = [
 export function UsersPanel() {
   const queryClient = useQueryClient()
   const router = useRouter()
-  const { data: usersData, isFetching, refetch } = useSuspenseQuery(
-    adminQueries.users(),
-  )
+  const {
+    data: usersData,
+    isFetching,
+    refetch,
+  } = useSuspenseQuery(adminQueries.users())
   const users = usersData ?? []
 
   const invalidateUsers = async () => {
@@ -211,133 +213,133 @@ export function UsersPanel() {
       <DataSection isRefreshing={isFetching}>
         <div className="overflow-hidden rounded-lg border border-border bg-card">
           <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-xs">User</TableHead>
-              <TableHead className="text-xs">Contact</TableHead>
-              <TableHead className="text-xs">Role permission</TableHead>
-              <TableHead className="text-xs">Joined</TableHead>
-              <TableHead className="text-center text-xs">Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredUsers.length === 0 ? (
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={5} className="p-0">
-                  <EmptyState
-                    title="No matching users found"
-                    description="Try adjusting your search query or role filter."
-                  />
-                </TableCell>
+                <TableHead className="text-xs">User</TableHead>
+                <TableHead className="text-xs">Contact</TableHead>
+                <TableHead className="text-xs">Role permission</TableHead>
+                <TableHead className="text-xs">Joined</TableHead>
+                <TableHead className="text-center text-xs">Status</TableHead>
               </TableRow>
-            ) : (
-              filteredUsers.map((u) => {
-                const currentRole = u.role || 'customer'
-                const isUpdating = updatingUserId === u.id
-                const isActive = u.isActive !== false
-                return (
-                  <TableRow
-                    key={u.id}
-                    className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
-                            {u.name.charAt(0).toUpperCase() || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium text-foreground">
-                            {u.name}
-                          </div>
-                          <div className="font-mono text-xs text-muted-foreground">
-                            {u.id.slice(0, 10)}...
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="p-0">
+                    <EmptyState
+                      title="No matching users found"
+                      description="Try adjusting your search query or role filter."
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredUsers.map((u) => {
+                  const currentRole = u.role || 'customer'
+                  const isUpdating = updatingUserId === u.id
+                  const isActive = u.isActive !== false
+                  return (
+                    <TableRow
+                      key={u.id}
+                      className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                              {u.name.charAt(0).toUpperCase() || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-foreground">
+                              {u.name}
+                            </div>
+                            <div className="font-mono text-xs text-muted-foreground">
+                              {u.id.slice(0, 10)}...
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
+                      </TableCell>
 
-                    <TableCell>
-                      <div className="flex items-center gap-1.5 text-xs text-foreground">
-                        <Mail className="h-3 w-3 text-muted-foreground" />
-                        <span>{u.email}</span>
-                      </div>
-                      {u.phone && (
-                        <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Phone className="h-3 w-3 text-muted-foreground" />
-                          <span>{u.phone}</span>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 text-xs text-foreground">
+                          <Mail className="h-3 w-3 text-muted-foreground" />
+                          <span>{u.email}</span>
                         </div>
-                      )}
-                    </TableCell>
-
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getRoleBadge(currentRole)}
-                        <NativeSelect
-                          disabled={isUpdating}
-                          value={currentRole}
-                          onChange={(e) =>
-                            handleRoleChange(u.id, e.target.value)
-                          }
-                          size="sm"
-                          className="h-7 text-xs"
-                        >
-                          {ROLES.map((r) => (
-                            <NativeSelectOption key={r.value} value={r.value}>
-                              {r.label}
-                            </NativeSelectOption>
-                          ))}
-                        </NativeSelect>
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="h-3 w-3 text-muted-foreground" />
-                        <span>
-                          {new Date(u.createdAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </span>
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="text-center">
-                      <Button
-                        variant={isActive ? 'outline' : 'destructive'}
-                        size="sm"
-                        disabled={isUpdating}
-                        onClick={() => {
-                          if (isActive) {
-                            setSuspendTarget({ id: u.id, name: u.name })
-                          } else {
-                            void handleToggleActive(u.id, false)
-                          }
-                        }}
-                        className="h-7 gap-1 text-xs cursor-pointer"
-                      >
-                        {isActive ? (
-                          <>
-                            <CheckCircle2 className="h-3 w-3 text-success" />{' '}
-                            Active
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="h-3 w-3" /> Suspended
-                          </>
+                        {u.phone && (
+                          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Phone className="h-3 w-3 text-muted-foreground" />
+                            <span>{u.phone}</span>
+                          </div>
                         )}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getRoleBadge(currentRole)}
+                          <NativeSelect
+                            disabled={isUpdating}
+                            value={currentRole}
+                            onChange={(e) =>
+                              handleRoleChange(u.id, e.target.value)
+                            }
+                            size="sm"
+                            className="h-7 text-xs"
+                          >
+                            {ROLES.map((r) => (
+                              <NativeSelectOption key={r.value} value={r.value}>
+                                {r.label}
+                              </NativeSelectOption>
+                            ))}
+                          </NativeSelect>
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3 w-3 text-muted-foreground" />
+                          <span>
+                            {new Date(u.createdAt).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="text-center">
+                        <Button
+                          variant={isActive ? 'outline' : 'destructive'}
+                          size="sm"
+                          disabled={isUpdating}
+                          onClick={() => {
+                            if (isActive) {
+                              setSuspendTarget({ id: u.id, name: u.name })
+                            } else {
+                              void handleToggleActive(u.id, false)
+                            }
+                          }}
+                          className="h-7 gap-1 text-xs cursor-pointer"
+                        >
+                          {isActive ? (
+                            <>
+                              <CheckCircle2 className="h-3 w-3 text-success" />{' '}
+                              Active
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="h-3 w-3" /> Suspended
+                            </>
+                          )}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </DataSection>
 
       <CreateStaffDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />

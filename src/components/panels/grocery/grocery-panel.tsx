@@ -508,193 +508,202 @@ export function GroceryPanel() {
       {/* Table */}
       <DataSection isRefreshing={isFetching}>
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
-        <Table>
-          <TableHeader className="bg-muted/40">
-            <TableRow>
-              <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Item</TableHead>
-              <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Brand &amp; Category</TableHead>
-              <TableHead className="text-xs">
-                Variants and pricing (NPR)
-              </TableHead>
-              <TableHead className="text-center text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Status</TableHead>
-              <TableHead className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredProducts.length === 0 ? (
+          <Table>
+            <TableHeader className="bg-muted/40">
               <TableRow>
-                <TableCell colSpan={5} className="p-0">
-                  <EmptyState
-                    title="No matching grocery products found"
-                    description="Try adjusting your filter or search query."
-                  />
-                </TableCell>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                  Item
+                </TableHead>
+                <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                  Brand &amp; Category
+                </TableHead>
+                <TableHead className="text-xs">
+                  Variants and pricing (NPR)
+                </TableHead>
+                <TableHead className="text-center text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                  Status
+                </TableHead>
+                <TableHead className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                  Actions
+                </TableHead>
               </TableRow>
-            ) : (
-              filteredProducts.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={
-                          p.primaryImage ||
-                          'https://images.unsplash.com/photo-1566478989037-eec170784d0b?auto=format&fit=crop&w=100&q=80'
-                        }
-                        alt={p.name}
-                        className="h-12 w-12 shrink-0 rounded-xl bg-secondary object-cover border border-border shadow-xs"
-                      />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap font-bold text-sm sm:text-base text-foreground">
-                          <span>{p.name}</span>
-                          {(p as any).customBadge && (
-                            <Badge
-                              variant="default"
-                              className="text-xs px-2 py-0.5 font-bold"
-                            >
-                              {(p as any).customBadge}
-                            </Badge>
-                          )}
-                          {!(p as any).customBadge && p.isFeatured && (
-                            <Badge
-                              variant="secondary"
-                              className="gap-1 text-xs px-2 py-0.5 font-medium"
-                            >
-                              <Sparkles className="h-2.5 w-2.5" /> Featured
-                            </Badge>
-                          )}
-                          {(p as any).customDiscountLabel && (
-                            <Badge
-                              variant="secondary"
-                              className="text-xs px-2 py-0.5 font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
-                            >
-                              {(p as any).customDiscountLabel}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="truncate font-mono text-xs text-muted-foreground mt-0.5">
-                          /{p.slug}
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-
-                  <TableCell>
-                    <div className="space-y-0.5">
-                      <span className="font-medium text-xs text-foreground block">
-                        {p.categoryName}
-                      </span>
-                      {(p as any).brandName ? (
-                        <Badge
-                          variant="outline"
-                          className="text-xs px-1.5 py-0 font-normal text-muted-foreground"
-                        >
-                          {(p as any).brandName}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground block">
-                          No brand
-                        </span>
-                      )}
-                      {(p as any).dealers && (p as any).dealers.length > 0 && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <Badge
-                            variant="outline"
-                            className="text-xs py-0 px-1.5 h-4 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20 font-normal flex items-center gap-1"
-                          >
-                            <Store className="h-2.5 w-2.5" />
-                            {(p as any).dealers.length}{' '}
-                            {(p as any).dealers.length === 1
-                              ? 'dealer'
-                              : 'dealers'}
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-
-                  <TableCell>
-                    <div className="flex max-w-sm flex-wrap gap-1.5">
-                      {p.variants.map((v) => (
-                        <span
-                          key={v.id}
-                          className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs ${
-                            v.stock <= 10
-                              ? 'border-destructive/30 bg-destructive/10 text-destructive'
-                              : 'border-border bg-muted/30 text-foreground'
-                          }`}
-                        >
-                          <span className="font-medium text-xs">
-                            {v.name}
-                          </span>
-                          <span className="font-mono font-semibold text-xs tabular-nums">
-                            {formatNPR(v.price)}
-                          </span>
-                          {v.mrp && v.mrp > v.price && (
-                            <span className="font-mono text-xs text-muted-foreground line-through tabular-nums">
-                              {formatNPR(v.mrp)}
-                            </span>
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            {v.stock} in stock
-                          </span>
-                        </span>
-                      ))}
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="text-center">
-                    <Button
-                      variant={p.isActive ? 'outline' : 'secondary'}
-                      size="sm"
-                      onClick={() =>
-                        handleToggleStatus(p.id, 'isActive', p.isActive)
-                      }
-                      className="h-7 gap-1 text-xs"
-                    >
-                      {p.isActive ? (
-                        <>
-                          <CheckCircle2 className="h-3 w-3 text-success" />{' '}
-                          Active
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="h-3 w-3 text-muted-foreground" />{' '}
-                          Draft
-                        </>
-                      )}
-                    </Button>
-                  </TableCell>
-
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditModal(p)}
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                        aria-label={`Edit ${p.name}`}
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          setDeleteTarget({ id: p.id, name: p.name })
-                        }
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        aria-label={`Delete ${p.name}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+            </TableHeader>
+            <TableBody>
+              {filteredProducts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="p-0">
+                    <EmptyState
+                      title="No matching grocery products found"
+                      description="Try adjusting your filter or search query."
+                    />
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : (
+                filteredProducts.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={
+                            p.primaryImage ||
+                            'https://images.unsplash.com/photo-1566478989037-eec170784d0b?auto=format&fit=crop&w=100&q=80'
+                          }
+                          alt={p.name}
+                          className="h-12 w-12 shrink-0 rounded-xl bg-secondary object-cover border border-border shadow-xs"
+                        />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap font-bold text-sm sm:text-base text-foreground">
+                            <span>{p.name}</span>
+                            {(p as any).customBadge && (
+                              <Badge
+                                variant="default"
+                                className="text-xs px-2 py-0.5 font-bold"
+                              >
+                                {(p as any).customBadge}
+                              </Badge>
+                            )}
+                            {!(p as any).customBadge && p.isFeatured && (
+                              <Badge
+                                variant="secondary"
+                                className="gap-1 text-xs px-2 py-0.5 font-medium"
+                              >
+                                <Sparkles className="h-2.5 w-2.5" /> Featured
+                              </Badge>
+                            )}
+                            {(p as any).customDiscountLabel && (
+                              <Badge
+                                variant="secondary"
+                                className="text-xs px-2 py-0.5 font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+                              >
+                                {(p as any).customDiscountLabel}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="truncate font-mono text-xs text-muted-foreground mt-0.5">
+                            /{p.slug}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    <TableCell>
+                      <div className="space-y-0.5">
+                        <span className="font-medium text-xs text-foreground block">
+                          {p.categoryName}
+                        </span>
+                        {(p as any).brandName ? (
+                          <Badge
+                            variant="outline"
+                            className="text-xs px-1.5 py-0 font-normal text-muted-foreground"
+                          >
+                            {(p as any).brandName}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground block">
+                            No brand
+                          </span>
+                        )}
+                        {(p as any).dealers &&
+                          (p as any).dealers.length > 0 && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <Badge
+                                variant="outline"
+                                className="text-xs py-0 px-1.5 h-4 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20 font-normal flex items-center gap-1"
+                              >
+                                <Store className="h-2.5 w-2.5" />
+                                {(p as any).dealers.length}{' '}
+                                {(p as any).dealers.length === 1
+                                  ? 'dealer'
+                                  : 'dealers'}
+                              </Badge>
+                            </div>
+                          )}
+                      </div>
+                    </TableCell>
+
+                    <TableCell>
+                      <div className="flex max-w-sm flex-wrap gap-1.5">
+                        {p.variants.map((v) => (
+                          <span
+                            key={v.id}
+                            className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs ${
+                              v.stock <= 10
+                                ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                                : 'border-border bg-muted/30 text-foreground'
+                            }`}
+                          >
+                            <span className="font-medium text-xs">
+                              {v.name}
+                            </span>
+                            <span className="font-mono font-semibold text-xs tabular-nums">
+                              {formatNPR(v.price)}
+                            </span>
+                            {v.mrp && v.mrp > v.price && (
+                              <span className="font-mono text-xs text-muted-foreground line-through tabular-nums">
+                                {formatNPR(v.mrp)}
+                              </span>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {v.stock} in stock
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="text-center">
+                      <Button
+                        variant={p.isActive ? 'outline' : 'secondary'}
+                        size="sm"
+                        onClick={() =>
+                          handleToggleStatus(p.id, 'isActive', p.isActive)
+                        }
+                        className="h-7 gap-1 text-xs"
+                      >
+                        {p.isActive ? (
+                          <>
+                            <CheckCircle2 className="h-3 w-3 text-success" />{' '}
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-3 w-3 text-muted-foreground" />{' '}
+                            Draft
+                          </>
+                        )}
+                      </Button>
+                    </TableCell>
+
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditModal(p)}
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          aria-label={`Edit ${p.name}`}
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() =>
+                            setDeleteTarget({ id: p.id, name: p.name })
+                          }
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          aria-label={`Delete ${p.name}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </DataSection>
 
       {/* Add / Edit Dialog */}

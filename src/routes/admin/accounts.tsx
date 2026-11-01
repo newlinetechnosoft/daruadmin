@@ -14,6 +14,8 @@ const accountsSearchSchema = z.object({
       'salary-account',
       'chart-of-accounts',
       'financial-reports',
+      'account-defaults',
+      'settings',
     ])
     .optional(),
   account: z.string().optional(),

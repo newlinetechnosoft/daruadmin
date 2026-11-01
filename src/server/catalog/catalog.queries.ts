@@ -1,5 +1,5 @@
 import { moveToRecycleBin } from '#/server/recycle-bin/recycle-bin.queries'
-import { db } from '#/db'
+import { db, dbTx, type DbTx } from '#/db'
 import {
   liquorCategories,
   liquorBrands,
@@ -713,354 +713,372 @@ export async function getAdminGroceryProductsQuery() {
 
 export async function upsertLiquorProductQuery(
   input: UpsertLiquorProductInput,
+  externalTx?: DbTx,
 ) {
-  const slug = input.slug?.trim() || slugify(input.name)
+  const run = async (tx: DbTx) => {
+    const slug = input.slug?.trim() || slugify(input.name)
 
-  let productId = input.id
+    let productId = input.id
 
-  if (productId) {
-    await db
-      .update(liquorProducts)
-      .set({
-        name: input.name,
-        slug,
-        categoryId: input.categoryId,
-        brandId: input.brandId ?? null,
-        description: input.description ?? null,
-        isFeatured: input.isFeatured,
-        customBadge: input.customBadge ?? null,
-        customDiscountLabel: input.customDiscountLabel ?? null,
-        isActive: input.isActive,
-      })
-      .where(eq(liquorProducts.id, productId))
-  } else {
-    const [inserted] = await db
-      .insert(liquorProducts)
-      .values({
-        name: input.name,
-        slug,
-        categoryId: input.categoryId,
-        brandId: input.brandId ?? null,
-        description: input.description ?? null,
-        isFeatured: input.isFeatured,
-        customBadge: input.customBadge ?? null,
-        customDiscountLabel: input.customDiscountLabel ?? null,
-        isActive: input.isActive,
-      })
-      .returning({ id: liquorProducts.id })
-    productId = inserted.id
-  }
-
-  if (input.images !== undefined) {
-    await db.delete(liquorImages).where(eq(liquorImages.productId, productId))
-    if (input.images.length > 0) {
-      await db.insert(liquorImages).values(
-        input.images.map((img) => ({
-          productId,
-          url: img.url,
-          alt: img.alt ?? input.name,
-          sortOrder: img.sortOrder,
-          isPrimary: img.isPrimary,
-        })),
-      )
-    }
-  } else if (input.imageUrl) {
-    const existingImg = await db
-      .select({ id: liquorImages.id })
-      .from(liquorImages)
-      .where(eq(liquorImages.productId, productId))
-      .limit(1)
-
-    if (existingImg.length > 0) {
-      await db
-        .update(liquorImages)
-        .set({ url: input.imageUrl, alt: input.name, isPrimary: true })
-        .where(eq(liquorImages.id, existingImg[0].id))
+    if (productId) {
+      await tx
+        .update(liquorProducts)
+        .set({
+          name: input.name,
+          slug,
+          categoryId: input.categoryId,
+          brandId: input.brandId ?? null,
+          description: input.description ?? null,
+          isFeatured: input.isFeatured,
+          customBadge: input.customBadge ?? null,
+          customDiscountLabel: input.customDiscountLabel ?? null,
+          isActive: input.isActive,
+        })
+        .where(eq(liquorProducts.id, productId))
     } else {
-      await db.insert(liquorImages).values({
-        productId,
-        url: input.imageUrl,
-        alt: input.name,
-        isPrimary: true,
-      })
+      const [inserted] = await tx
+        .insert(liquorProducts)
+        .values({
+          name: input.name,
+          slug,
+          categoryId: input.categoryId,
+          brandId: input.brandId ?? null,
+          description: input.description ?? null,
+          isFeatured: input.isFeatured,
+          customBadge: input.customBadge ?? null,
+          customDiscountLabel: input.customDiscountLabel ?? null,
+          isActive: input.isActive,
+        })
+        .returning({ id: liquorProducts.id })
+      productId = inserted.id
     }
-  }
 
-  if (input.id) {
-    const keptVariantIds = input.variants
-      .map((v) => v.id)
-      .filter((id): id is string => Boolean(id))
-
-    if (keptVariantIds.length > 0) {
-      const removedVariants = await db
-        .select({ id: liquorVariants.id })
-        .from(liquorVariants)
-        .where(
-          and(
-            eq(liquorVariants.productId, productId),
-            notInArray(liquorVariants.id, keptVariantIds),
-          ),
+    if (input.images !== undefined) {
+      await tx.delete(liquorImages).where(eq(liquorImages.productId, productId))
+      if (input.images.length > 0) {
+        await tx.insert(liquorImages).values(
+          input.images.map((img) => ({
+            productId,
+            url: img.url,
+            alt: img.alt ?? input.name,
+            sortOrder: img.sortOrder,
+            isPrimary: img.isPrimary,
+          })),
         )
-      const removedIds = removedVariants.map((v) => v.id)
-      if (removedIds.length > 0) {
-        await db
-          .delete(dealerStock)
-          .where(
-            and(
-              eq(dealerStock.catalogType, 'liquor'),
-              inArray(dealerStock.variantId, removedIds),
-            ),
-          )
-        await db
-          .delete(liquorVariants)
-          .where(inArray(liquorVariants.id, removedIds))
+      }
+    } else if (input.imageUrl) {
+      const existingImg = await tx
+        .select({ id: liquorImages.id })
+        .from(liquorImages)
+        .where(eq(liquorImages.productId, productId))
+        .limit(1)
+
+      if (existingImg.length > 0) {
+        await tx
+          .update(liquorImages)
+          .set({ url: input.imageUrl, alt: input.name, isPrimary: true })
+          .where(eq(liquorImages.id, existingImg[0].id))
+      } else {
+        await tx.insert(liquorImages).values({
+          productId,
+          url: input.imageUrl,
+          alt: input.name,
+          isPrimary: true,
+        })
       }
     }
-  }
 
-  for (const v of input.variants) {
-    if (v.id) {
-      await db
-        .update(liquorVariants)
-        .set({
-          name: v.name,
-          volumeMl: v.volumeMl,
-          sku: v.sku,
-          price: v.price,
-          mrp: v.mrp ?? null,
-          abv: v.abv ?? null,
-          stock: v.stock,
-          isActive: v.isActive,
-        })
-        .where(eq(liquorVariants.id, v.id))
-    } else {
-      await db
-        .insert(liquorVariants)
-        .values({
-          productId,
-          name: v.name,
-          volumeMl: v.volumeMl,
-          sku: v.sku,
-          price: v.price,
-          mrp: v.mrp ?? null,
-          abv: v.abv ?? null,
-          stock: v.stock,
-          isActive: v.isActive,
-        })
-        .onConflictDoUpdate({
-          target: liquorVariants.sku,
-          set: {
+    if (input.id) {
+      const keptVariantIds = input.variants
+        .map((v) => v.id)
+        .filter((id): id is string => Boolean(id))
+
+      if (keptVariantIds.length > 0) {
+        const removedVariants = await tx
+          .select({ id: liquorVariants.id })
+          .from(liquorVariants)
+          .where(
+            and(
+              eq(liquorVariants.productId, productId),
+              notInArray(liquorVariants.id, keptVariantIds),
+            ),
+          )
+        const removedIds = removedVariants.map((v) => v.id)
+        if (removedIds.length > 0) {
+          await tx
+            .delete(dealerStock)
+            .where(
+              and(
+                eq(dealerStock.catalogType, 'liquor'),
+                inArray(dealerStock.variantId, removedIds),
+              ),
+            )
+          await tx
+            .delete(liquorVariants)
+            .where(inArray(liquorVariants.id, removedIds))
+        }
+      }
+    }
+
+    for (const v of input.variants) {
+      if (v.id) {
+        await tx
+          .update(liquorVariants)
+          .set({
             name: v.name,
             volumeMl: v.volumeMl,
+            sku: v.sku,
             price: v.price,
             mrp: v.mrp ?? null,
             abv: v.abv ?? null,
             stock: v.stock,
             isActive: v.isActive,
-          },
-        })
+          })
+          .where(eq(liquorVariants.id, v.id))
+      } else {
+        await tx
+          .insert(liquorVariants)
+          .values({
+            productId,
+            name: v.name,
+            volumeMl: v.volumeMl,
+            sku: v.sku,
+            price: v.price,
+            mrp: v.mrp ?? null,
+            abv: v.abv ?? null,
+            stock: v.stock,
+            isActive: v.isActive,
+          })
+          .onConflictDoUpdate({
+            target: liquorVariants.sku,
+            set: {
+              name: v.name,
+              volumeMl: v.volumeMl,
+              price: v.price,
+              mrp: v.mrp ?? null,
+              abv: v.abv ?? null,
+              stock: v.stock,
+              isActive: v.isActive,
+            },
+          })
+      }
     }
+
+    if (input.dealerIds !== undefined) {
+      await tx
+        .delete(dealerItems)
+        .where(
+          and(
+            eq(dealerItems.catalogType, 'liquor'),
+            eq(dealerItems.productId, productId),
+          ),
+        )
+      if (input.dealerIds.length > 0) {
+        const uniqueDealers = Array.from(new Set(input.dealerIds))
+        await tx.insert(dealerItems).values(
+          uniqueDealers.map((dealerId) => ({
+            id: crypto.randomUUID(),
+            dealerId,
+            catalogType: 'liquor',
+            productId,
+          })),
+        )
+      }
+    }
+
+    return { success: true, productId }
   }
 
-  if (input.dealerIds !== undefined) {
-    await db
-      .delete(dealerItems)
-      .where(
-        and(
-          eq(dealerItems.catalogType, 'liquor'),
-          eq(dealerItems.productId, productId),
-        ),
-      )
-    if (input.dealerIds.length > 0) {
-      const uniqueDealers = Array.from(new Set(input.dealerIds))
-      await db.insert(dealerItems).values(
-        uniqueDealers.map((dealerId) => ({
-          id: crypto.randomUUID(),
-          dealerId,
-          catalogType: 'liquor',
-          productId,
-        })),
-      )
-    }
+  if (externalTx) {
+    return run(externalTx)
   }
-
-  return { success: true, productId }
+  return dbTx.transaction((tx) => run(tx))
 }
 
 export async function upsertGroceryProductQuery(
   input: UpsertGroceryProductInput,
+  externalTx?: DbTx,
 ) {
-  const slug = input.slug?.trim() || slugify(input.name)
+  const run = async (tx: DbTx) => {
+    const slug = input.slug?.trim() || slugify(input.name)
 
-  let productId = input.id
+    let productId = input.id
 
-  if (productId) {
-    await db
-      .update(groceryProducts)
-      .set({
-        name: input.name,
-        slug,
-        categoryId: input.categoryId,
-        brandId: input.brandId ?? null,
-        description: input.description ?? null,
-        isFeatured: input.isFeatured,
-        customBadge: input.customBadge ?? null,
-        customDiscountLabel: input.customDiscountLabel ?? null,
-        isActive: input.isActive,
-      })
-      .where(eq(groceryProducts.id, productId))
-  } else {
-    const [inserted] = await db
-      .insert(groceryProducts)
-      .values({
-        name: input.name,
-        slug,
-        categoryId: input.categoryId,
-        brandId: input.brandId ?? null,
-        description: input.description ?? null,
-        isFeatured: input.isFeatured,
-        customBadge: input.customBadge ?? null,
-        customDiscountLabel: input.customDiscountLabel ?? null,
-        isActive: input.isActive,
-      })
-      .returning({ id: groceryProducts.id })
-    productId = inserted.id
-  }
-
-  if (input.images !== undefined) {
-    await db.delete(groceryImages).where(eq(groceryImages.productId, productId))
-    if (input.images.length > 0) {
-      await db.insert(groceryImages).values(
-        input.images.map((img) => ({
-          productId,
-          url: img.url,
-          alt: img.alt ?? input.name,
-          sortOrder: img.sortOrder,
-          isPrimary: img.isPrimary,
-        })),
-      )
-    }
-  } else if (input.imageUrl) {
-    const existingImg = await db
-      .select({ id: groceryImages.id })
-      .from(groceryImages)
-      .where(eq(groceryImages.productId, productId))
-      .limit(1)
-
-    if (existingImg.length > 0) {
-      await db
-        .update(groceryImages)
-        .set({ url: input.imageUrl, alt: input.name, isPrimary: true })
-        .where(eq(groceryImages.id, existingImg[0].id))
+    if (productId) {
+      await tx
+        .update(groceryProducts)
+        .set({
+          name: input.name,
+          slug,
+          categoryId: input.categoryId,
+          brandId: input.brandId ?? null,
+          description: input.description ?? null,
+          isFeatured: input.isFeatured,
+          customBadge: input.customBadge ?? null,
+          customDiscountLabel: input.customDiscountLabel ?? null,
+          isActive: input.isActive,
+        })
+        .where(eq(groceryProducts.id, productId))
     } else {
-      await db.insert(groceryImages).values({
-        productId,
-        url: input.imageUrl,
-        alt: input.name,
-        isPrimary: true,
-      })
+      const [inserted] = await tx
+        .insert(groceryProducts)
+        .values({
+          name: input.name,
+          slug,
+          categoryId: input.categoryId,
+          brandId: input.brandId ?? null,
+          description: input.description ?? null,
+          isFeatured: input.isFeatured,
+          customBadge: input.customBadge ?? null,
+          customDiscountLabel: input.customDiscountLabel ?? null,
+          isActive: input.isActive,
+        })
+        .returning({ id: groceryProducts.id })
+      productId = inserted.id
     }
-  }
 
-  if (input.id) {
-    const keptVariantIds = input.variants
-      .map((v) => v.id)
-      .filter((id): id is string => Boolean(id))
-
-    if (keptVariantIds.length > 0) {
-      const removedVariants = await db
-        .select({ id: groceryVariants.id })
-        .from(groceryVariants)
-        .where(
-          and(
-            eq(groceryVariants.productId, productId),
-            notInArray(groceryVariants.id, keptVariantIds),
-          ),
+    if (input.images !== undefined) {
+      await tx
+        .delete(groceryImages)
+        .where(eq(groceryImages.productId, productId))
+      if (input.images.length > 0) {
+        await tx.insert(groceryImages).values(
+          input.images.map((img) => ({
+            productId,
+            url: img.url,
+            alt: img.alt ?? input.name,
+            sortOrder: img.sortOrder,
+            isPrimary: img.isPrimary,
+          })),
         )
-      const removedIds = removedVariants.map((v) => v.id)
-      if (removedIds.length > 0) {
-        await db
-          .delete(dealerStock)
-          .where(
-            and(
-              eq(dealerStock.catalogType, 'grocery'),
-              inArray(dealerStock.variantId, removedIds),
-            ),
-          )
-        await db
-          .delete(groceryVariants)
-          .where(inArray(groceryVariants.id, removedIds))
+      }
+    } else if (input.imageUrl) {
+      const existingImg = await tx
+        .select({ id: groceryImages.id })
+        .from(groceryImages)
+        .where(eq(groceryImages.productId, productId))
+        .limit(1)
+
+      if (existingImg.length > 0) {
+        await tx
+          .update(groceryImages)
+          .set({ url: input.imageUrl, alt: input.name, isPrimary: true })
+          .where(eq(groceryImages.id, existingImg[0].id))
+      } else {
+        await tx.insert(groceryImages).values({
+          productId,
+          url: input.imageUrl,
+          alt: input.name,
+          isPrimary: true,
+        })
       }
     }
-  }
 
-  for (const v of input.variants) {
-    if (v.id) {
-      await db
-        .update(groceryVariants)
-        .set({
-          name: v.name,
-          unit: v.unit,
-          quantity: v.quantity,
-          sku: v.sku,
-          price: v.price,
-          mrp: v.mrp ?? null,
-          stock: v.stock,
-          isActive: v.isActive,
-        })
-        .where(eq(groceryVariants.id, v.id))
-    } else {
-      await db
-        .insert(groceryVariants)
-        .values({
-          productId,
-          name: v.name,
-          unit: v.unit,
-          quantity: v.quantity,
-          sku: v.sku,
-          price: v.price,
-          mrp: v.mrp ?? null,
-          stock: v.stock,
-          isActive: v.isActive,
-        })
-        .onConflictDoUpdate({
-          target: groceryVariants.sku,
-          set: {
+    if (input.id) {
+      const keptVariantIds = input.variants
+        .map((v) => v.id)
+        .filter((id): id is string => Boolean(id))
+
+      if (keptVariantIds.length > 0) {
+        const removedVariants = await tx
+          .select({ id: groceryVariants.id })
+          .from(groceryVariants)
+          .where(
+            and(
+              eq(groceryVariants.productId, productId),
+              notInArray(groceryVariants.id, keptVariantIds),
+            ),
+          )
+        const removedIds = removedVariants.map((v) => v.id)
+        if (removedIds.length > 0) {
+          await tx
+            .delete(dealerStock)
+            .where(
+              and(
+                eq(dealerStock.catalogType, 'grocery'),
+                inArray(dealerStock.variantId, removedIds),
+              ),
+            )
+          await tx
+            .delete(groceryVariants)
+            .where(inArray(groceryVariants.id, removedIds))
+        }
+      }
+    }
+
+    for (const v of input.variants) {
+      if (v.id) {
+        await tx
+          .update(groceryVariants)
+          .set({
             name: v.name,
             unit: v.unit,
             quantity: v.quantity,
+            sku: v.sku,
             price: v.price,
             mrp: v.mrp ?? null,
             stock: v.stock,
             isActive: v.isActive,
-          },
-        })
+          })
+          .where(eq(groceryVariants.id, v.id))
+      } else {
+        await tx
+          .insert(groceryVariants)
+          .values({
+            productId,
+            name: v.name,
+            unit: v.unit,
+            quantity: v.quantity,
+            sku: v.sku,
+            price: v.price,
+            mrp: v.mrp ?? null,
+            stock: v.stock,
+            isActive: v.isActive,
+          })
+          .onConflictDoUpdate({
+            target: groceryVariants.sku,
+            set: {
+              name: v.name,
+              unit: v.unit,
+              quantity: v.quantity,
+              price: v.price,
+              mrp: v.mrp ?? null,
+              stock: v.stock,
+              isActive: v.isActive,
+            },
+          })
+      }
     }
+
+    if (input.dealerIds !== undefined) {
+      await tx
+        .delete(dealerItems)
+        .where(
+          and(
+            eq(dealerItems.catalogType, 'grocery'),
+            eq(dealerItems.productId, productId),
+          ),
+        )
+      if (input.dealerIds.length > 0) {
+        const uniqueDealers = Array.from(new Set(input.dealerIds))
+        await tx.insert(dealerItems).values(
+          uniqueDealers.map((dealerId) => ({
+            id: crypto.randomUUID(),
+            dealerId,
+            catalogType: 'grocery',
+            productId,
+          })),
+        )
+      }
+    }
+
+    return { success: true, productId }
   }
 
-  if (input.dealerIds !== undefined) {
-    await db
-      .delete(dealerItems)
-      .where(
-        and(
-          eq(dealerItems.catalogType, 'grocery'),
-          eq(dealerItems.productId, productId),
-        ),
-      )
-    if (input.dealerIds.length > 0) {
-      const uniqueDealers = Array.from(new Set(input.dealerIds))
-      await db.insert(dealerItems).values(
-        uniqueDealers.map((dealerId) => ({
-          id: crypto.randomUUID(),
-          dealerId,
-          catalogType: 'grocery',
-          productId,
-        })),
-      )
-    }
+  if (externalTx) {
+    return run(externalTx)
   }
-
-  return { success: true, productId }
+  return dbTx.transaction((tx) => run(tx))
 }
 
 export async function toggleProductStatusQuery(
@@ -1232,143 +1250,66 @@ export async function upsertBrandQuery(input: UpsertBrandInput) {
   }
 }
 
-export async function deleteItemQuery(input: DeleteItemInput) {
-  if (input.catalogType === 'liquor') {
-    const [prod] = await db
-      .select()
-      .from(liquorProducts)
-      .where(eq(liquorProducts.id, input.id))
-      .limit(1)
+export async function deleteItemQuery(
+  input: DeleteItemInput,
+  externalTx?: DbTx,
+) {
+  const run = async (tx: DbTx) => {
+    if (input.catalogType === 'liquor') {
+      const [prod] = await tx
+        .select()
+        .from(liquorProducts)
+        .where(eq(liquorProducts.id, input.id))
+        .limit(1)
 
-    if (prod) {
-      const [variants, images, dItems] = await Promise.all([
-        db.select().from(liquorVariants).where(eq(liquorVariants.productId, input.id)),
-        db.select().from(liquorImages).where(eq(liquorImages.productId, input.id)),
-        db.select().from(dealerItems).where(
-          and(eq(dealerItems.catalogType, 'liquor'), eq(dealerItems.productId, input.id)),
-        ),
-      ])
+      if (prod) {
+        const [variants, images, dItems] = await Promise.all([
+          tx
+            .select()
+            .from(liquorVariants)
+            .where(eq(liquorVariants.productId, input.id)),
+          tx
+            .select()
+            .from(liquorImages)
+            .where(eq(liquorImages.productId, input.id)),
+          tx
+            .select()
+            .from(dealerItems)
+            .where(
+              and(
+                eq(dealerItems.catalogType, 'liquor'),
+                eq(dealerItems.productId, input.id),
+              ),
+            ),
+        ])
 
-      await moveToRecycleBin({
-        entityType: 'liquor_product',
-        entityId: prod.id,
-        name: prod.name,
-        description: prod.slug,
-        data: { product: prod, variants, images, dealerItems: dItems },
-      })
-    }
-
-    await db
-      .delete(dealerItems)
-      .where(
-        and(
-          eq(dealerItems.catalogType, 'liquor'),
-          eq(dealerItems.productId, input.id),
-        ),
-      )
-    const variantRows = await db
-      .select({ id: liquorVariants.id })
-      .from(liquorVariants)
-      .where(eq(liquorVariants.productId, input.id))
-    const variantIds = variantRows.map((v) => v.id)
-    if (variantIds.length > 0) {
-      await db
-        .delete(dealerStock)
-        .where(
-          and(
-            eq(dealerStock.catalogType, 'liquor'),
-            inArray(dealerStock.variantId, variantIds),
-          ),
+        await moveToRecycleBin(
+          {
+            entityType: 'liquor_product',
+            entityId: prod.id,
+            name: prod.name,
+            description: prod.slug,
+            data: { product: prod, variants, images, dealerItems: dItems },
+          },
+          tx,
         )
-    }
-    await db.delete(liquorProducts).where(eq(liquorProducts.id, input.id))
-  } else if (input.catalogType === 'grocery') {
-    const [prod] = await db
-      .select()
-      .from(groceryProducts)
-      .where(eq(groceryProducts.id, input.id))
-      .limit(1)
+      }
 
-    if (prod) {
-      const [variants, images, dItems] = await Promise.all([
-        db.select().from(groceryVariants).where(eq(groceryVariants.productId, input.id)),
-        db.select().from(groceryImages).where(eq(groceryImages.productId, input.id)),
-        db.select().from(dealerItems).where(
-          and(eq(dealerItems.catalogType, 'grocery'), eq(dealerItems.productId, input.id)),
-        ),
-      ])
-
-      await moveToRecycleBin({
-        entityType: 'grocery_product',
-        entityId: prod.id,
-        name: prod.name,
-        description: prod.slug,
-        data: { product: prod, variants, images, dealerItems: dItems },
-      })
-    }
-
-    await db
-      .delete(dealerItems)
-      .where(
-        and(
-          eq(dealerItems.catalogType, 'grocery'),
-          eq(dealerItems.productId, input.id),
-        ),
-      )
-    const variantRows = await db
-      .select({ id: groceryVariants.id })
-      .from(groceryVariants)
-      .where(eq(groceryVariants.productId, input.id))
-    const variantIds = variantRows.map((v) => v.id)
-    if (variantIds.length > 0) {
-      await db
-        .delete(dealerStock)
-        .where(
-          and(
-            eq(dealerStock.catalogType, 'grocery'),
-            inArray(dealerStock.variantId, variantIds),
-          ),
-        )
-    }
-    await db.delete(groceryProducts).where(eq(groceryProducts.id, input.id))
-  } else if (input.catalogType === 'liquor-category') {
-    const [cat] = await db
-      .select()
-      .from(liquorCategories)
-      .where(eq(liquorCategories.id, input.id))
-      .limit(1)
-
-    if (cat) {
-      await moveToRecycleBin({
-        entityType: 'liquor_category',
-        entityId: cat.id,
-        name: cat.name,
-        description: cat.slug,
-        data: { category: cat },
-      })
-    }
-
-    const products = await db
-      .select({ id: liquorProducts.id })
-      .from(liquorProducts)
-      .where(eq(liquorProducts.categoryId, input.id))
-    const productIds = products.map((p) => p.id)
-    if (productIds.length > 0) {
-      await db
+      await tx
         .delete(dealerItems)
         .where(
           and(
             eq(dealerItems.catalogType, 'liquor'),
-            inArray(dealerItems.productId, productIds),
+            eq(dealerItems.productId, input.id),
           ),
         )
-      const variantRows = await db
+      const variantRows = await tx
         .select({ id: liquorVariants.id })
         .from(liquorVariants)
-        .where(inArray(liquorVariants.productId, productIds))
+        .where(eq(liquorVariants.productId, input.id))
       const variantIds = variantRows.map((v) => v.id)
       if (variantIds.length > 0) {
-        await db
+        await tx
           .delete(dealerStock)
           .where(
             and(
@@ -1377,46 +1318,62 @@ export async function deleteItemQuery(input: DeleteItemInput) {
             ),
           )
       }
-    }
-    await db.delete(liquorCategories).where(eq(liquorCategories.id, input.id))
-  } else if (input.catalogType === 'grocery-category') {
-    const [cat] = await db
-      .select()
-      .from(groceryCategories)
-      .where(eq(groceryCategories.id, input.id))
-      .limit(1)
+      await tx.delete(liquorProducts).where(eq(liquorProducts.id, input.id))
+    } else if (input.catalogType === 'grocery') {
+      const [prod] = await tx
+        .select()
+        .from(groceryProducts)
+        .where(eq(groceryProducts.id, input.id))
+        .limit(1)
 
-    if (cat) {
-      await moveToRecycleBin({
-        entityType: 'grocery_category',
-        entityId: cat.id,
-        name: cat.name,
-        description: cat.slug,
-        data: { category: cat },
-      })
-    }
+      if (prod) {
+        const [variants, images, dItems] = await Promise.all([
+          tx
+            .select()
+            .from(groceryVariants)
+            .where(eq(groceryVariants.productId, input.id)),
+          tx
+            .select()
+            .from(groceryImages)
+            .where(eq(groceryImages.productId, input.id)),
+          tx
+            .select()
+            .from(dealerItems)
+            .where(
+              and(
+                eq(dealerItems.catalogType, 'grocery'),
+                eq(dealerItems.productId, input.id),
+              ),
+            ),
+        ])
 
-    const products = await db
-      .select({ id: groceryProducts.id })
-      .from(groceryProducts)
-      .where(eq(groceryProducts.categoryId, input.id))
-    const productIds = products.map((p) => p.id)
-    if (productIds.length > 0) {
-      await db
+        await moveToRecycleBin(
+          {
+            entityType: 'grocery_product',
+            entityId: prod.id,
+            name: prod.name,
+            description: prod.slug,
+            data: { product: prod, variants, images, dealerItems: dItems },
+          },
+          tx,
+        )
+      }
+
+      await tx
         .delete(dealerItems)
         .where(
           and(
             eq(dealerItems.catalogType, 'grocery'),
-            inArray(dealerItems.productId, productIds),
+            eq(dealerItems.productId, input.id),
           ),
         )
-      const variantRows = await db
+      const variantRows = await tx
         .select({ id: groceryVariants.id })
         .from(groceryVariants)
-        .where(inArray(groceryVariants.productId, productIds))
+        .where(eq(groceryVariants.productId, input.id))
       const variantIds = variantRows.map((v) => v.id)
       if (variantIds.length > 0) {
-        await db
+        await tx
           .delete(dealerStock)
           .where(
             and(
@@ -1425,75 +1382,197 @@ export async function deleteItemQuery(input: DeleteItemInput) {
             ),
           )
       }
-    }
-    await db.delete(groceryCategories).where(eq(groceryCategories.id, input.id))
-  } else if (input.catalogType === 'grocery-brand') {
-    const [brand] = await db
-      .select()
-      .from(groceryBrands)
-      .where(eq(groceryBrands.id, input.id))
-      .limit(1)
-
-    if (brand) {
-      await moveToRecycleBin({
-        entityType: 'grocery_brand',
-        entityId: brand.id,
-        name: brand.name,
-        description: brand.slug,
-        data: { brand },
-      })
-    }
-
-    await db.delete(groceryBrands).where(eq(groceryBrands.id, input.id))
-  } else if (input.catalogType === 'liquor-brand') {
-    const [brand] = await db
-      .select()
-      .from(liquorBrands)
-      .where(eq(liquorBrands.id, input.id))
-      .limit(1)
-
-    if (brand) {
-      await moveToRecycleBin({
-        entityType: 'liquor_brand',
-        entityId: brand.id,
-        name: brand.name,
-        description: brand.slug,
-        data: { brand },
-      })
-    }
-
-    await db.delete(liquorBrands).where(eq(liquorBrands.id, input.id))
-  } else {
-    const [dealer] = await db
-      .select()
-      .from(dealers)
-      .where(eq(dealers.id, input.id))
-      .limit(1)
-
-    if (dealer) {
-      const dItems = await db
+      await tx.delete(groceryProducts).where(eq(groceryProducts.id, input.id))
+    } else if (input.catalogType === 'liquor-category') {
+      const [cat] = await tx
         .select()
-        .from(dealerItems)
-        .where(eq(dealerItems.dealerId, input.id))
+        .from(liquorCategories)
+        .where(eq(liquorCategories.id, input.id))
+        .limit(1)
 
-      await moveToRecycleBin({
-        entityType: 'dealer',
-        entityId: dealer.id,
-        name: dealer.name,
-        description: dealer.contact,
-        data: { dealer, dealerItems: dItems },
-      })
+      if (cat) {
+        await moveToRecycleBin(
+          {
+            entityType: 'liquor_category',
+            entityId: cat.id,
+            name: cat.name,
+            description: cat.slug,
+            data: { category: cat },
+          },
+          tx,
+        )
+      }
+
+      const products = await tx
+        .select({ id: liquorProducts.id })
+        .from(liquorProducts)
+        .where(eq(liquorProducts.categoryId, input.id))
+      const productIds = products.map((p) => p.id)
+      if (productIds.length > 0) {
+        await tx
+          .delete(dealerItems)
+          .where(
+            and(
+              eq(dealerItems.catalogType, 'liquor'),
+              inArray(dealerItems.productId, productIds),
+            ),
+          )
+        const variantRows = await tx
+          .select({ id: liquorVariants.id })
+          .from(liquorVariants)
+          .where(inArray(liquorVariants.productId, productIds))
+        const variantIds = variantRows.map((v) => v.id)
+        if (variantIds.length > 0) {
+          await tx
+            .delete(dealerStock)
+            .where(
+              and(
+                eq(dealerStock.catalogType, 'liquor'),
+                inArray(dealerStock.variantId, variantIds),
+              ),
+            )
+        }
+      }
+      await tx.delete(liquorCategories).where(eq(liquorCategories.id, input.id))
+    } else if (input.catalogType === 'grocery-category') {
+      const [cat] = await tx
+        .select()
+        .from(groceryCategories)
+        .where(eq(groceryCategories.id, input.id))
+        .limit(1)
+
+      if (cat) {
+        await moveToRecycleBin(
+          {
+            entityType: 'grocery_category',
+            entityId: cat.id,
+            name: cat.name,
+            description: cat.slug,
+            data: { category: cat },
+          },
+          tx,
+        )
+      }
+
+      const products = await tx
+        .select({ id: groceryProducts.id })
+        .from(groceryProducts)
+        .where(eq(groceryProducts.categoryId, input.id))
+      const productIds = products.map((p) => p.id)
+      if (productIds.length > 0) {
+        await tx
+          .delete(dealerItems)
+          .where(
+            and(
+              eq(dealerItems.catalogType, 'grocery'),
+              inArray(dealerItems.productId, productIds),
+            ),
+          )
+        const variantRows = await tx
+          .select({ id: groceryVariants.id })
+          .from(groceryVariants)
+          .where(inArray(groceryVariants.productId, productIds))
+        const variantIds = variantRows.map((v) => v.id)
+        if (variantIds.length > 0) {
+          await tx
+            .delete(dealerStock)
+            .where(
+              and(
+                eq(dealerStock.catalogType, 'grocery'),
+                inArray(dealerStock.variantId, variantIds),
+              ),
+            )
+        }
+      }
+      await tx
+        .delete(groceryCategories)
+        .where(eq(groceryCategories.id, input.id))
+    } else if (input.catalogType === 'grocery-brand') {
+      const [brand] = await tx
+        .select()
+        .from(groceryBrands)
+        .where(eq(groceryBrands.id, input.id))
+        .limit(1)
+
+      if (brand) {
+        await moveToRecycleBin(
+          {
+            entityType: 'grocery_brand',
+            entityId: brand.id,
+            name: brand.name,
+            description: brand.slug,
+            data: { brand },
+          },
+          tx,
+        )
+      }
+
+      await tx.delete(groceryBrands).where(eq(groceryBrands.id, input.id))
+    } else if (input.catalogType === 'liquor-brand') {
+      const [brand] = await tx
+        .select()
+        .from(liquorBrands)
+        .where(eq(liquorBrands.id, input.id))
+        .limit(1)
+
+      if (brand) {
+        await moveToRecycleBin(
+          {
+            entityType: 'liquor_brand',
+            entityId: brand.id,
+            name: brand.name,
+            description: brand.slug,
+            data: { brand },
+          },
+          tx,
+        )
+      }
+
+      await tx.delete(liquorBrands).where(eq(liquorBrands.id, input.id))
+    } else {
+      const [dealer] = await tx
+        .select()
+        .from(dealers)
+        .where(eq(dealers.id, input.id))
+        .limit(1)
+
+      if (dealer) {
+        const dItems = await tx
+          .select()
+          .from(dealerItems)
+          .where(eq(dealerItems.dealerId, input.id))
+
+        await moveToRecycleBin(
+          {
+            entityType: 'dealer',
+            entityId: dealer.id,
+            name: dealer.name,
+            description: dealer.contact,
+            data: { dealer, dealerItems: dItems },
+          },
+          tx,
+        )
+      }
+
+      await tx.delete(dealerItems).where(eq(dealerItems.dealerId, input.id))
+      await tx.delete(dealers).where(eq(dealers.id, input.id))
     }
-
-    await db.delete(dealerItems).where(eq(dealerItems.dealerId, input.id))
-    await db.delete(dealers).where(eq(dealers.id, input.id))
+    return { success: true }
   }
+
+  const result = externalTx
+    ? await run(externalTx)
+    : await dbTx.transaction((tx) => run(tx))
+
   invalidateCatalogCache()
-  return { success: true }
+  return result
 }
 
-export async function toggleCategoryStatusQuery(input: ToggleCategoryStatusInput) {
-  const table = input.catalogType === 'liquor' ? liquorCategories : groceryCategories
+export async function toggleCategoryStatusQuery(
+  input: ToggleCategoryStatusInput,
+) {
+  const table =
+    input.catalogType === 'liquor' ? liquorCategories : groceryCategories
   await db
     .update(table)
     .set({

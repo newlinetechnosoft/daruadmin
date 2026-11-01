@@ -52,9 +52,11 @@ import {
 export function ShippingPanel() {
   const queryClient = useQueryClient()
   const router = useRouter()
-  const { data: shippingData, isFetching, refetch } = useSuspenseQuery(
-    adminQueries.shipping(),
-  )
+  const {
+    data: shippingData,
+    isFetching,
+    refetch,
+  } = useSuspenseQuery(adminQueries.shipping())
   const ops = shippingData.ops
 
   const invalidateShipping = async () => {
@@ -334,64 +336,64 @@ export function ShippingPanel() {
                       key={zone.id}
                       className="transition-all duration-200 hover:bg-muted/30 animate-in fade-in-50"
                     >
-                    <TableCell>
-                      <div className="font-medium text-xs text-foreground">
-                        {zone.name}
-                      </div>
-                      <div className="text-xs text-muted-foreground max-w-xs truncate">
-                        {zone.areas}
-                      </div>
-                    </TableCell>
+                      <TableCell>
+                        <div className="font-medium text-xs text-foreground">
+                          {zone.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground max-w-xs truncate">
+                          {zone.areas}
+                        </div>
+                      </TableCell>
 
-                    <TableCell>
-                      <span className="font-mono text-xs tabular-nums text-foreground">
-                        {formatNPR(zone.deliveryCharge)}
-                      </span>
-                    </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-xs tabular-nums text-foreground">
+                          {formatNPR(zone.deliveryCharge)}
+                        </span>
+                      </TableCell>
 
-                    <TableCell>
-                      <span className="text-xs text-muted-foreground flex items-center gap-1 font-mono">
-                        <Clock className="h-3 w-3" />
-                        {zone.etaMinutes} mins
-                      </span>
-                    </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-muted-foreground flex items-center gap-1 font-mono">
+                          <Clock className="h-3 w-3" />
+                          {zone.etaMinutes} mins
+                        </span>
+                      </TableCell>
 
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className="text-xs font-normal capitalize"
-                      >
-                        {zone.courier}
-                      </Badge>
-                    </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="secondary"
+                          className="text-xs font-normal capitalize"
+                        >
+                          {zone.courier}
+                        </Badge>
+                      </TableCell>
 
-                    <TableCell>
-                      <Badge
-                        variant={zone.active ? 'default' : 'outline'}
-                        className="text-xs font-normal"
-                      >
-                        {zone.active ? 'Active' : 'Disabled'}
-                      </Badge>
-                    </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={zone.active ? 'default' : 'outline'}
+                          className="text-xs font-normal"
+                        >
+                          {zone.active ? 'Active' : 'Disabled'}
+                        </Badge>
+                      </TableCell>
 
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleOpenEdit(zone)}
-                        className="h-7 gap-1 px-2 text-xs"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                        Edit
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </DataSection>
-      </div>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenEdit(zone)}
+                          className="h-7 gap-1 px-2 text-xs"
+                        >
+                          <Edit2 className="h-3 w-3" />
+                          Edit
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </DataSection>
+        </div>
       </div>
 
       {/* Add / Edit Zone Dialog */}

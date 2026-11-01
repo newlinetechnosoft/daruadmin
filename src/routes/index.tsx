@@ -18,7 +18,9 @@ import {
 export const Route = createFileRoute('/')({
   loader: async ({ context }) => {
     const [groceryCategories, liquorCategories] = await Promise.all([
-      context.queryClient.ensureQueryData(storefrontQueries.groceryCategories()),
+      context.queryClient.ensureQueryData(
+        storefrontQueries.groceryCategories(),
+      ),
       context.queryClient.ensureQueryData(storefrontQueries.liquorCategories()),
     ])
     return { groceryCategories, liquorCategories }
@@ -379,7 +381,6 @@ const DRINK_BENTO_SLOTS = [
   },
 ]
 
-
 function DrinkTileBody({
   lines,
   src,
@@ -453,7 +454,7 @@ function SearchIcon({ className = 'h-5 w-5' }: { className?: string }) {
 function HomePage() {
   const navigate = useNavigate()
   const loaderData = Route.useLoaderData()
-    const { data: allGroceryCategories = loaderData?.groceryCategories ?? [] } =
+  const { data: allGroceryCategories = loaderData?.groceryCategories ?? [] } =
     useQuery({
       ...storefrontQueries.groceryCategories(),
       initialData: loaderData?.groceryCategories,
@@ -545,8 +546,9 @@ function HomePage() {
                   loading={idx === 0 ? 'eager' : 'lazy'}
                   decoding="async"
                   fetchPriority={idx === 0 ? 'high' : 'auto'}
-                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${idx === currentSlide ? 'scale-110' : 'scale-100'
-                    }`}
+                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${
+                    idx === currentSlide ? 'scale-110' : 'scale-100'
+                  }`}
                 />
               </div>
             ))}
@@ -621,10 +623,11 @@ function HomePage() {
                   key={idx}
                   type="button"
                   onClick={() => setCurrentSlide(idx)}
-                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${idx === currentSlide
-                    ? 'w-8 bg-primary shadow-md shadow-primary/50'
-                    : 'w-2.5 bg-white/70 hover:bg-white'
-                    }`}
+                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                    idx === currentSlide
+                      ? 'w-8 bg-primary shadow-md shadow-primary/50'
+                      : 'w-2.5 bg-white/70 hover:bg-white'
+                  }`}
                   aria-label={`Go to slide ${idx + 1}`}
                 />
               ))}
@@ -679,7 +682,8 @@ function HomePage() {
                   Curated Drink Menu Coming Up
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Browse our full chilled beer, premier spirits and wine catalog.
+                  Browse our full chilled beer, premier spirits and wine
+                  catalog.
                 </p>
                 <Link
                   to="/drinks"
@@ -771,7 +775,11 @@ function HomePage() {
                     return (
                       <Link
                         key={cat.id}
-                        to={cat.slug === 'party-essentials' ? '/grocery' : '/drinks'}
+                        to={
+                          cat.slug === 'party-essentials'
+                            ? '/grocery'
+                            : '/drinks'
+                        }
                         search={{ category: cat.slug }}
                         className={`${drinkTile} ${slot.className}`}
                       >
@@ -842,7 +850,8 @@ function HomePage() {
                   Shop by food
                 </h2>
                 <p className="mt-2.5 max-w-xl text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Hot meals, late-night bites, and essential snacks delivered fresh to your doorstep in 30 minutes.
+                  Hot meals, late-night bites, and essential snacks delivered
+                  fresh to your doorstep in 30 minutes.
                 </p>
               </div>
 
@@ -936,33 +945,13 @@ function HomePage() {
           <div
             className={`${wrap} grid items-center gap-14 py-16 sm:py-24 lg:grid-cols-2`}
           >
-            <div className="flex justify-center lg:justify-start">
-              <div className="w-60 rounded-[2.5rem] bg-foreground text-background p-2.5 shadow-2xl sm:w-72">
-                <div className="relative flex aspect-[9/17] flex-col justify-between overflow-hidden rounded-[2rem] bg-card border border-border p-6 text-card-foreground">
-                  <div>
-                    <span className="text-xs font-black uppercase tracking-tighter">
-                      <img
-                        src="/mezmani_logo.webp"
-                        alt="LOGO"
-                        width="180"
-                        height="180"
-                        loading="lazy"
-                        className="-ml-2"
-                      />
-                    </span>
-                    <strong className="mt-4 block text-3xl font-black uppercase leading-[0.92] tracking-tighter">
-                      Good times
-                      <br />
-                      delivered.
-                    </strong>
-                  </div>
-                  <img
-                    src="/images/riderimage.jpeg"
-                    alt="Delivery rider"
-                    className="mx-auto h-[60%] w-full object-cover object-center"
-                  />
-                </div>
-              </div>
+            <div className="flex items-center justify-center lg:justify-start">
+              <img
+                src="/images/rider.jpeg"
+                alt="Mezmani delivery rider"
+                loading="lazy"
+                className="w-full max-w-md rounded-2xl object-cover"
+              />
             </div>
 
             <div>

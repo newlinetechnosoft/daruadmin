@@ -41,7 +41,11 @@ type CatalogTab = 'liquor' | 'grocery'
 
 export function BrandsPanel() {
   const queryClient = useQueryClient()
-  const { data: brandsData, isFetching, refetch } = useSuspenseQuery(adminQueries.brands())
+  const {
+    data: brandsData,
+    isFetching,
+    refetch,
+  } = useSuspenseQuery(adminQueries.brands())
   const { data: access } = useSuspenseQuery(adminQueries.access())
 
   const grants = access.authenticated ? access.grants : null

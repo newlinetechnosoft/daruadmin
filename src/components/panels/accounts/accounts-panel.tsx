@@ -9,8 +9,10 @@ import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
-import { DateRangeFilter, useDateFilter } from '#/components/shared/date-range-filter'
-import { addLedgerFn } from '#/server/operations/operations.functions'
+import {
+  DateRangeFilter,
+  useDateFilter,
+} from '#/components/shared/date-range-filter'
 import {
   postManualJournalVoucherFn,
   recordDealerDisbursementFn,
@@ -46,6 +48,7 @@ import {
   FileText,
   ExternalLink,
   FileSpreadsheet,
+  SlidersHorizontal,
   ArrowRight,
   X,
   Calendar,
@@ -81,6 +84,7 @@ import { RiderPayrollRunDialog } from './rider-payroll-run-dialog'
 import { RiderSettlementApprovalDialog } from './rider-settlement-approval-dialog'
 import { VoucherDetailsDialog } from './voucher-details-dialog'
 import { FinancialReportsTab } from './financial-reports-tab'
+import { AccountDefaultsTab } from './account-defaults-tab'
 import type { DetailedJournalEntry } from '#/server/finance/finance.queries'
 
 const routeApi = getRouteApi('/admin/accounts')
@@ -93,13 +97,17 @@ type SubAccountTab =
   | 'salary-account'
   | 'chart-of-accounts'
   | 'financial-reports'
+  | 'account-defaults'
+  | 'settings'
 
 export function AccountsPanel() {
   const queryClient = useQueryClient()
   const router = useRouter()
-  const { data: ledgerData, isFetching, refetch } = useSuspenseQuery(
-    adminQueries.ledger(),
-  )
+  const {
+    data: ledgerData,
+    isFetching,
+    refetch,
+  } = useSuspenseQuery(adminQueries.ledger())
   const ops = ledgerData.ops
 
   const invalidateLedger = async () => {
@@ -187,7 +195,6 @@ export function AccountsPanel() {
   const [isBatchDealerSettlementOpen, setIsBatchDealerSettlementOpen] =
     useState(false)
   const [batchDealerId, setBatchDealerId] = useState<string>('')
-  const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false)
   const [isRiderPayrollRunOpen, setIsRiderPayrollRunOpen] = useState(false)
   const [isRiderApprovalModalOpen, setIsRiderApprovalModalOpen] =
     useState(false)
@@ -222,15 +229,6 @@ export function AccountsPanel() {
     account: 'bank',
     memo: '',
     ref: '',
-  })
-
-  // Salary disbursement form
-  const [salaryForm, setSalaryForm] = useState({
-    riderId: '',
-    recipientName: '',
-    amountInRs: 1500,
-    account: 'bank',
-    memo: 'Rider weekly performance commission disbursement',
   })
 
   // ----------------------------------------------------
@@ -630,9 +628,18 @@ export function AccountsPanel() {
     })
   }, [dateFilteredOrders, salesPaymentFilter, salesStatusFilter, salesSearch])
 
-  const orderGrossRevenue = dateFilteredOrders.reduce((sum, o) => sum + o.total, 0)
-  const orderNetSales = dateFilteredOrders.reduce((sum, o) => sum + o.subtotal, 0)
-  const orderDiscountsGiven = dateFilteredOrders.reduce((sum, o) => sum + o.discount, 0)
+  const orderGrossRevenue = dateFilteredOrders.reduce(
+    (sum, o) => sum + o.total,
+    0,
+  )
+  const orderNetSales = dateFilteredOrders.reduce(
+    (sum, o) => sum + o.subtotal,
+    0,
+  )
+  const orderDiscountsGiven = dateFilteredOrders.reduce(
+    (sum, o) => sum + o.discount,
+    0,
+  )
   const orderDeliveryFees = dateFilteredOrders.reduce(
     (sum, o) => sum + o.deliveryCharge,
     0,
@@ -810,52 +817,6 @@ export function AccountsPanel() {
     }
   }
 
-  const handleOpenSalaryDisbursement = (
-    riderId?: string,
-    riderName?: string,
-  ) => {
-    setSalaryForm({
-      riderId: riderId || '',
-      recipientName: riderName || '',
-      amountInRs: 2500,
-      account: 'bank',
-      memo: riderName
-        ? `Delivery payroll compensation: ${riderName}`
-        : 'Rider & staff payroll disbursement',
-    })
-    setIsSalaryModalOpen(true)
-  }
-
-  const handlePostSalaryDisbursement = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (salaryForm.amountInRs <= 0) {
-      toast.error('Please enter a valid salary amount')
-      return
-    }
-
-    try {
-      setIsSubmitting(true)
-      await addLedgerFn({
-        data: {
-          type: 'debit',
-          category: 'salary',
-          account: salaryForm.account,
-          memo: salaryForm.memo,
-          amount: toPaisa(Number(salaryForm.amountInRs)),
-          refType: 'salary',
-          refId: salaryForm.riderId || null,
-        },
-      })
-      toast.success('Salary disbursement recorded in general ledger')
-      setIsSalaryModalOpen(false)
-      await invalidateLedger()
-    } catch {
-      toast.error('Failed to record salary disbursement')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   const handleExportCSV = () => {
     const headers =
       'ID,Date,Type,Category,Account,AmountNPR,Memo,RefType,RefID\n'
@@ -925,6 +886,8 @@ export function AccountsPanel() {
           event: null,
           postingStatus: 'posted',
           reversalOf: null,
+          isReversed: false,
+          reversedBy: null,
           metadata: null,
           createdBy: 'system',
           totalDebit,
@@ -1052,1626 +1015,955 @@ export function AccountsPanel() {
       {/* Sub-Accounts Navigation Tabs */}
       <DataSection isRefreshing={isFetching}>
         <div className="border-b border-border">
-        <Tabs
-          value={activeTab}
-          onValueChange={(val) => setActiveTab(val as SubAccountTab)}
-        >
-          <TabsList className="flex h-10 w-full items-center justify-start gap-1 bg-transparent p-0 overflow-x-auto click-scroll border-none">
-            <TabsTrigger
-              value="ledger"
-              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
-            >
-              <Receipt className="h-3.5 w-3.5" />
-              <span>General Ledger</span>
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
-                {dateFilteredJournalEntries.length}
-              </span>
-            </TabsTrigger>
+          <Tabs
+            value={activeTab}
+            onValueChange={(val) => setActiveTab(val as SubAccountTab)}
+          >
+            <TabsList className="flex h-10 w-full items-center justify-start gap-1 bg-transparent p-0 overflow-x-auto click-scroll border-none">
+              <TabsTrigger
+                value="ledger"
+                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
+              >
+                <Receipt className="h-3.5 w-3.5" />
+                <span>General Ledger</span>
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
+                  {dateFilteredJournalEntries.length}
+                </span>
+              </TabsTrigger>
 
-            <TabsTrigger
-              value="transactions"
-              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
-            >
-              <CreditCard className="h-3.5 w-3.5" />
-              <span>Transactions</span>
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
-                {dateFilteredPayments.length}
-              </span>
-            </TabsTrigger>
+              <TabsTrigger
+                value="transactions"
+                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
+              >
+                <CreditCard className="h-3.5 w-3.5" />
+                <span>Transactions</span>
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
+                  {dateFilteredPayments.length}
+                </span>
+              </TabsTrigger>
 
-            <TabsTrigger
-              value="dealer-ledger"
-              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
-            >
-              <Store className="h-3.5 w-3.5" />
-              <span>Dealer Payables</span>
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
-                {rawDealers.length}
-              </span>
-            </TabsTrigger>
+              <TabsTrigger
+                value="dealer-ledger"
+                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
+              >
+                <Store className="h-3.5 w-3.5" />
+                <span>Dealer Payables</span>
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
+                  {rawDealers.length}
+                </span>
+              </TabsTrigger>
 
-            <TabsTrigger
-              value="sales-account"
-              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
-            >
-              <TrendingUp className="h-3.5 w-3.5" />
-              <span>Sales Account</span>
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
-                {dateFilteredOrders.length}
-              </span>
-            </TabsTrigger>
+              <TabsTrigger
+                value="sales-account"
+                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
+              >
+                <TrendingUp className="h-3.5 w-3.5" />
+                <span>Sales Account</span>
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
+                  {dateFilteredOrders.length}
+                </span>
+              </TabsTrigger>
 
-            <TabsTrigger
-              value="salary-account"
-              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
-            >
-              <Coins className="h-3.5 w-3.5" />
-              <span>Rider Payroll</span>
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
-                {dateFilteredSettlements.length}
-              </span>
-            </TabsTrigger>
+              <TabsTrigger
+                value="salary-account"
+                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
+              >
+                <Coins className="h-3.5 w-3.5" />
+                <span>Rider Payroll</span>
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
+                  {dateFilteredSettlements.length}
+                </span>
+              </TabsTrigger>
 
-            <TabsTrigger
-              value="chart-of-accounts"
-              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
-            >
-              <Building2 className="h-3.5 w-3.5" />
-              <span>Chart of Accounts</span>
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
-                39
-              </span>
-            </TabsTrigger>
+              <TabsTrigger
+                value="chart-of-accounts"
+                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
+              >
+                <Building2 className="h-3.5 w-3.5" />
+                <span>Chart of Accounts</span>
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
+                  39
+                </span>
+              </TabsTrigger>
 
-            <TabsTrigger
-              value="financial-reports"
-              className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              <span>Financial Reports</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+              <TabsTrigger
+                value="financial-reports"
+                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                <span>Financial Reports</span>
+              </TabsTrigger>
 
-      {/* ==================================================== */}
-      {/* 1. SUB-ACCOUNT: GENERAL LEDGER                       */}
-      {/* ==================================================== */}
-      {activeTab === 'ledger' && (
-        <div className="space-y-6">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard
-              label="Consolidated liquidity"
-              value={formatNPR(netLiquidityBalance)}
-              note="Across bank, wallets & COD cash"
-              icon={Wallet}
-            />
-            <KpiCard
-              label="Total credits (inflow)"
-              value={formatNPR(totalCredits)}
-              note="Sales revenue & cash receipts"
-              icon={ArrowDownLeft}
-              tone="success"
-            />
-            <KpiCard
-              label="Total debits (outflow)"
-              value={formatNPR(totalDebits)}
-              note="Supplier restock, payroll & ops"
-              icon={ArrowUpRight}
-              tone="danger"
-            />
-            <KpiCard
-              label="Estimated net margin"
-              value={formatNPR(netEstimatedProfit)}
-              note="Gross operating margin less overhead"
-              icon={TrendingUp}
-              tone={netEstimatedProfit >= 0 ? 'success' : 'danger'}
-            />
-          </div>
-
-          {/* Sub-view Switcher & Filters */}
-          <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-2.5">
-              <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
-                <Button
-                  type="button"
-                  variant={ledgerSubView === 'vouchers' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setLedgerSubView('vouchers')}
-                  className="h-7 text-xs gap-1.5"
-                >
-                  <FileText className="h-3.5 w-3.5" />
-                  Journal Vouchers ({rawJournalEntries.length})
-                </Button>
-                <Button
-                  type="button"
-                  variant={
-                    ledgerSubView === 'general-ledger' ? 'default' : 'ghost'
-                  }
-                  size="sm"
-                  onClick={() => setLedgerSubView('general-ledger')}
-                  className="h-7 text-xs gap-1.5"
-                >
-                  <Receipt className="h-3.5 w-3.5" />
-                  General Ledger ({rawGeneralLedger.length})
-                </Button>
-                <Button
-                  type="button"
-                  variant={ledgerSubView === 'legacy' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setLedgerSubView('legacy')}
-                  className="h-7 text-xs gap-1.5"
-                >
-                  <Clock className="h-3.5 w-3.5" />
-                  Legacy Archive ({rawLedger.length})
-                </Button>
-              </div>
-
-              <span className="text-xs text-muted-foreground">
-                {ledgerSubView === 'vouchers' &&
-                  `${filteredJournalEntries.length} vouchers`}
-                {ledgerSubView === 'general-ledger' &&
-                  `${filteredGeneralLedger.length} ledger postings`}
-                {ledgerSubView === 'legacy' &&
-                  `${filteredLedger.length} legacy entries`}
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  placeholder={
-                    ledgerSubView === 'vouchers'
-                      ? 'Search voucher #, narration, ref ID...'
-                      : 'Search account, memo, voucher...'
-                  }
-                  value={ledgerSearch}
-                  onChange={(e) => setLedgerSearch(e.target.value)}
-                  className="h-8 pl-9 text-xs"
-                />
-              </div>
-
-              {ledgerSubView === 'vouchers' ? (
-                <div className="flex items-center gap-2">
-                  <NativeSelect
-                    value={voucherTypeFilter}
-                    onChange={(e) => setVoucherTypeFilter(e.target.value)}
-                    size="sm"
-                    className="h-8 text-xs font-mono"
-                  >
-                    <NativeSelectOption value="all">
-                      All Voucher Types
-                    </NativeSelectOption>
-                    <NativeSelectOption value="SV">
-                      SV - Sales Voucher
-                    </NativeSelectOption>
-                    <NativeSelectOption value="RV">
-                      RV - Receipt Voucher
-                    </NativeSelectOption>
-                    <NativeSelectOption value="PV">
-                      PV - Payment Voucher
-                    </NativeSelectOption>
-                    <NativeSelectOption value="JV">
-                      JV - Journal Voucher
-                    </NativeSelectOption>
-                    <NativeSelectOption value="CV">
-                      CV - Contra Voucher
-                    </NativeSelectOption>
-                  </NativeSelect>
-                </div>
-              ) : ledgerSubView === 'general-ledger' ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <NativeSelect
-                    value={accountFilter}
-                    onChange={(e) => setAccountFilter(e.target.value)}
-                    size="sm"
-                    className="h-8 text-xs font-mono max-w-[200px]"
-                  >
-                    <NativeSelectOption value="all">
-                      All Chart Accounts ({rawChartOfAccounts.length})
-                    </NativeSelectOption>
-                    {rawChartOfAccounts
-                      .filter((a: any) => !a.isGroup)
-                      .map((a: any) => (
-                        <NativeSelectOption key={a.id} value={a.id}>
-                          {a.code} - {a.name}
-                        </NativeSelectOption>
-                      ))}
-                  </NativeSelect>
-
-                  <NativeSelect
-                    value={glPartyTypeFilter}
-                    onChange={(e) => {
-                      setGlPartyTypeFilter(e.target.value)
-                      setGlPartyIdFilter('all')
-                    }}
-                    size="sm"
-                    className="h-8 text-xs"
-                  >
-                    <NativeSelectOption value="all">
-                      All Parties
-                    </NativeSelectOption>
-                    <NativeSelectOption value="dealer">
-                      Dealers / Suppliers
-                    </NativeSelectOption>
-                    <NativeSelectOption value="rider">
-                      Fleet Couriers
-                    </NativeSelectOption>
-                    <NativeSelectOption value="customer">
-                      Customers
-                    </NativeSelectOption>
-                  </NativeSelect>
-
-                  {glPartyTypeFilter === 'dealer' && (
-                    <NativeSelect
-                      value={glPartyIdFilter}
-                      onChange={(e) => setGlPartyIdFilter(e.target.value)}
-                      size="sm"
-                      className="h-8 text-xs max-w-[150px]"
-                    >
-                      <NativeSelectOption value="all">
-                        All Dealers ({rawDealers.length})
-                      </NativeSelectOption>
-                      {rawDealers.map((d: any) => (
-                        <NativeSelectOption key={d.id} value={d.id}>
-                          {d.name}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
-                  )}
-
-                  {glPartyTypeFilter === 'rider' && (
-                    <NativeSelect
-                      value={glPartyIdFilter}
-                      onChange={(e) => setGlPartyIdFilter(e.target.value)}
-                      size="sm"
-                      className="h-8 text-xs max-w-[150px]"
-                    >
-                      <NativeSelectOption value="all">
-                        All Riders ({ops.riders.length})
-                      </NativeSelectOption>
-                      {ops.riders.map((r: any) => (
-                        <NativeSelectOption key={r.id} value={r.id}>
-                          {r.name}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
-                  )}
-
-                  <NativeSelect
-                    value={glVoucherTypeFilter}
-                    onChange={(e) => setGlVoucherTypeFilter(e.target.value)}
-                    size="sm"
-                    className="h-8 text-xs font-mono"
-                  >
-                    <NativeSelectOption value="all">
-                      All Vouchers
-                    </NativeSelectOption>
-                    <NativeSelectOption value="SV">
-                      SV - Sales
-                    </NativeSelectOption>
-                    <NativeSelectOption value="RV">
-                      RV - Receipt
-                    </NativeSelectOption>
-                    <NativeSelectOption value="PV">
-                      PV - Payment
-                    </NativeSelectOption>
-                    <NativeSelectOption value="JV">
-                      JV - Journal
-                    </NativeSelectOption>
-                    <NativeSelectOption value="CV">
-                      CV - Contra
-                    </NativeSelectOption>
-                  </NativeSelect>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportGeneralLedgerCSV}
-                    className="h-8 gap-1.5 text-xs"
-                    title="Export filtered General Ledger to CSV"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Export CSV
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-wrap items-center gap-2">
-                  <NativeSelect
-                    value={accountFilter}
-                    onChange={(e) => setAccountFilter(e.target.value)}
-                    size="sm"
-                    className="h-8 text-xs"
-                  >
-                    <NativeSelectOption value="all">
-                      All accounts
-                    </NativeSelectOption>
-                    <NativeSelectOption value="bank">
-                      Bank account
-                    </NativeSelectOption>
-                    <NativeSelectOption value="cash">
-                      Cash in hand (COD)
-                    </NativeSelectOption>
-                    <NativeSelectOption value="esewa">
-                      eSewa wallet
-                    </NativeSelectOption>
-                    <NativeSelectOption value="khalti">
-                      Khalti wallet
-                    </NativeSelectOption>
-                    <NativeSelectOption value="dealer_payable">
-                      Dealer accounts payable
-                    </NativeSelectOption>
-                    <NativeSelectOption value="sales_revenue">
-                      Sales revenue
-                    </NativeSelectOption>
-                    <NativeSelectOption value="rider_payable">
-                      Rider compensation payable
-                    </NativeSelectOption>
-                  </NativeSelect>
-
-                  <NativeSelect
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    size="sm"
-                    className="h-8 text-xs"
-                  >
-                    <NativeSelectOption value="all">
-                      All categories
-                    </NativeSelectOption>
-                    <NativeSelectOption value="sales">
-                      Sales income
-                    </NativeSelectOption>
-                    <NativeSelectOption value="purchase">
-                      Inventory purchases
-                    </NativeSelectOption>
-                    <NativeSelectOption value="dealer_payment">
-                      Dealer supplier payout
-                    </NativeSelectOption>
-                    <NativeSelectOption value="salary">
-                      Staff & rider payroll
-                    </NativeSelectOption>
-                    <NativeSelectOption value="expense">
-                      Operating expense
-                    </NativeSelectOption>
-                    <NativeSelectOption value="cod">
-                      COD remittance
-                    </NativeSelectOption>
-                    <NativeSelectOption value="refund">
-                      Refund payout
-                    </NativeSelectOption>
-                  </NativeSelect>
-                </div>
-              )}
-            </div>
-
-            {ledgerSubView === 'general-ledger' &&
-              (accountFilter !== 'all' ||
-                glPartyTypeFilter !== 'all' ||
-                glPartyIdFilter !== 'all' ||
-                glVoucherTypeFilter !== 'all' ||
-                ledgerSearch.trim() !== '') && (
-                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50 text-xs">
-                  <span className="text-muted-foreground font-medium">
-                    Active Filters:
-                  </span>
-                  {accountFilter !== 'all' && (
-                    <Badge
-                      variant="secondary"
-                      className="gap-1 text-xs font-mono"
-                    >
-                      Account:{' '}
-                      {rawChartOfAccounts.find(
-                        (a: any) =>
-                          a.id === accountFilter || a.code === accountFilter,
-                      )?.code || accountFilter}
-                      <button
-                        type="button"
-                        onClick={() => setAccountFilter('all')}
-                        className="cursor-pointer"
-                      >
-                        <X className="h-3 w-3 hover:text-foreground" />
-                      </button>
-                    </Badge>
-                  )}
-                  {glPartyTypeFilter !== 'all' && (
-                    <Badge
-                      variant="secondary"
-                      className="gap-1 text-xs capitalize"
-                    >
-                      Party: {glPartyTypeFilter}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setGlPartyTypeFilter('all')
-                          setGlPartyIdFilter('all')
-                        }}
-                        className="cursor-pointer"
-                      >
-                        <X className="h-3 w-3 hover:text-foreground" />
-                      </button>
-                    </Badge>
-                  )}
-                  {glPartyIdFilter !== 'all' && (
-                    <Badge variant="secondary" className="gap-1 text-xs">
-                      Party ID: {glPartyIdFilter}
-                      <button
-                        type="button"
-                        onClick={() => setGlPartyIdFilter('all')}
-                        className="cursor-pointer"
-                      >
-                        <X className="h-3 w-3 hover:text-foreground" />
-                      </button>
-                    </Badge>
-                  )}
-                  {glVoucherTypeFilter !== 'all' && (
-                    <Badge
-                      variant="secondary"
-                      className="gap-1 text-xs font-mono"
-                    >
-                      Type: {glVoucherTypeFilter}
-                      <button
-                        type="button"
-                        onClick={() => setGlVoucherTypeFilter('all')}
-                        className="cursor-pointer"
-                      >
-                        <X className="h-3 w-3 hover:text-foreground" />
-                      </button>
-                    </Badge>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleResetGlFilters}
-                    className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Reset All Filters
-                  </Button>
-                </div>
-              )}
-          </div>
-
-          {/* Ledger Table Container */}
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
-            {ledgerSubView === 'vouchers' && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[30px]"></TableHead>
-                    <TableHead className="text-xs">Voucher No & Type</TableHead>
-                    <TableHead className="text-xs">Date (BS & AD)</TableHead>
-                    <TableHead className="text-xs">Narration & Event</TableHead>
-                    <TableHead className="text-xs">Reference</TableHead>
-                    <TableHead className="text-right text-xs">
-                      Total Debit
-                    </TableHead>
-                    <TableHead className="text-right text-xs">
-                      Total Credit
-                    </TableHead>
-                    <TableHead className="text-center text-xs">
-                      Status
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredJournalEntries.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="p-0">
-                        <EmptyState
-                          title="No journal vouchers found"
-                          description="Double-entry vouchers (JV, PV, RV, SV) will appear here once generated."
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredJournalEntries.map((entry: any) => {
-                      const isExpanded = expandedVoucherId === entry.id
-                      return (
-                        <>
-                          <TableRow
-                            key={entry.id}
-                            className="cursor-pointer hover:bg-muted/30"
-                            onClick={() =>
-                              setExpandedVoucherId(isExpanded ? null : entry.id)
-                            }
-                          >
-                            <TableCell className="p-2 text-muted-foreground">
-                              {isExpanded ? (
-                                <ChevronDown className="h-3.5 w-3.5" />
-                              ) : (
-                                <ChevronRight className="h-3.5 w-3.5" />
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  variant="outline"
-                                  className="font-mono text-xs"
-                                >
-                                  {entry.voucherType}
-                                </Badge>
-                                <span className="font-mono text-xs font-semibold text-foreground">
-                                  {entry.voucherNo}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className="text-xs text-foreground block font-medium">
-                                {entry.bsDate}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {entry.postingDate.slice(0, 10)}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-xs text-foreground font-medium">
-                                {entry.narration}
-                              </div>
-                              {entry.event && (
-                                <span className="text-xs text-muted-foreground capitalize">
-                                  Event: {entry.event.replace('_', ' ')}
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <span className="font-mono text-xs text-muted-foreground">
-                                {entry.refType
-                                  ? `${entry.refType}: ${entry.refId || '—'}`
-                                  : '—'}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-semibold tabular-nums text-foreground">
-                              {formatNPR(entry.totalDebit)}
-                            </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-semibold tabular-nums text-foreground">
-                              {formatNPR(entry.totalCredit)}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge
-                                variant={
-                                  entry.postingStatus === 'submitted'
-                                    ? 'success'
-                                    : 'secondary'
-                                }
-                                className="text-xs uppercase font-normal"
-                              >
-                                {entry.postingStatus}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-
-                          {/* Expanded Lines */}
-                          {isExpanded && (
-                            <TableRow
-                              key={`${entry.id}-lines`}
-                              className="bg-muted/20"
-                            >
-                              <TableCell colSpan={8} className="p-3">
-                                <div className="rounded-md border border-border bg-card p-2.5 space-y-2">
-                                  <div className="flex items-center justify-between text-xs text-muted-foreground font-semibold uppercase tracking-wider">
-                                    <span>Voucher Balanced Lines</span>
-                                    <span>Created by: {entry.createdBy}</span>
-                                  </div>
-                                  <table className="w-full text-xs">
-                                    <thead>
-                                      <tr className="border-b border-border/50 text-muted-foreground text-xs">
-                                        <th className="text-left py-1 font-medium">
-                                          Account Code & Title
-                                        </th>
-                                        <th className="text-left py-1 font-medium">
-                                          Party / Cost Center
-                                        </th>
-                                        <th className="text-left py-1 font-medium">
-                                          Line Narration
-                                        </th>
-                                        <th className="text-right py-1 font-medium">
-                                          Debit (Rs.)
-                                        </th>
-                                        <th className="text-right py-1 font-medium">
-                                          Credit (Rs.)
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border/30 font-mono">
-                                      {entry.lines.map((l: any) => (
-                                        <tr key={l.id} className="py-1">
-                                          <td className="py-1 text-left text-foreground">
-                                            <span className="font-bold">
-                                              {l.accountCode}
-                                            </span>{' '}
-                                            · {l.accountName}
-                                          </td>
-                                          <td className="py-1 text-left text-muted-foreground text-xs">
-                                            {l.partyType
-                                              ? `${l.partyType} (${l.partyId})`
-                                              : l.costCenter || '—'}
-                                          </td>
-                                          <td className="py-1 text-left text-muted-foreground text-xs font-sans">
-                                            {l.narration || '—'}
-                                          </td>
-                                          <td className="py-1 text-right text-emerald-600 dark:text-emerald-400">
-                                            {l.debit > 0
-                                              ? formatNPR(l.debit)
-                                              : '—'}
-                                          </td>
-                                          <td className="py-1 text-right text-blue-600 dark:text-blue-400">
-                                            {l.credit > 0
-                                              ? formatNPR(l.credit)
-                                              : '—'}
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </>
-                      )
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            )}
-
-            {ledgerSubView === 'general-ledger' && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">
-                      Posting Date (BS & AD)
-                    </TableHead>
-                    <TableHead className="text-xs">Voucher No</TableHead>
-                    <TableHead className="text-xs">Account</TableHead>
-                    <TableHead className="text-xs">
-                      Description & Memo
-                    </TableHead>
-                    <TableHead className="text-xs">
-                      Cost Center / Party
-                    </TableHead>
-                    <TableHead className="text-right text-xs">Debit</TableHead>
-                    <TableHead className="text-right text-xs">Credit</TableHead>
-                    <TableHead className="text-right text-xs">
-                      Running Balance
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredGeneralLedger.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="p-0">
-                        <EmptyState
-                          title="No general ledger lines found"
-                          description="Postings to the selected account will appear here."
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    <>
-                      {filteredGeneralLedger.map((row: any) => (
-                        <TableRow key={row.lineId}>
-                          <TableCell>
-                            <span className="text-xs font-medium text-foreground block">
-                              {row.bsDate}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {row.postingDate.slice(0, 10)}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleOpenVoucherDetails(row.voucherNo)
-                              }
-                              className="font-mono text-xs font-semibold text-primary hover:underline cursor-pointer text-left"
-                              title="Inspect journal voucher and balancing legs"
-                            >
-                              {row.voucherNo}
-                            </button>
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-mono text-xs font-bold text-foreground block">
-                              {row.accountCode}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {row.accountName}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-xs text-foreground font-medium">
-                              {row.narration}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-xs text-muted-foreground">
-                              {row.partyType
-                                ? `${row.partyType}: ${row.partyId}`
-                                : row.costCenter || '—'}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-                            {row.debit > 0 ? formatNPR(row.debit) : '—'}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold">
-                            {row.credit > 0 ? formatNPR(row.credit) : '—'}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs font-bold tabular-nums">
-                            {formatNPR(row.balance)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-
-                      {/* Summary Table Footer */}
-                      <TableRow className="bg-muted/40 font-bold border-t-2 border-border">
-                        <TableCell
-                          colSpan={5}
-                          className="text-xs uppercase text-foreground"
-                        >
-                          Total Movement ({filteredGeneralLedger.length} lines)
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400">
-                          {formatNPR(totalGlDebit)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs text-blue-600 dark:text-blue-400">
-                          {formatNPR(totalGlCredit)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs font-bold text-foreground">
-                          {formatNPR(netGlClosingBalance)}
-                        </TableCell>
-                      </TableRow>
-                    </>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-
-            {ledgerSubView === 'legacy' && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Date and ID</TableHead>
-                    <TableHead className="text-xs">
-                      Description & memo
-                    </TableHead>
-                    <TableHead className="text-xs">Category</TableHead>
-                    <TableHead className="text-xs">Account</TableHead>
-                    <TableHead className="text-right text-xs">
-                      Debit out (-)
-                    </TableHead>
-                    <TableHead className="text-right text-xs">
-                      Credit in (+)
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredLedger.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="p-0">
-                        <EmptyState
-                          title="No legacy ledger vouchers found"
-                          description="Try adjusting your filters or search terms."
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredLedger.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>
-                          <span className="font-mono text-xs text-foreground block">
-                            {item.id}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {item.date}
-                          </span>
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="font-medium text-xs text-foreground">
-                            {item.memo}
-                          </div>
-                          {item.refId && (
-                            <span className="text-xs text-muted-foreground font-mono">
-                              Ref: {item.refId} ({item.refType})
-                            </span>
-                          )}
-                        </TableCell>
-
-                        <TableCell>
-                          <Badge
-                            variant="secondary"
-                            className="text-xs font-normal capitalize"
-                          >
-                            {item.category.replace('_', ' ')}
-                          </Badge>
-                        </TableCell>
-
-                        <TableCell>
-                          <span className="font-mono text-xs uppercase text-muted-foreground">
-                            {item.account.replace('_', ' ')}
-                          </span>
-                        </TableCell>
-
-                        <TableCell className="text-right">
-                          {item.type === 'debit' ? (
-                            <span className="font-mono text-xs font-semibold tabular-nums text-destructive">
-                              -{formatNPR(item.amount)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/40">-</span>
-                          )}
-                        </TableCell>
-
-                        <TableCell className="text-right">
-                          {item.type === 'credit' ? (
-                            <span className="font-mono text-xs font-semibold tabular-nums text-success">
-                              +{formatNPR(item.amount)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/40">-</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </div>
+              <TabsTrigger
+                value="account-defaults"
+                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-none gap-2 shrink-0 cursor-pointer"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>Account Defaults</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
-      )}
 
-      {/* ==================================================== */}
-      {/* 2. SUB-ACCOUNT: TRANSACTION                         */}
-      {/* ==================================================== */}
-      {activeTab === 'transactions' && (
-        <div className="space-y-6">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard
-              label="Settled payment volume"
-              value={formatNPR(totalTxVolume)}
-              note="Total successful gateway transactions"
-              icon={CreditCard}
-              tone="success"
-            />
-            <KpiCard
-              label="Digital wallets volume"
-              value={formatNPR(digitalVolume)}
-              note="eSewa, Khalti, Fonepay & ConnectIPS"
-              icon={Wallet}
-            />
-            <KpiCard
-              label="COD collections"
-              value={formatNPR(codTxVolume)}
-              note="Cash on Delivery remittance"
-              icon={Coins}
-            />
-            <KpiCard
-              label="Total transactions"
-              value={String(rawPayments.length)}
-              note={`${rawPayments.filter((p) => p.status === 'success').length} verified successful`}
-              icon={Receipt}
-            />
-          </div>
-
-          {/* Filters & Search */}
-          <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 md:flex-row md:items-center md:justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Search transaction ID, reference, order ID..."
-                value={txSearch}
-                onChange={(e) => setTxSearch(e.target.value)}
-                className="h-8 pl-9 text-xs"
+        {/* ==================================================== */}
+        {/* 1. SUB-ACCOUNT: GENERAL LEDGER                       */}
+        {/* ==================================================== */}
+        {activeTab === 'ledger' && (
+          <div className="space-y-6">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <KpiCard
+                label="Consolidated liquidity"
+                value={formatNPR(netLiquidityBalance)}
+                note="Across bank, wallets & COD cash"
+                icon={Wallet}
+              />
+              <KpiCard
+                label="Total credits (inflow)"
+                value={formatNPR(totalCredits)}
+                note="Sales revenue & cash receipts"
+                icon={ArrowDownLeft}
+                tone="success"
+              />
+              <KpiCard
+                label="Total debits (outflow)"
+                value={formatNPR(totalDebits)}
+                note="Supplier restock, payroll & ops"
+                icon={ArrowUpRight}
+                tone="danger"
+              />
+              <KpiCard
+                label="Estimated net margin"
+                value={formatNPR(netEstimatedProfit)}
+                note="Gross operating margin less overhead"
+                icon={TrendingUp}
+                tone={netEstimatedProfit >= 0 ? 'success' : 'danger'}
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <NativeSelect
-                value={txGatewayFilter}
-                onChange={(e) => setTxGatewayFilter(e.target.value)}
-                size="sm"
-                className="h-8 text-xs"
-              >
-                <NativeSelectOption value="all">
-                  All gateways
-                </NativeSelectOption>
-                <NativeSelectOption value="cod">
-                  Cash on Delivery (COD)
-                </NativeSelectOption>
-                <NativeSelectOption value="esewa">eSewa</NativeSelectOption>
-                <NativeSelectOption value="khalti">Khalti</NativeSelectOption>
-                <NativeSelectOption value="fonepay">Fonepay</NativeSelectOption>
-                <NativeSelectOption value="connectips">
-                  ConnectIPS
-                </NativeSelectOption>
-              </NativeSelect>
-
-              <NativeSelect
-                value={txStatusFilter}
-                onChange={(e) => setTxStatusFilter(e.target.value)}
-                size="sm"
-                className="h-8 text-xs"
-              >
-                <NativeSelectOption value="all">
-                  All statuses
-                </NativeSelectOption>
-                <NativeSelectOption value="success">Success</NativeSelectOption>
-                <NativeSelectOption value="initiated">
-                  Initiated
-                </NativeSelectOption>
-                <NativeSelectOption value="failed">Failed</NativeSelectOption>
-                <NativeSelectOption value="reconciled">
-                  Reconciled
-                </NativeSelectOption>
-              </NativeSelect>
-            </div>
-          </div>
-
-          {/* Transactions Table */}
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Txn ID & Date</TableHead>
-                  <TableHead className="text-xs">Order ID</TableHead>
-                  <TableHead className="text-xs">Gateway</TableHead>
-                  <TableHead className="text-xs">Reference code</TableHead>
-                  <TableHead className="text-xs">Status</TableHead>
-                  <TableHead className="text-right text-xs">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTransactions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="p-0">
-                      <EmptyState
-                        title="No payment transactions found"
-                        description="Try adjusting your filters or gateway search."
-                      />
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredTransactions.map((tx) => (
-                    <TableRow key={tx.id}>
-                      <TableCell>
-                        <span className="font-mono text-xs text-foreground block">
-                          {tx.id}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {tx.createdAt
-                            ? new Date(tx.createdAt).toLocaleString()
-                            : '-'}
-                        </span>
-                      </TableCell>
-
-                      <TableCell>
-                        <Link
-                          to="/admin/orders"
-                          className="font-mono text-xs text-primary hover:underline"
-                        >
-                          {tx.orderId}
-                        </Link>
-                      </TableCell>
-
-                      <TableCell>
-                        <Badge
-                          variant="secondary"
-                          className="text-xs font-semibold uppercase"
-                        >
-                          {tx.gateway}
-                        </Badge>
-                      </TableCell>
-
-                      <TableCell>
-                        <span className="font-mono text-xs text-foreground">
-                          {tx.reference || '-'}
-                        </span>
-                      </TableCell>
-
-                      <TableCell>
-                        <Badge
-                          variant={
-                            tx.status === 'success' ||
-                            tx.status === 'reconciled'
-                              ? 'success'
-                              : tx.status === 'failed'
-                                ? 'destructive'
-                                : 'secondary'
-                          }
-                          className="text-xs font-normal uppercase"
-                        >
-                          {tx.status}
-                        </Badge>
-                      </TableCell>
-
-                      <TableCell className="text-right">
-                        <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
-                          {formatNPR(tx.amount)}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      )}
-
-      {/* ==================================================== */}
-      {/* 3. SUB-ACCOUNT: DEALER LEDGER ACCOUNT               */}
-      {/* ==================================================== */}
-      {activeTab === 'dealer-ledger' && (
-        <div className="space-y-6">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard
-              label="Active suppliers / dealers"
-              value={String(rawDealers.filter((d) => d.isActive).length)}
-              note="Registered partner merchants"
-              icon={Store}
-            />
-            <KpiCard
-              label="Total items procured"
-              value={String(dealerProcurements.length)}
-              note="Assigned from customer orders"
-              icon={ShoppingBag}
-            />
-            <KpiCard
-              label="Total procured inventory"
-              value={formatNPR(totalDealerProcured)}
-              note="Procured inventory value"
-              icon={ArrowDownLeft}
-              tone="default"
-            />
-            <KpiCard
-              label="Outstanding dealer payables"
-              value={formatNPR(totalOutstandingDealerPayables)}
-              note="Balance to be disbursed to dealers"
-              icon={Coins}
-              tone={totalOutstandingDealerPayables > 0 ? 'warning' : 'success'}
-            />
-          </div>
-
-          {/* Dealer Balance Summary Cards */}
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                  Dealer Accounts &amp; Payables Overview
-                </h4>
-                <p className="text-xs text-muted-foreground">
-                  Showing {dealerBalances.length} registered dealers
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setBatchDealerId('')
-                    setIsBatchDealerSettlementOpen(true)
-                  }}
-                  className="h-8 gap-1.5 text-xs"
-                >
-                  <Receipt className="h-3.5 w-3.5" />
-                  Batch Settle Items
-                </Button>
-                <Link to="/admin/dealers">
+            {/* Sub-view Switcher & Filters */}
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-2.5">
+                <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
                   <Button
-                    variant="outline"
+                    type="button"
+                    variant={ledgerSubView === 'vouchers' ? 'default' : 'ghost'}
                     size="sm"
-                    className="h-8 gap-1.5 text-xs"
+                    onClick={() => setLedgerSubView('vouchers')}
+                    className="h-7 text-xs gap-1.5"
                   >
-                    <Building2 className="h-3.5 w-3.5" />
-                    Dealers Directory
+                    <FileText className="h-3.5 w-3.5" />
+                    Journal Vouchers ({rawJournalEntries.length})
                   </Button>
-                </Link>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {dealerBalances.map(({ dealer, totalProcured, totalPaid }) => {
-                const balance = totalProcured - totalPaid
-                const isSelected = selectedDealerId === dealer.id
-                return (
-                  <Card
-                    key={dealer.id}
-                    className={`p-4 transition-all ${isSelected ? 'border-primary ring-1 ring-primary/30' : ''}`}
+                  <Button
+                    type="button"
+                    variant={
+                      ledgerSubView === 'general-ledger' ? 'default' : 'ghost'
+                    }
+                    size="sm"
+                    onClick={() => setLedgerSubView('general-ledger')}
+                    className="h-7 text-xs gap-1.5"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-foreground">
-                            {dealer.name}
-                          </span>
-                          {!dealer.isActive && (
-                            <Badge variant="outline" className="text-xs">
-                              Inactive
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {dealer.city} · PAN/VAT: {dealer.pan || 'N/A'}
-                        </p>
-                      </div>
-                      <Button
+                    <Receipt className="h-3.5 w-3.5" />
+                    General Ledger ({rawGeneralLedger.length})
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={ledgerSubView === 'legacy' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setLedgerSubView('legacy')}
+                    className="h-7 text-xs gap-1.5"
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    Legacy Archive ({rawLedger.length})
+                  </Button>
+                </div>
+
+                <span className="text-xs text-muted-foreground">
+                  {ledgerSubView === 'vouchers' &&
+                    `${filteredJournalEntries.length} vouchers`}
+                  {ledgerSubView === 'general-ledger' &&
+                    `${filteredGeneralLedger.length} ledger postings`}
+                  {ledgerSubView === 'legacy' &&
+                    `${filteredLedger.length} legacy entries`}
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder={
+                      ledgerSubView === 'vouchers'
+                        ? 'Search voucher #, narration, ref ID...'
+                        : 'Search account, memo, voucher...'
+                    }
+                    value={ledgerSearch}
+                    onChange={(e) => setLedgerSearch(e.target.value)}
+                    className="h-8 pl-9 text-xs"
+                  />
+                </div>
+
+                {ledgerSubView === 'vouchers' ? (
+                  <div className="flex items-center gap-2">
+                    <NativeSelect
+                      value={voucherTypeFilter}
+                      onChange={(e) => setVoucherTypeFilter(e.target.value)}
+                      size="sm"
+                      className="h-8 text-xs font-mono"
+                    >
+                      <NativeSelectOption value="all">
+                        All Voucher Types
+                      </NativeSelectOption>
+                      <NativeSelectOption value="SV">
+                        SV - Sales Voucher
+                      </NativeSelectOption>
+                      <NativeSelectOption value="RV">
+                        RV - Receipt Voucher
+                      </NativeSelectOption>
+                      <NativeSelectOption value="PV">
+                        PV - Payment Voucher
+                      </NativeSelectOption>
+                      <NativeSelectOption value="JV">
+                        JV - Journal Voucher
+                      </NativeSelectOption>
+                      <NativeSelectOption value="CV">
+                        CV - Contra Voucher
+                      </NativeSelectOption>
+                    </NativeSelect>
+                  </div>
+                ) : ledgerSubView === 'general-ledger' ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <NativeSelect
+                      value={accountFilter}
+                      onChange={(e) => setAccountFilter(e.target.value)}
+                      size="sm"
+                      className="h-8 text-xs font-mono max-w-[200px]"
+                    >
+                      <NativeSelectOption value="all">
+                        All Chart Accounts ({rawChartOfAccounts.length})
+                      </NativeSelectOption>
+                      {rawChartOfAccounts
+                        .filter((a: any) => !a.isGroup)
+                        .map((a: any) => (
+                          <NativeSelectOption key={a.id} value={a.id}>
+                            {a.code} - {a.name}
+                          </NativeSelectOption>
+                        ))}
+                    </NativeSelect>
+
+                    <NativeSelect
+                      value={glPartyTypeFilter}
+                      onChange={(e) => {
+                        setGlPartyTypeFilter(e.target.value)
+                        setGlPartyIdFilter('all')
+                      }}
+                      size="sm"
+                      className="h-8 text-xs"
+                    >
+                      <NativeSelectOption value="all">
+                        All Parties
+                      </NativeSelectOption>
+                      <NativeSelectOption value="dealer">
+                        Dealers / Suppliers
+                      </NativeSelectOption>
+                      <NativeSelectOption value="rider">
+                        Fleet Couriers
+                      </NativeSelectOption>
+                      <NativeSelectOption value="customer">
+                        Customers
+                      </NativeSelectOption>
+                    </NativeSelect>
+
+                    {glPartyTypeFilter === 'dealer' && (
+                      <NativeSelect
+                        value={glPartyIdFilter}
+                        onChange={(e) => setGlPartyIdFilter(e.target.value)}
                         size="sm"
-                        variant={isSelected ? 'default' : 'outline'}
-                        onClick={() =>
-                          setSelectedDealerId(isSelected ? 'all' : dealer.id)
-                        }
-                        className="h-6 px-2 text-xs"
+                        className="h-8 text-xs max-w-[150px]"
                       >
-                        {isSelected ? 'Selected' : 'Filter'}
-                      </Button>
-                    </div>
+                        <NativeSelectOption value="all">
+                          All Dealers ({rawDealers.length})
+                        </NativeSelectOption>
+                        {rawDealers.map((d: any) => (
+                          <NativeSelectOption key={d.id} value={d.id}>
+                            {d.name}
+                          </NativeSelectOption>
+                        ))}
+                      </NativeSelect>
+                    )}
 
-                    <div className="mt-3 grid grid-cols-3 gap-2 rounded-md bg-muted/30 p-2 text-center text-xs">
-                      <div>
-                        <span className="text-xs text-muted-foreground block">
-                          Procured
-                        </span>
-                        <span className="font-mono font-medium text-foreground">
-                          {formatNPR(totalProcured)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-xs text-muted-foreground block">
-                          Paid
-                        </span>
-                        <span className="font-mono font-medium text-success">
-                          {formatNPR(totalPaid)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-xs text-muted-foreground block">
-                          Payable
-                        </span>
-                        <span
-                          className={`font-mono font-bold ${balance > 0 ? 'text-amber-500' : 'text-muted-foreground'}`}
+                    {glPartyTypeFilter === 'rider' && (
+                      <NativeSelect
+                        value={glPartyIdFilter}
+                        onChange={(e) => setGlPartyIdFilter(e.target.value)}
+                        size="sm"
+                        className="h-8 text-xs max-w-[150px]"
+                      >
+                        <NativeSelectOption value="all">
+                          All Riders ({ops.riders.length})
+                        </NativeSelectOption>
+                        {ops.riders.map((r: any) => (
+                          <NativeSelectOption key={r.id} value={r.id}>
+                            {r.name}
+                          </NativeSelectOption>
+                        ))}
+                      </NativeSelect>
+                    )}
+
+                    <NativeSelect
+                      value={glVoucherTypeFilter}
+                      onChange={(e) => setGlVoucherTypeFilter(e.target.value)}
+                      size="sm"
+                      className="h-8 text-xs font-mono"
+                    >
+                      <NativeSelectOption value="all">
+                        All Vouchers
+                      </NativeSelectOption>
+                      <NativeSelectOption value="SV">
+                        SV - Sales
+                      </NativeSelectOption>
+                      <NativeSelectOption value="RV">
+                        RV - Receipt
+                      </NativeSelectOption>
+                      <NativeSelectOption value="PV">
+                        PV - Payment
+                      </NativeSelectOption>
+                      <NativeSelectOption value="JV">
+                        JV - Journal
+                      </NativeSelectOption>
+                      <NativeSelectOption value="CV">
+                        CV - Contra
+                      </NativeSelectOption>
+                    </NativeSelect>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportGeneralLedgerCSV}
+                      className="h-8 gap-1.5 text-xs"
+                      title="Export filtered General Ledger to CSV"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Export CSV
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <NativeSelect
+                      value={accountFilter}
+                      onChange={(e) => setAccountFilter(e.target.value)}
+                      size="sm"
+                      className="h-8 text-xs"
+                    >
+                      <NativeSelectOption value="all">
+                        All accounts
+                      </NativeSelectOption>
+                      <NativeSelectOption value="bank">
+                        Bank account
+                      </NativeSelectOption>
+                      <NativeSelectOption value="cash">
+                        Cash in hand (COD)
+                      </NativeSelectOption>
+                      <NativeSelectOption value="esewa">
+                        eSewa wallet
+                      </NativeSelectOption>
+                      <NativeSelectOption value="khalti">
+                        Khalti wallet
+                      </NativeSelectOption>
+                      <NativeSelectOption value="dealer_payable">
+                        Dealer accounts payable
+                      </NativeSelectOption>
+                      <NativeSelectOption value="sales_revenue">
+                        Sales revenue
+                      </NativeSelectOption>
+                      <NativeSelectOption value="rider_payable">
+                        Rider compensation payable
+                      </NativeSelectOption>
+                    </NativeSelect>
+
+                    <NativeSelect
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                      size="sm"
+                      className="h-8 text-xs"
+                    >
+                      <NativeSelectOption value="all">
+                        All categories
+                      </NativeSelectOption>
+                      <NativeSelectOption value="sales">
+                        Sales income
+                      </NativeSelectOption>
+                      <NativeSelectOption value="purchase">
+                        Inventory purchases
+                      </NativeSelectOption>
+                      <NativeSelectOption value="dealer_payment">
+                        Dealer supplier payout
+                      </NativeSelectOption>
+                      <NativeSelectOption value="salary">
+                        Staff & rider payroll
+                      </NativeSelectOption>
+                      <NativeSelectOption value="expense">
+                        Operating expense
+                      </NativeSelectOption>
+                      <NativeSelectOption value="cod">
+                        COD remittance
+                      </NativeSelectOption>
+                      <NativeSelectOption value="refund">
+                        Refund payout
+                      </NativeSelectOption>
+                    </NativeSelect>
+                  </div>
+                )}
+              </div>
+
+              {ledgerSubView === 'general-ledger' &&
+                (accountFilter !== 'all' ||
+                  glPartyTypeFilter !== 'all' ||
+                  glPartyIdFilter !== 'all' ||
+                  glVoucherTypeFilter !== 'all' ||
+                  ledgerSearch.trim() !== '') && (
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50 text-xs">
+                    <span className="text-muted-foreground font-medium">
+                      Active Filters:
+                    </span>
+                    {accountFilter !== 'all' && (
+                      <Badge
+                        variant="secondary"
+                        className="gap-1 text-xs font-mono"
+                      >
+                        Account:{' '}
+                        {rawChartOfAccounts.find(
+                          (a: any) =>
+                            a.id === accountFilter || a.code === accountFilter,
+                        )?.code || accountFilter}
+                        <button
+                          type="button"
+                          onClick={() => setAccountFilter('all')}
+                          className="cursor-pointer"
                         >
-                          {formatNPR(balance)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-between pt-1">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Phone className="h-3 w-3" />
-                        <span>{dealer.contact}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="secondary"
+                          <X className="h-3 w-3 hover:text-foreground" />
+                        </button>
+                      </Badge>
+                    )}
+                    {glPartyTypeFilter !== 'all' && (
+                      <Badge
+                        variant="secondary"
+                        className="gap-1 text-xs capitalize"
+                      >
+                        Party: {glPartyTypeFilter}
+                        <button
+                          type="button"
                           onClick={() => {
-                            setBatchDealerId(dealer.id)
-                            setIsBatchDealerSettlementOpen(true)
+                            setGlPartyTypeFilter('all')
+                            setGlPartyIdFilter('all')
                           }}
-                          className="h-6 px-2 text-xs gap-1"
-                          title="Select and settle delivered items for this dealer"
+                          className="cursor-pointer"
                         >
-                          <Receipt className="h-3 w-3 text-amber-500" />
-                          Settle Items
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            handleOpenDealerPayout(dealer, balance)
-                          }
-                          className="h-6 px-2 text-xs gap-1"
+                          <X className="h-3 w-3 hover:text-foreground" />
+                        </button>
+                      </Badge>
+                    )}
+                    {glPartyIdFilter !== 'all' && (
+                      <Badge variant="secondary" className="gap-1 text-xs">
+                        Party ID: {glPartyIdFilter}
+                        <button
+                          type="button"
+                          onClick={() => setGlPartyIdFilter('all')}
+                          className="cursor-pointer"
                         >
-                          <Plus className="h-3 w-3" />
-                          Payout
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* View Mode Switcher and Filters */}
-          <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-2">
-              <Button
-                variant={dealerViewMode === 'items' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setDealerViewMode('items')}
-                className="h-8 gap-1.5 text-xs"
-              >
-                <ShoppingBag className="h-3.5 w-3.5" />
-                Procured Order Items ({filteredProcurements.length})
-              </Button>
-              <Button
-                variant={dealerViewMode === 'vouchers' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setDealerViewMode('vouchers')}
-                className="h-8 gap-1.5 text-xs"
-              >
-                <Receipt className="h-3.5 w-3.5" />
-                Dealer Payout Vouchers ({filteredDealerVouchers.length})
-              </Button>
+                          <X className="h-3 w-3 hover:text-foreground" />
+                        </button>
+                      </Badge>
+                    )}
+                    {glVoucherTypeFilter !== 'all' && (
+                      <Badge
+                        variant="secondary"
+                        className="gap-1 text-xs font-mono"
+                      >
+                        Type: {glVoucherTypeFilter}
+                        <button
+                          type="button"
+                          onClick={() => setGlVoucherTypeFilter('all')}
+                          className="cursor-pointer"
+                        >
+                          <X className="h-3 w-3 hover:text-foreground" />
+                        </button>
+                      </Badge>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleResetGlFilters}
+                      className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Reset All Filters
+                    </Button>
+                  </div>
+                )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  placeholder="Search item, dealer or order..."
-                  value={dealerSearch}
-                  onChange={(e) => setDealerSearch(e.target.value)}
-                  className="h-8 pl-9 text-xs"
-                />
-              </div>
-
-              <NativeSelect
-                value={selectedDealerId}
-                onChange={(e) => setSelectedDealerId(e.target.value)}
-                size="sm"
-                className="h-8 text-xs"
-              >
-                <NativeSelectOption value="all">All dealers</NativeSelectOption>
-                {rawDealers.map((d) => (
-                  <NativeSelectOption key={d.id} value={d.id}>
-                    {d.name}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </div>
-          </div>
-
-          {/* Dealer Records Table */}
-          {dealerViewMode === 'items' ? (
+            {/* Ledger Table Container */}
             <div className="overflow-hidden rounded-lg border border-border bg-card">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Order & Date</TableHead>
-                    <TableHead className="text-xs">Procured item</TableHead>
-                    <TableHead className="text-xs">Type</TableHead>
-                    <TableHead className="text-xs">Assigned dealer</TableHead>
-                    <TableHead className="text-xs">Quantity</TableHead>
-                    <TableHead className="text-xs">Unit cost</TableHead>
-                    <TableHead className="text-right text-xs">
-                      Procured total
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProcurements.length === 0 ? (
+              {ledgerSubView === 'vouchers' && (
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={7} className="p-0">
-                        <EmptyState
-                          title="No dealer order items assigned"
-                          description="When customer order items are assigned to dealers in the Orders panel, they will appear here as procurement entries."
-                        />
-                      </TableCell>
+                      <TableHead className="w-[30px]"></TableHead>
+                      <TableHead className="text-xs">
+                        Voucher No & Type
+                      </TableHead>
+                      <TableHead className="text-xs">Date (BS & AD)</TableHead>
+                      <TableHead className="text-xs">
+                        Narration & Event
+                      </TableHead>
+                      <TableHead className="text-xs">Reference</TableHead>
+                      <TableHead className="text-right text-xs">
+                        Total Debit
+                      </TableHead>
+                      <TableHead className="text-right text-xs">
+                        Total Credit
+                      </TableHead>
+                      <TableHead className="text-center text-xs">
+                        Status
+                      </TableHead>
                     </TableRow>
-                  ) : (
-                    filteredProcurements.map((p, idx) => (
-                      <TableRow key={`${p.orderId}-${p.itemId}-${idx}`}>
-                        <TableCell>
-                          <Link
-                            to="/admin/orders"
-                            className="font-mono text-xs font-semibold text-primary hover:underline block"
-                          >
-                            {p.orderNumber}
-                          </Link>
-                          <span className="text-xs text-muted-foreground">
-                            {p.orderDate
-                              ? new Date(p.orderDate).toLocaleDateString()
-                              : '-'}
-                          </span>
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="font-medium text-xs text-foreground">
-                            {p.itemName}
-                          </div>
-                        </TableCell>
-
-                        <TableCell>
-                          <Badge
-                            variant="secondary"
-                            className="text-xs font-normal capitalize"
-                          >
-                            {p.catalogType}
-                          </Badge>
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="text-xs font-medium text-foreground">
-                            {p.dealerName}
-                          </div>
-                          {p.dealerPan && (
-                            <span className="text-xs text-muted-foreground font-mono">
-                              PAN: {p.dealerPan}
-                            </span>
-                          )}
-                        </TableCell>
-
-                        <TableCell>
-                          <span className="font-mono text-xs text-foreground">
-                            {p.qty} pcs
-                          </span>
-                        </TableCell>
-
-                        <TableCell>
-                          <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                            {formatNPR(p.unitPrice)}
-                          </span>
-                        </TableCell>
-
-                        <TableCell className="text-right">
-                          <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
-                            {formatNPR(p.lineTotal)}
-                          </span>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredJournalEntries.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="p-0">
+                          <EmptyState
+                            title="No journal vouchers found"
+                            description="Double-entry vouchers (JV, PV, RV, SV) will appear here once generated."
+                          />
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-lg border border-border bg-card">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Voucher ID & Date</TableHead>
-                    <TableHead className="text-xs">Dealer & memo</TableHead>
-                    <TableHead className="text-xs">Account</TableHead>
-                    <TableHead className="text-xs">Reference</TableHead>
-                    <TableHead className="text-right text-xs">
-                      Amount disbursed
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDealerVouchers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="p-0">
-                        <EmptyState
-                          title="No dealer payout vouchers found"
-                          description="Use the 'Record Payout' button to record settlement vouchers to suppliers."
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredDealerVouchers.map((v: any) => (
-                      <TableRow key={v.id}>
-                        <TableCell>
-                          <span className="font-mono text-xs text-foreground block">
-                            {v.voucherNo || v.id}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {v.date}
-                          </span>
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="font-medium text-xs text-foreground">
-                            {v.memo}
-                          </div>
-                        </TableCell>
-
-                        <TableCell>
-                          <span className="font-mono text-xs uppercase text-muted-foreground">
-                            {v.account}
-                          </span>
-                        </TableCell>
-
-                        <TableCell>
-                          {v.slug ? (
-                            <a
-                              href={`/voucher/${v.slug}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-mono"
-                              title="View printable settlement voucher"
+                    ) : (
+                      filteredJournalEntries.map((entry: any) => {
+                        const isExpanded = expandedVoucherId === entry.id
+                        return (
+                          <>
+                            <TableRow
+                              key={entry.id}
+                              className="cursor-pointer hover:bg-muted/30"
+                              onClick={() =>
+                                setExpandedVoucherId(
+                                  isExpanded ? null : entry.id,
+                                )
+                              }
                             >
-                              <ExternalLink className="h-3 w-3" />
-                              <span>{v.voucherNo || 'Voucher'}</span>
-                            </a>
-                          ) : (
-                            <span className="font-mono text-xs text-muted-foreground">
-                              {v.refId || '-'}
-                            </span>
-                          )}
-                        </TableCell>
+                              <TableCell className="p-2 text-muted-foreground">
+                                {isExpanded ? (
+                                  <ChevronDown className="h-3.5 w-3.5" />
+                                ) : (
+                                  <ChevronRight className="h-3.5 w-3.5" />
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Badge
+                                    variant="outline"
+                                    className="font-mono text-xs"
+                                  >
+                                    {entry.voucherType}
+                                  </Badge>
+                                  <span className="font-mono text-xs font-semibold text-foreground">
+                                    {entry.voucherNo}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-xs text-foreground block font-medium">
+                                  {entry.bsDate}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {entry.postingDate.slice(0, 10)}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-xs text-foreground font-medium">
+                                  {entry.narration}
+                                </div>
+                                {entry.event && (
+                                  <span className="text-xs text-muted-foreground capitalize">
+                                    Event: {entry.event.replace('_', ' ')}
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-mono text-xs text-muted-foreground">
+                                  {entry.refType
+                                    ? `${entry.refType}: ${entry.refId || '—'}`
+                                    : '—'}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-xs font-semibold tabular-nums text-foreground">
+                                {formatNPR(entry.totalDebit)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-xs font-semibold tabular-nums text-foreground">
+                                {formatNPR(entry.totalCredit)}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge
+                                  variant={
+                                    entry.postingStatus === 'submitted'
+                                      ? 'success'
+                                      : 'secondary'
+                                  }
+                                  className="text-xs uppercase font-normal"
+                                >
+                                  {entry.postingStatus}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
 
-                        <TableCell className="text-right">
-                          <span className="font-mono text-xs font-semibold tabular-nums text-destructive">
-                            -{formatNPR(v.amount)}
-                          </span>
+                            {/* Expanded Lines */}
+                            {isExpanded && (
+                              <TableRow
+                                key={`${entry.id}-lines`}
+                                className="bg-muted/20"
+                              >
+                                <TableCell colSpan={8} className="p-3">
+                                  <div className="rounded-md border border-border bg-card p-2.5 space-y-2">
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+                                      <span>Voucher Balanced Lines</span>
+                                      <span>Created by: {entry.createdBy}</span>
+                                    </div>
+                                    <table className="w-full text-xs">
+                                      <thead>
+                                        <tr className="border-b border-border/50 text-muted-foreground text-xs">
+                                          <th className="text-left py-1 font-medium">
+                                            Account Code & Title
+                                          </th>
+                                          <th className="text-left py-1 font-medium">
+                                            Party / Cost Center
+                                          </th>
+                                          <th className="text-left py-1 font-medium">
+                                            Line Narration
+                                          </th>
+                                          <th className="text-right py-1 font-medium">
+                                            Debit (Rs.)
+                                          </th>
+                                          <th className="text-right py-1 font-medium">
+                                            Credit (Rs.)
+                                          </th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-border/30 font-mono">
+                                        {entry.lines.map((l: any) => (
+                                          <tr key={l.id} className="py-1">
+                                            <td className="py-1 text-left text-foreground">
+                                              <span className="font-bold">
+                                                {l.accountCode}
+                                              </span>{' '}
+                                              · {l.accountName}
+                                            </td>
+                                            <td className="py-1 text-left text-muted-foreground text-xs">
+                                              {l.partyType
+                                                ? `${l.partyType} (${l.partyId})`
+                                                : l.costCenter || '—'}
+                                            </td>
+                                            <td className="py-1 text-left text-muted-foreground text-xs font-sans">
+                                              {l.narration || '—'}
+                                            </td>
+                                            <td className="py-1 text-right text-emerald-600 dark:text-emerald-400">
+                                              {l.debit > 0
+                                                ? formatNPR(l.debit)
+                                                : '—'}
+                                            </td>
+                                            <td className="py-1 text-right text-blue-600 dark:text-blue-400">
+                                              {l.credit > 0
+                                                ? formatNPR(l.credit)
+                                                : '—'}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </>
+                        )
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+
+              {ledgerSubView === 'general-ledger' && (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">
+                        Posting Date (BS & AD)
+                      </TableHead>
+                      <TableHead className="text-xs">Voucher No</TableHead>
+                      <TableHead className="text-xs">Account</TableHead>
+                      <TableHead className="text-xs">
+                        Description & Memo
+                      </TableHead>
+                      <TableHead className="text-xs">
+                        Cost Center / Party
+                      </TableHead>
+                      <TableHead className="text-right text-xs">
+                        Debit
+                      </TableHead>
+                      <TableHead className="text-right text-xs">
+                        Credit
+                      </TableHead>
+                      <TableHead className="text-right text-xs">
+                        Running Balance
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredGeneralLedger.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="p-0">
+                          <EmptyState
+                            title="No general ledger lines found"
+                            description="Postings to the selected account will appear here."
+                          />
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      <>
+                        {filteredGeneralLedger.map((row: any) => (
+                          <TableRow key={row.lineId}>
+                            <TableCell>
+                              <span className="text-xs font-medium text-foreground block">
+                                {row.bsDate}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {row.postingDate.slice(0, 10)}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleOpenVoucherDetails(row.voucherNo)
+                                }
+                                className="font-mono text-xs font-semibold text-primary hover:underline cursor-pointer text-left"
+                                title="Inspect journal voucher and balancing legs"
+                              >
+                                {row.voucherNo}
+                              </button>
+                            </TableCell>
+                            <TableCell>
+                              <span className="font-mono text-xs font-bold text-foreground block">
+                                {row.accountCode}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {row.accountName}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs text-foreground font-medium">
+                                {row.narration}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs text-muted-foreground">
+                                {row.partyType
+                                  ? `${row.partyType}: ${row.partyId}`
+                                  : row.costCenter || '—'}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                              {row.debit > 0 ? formatNPR(row.debit) : '—'}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold">
+                              {row.credit > 0 ? formatNPR(row.credit) : '—'}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-bold tabular-nums">
+                              {formatNPR(row.balance)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+
+                        {/* Summary Table Footer */}
+                        <TableRow className="bg-muted/40 font-bold border-t-2 border-border">
+                          <TableCell
+                            colSpan={5}
+                            className="text-xs uppercase text-foreground"
+                          >
+                            Total Movement ({filteredGeneralLedger.length}{' '}
+                            lines)
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400">
+                            {formatNPR(totalGlDebit)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-blue-600 dark:text-blue-400">
+                            {formatNPR(totalGlCredit)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-bold text-foreground">
+                            {formatNPR(netGlClosingBalance)}
+                          </TableCell>
+                        </TableRow>
+                      </>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+
+              {ledgerSubView === 'legacy' && (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Date and ID</TableHead>
+                      <TableHead className="text-xs">
+                        Description & memo
+                      </TableHead>
+                      <TableHead className="text-xs">Category</TableHead>
+                      <TableHead className="text-xs">Account</TableHead>
+                      <TableHead className="text-right text-xs">
+                        Debit out (-)
+                      </TableHead>
+                      <TableHead className="text-right text-xs">
+                        Credit in (+)
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredLedger.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="p-0">
+                          <EmptyState
+                            title="No legacy ledger vouchers found"
+                            description="Try adjusting your filters or search terms."
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredLedger.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            <span className="font-mono text-xs text-foreground block">
+                              {item.id}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {item.date}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="font-medium text-xs text-foreground">
+                              {item.memo}
+                            </div>
+                            {item.refId && (
+                              <span className="text-xs text-muted-foreground font-mono">
+                                Ref: {item.refId} ({item.refType})
+                              </span>
+                            )}
+                          </TableCell>
+
+                          <TableCell>
+                            <Badge
+                              variant="secondary"
+                              className="text-xs font-normal capitalize"
+                            >
+                              {item.category.replace('_', ' ')}
+                            </Badge>
+                          </TableCell>
+
+                          <TableCell>
+                            <span className="font-mono text-xs uppercase text-muted-foreground">
+                              {item.account.replace('_', ' ')}
+                            </span>
+                          </TableCell>
+
+                          <TableCell className="text-right">
+                            {item.type === 'debit' ? (
+                              <span className="font-mono text-xs font-semibold tabular-nums text-destructive">
+                                -{formatNPR(item.amount)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/40">
+                                -
+                              </span>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="text-right">
+                            {item.type === 'credit' ? (
+                              <span className="font-mono text-xs font-semibold tabular-nums text-success">
+                                +{formatNPR(item.amount)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/40">
+                                -
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </div>
-          )}
-        </div>
-      )}
-
-      {/* ==================================================== */}
-      {/* 4. SUB-ACCOUNT: SALES ACCOUNT                       */}
-      {/* ==================================================== */}
-      {activeTab === 'sales-account' && (
-        <div className="space-y-6">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard
-              label="Gross order sales"
-              value={formatNPR(orderGrossRevenue)}
-              note="Total customer order value"
-              icon={TrendingUp}
-              tone="success"
-            />
-            <KpiCard
-              label="Net merchandise value"
-              value={formatNPR(orderNetSales)}
-              note="Excluding delivery & discounts"
-              icon={ShoppingBag}
-            />
-            <KpiCard
-              label="Discounts absorbed"
-              value={formatNPR(orderDiscountsGiven)}
-              note="Coupon codes and price rebates"
-              icon={BadgePercent}
-              tone="danger"
-            />
-            <KpiCard
-              label="Delivery fees collected"
-              value={formatNPR(orderDeliveryFees)}
-              note="Shipping freight surcharge receipts"
-              icon={Truck}
-            />
           </div>
+        )}
 
-          {/* Catalog & Payment Breakdown Cards */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {/* Catalog Breakdown: Liquor vs Grocery */}
-            <Card className="p-4 space-y-4">
-              <CardHeader className="p-0 pb-2 border-b border-border">
-                <CardTitle className="text-xs font-semibold flex items-center justify-between">
-                  <span>Catalog Performance Breakdown</span>
-                  <span className="text-xs font-normal text-muted-foreground">
-                    Liquor vs Grocery Revenue
-                  </span>
-                </CardTitle>
-              </CardHeader>
+        {/* ==================================================== */}
+        {/* 2. SUB-ACCOUNT: TRANSACTION                         */}
+        {/* ==================================================== */}
+        {activeTab === 'transactions' && (
+          <div className="space-y-6">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <KpiCard
+                label="Settled payment volume"
+                value={formatNPR(totalTxVolume)}
+                note="Total successful gateway transactions"
+                icon={CreditCard}
+                tone="success"
+              />
+              <KpiCard
+                label="Digital wallets volume"
+                value={formatNPR(digitalVolume)}
+                note="eSewa, Khalti, Fonepay & ConnectIPS"
+                icon={Wallet}
+              />
+              <KpiCard
+                label="COD collections"
+                value={formatNPR(codTxVolume)}
+                note="Cash on Delivery remittance"
+                icon={Coins}
+              />
+              <KpiCard
+                label="Total transactions"
+                value={String(rawPayments.length)}
+                note={`${rawPayments.filter((p) => p.status === 'success').length} verified successful`}
+                icon={Receipt}
+              />
+            </div>
 
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5 font-medium text-foreground">
-                      <Wine className="h-3.5 w-3.5 text-primary" />
-                      Liquor Catalog Revenue
-                    </span>
-                    <span className="font-mono font-semibold text-foreground">
-                      {formatNPR(liquorRevenue)}
-                    </span>
-                  </div>
-                  <Progress
-                    value={
-                      liquorRevenue + groceryRevenue > 0
-                        ? (liquorRevenue / (liquorRevenue + groceryRevenue)) *
-                          100
-                        : 50
-                    }
-                    className="h-2"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5 font-medium text-foreground">
-                      <ShoppingBag className="h-3.5 w-3.5 text-emerald-500" />
-                      Grocery Catalog Revenue
-                    </span>
-                    <span className="font-mono font-semibold text-foreground">
-                      {formatNPR(groceryRevenue)}
-                    </span>
-                  </div>
-                  <Progress
-                    value={
-                      liquorRevenue + groceryRevenue > 0
-                        ? (groceryRevenue / (liquorRevenue + groceryRevenue)) *
-                          100
-                        : 50
-                    }
-                    className="h-2"
-                  />
-                </div>
-              </div>
-            </Card>
-
-            {/* Payment Method Distribution */}
-            <Card className="p-4 space-y-4">
-              <CardHeader className="p-0 pb-2 border-b border-border">
-                <CardTitle className="text-xs font-semibold flex items-center justify-between">
-                  <span>Payment Method Distribution</span>
-                  <span className="text-xs font-normal text-muted-foreground">
-                    Cash on Delivery vs Digital Pre-paid
-                  </span>
-                </CardTitle>
-              </CardHeader>
-
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5 font-medium text-foreground">
-                      <Coins className="h-3.5 w-3.5 text-amber-500" />
-                      Cash on Delivery (COD) Remittances
-                    </span>
-                    <span className="font-mono font-semibold text-foreground">
-                      {formatNPR(codTxVolume)}
-                    </span>
-                  </div>
-                  <Progress
-                    value={
-                      codTxVolume + digitalVolume > 0
-                        ? (codTxVolume / (codTxVolume + digitalVolume)) * 100
-                        : 50
-                    }
-                    className="h-2"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1.5 font-medium text-foreground">
-                      <Wallet className="h-3.5 w-3.5 text-blue-500" />
-                      Digital Wallets (eSewa / Khalti / Fonepay)
-                    </span>
-                    <span className="font-mono font-semibold text-foreground">
-                      {formatNPR(digitalVolume)}
-                    </span>
-                  </div>
-                  <Progress
-                    value={
-                      codTxVolume + digitalVolume > 0
-                        ? (digitalVolume / (codTxVolume + digitalVolume)) * 100
-                        : 50
-                    }
-                    className="h-2"
-                  />
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Sales Orders Register */}
-          <div className="space-y-3">
+            {/* Filters & Search */}
             <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 md:flex-row md:items-center md:justify-between">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
-                  placeholder="Search order number, customer name, phone..."
-                  value={salesSearch}
-                  onChange={(e) => setSalesSearch(e.target.value)}
+                  placeholder="Search transaction ID, reference, order ID..."
+                  value={txSearch}
+                  onChange={(e) => setTxSearch(e.target.value)}
                   className="h-8 pl-9 text-xs"
                 />
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
                 <NativeSelect
-                  value={salesPaymentFilter}
-                  onChange={(e) => setSalesPaymentFilter(e.target.value)}
+                  value={txGatewayFilter}
+                  onChange={(e) => setTxGatewayFilter(e.target.value)}
                   size="sm"
                   className="h-8 text-xs"
                 >
                   <NativeSelectOption value="all">
-                    All payment modes
+                    All gateways
                   </NativeSelectOption>
                   <NativeSelectOption value="cod">
                     Cash on Delivery (COD)
@@ -2687,88 +1979,72 @@ export function AccountsPanel() {
                 </NativeSelect>
 
                 <NativeSelect
-                  value={salesStatusFilter}
-                  onChange={(e) => setSalesStatusFilter(e.target.value)}
+                  value={txStatusFilter}
+                  onChange={(e) => setTxStatusFilter(e.target.value)}
                   size="sm"
                   className="h-8 text-xs"
                 >
                   <NativeSelectOption value="all">
-                    All fulfillment statuses
+                    All statuses
                   </NativeSelectOption>
-                  <NativeSelectOption value="delivered">
-                    Delivered
+                  <NativeSelectOption value="success">
+                    Success
                   </NativeSelectOption>
-                  <NativeSelectOption value="dispatched">
-                    Dispatched
+                  <NativeSelectOption value="initiated">
+                    Initiated
                   </NativeSelectOption>
-                  <NativeSelectOption value="processing">
-                    Processing
-                  </NativeSelectOption>
-                  <NativeSelectOption value="cancelled">
-                    Cancelled
+                  <NativeSelectOption value="failed">Failed</NativeSelectOption>
+                  <NativeSelectOption value="reconciled">
+                    Reconciled
                   </NativeSelectOption>
                 </NativeSelect>
               </div>
             </div>
 
+            {/* Transactions Table */}
             <div className="overflow-hidden rounded-lg border border-border bg-card">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Order & Date</TableHead>
-                    <TableHead className="text-xs">Customer</TableHead>
-                    <TableHead className="text-xs">Items</TableHead>
-                    <TableHead className="text-xs">Payment mode</TableHead>
-                    <TableHead className="text-xs">Delivery fee</TableHead>
-                    <TableHead className="text-xs">Discount</TableHead>
+                    <TableHead className="text-xs">Txn ID & Date</TableHead>
+                    <TableHead className="text-xs">Order ID</TableHead>
+                    <TableHead className="text-xs">Gateway</TableHead>
+                    <TableHead className="text-xs">Reference code</TableHead>
                     <TableHead className="text-xs">Status</TableHead>
-                    <TableHead className="text-right text-xs">
-                      Total billed
-                    </TableHead>
+                    <TableHead className="text-right text-xs">Amount</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSalesOrders.length === 0 ? (
+                  {filteredTransactions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="p-0">
+                      <TableCell colSpan={6} className="p-0">
                         <EmptyState
-                          title="No sales orders found"
-                          description="Try adjusting your filters or search keywords."
+                          title="No payment transactions found"
+                          description="Try adjusting your filters or gateway search."
                         />
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredSalesOrders.map((order) => (
-                      <TableRow key={order.id}>
+                    filteredTransactions.map((tx) => (
+                      <TableRow key={tx.id}>
                         <TableCell>
-                          <Link
-                            to="/admin/orders"
-                            className="font-mono text-xs font-semibold text-primary hover:underline block"
-                          >
-                            {order.number}
-                          </Link>
+                          <span className="font-mono text-xs text-foreground block">
+                            {tx.id}
+                          </span>
                           <span className="text-xs text-muted-foreground">
-                            {order.events[0]?.at
-                              ? new Date(
-                                  order.events[0].at,
-                                ).toLocaleDateString()
+                            {tx.createdAt
+                              ? new Date(tx.createdAt).toLocaleString()
                               : '-'}
                           </span>
                         </TableCell>
 
                         <TableCell>
-                          <div className="font-medium text-xs text-foreground">
-                            {order.customerName}
-                          </div>
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {order.customerPhone}
-                          </span>
-                        </TableCell>
-
-                        <TableCell>
-                          <span className="font-mono text-xs text-foreground">
-                            {order.items.length} items
-                          </span>
+                          <Link
+                            to="/admin/orders"
+                            className="font-mono text-xs text-primary hover:underline"
+                          >
+                            {tx.orderId}
+                          </Link>
                         </TableCell>
 
                         <TableCell>
@@ -2776,307 +2052,36 @@ export function AccountsPanel() {
                             variant="secondary"
                             className="text-xs font-semibold uppercase"
                           >
-                            {order.paymentMethod}
+                            {tx.gateway}
                           </Badge>
-                        </TableCell>
-
-                        <TableCell>
-                          <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                            {formatNPR(order.deliveryCharge)}
-                          </span>
-                        </TableCell>
-
-                        <TableCell>
-                          {order.discount > 0 ? (
-                            <span className="font-mono text-xs tabular-nums text-destructive">
-                              -{formatNPR(order.discount)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/40">-</span>
-                          )}
-                        </TableCell>
-
-                        <TableCell>
-                          <Badge
-                            variant={
-                              order.status === 'delivered'
-                                ? 'success'
-                                : order.status === 'cancelled'
-                                  ? 'destructive'
-                                  : 'secondary'
-                            }
-                            className="text-xs font-normal capitalize"
-                          >
-                            {order.status}
-                          </Badge>
-                        </TableCell>
-
-                        <TableCell className="text-right">
-                          <span className="font-mono text-xs font-bold tabular-nums text-foreground">
-                            {formatNPR(order.total)}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ==================================================== */}
-      {/* 5. SUB-ACCOUNT: SALARY ACCOUNT                       */}
-      {/* ==================================================== */}
-      {activeTab === 'salary-account' && (
-        <div className="space-y-6">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard
-              label="Active riders"
-              value={String(ops.riders.length)}
-              note="Active courier personnel"
-              icon={UserCheck}
-            />
-            <KpiCard
-              label="Total deliveries completed"
-              value={String(totalDeliveries)}
-              note="Across settlement cycles"
-              icon={Truck}
-            />
-            <KpiCard
-              label="Total commissions earned"
-              value={formatNPR(totalCommissionsEarned)}
-              note="Delivery per-drop incentives"
-              icon={Coins}
-              tone="success"
-            />
-            <KpiCard
-              label="Pending payroll payouts"
-              value={formatNPR(pendingSettlementPayouts)}
-              note="Pending disbursement to couriers"
-              icon={Clock}
-              tone={pendingSettlementPayouts > 0 ? 'warning' : 'success'}
-            />
-          </div>
-
-          {/* Rider Fleet Accounts Overview */}
-          {rawRiderAccounts.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                    Rider Accounts &amp; COD Cash Balances
-                  </h4>
-                  <p className="text-xs text-muted-foreground">
-                    {rawRiderAccounts.length} active couriers
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenCashHandover()}
-                    className="h-8 gap-1.5 text-xs"
-                  >
-                    <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-500" />
-                    Receive Cash Handover
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenSalaryDisbursement()}
-                    className="h-8 gap-1.5 text-xs"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Manual Entry
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => setIsRiderPayrollRunOpen(true)}
-                    className="h-8 gap-1.5 text-xs"
-                  >
-                    <Calendar className="h-3.5 w-3.5" />
-                    Run Monthly Payroll
-                  </Button>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {rawRiderAccounts.map((r: any) => (
-                  <Card key={r.riderId} className="p-3.5 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="font-semibold text-xs text-foreground block">
-                          {r.riderName}
-                        </span>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {r.phone || 'No phone'}
-                        </span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          handleOpenCashHandover(
-                            r.riderId,
-                            r.riderName,
-                            r.cashOnHand,
-                          )
-                        }
-                        className="h-6 px-2 text-xs gap-1"
-                      >
-                        <ArrowDownLeft className="h-3 w-3 text-emerald-500" />
-                        Receive
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/30 p-2 text-center text-xs">
-                      <div>
-                        <span className="text-xs text-muted-foreground block">
-                          Cash in Hand
-                        </span>
-                        <span className="font-mono font-bold text-foreground">
-                          {formatNPR(r.cashOnHand)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-xs text-muted-foreground block">
-                          Commission Payable
-                        </span>
-                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          {formatNPR(r.commissionPayable)}
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Rider Settlements Table */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                Rider Commission Settlements
-              </h4>
-              <span className="text-xs text-muted-foreground">
-                {rawSettlements.length} settlement cycles recorded
-              </span>
-            </div>
-
-            <div className="overflow-hidden rounded-lg border border-border bg-card">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Settlement ID</TableHead>
-                    <TableHead className="text-xs">Rider Name</TableHead>
-                    <TableHead className="text-xs">Period</TableHead>
-                    <TableHead className="text-xs">Deliveries</TableHead>
-                    <TableHead className="text-xs">Cash collected</TableHead>
-                    <TableHead className="text-xs">Commission</TableHead>
-                    <TableHead className="text-xs">Net Payout</TableHead>
-                    <TableHead className="text-xs">Status</TableHead>
-                    <TableHead className="text-right text-xs">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rawSettlements.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="p-0">
-                        <EmptyState
-                          title="No courier settlements pending"
-                          description="All rider accounts and delivery commissions are balanced."
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    rawSettlements.map((set) => (
-                      <TableRow key={set.id}>
-                        <TableCell>
-                          <span className="font-mono text-xs font-semibold text-foreground">
-                            {set.id}
-                          </span>
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="font-medium text-xs text-foreground">
-                            {set.riderName}
-                          </div>
-                        </TableCell>
-
-                        <TableCell>
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {set.periodStart} → {set.periodEnd}
-                          </span>
                         </TableCell>
 
                         <TableCell>
                           <span className="font-mono text-xs text-foreground">
-                            {set.deliveries}
-                          </span>
-                        </TableCell>
-
-                        <TableCell>
-                          <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
-                            {formatNPR(set.cashCollected)}
-                          </span>
-                        </TableCell>
-
-                        <TableCell>
-                          <span className="font-mono text-xs font-medium tabular-nums text-success">
-                            +{formatNPR(set.commission)}
-                          </span>
-                        </TableCell>
-
-                        <TableCell>
-                          <span className="font-mono text-xs font-bold tabular-nums text-foreground">
-                            {formatNPR(set.payout)}
+                            {tx.reference || '-'}
                           </span>
                         </TableCell>
 
                         <TableCell>
                           <Badge
                             variant={
-                              set.status === 'paid' ? 'success' : 'secondary'
+                              tx.status === 'success' ||
+                              tx.status === 'reconciled'
+                                ? 'success'
+                                : tx.status === 'failed'
+                                  ? 'destructive'
+                                  : 'secondary'
                             }
                             className="text-xs font-normal uppercase"
                           >
-                            {set.status}
+                            {tx.status}
                           </Badge>
                         </TableCell>
 
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {set.slug && (
-                              <a
-                                href={`/voucher/${set.slug}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-1 text-xs font-medium text-foreground hover:bg-muted"
-                                title="Open printable public voucher"
-                              >
-                                <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                                <span>Voucher</span>
-                              </a>
-                            )}
-                            {set.status !== 'paid' && (
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedRiderSettlement(set)
-                                  setIsRiderApprovalModalOpen(true)
-                                }}
-                                disabled={isSubmitting}
-                                className="h-7 px-2 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-                              >
-                                <CheckCircle2 className="h-3 w-3" />
-                                Approve & Pay
-                              </Button>
-                            )}
-                          </div>
+                          <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+                            {formatNPR(tx.amount)}
+                          </span>
                         </TableCell>
                       </TableRow>
                     ))
@@ -3085,387 +2090,1401 @@ export function AccountsPanel() {
               </Table>
             </div>
           </div>
+        )}
 
-          {/* Payroll Disbursements History */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                Salary & Payroll Disbursement Vouchers
-              </h4>
-              <span className="text-xs text-muted-foreground">
-                {salaryVouchers.length} disbursement records in general ledger
-              </span>
+        {/* ==================================================== */}
+        {/* 3. SUB-ACCOUNT: DEALER LEDGER ACCOUNT               */}
+        {/* ==================================================== */}
+        {activeTab === 'dealer-ledger' && (
+          <div className="space-y-6">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <KpiCard
+                label="Active suppliers / dealers"
+                value={String(rawDealers.filter((d) => d.isActive).length)}
+                note="Registered partner merchants"
+                icon={Store}
+              />
+              <KpiCard
+                label="Total items procured"
+                value={String(dealerProcurements.length)}
+                note="Assigned from customer orders"
+                icon={ShoppingBag}
+              />
+              <KpiCard
+                label="Total procured inventory"
+                value={formatNPR(totalDealerProcured)}
+                note="Procured inventory value"
+                icon={ArrowDownLeft}
+                tone="default"
+              />
+              <KpiCard
+                label="Outstanding dealer payables"
+                value={formatNPR(totalOutstandingDealerPayables)}
+                note="Balance to be disbursed to dealers"
+                icon={Coins}
+                tone={
+                  totalOutstandingDealerPayables > 0 ? 'warning' : 'success'
+                }
+              />
             </div>
 
+            {/* Dealer Balance Summary Cards */}
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Dealer Accounts &amp; Payables Overview
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    Showing {dealerBalances.length} registered dealers
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setBatchDealerId('')
+                      setIsBatchDealerSettlementOpen(true)
+                    }}
+                    className="h-8 gap-1.5 text-xs"
+                  >
+                    <Receipt className="h-3.5 w-3.5" />
+                    Batch Settle Items
+                  </Button>
+                  <Link to="/admin/dealers">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 text-xs"
+                    >
+                      <Building2 className="h-3.5 w-3.5" />
+                      Dealers Directory
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {dealerBalances.map(({ dealer, totalProcured, totalPaid }) => {
+                  const balance = totalProcured - totalPaid
+                  const isSelected = selectedDealerId === dealer.id
+                  return (
+                    <Card
+                      key={dealer.id}
+                      className={`p-4 transition-all ${isSelected ? 'border-primary ring-1 ring-primary/30' : ''}`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-foreground">
+                              {dealer.name}
+                            </span>
+                            {!dealer.isActive && (
+                              <Badge variant="outline" className="text-xs">
+                                Inactive
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {dealer.city} · PAN/VAT: {dealer.pan || 'N/A'}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant={isSelected ? 'default' : 'outline'}
+                          onClick={() =>
+                            setSelectedDealerId(isSelected ? 'all' : dealer.id)
+                          }
+                          className="h-6 px-2 text-xs"
+                        >
+                          {isSelected ? 'Selected' : 'Filter'}
+                        </Button>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-3 gap-2 rounded-md bg-muted/30 p-2 text-center text-xs">
+                        <div>
+                          <span className="text-xs text-muted-foreground block">
+                            Procured
+                          </span>
+                          <span className="font-mono font-medium text-foreground">
+                            {formatNPR(totalProcured)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">
+                            Paid
+                          </span>
+                          <span className="font-mono font-medium text-success">
+                            {formatNPR(totalPaid)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">
+                            Payable
+                          </span>
+                          <span
+                            className={`font-mono font-bold ${balance > 0 ? 'text-amber-500' : 'text-muted-foreground'}`}
+                          >
+                            {formatNPR(balance)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between pt-1">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Phone className="h-3 w-3" />
+                          <span>{dealer.contact}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              setBatchDealerId(dealer.id)
+                              setIsBatchDealerSettlementOpen(true)
+                            }}
+                            className="h-6 px-2 text-xs gap-1"
+                            title="Select and settle delivered items for this dealer"
+                          >
+                            <Receipt className="h-3 w-3 text-amber-500" />
+                            Settle Items
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              handleOpenDealerPayout(dealer, balance)
+                            }
+                            className="h-6 px-2 text-xs gap-1"
+                          >
+                            <Plus className="h-3 w-3" />
+                            Payout
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* View Mode Switcher and Filters */}
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={dealerViewMode === 'items' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setDealerViewMode('items')}
+                  className="h-8 gap-1.5 text-xs"
+                >
+                  <ShoppingBag className="h-3.5 w-3.5" />
+                  Procured Order Items ({filteredProcurements.length})
+                </Button>
+                <Button
+                  variant={
+                    dealerViewMode === 'vouchers' ? 'default' : 'outline'
+                  }
+                  size="sm"
+                  onClick={() => setDealerViewMode('vouchers')}
+                  className="h-8 gap-1.5 text-xs"
+                >
+                  <Receipt className="h-3.5 w-3.5" />
+                  Dealer Payout Vouchers ({filteredDealerVouchers.length})
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search item, dealer or order..."
+                    value={dealerSearch}
+                    onChange={(e) => setDealerSearch(e.target.value)}
+                    className="h-8 pl-9 text-xs"
+                  />
+                </div>
+
+                <NativeSelect
+                  value={selectedDealerId}
+                  onChange={(e) => setSelectedDealerId(e.target.value)}
+                  size="sm"
+                  className="h-8 text-xs"
+                >
+                  <NativeSelectOption value="all">
+                    All dealers
+                  </NativeSelectOption>
+                  {rawDealers.map((d) => (
+                    <NativeSelectOption key={d.id} value={d.id}>
+                      {d.name}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </div>
+            </div>
+
+            {/* Dealer Records Table */}
+            {dealerViewMode === 'items' ? (
+              <div className="overflow-hidden rounded-lg border border-border bg-card">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Order & Date</TableHead>
+                      <TableHead className="text-xs">Procured item</TableHead>
+                      <TableHead className="text-xs">Type</TableHead>
+                      <TableHead className="text-xs">Assigned dealer</TableHead>
+                      <TableHead className="text-xs">Quantity</TableHead>
+                      <TableHead className="text-xs">Unit cost</TableHead>
+                      <TableHead className="text-right text-xs">
+                        Procured total
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProcurements.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="p-0">
+                          <EmptyState
+                            title="No dealer order items assigned"
+                            description="When customer order items are assigned to dealers in the Orders panel, they will appear here as procurement entries."
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredProcurements.map((p, idx) => (
+                        <TableRow key={`${p.orderId}-${p.itemId}-${idx}`}>
+                          <TableCell>
+                            <Link
+                              to="/admin/orders"
+                              className="font-mono text-xs font-semibold text-primary hover:underline block"
+                            >
+                              {p.orderNumber}
+                            </Link>
+                            <span className="text-xs text-muted-foreground">
+                              {p.orderDate
+                                ? new Date(p.orderDate).toLocaleDateString()
+                                : '-'}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="font-medium text-xs text-foreground">
+                              {p.itemName}
+                            </div>
+                          </TableCell>
+
+                          <TableCell>
+                            <Badge
+                              variant="secondary"
+                              className="text-xs font-normal capitalize"
+                            >
+                              {p.catalogType}
+                            </Badge>
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="text-xs font-medium text-foreground">
+                              {p.dealerName}
+                            </div>
+                            {p.dealerPan && (
+                              <span className="text-xs text-muted-foreground font-mono">
+                                PAN: {p.dealerPan}
+                              </span>
+                            )}
+                          </TableCell>
+
+                          <TableCell>
+                            <span className="font-mono text-xs text-foreground">
+                              {p.qty} pcs
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                              {formatNPR(p.unitPrice)}
+                            </span>
+                          </TableCell>
+
+                          <TableCell className="text-right">
+                            <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+                              {formatNPR(p.lineTotal)}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-lg border border-border bg-card">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">
+                        Voucher ID & Date
+                      </TableHead>
+                      <TableHead className="text-xs">Dealer & memo</TableHead>
+                      <TableHead className="text-xs">Account</TableHead>
+                      <TableHead className="text-xs">Reference</TableHead>
+                      <TableHead className="text-right text-xs">
+                        Amount disbursed
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDealerVouchers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="p-0">
+                          <EmptyState
+                            title="No dealer payout vouchers found"
+                            description="Use the 'Record Payout' button to record settlement vouchers to suppliers."
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredDealerVouchers.map((v: any) => (
+                        <TableRow key={v.id}>
+                          <TableCell>
+                            <span className="font-mono text-xs text-foreground block">
+                              {v.voucherNo || v.id}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {v.date}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="font-medium text-xs text-foreground">
+                              {v.memo}
+                            </div>
+                          </TableCell>
+
+                          <TableCell>
+                            <span className="font-mono text-xs uppercase text-muted-foreground">
+                              {v.account}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            {v.slug ? (
+                              <a
+                                href={`/voucher/${v.slug}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-mono"
+                                title="View printable settlement voucher"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                <span>{v.voucherNo || 'Voucher'}</span>
+                              </a>
+                            ) : (
+                              <span className="font-mono text-xs text-muted-foreground">
+                                {v.refId || '-'}
+                              </span>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="text-right">
+                            <span className="font-mono text-xs font-semibold tabular-nums text-destructive">
+                              -{formatNPR(v.amount)}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* 4. SUB-ACCOUNT: SALES ACCOUNT                       */}
+        {/* ==================================================== */}
+        {activeTab === 'sales-account' && (
+          <div className="space-y-6">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <KpiCard
+                label="Gross order sales"
+                value={formatNPR(orderGrossRevenue)}
+                note="Total customer order value"
+                icon={TrendingUp}
+                tone="success"
+              />
+              <KpiCard
+                label="Net merchandise value"
+                value={formatNPR(orderNetSales)}
+                note="Excluding delivery & discounts"
+                icon={ShoppingBag}
+              />
+              <KpiCard
+                label="Discounts absorbed"
+                value={formatNPR(orderDiscountsGiven)}
+                note="Coupon codes and price rebates"
+                icon={BadgePercent}
+                tone="danger"
+              />
+              <KpiCard
+                label="Delivery fees collected"
+                value={formatNPR(orderDeliveryFees)}
+                note="Shipping freight surcharge receipts"
+                icon={Truck}
+              />
+            </div>
+
+            {/* Catalog & Payment Breakdown Cards */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {/* Catalog Breakdown: Liquor vs Grocery */}
+              <Card className="p-4 space-y-4">
+                <CardHeader className="p-0 pb-2 border-b border-border">
+                  <CardTitle className="text-xs font-semibold flex items-center justify-between">
+                    <span>Catalog Performance Breakdown</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      Liquor vs Grocery Revenue
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5 font-medium text-foreground">
+                        <Wine className="h-3.5 w-3.5 text-primary" />
+                        Liquor Catalog Revenue
+                      </span>
+                      <span className="font-mono font-semibold text-foreground">
+                        {formatNPR(liquorRevenue)}
+                      </span>
+                    </div>
+                    <Progress
+                      value={
+                        liquorRevenue + groceryRevenue > 0
+                          ? (liquorRevenue / (liquorRevenue + groceryRevenue)) *
+                            100
+                          : 50
+                      }
+                      className="h-2"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5 font-medium text-foreground">
+                        <ShoppingBag className="h-3.5 w-3.5 text-emerald-500" />
+                        Grocery Catalog Revenue
+                      </span>
+                      <span className="font-mono font-semibold text-foreground">
+                        {formatNPR(groceryRevenue)}
+                      </span>
+                    </div>
+                    <Progress
+                      value={
+                        liquorRevenue + groceryRevenue > 0
+                          ? (groceryRevenue /
+                              (liquorRevenue + groceryRevenue)) *
+                            100
+                          : 50
+                      }
+                      className="h-2"
+                    />
+                  </div>
+                </div>
+              </Card>
+
+              {/* Payment Method Distribution */}
+              <Card className="p-4 space-y-4">
+                <CardHeader className="p-0 pb-2 border-b border-border">
+                  <CardTitle className="text-xs font-semibold flex items-center justify-between">
+                    <span>Payment Method Distribution</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      Cash on Delivery vs Digital Pre-paid
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5 font-medium text-foreground">
+                        <Coins className="h-3.5 w-3.5 text-amber-500" />
+                        Cash on Delivery (COD) Remittances
+                      </span>
+                      <span className="font-mono font-semibold text-foreground">
+                        {formatNPR(codTxVolume)}
+                      </span>
+                    </div>
+                    <Progress
+                      value={
+                        codTxVolume + digitalVolume > 0
+                          ? (codTxVolume / (codTxVolume + digitalVolume)) * 100
+                          : 50
+                      }
+                      className="h-2"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5 font-medium text-foreground">
+                        <Wallet className="h-3.5 w-3.5 text-blue-500" />
+                        Digital Wallets (eSewa / Khalti / Fonepay)
+                      </span>
+                      <span className="font-mono font-semibold text-foreground">
+                        {formatNPR(digitalVolume)}
+                      </span>
+                    </div>
+                    <Progress
+                      value={
+                        codTxVolume + digitalVolume > 0
+                          ? (digitalVolume / (codTxVolume + digitalVolume)) *
+                            100
+                          : 50
+                      }
+                      className="h-2"
+                    />
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Sales Orders Register */}
+            <div className="space-y-3">
+              <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 md:flex-row md:items-center md:justify-between">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search order number, customer name, phone..."
+                    value={salesSearch}
+                    onChange={(e) => setSalesSearch(e.target.value)}
+                    className="h-8 pl-9 text-xs"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <NativeSelect
+                    value={salesPaymentFilter}
+                    onChange={(e) => setSalesPaymentFilter(e.target.value)}
+                    size="sm"
+                    className="h-8 text-xs"
+                  >
+                    <NativeSelectOption value="all">
+                      All payment modes
+                    </NativeSelectOption>
+                    <NativeSelectOption value="cod">
+                      Cash on Delivery (COD)
+                    </NativeSelectOption>
+                    <NativeSelectOption value="esewa">eSewa</NativeSelectOption>
+                    <NativeSelectOption value="khalti">
+                      Khalti
+                    </NativeSelectOption>
+                    <NativeSelectOption value="fonepay">
+                      Fonepay
+                    </NativeSelectOption>
+                    <NativeSelectOption value="connectips">
+                      ConnectIPS
+                    </NativeSelectOption>
+                  </NativeSelect>
+
+                  <NativeSelect
+                    value={salesStatusFilter}
+                    onChange={(e) => setSalesStatusFilter(e.target.value)}
+                    size="sm"
+                    className="h-8 text-xs"
+                  >
+                    <NativeSelectOption value="all">
+                      All fulfillment statuses
+                    </NativeSelectOption>
+                    <NativeSelectOption value="delivered">
+                      Delivered
+                    </NativeSelectOption>
+                    <NativeSelectOption value="dispatched">
+                      Dispatched
+                    </NativeSelectOption>
+                    <NativeSelectOption value="processing">
+                      Processing
+                    </NativeSelectOption>
+                    <NativeSelectOption value="cancelled">
+                      Cancelled
+                    </NativeSelectOption>
+                  </NativeSelect>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-lg border border-border bg-card">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Order & Date</TableHead>
+                      <TableHead className="text-xs">Customer</TableHead>
+                      <TableHead className="text-xs">Items</TableHead>
+                      <TableHead className="text-xs">Payment mode</TableHead>
+                      <TableHead className="text-xs">Delivery fee</TableHead>
+                      <TableHead className="text-xs">Discount</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-right text-xs">
+                        Total billed
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSalesOrders.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="p-0">
+                          <EmptyState
+                            title="No sales orders found"
+                            description="Try adjusting your filters or search keywords."
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredSalesOrders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell>
+                            <Link
+                              to="/admin/orders"
+                              className="font-mono text-xs font-semibold text-primary hover:underline block"
+                            >
+                              {order.number}
+                            </Link>
+                            <span className="text-xs text-muted-foreground">
+                              {order.events[0]?.at
+                                ? new Date(
+                                    order.events[0].at,
+                                  ).toLocaleDateString()
+                                : '-'}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="font-medium text-xs text-foreground">
+                              {order.customerName}
+                            </div>
+                            <span className="text-xs text-muted-foreground font-mono">
+                              {order.customerPhone}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <span className="font-mono text-xs text-foreground">
+                              {order.items.length} items
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <Badge
+                              variant="secondary"
+                              className="text-xs font-semibold uppercase"
+                            >
+                              {order.paymentMethod}
+                            </Badge>
+                          </TableCell>
+
+                          <TableCell>
+                            <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                              {formatNPR(order.deliveryCharge)}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            {order.discount > 0 ? (
+                              <span className="font-mono text-xs tabular-nums text-destructive">
+                                -{formatNPR(order.discount)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/40">
+                                -
+                              </span>
+                            )}
+                          </TableCell>
+
+                          <TableCell>
+                            <Badge
+                              variant={
+                                order.status === 'delivered'
+                                  ? 'success'
+                                  : order.status === 'cancelled'
+                                    ? 'destructive'
+                                    : 'secondary'
+                              }
+                              className="text-xs font-normal capitalize"
+                            >
+                              {order.status}
+                            </Badge>
+                          </TableCell>
+
+                          <TableCell className="text-right">
+                            <span className="font-mono text-xs font-bold tabular-nums text-foreground">
+                              {formatNPR(order.total)}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* 5. SUB-ACCOUNT: SALARY ACCOUNT                       */}
+        {/* ==================================================== */}
+        {activeTab === 'salary-account' && (
+          <div className="space-y-6">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <KpiCard
+                label="Active riders"
+                value={String(ops.riders.length)}
+                note="Active courier personnel"
+                icon={UserCheck}
+              />
+              <KpiCard
+                label="Total deliveries completed"
+                value={String(totalDeliveries)}
+                note="Across settlement cycles"
+                icon={Truck}
+              />
+              <KpiCard
+                label="Total commissions earned"
+                value={formatNPR(totalCommissionsEarned)}
+                note="Delivery per-drop incentives"
+                icon={Coins}
+                tone="success"
+              />
+              <KpiCard
+                label="Pending payroll payouts"
+                value={formatNPR(pendingSettlementPayouts)}
+                note="Pending disbursement to couriers"
+                icon={Clock}
+                tone={pendingSettlementPayouts > 0 ? 'warning' : 'success'}
+              />
+            </div>
+
+            {/* Rider Fleet Accounts Overview */}
+            {rawRiderAccounts.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                      Rider Accounts &amp; COD Cash Balances
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      {rawRiderAccounts.length} active couriers
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenCashHandover()}
+                      className="h-8 gap-1.5 text-xs"
+                    >
+                      <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-500" />
+                      Receive Cash Handover
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsAddVoucherOpen(true)}
+                      className="h-8 gap-1.5 text-xs"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Journal Voucher
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => setIsRiderPayrollRunOpen(true)}
+                      className="h-8 gap-1.5 text-xs"
+                    >
+                      <Calendar className="h-3.5 w-3.5" />
+                      Run Monthly Payroll
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {rawRiderAccounts.map((r: any) => (
+                    <Card key={r.riderId} className="p-3.5 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-semibold text-xs text-foreground block">
+                            {r.riderName}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {r.phone || 'No phone'}
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            handleOpenCashHandover(
+                              r.riderId,
+                              r.riderName,
+                              r.cashOnHand,
+                            )
+                          }
+                          className="h-6 px-2 text-xs gap-1"
+                        >
+                          <ArrowDownLeft className="h-3 w-3 text-emerald-500" />
+                          Receive
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/30 p-2 text-center text-xs">
+                        <div>
+                          <span className="text-xs text-muted-foreground block">
+                            Cash in Hand
+                          </span>
+                          <span className="font-mono font-bold text-foreground">
+                            {formatNPR(r.cashOnHand)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">
+                            Commission Payable
+                          </span>
+                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            {formatNPR(r.commissionPayable)}
+                          </span>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Rider Settlements Table */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Rider Commission Settlements
+                </h4>
+                <span className="text-xs text-muted-foreground">
+                  {rawSettlements.length} settlement cycles recorded
+                </span>
+              </div>
+
+              <div className="overflow-hidden rounded-lg border border-border bg-card">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Settlement ID</TableHead>
+                      <TableHead className="text-xs">Rider Name</TableHead>
+                      <TableHead className="text-xs">Period</TableHead>
+                      <TableHead className="text-xs">Deliveries</TableHead>
+                      <TableHead className="text-xs">Cash collected</TableHead>
+                      <TableHead className="text-xs">Commission</TableHead>
+                      <TableHead className="text-xs">Net Payout</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-right text-xs">
+                        Actions
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rawSettlements.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="p-0">
+                          <EmptyState
+                            title="No courier settlements pending"
+                            description="All rider accounts and delivery commissions are balanced."
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      rawSettlements.map((set) => (
+                        <TableRow key={set.id}>
+                          <TableCell>
+                            <span className="font-mono text-xs font-semibold text-foreground">
+                              {set.id}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="font-medium text-xs text-foreground">
+                              {set.riderName}
+                            </div>
+                          </TableCell>
+
+                          <TableCell>
+                            <span className="text-xs text-muted-foreground font-mono">
+                              {set.periodStart} → {set.periodEnd}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <span className="font-mono text-xs text-foreground">
+                              {set.deliveries}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+                              {formatNPR(set.cashCollected)}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <span className="font-mono text-xs font-medium tabular-nums text-success">
+                              +{formatNPR(set.commission)}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <span className="font-mono text-xs font-bold tabular-nums text-foreground">
+                              {formatNPR(set.payout)}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <Badge
+                              variant={
+                                set.status === 'paid' ? 'success' : 'secondary'
+                              }
+                              className="text-xs font-normal uppercase"
+                            >
+                              {set.status}
+                            </Badge>
+                          </TableCell>
+
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {set.slug && (
+                                <a
+                                  href={`/voucher/${set.slug}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                                  title="Open printable public voucher"
+                                >
+                                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                                  <span>Voucher</span>
+                                </a>
+                              )}
+                              {set.status !== 'paid' && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedRiderSettlement(set)
+                                    setIsRiderApprovalModalOpen(true)
+                                  }}
+                                  disabled={isSubmitting}
+                                  className="h-7 px-2 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                >
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Approve & Pay
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Payroll Disbursements History */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Salary & Payroll Disbursement Vouchers
+                </h4>
+                <span className="text-xs text-muted-foreground">
+                  {salaryVouchers.length} disbursement records in general ledger
+                </span>
+              </div>
+
+              <div className="overflow-hidden rounded-lg border border-border bg-card">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">
+                        Voucher ID & Date
+                      </TableHead>
+                      <TableHead className="text-xs">
+                        Recipient / Memo
+                      </TableHead>
+                      <TableHead className="text-xs">Account</TableHead>
+                      <TableHead className="text-xs">Reference</TableHead>
+                      <TableHead className="text-right text-xs">
+                        Amount disbursed
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {salaryVouchers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="p-0">
+                          <EmptyState
+                            title="No salary disbursement vouchers"
+                            description="Disbursed payroll vouchers posted to the general ledger will appear here."
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      salaryVouchers.map((v) => (
+                        <TableRow key={v.id}>
+                          <TableCell>
+                            <span className="font-mono text-xs text-foreground block">
+                              {v.id}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {v.date}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="font-medium text-xs text-foreground">
+                              {v.memo}
+                            </div>
+                          </TableCell>
+
+                          <TableCell>
+                            <span className="font-mono text-xs uppercase text-muted-foreground">
+                              {v.account}
+                            </span>
+                          </TableCell>
+
+                          <TableCell>
+                            <span className="font-mono text-xs text-muted-foreground">
+                              {v.refId || '-'}
+                            </span>
+                          </TableCell>
+
+                          <TableCell className="text-right">
+                            <span className="font-mono text-xs font-semibold tabular-nums text-destructive">
+                              -{formatNPR(v.amount)}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* 6. SUB-ACCOUNT: CHART OF ACCOUNTS                    */}
+        {/* ==================================================== */}
+        {activeTab === 'chart-of-accounts' && (
+          <div className="space-y-6">
+            {/* Root Category KPI Cards */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              <KpiCard
+                label="Total Assets (1xxx)"
+                value={formatNPR(
+                  rawChartOfAccounts
+                    .filter((a: any) => a.rootType === 'asset' && !a.isGroup)
+                    .reduce(
+                      (sum: number, a: any) => sum + Math.max(0, a.netBalance),
+                      0,
+                    ),
+                )}
+                note="Cash, fleet, bank, clearing"
+                icon={Wallet}
+              />
+              <KpiCard
+                label="Total Liabilities (2xxx)"
+                value={formatNPR(
+                  rawChartOfAccounts
+                    .filter(
+                      (a: any) => a.rootType === 'liability' && !a.isGroup,
+                    )
+                    .reduce(
+                      (sum: number, a: any) => sum + Math.max(0, a.netBalance),
+                      0,
+                    ),
+                )}
+                note="Dealer AP, VAT 13%, TDS, riders"
+                icon={Store}
+                tone="warning"
+              />
+              <KpiCard
+                label="Equity (3xxx)"
+                value={formatNPR(
+                  rawChartOfAccounts
+                    .filter((a: any) => a.rootType === 'equity' && !a.isGroup)
+                    .reduce(
+                      (sum: number, a: any) => sum + Math.max(0, a.netBalance),
+                      0,
+                    ),
+                )}
+                note="Capital & retained earnings"
+                icon={Coins}
+              />
+              <KpiCard
+                label="Total Revenue (4xxx)"
+                value={formatNPR(
+                  rawChartOfAccounts
+                    .filter((a: any) => a.rootType === 'income' && !a.isGroup)
+                    .reduce(
+                      (sum: number, a: any) => sum + Math.max(0, a.netBalance),
+                      0,
+                    ),
+                )}
+                note="Liquor, grocery, delivery"
+                icon={TrendingUp}
+                tone="success"
+              />
+              <KpiCard
+                label="Total Expenses (5xxx)"
+                value={formatNPR(
+                  rawChartOfAccounts
+                    .filter((a: any) => a.rootType === 'expense' && !a.isGroup)
+                    .reduce(
+                      (sum: number, a: any) => sum + Math.max(0, a.netBalance),
+                      0,
+                    ),
+                )}
+                note="COGS, commission, overhead"
+                icon={ArrowUpRight}
+                tone="danger"
+              />
+            </div>
+
+            {/* Filters & Search */}
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 md:flex-row md:items-center md:justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search account code (e.g. 1011) or name..."
+                  value={coaSearch}
+                  onChange={(e) => setCoaSearch(e.target.value)}
+                  className="h-8 pl-9 text-xs"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="text-xs py-1 px-2.5 gap-1.5 border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Active FY:{' '}
+                  {rawFiscalYears.find((fy: any) => !fy.isClosed)?.name ||
+                    '2083/84'}
+                </Badge>
+
+                <NativeSelect
+                  value={coaCategoryFilter}
+                  onChange={(e) => setCoaCategoryFilter(e.target.value)}
+                  size="sm"
+                  className="h-8 text-xs"
+                >
+                  <NativeSelectOption value="all">
+                    All Root Types ({rawChartOfAccounts.length})
+                  </NativeSelectOption>
+                  <NativeSelectOption value="asset">
+                    Assets (1000s)
+                  </NativeSelectOption>
+                  <NativeSelectOption value="liability">
+                    Liabilities (2000s)
+                  </NativeSelectOption>
+                  <NativeSelectOption value="equity">
+                    Equity (3000s)
+                  </NativeSelectOption>
+                  <NativeSelectOption value="income">
+                    Income / Revenue (4000s)
+                  </NativeSelectOption>
+                  <NativeSelectOption value="expense">
+                    Expenses / COGS (5000s)
+                  </NativeSelectOption>
+                </NativeSelect>
+              </div>
+            </div>
+
+            {/* Chart of Accounts Table */}
             <div className="overflow-hidden rounded-lg border border-border bg-card">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Voucher ID & Date</TableHead>
-                    <TableHead className="text-xs">Recipient / Memo</TableHead>
-                    <TableHead className="text-xs">Account</TableHead>
-                    <TableHead className="text-xs">Reference</TableHead>
+                    <TableHead className="text-xs w-[120px]">
+                      Account Code
+                    </TableHead>
+                    <TableHead className="text-xs">
+                      Account Title & Ledger
+                    </TableHead>
+                    <TableHead className="text-xs">Root Type</TableHead>
+                    <TableHead className="text-xs">Classification</TableHead>
                     <TableHead className="text-right text-xs">
-                      Amount disbursed
+                      Total Debit
+                    </TableHead>
+                    <TableHead className="text-right text-xs">
+                      Total Credit
+                    </TableHead>
+                    <TableHead className="text-right text-xs">
+                      Net Balance
+                    </TableHead>
+                    <TableHead className="text-right text-xs w-[90px]">
+                      Action
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {salaryVouchers.length === 0 ? (
+                  {filteredChartOfAccounts.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="p-0">
+                      <TableCell colSpan={8} className="p-0">
                         <EmptyState
-                          title="No salary disbursement vouchers"
-                          description="Disbursed payroll vouchers posted to the general ledger will appear here."
+                          title="No accounts match filter"
+                          description="Try adjusting your search or category filter."
                         />
                       </TableCell>
                     </TableRow>
                   ) : (
-                    salaryVouchers.map((v) => (
-                      <TableRow key={v.id}>
-                        <TableCell>
-                          <span className="font-mono text-xs text-foreground block">
-                            {v.id}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {v.date}
-                          </span>
-                        </TableCell>
-
-                        <TableCell>
-                          <div className="font-medium text-xs text-foreground">
-                            {v.memo}
-                          </div>
-                        </TableCell>
-
-                        <TableCell>
-                          <span className="font-mono text-xs uppercase text-muted-foreground">
-                            {v.account}
-                          </span>
-                        </TableCell>
-
-                        <TableCell>
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {v.refId || '-'}
-                          </span>
-                        </TableCell>
-
-                        <TableCell className="text-right">
-                          <span className="font-mono text-xs font-semibold tabular-nums text-destructive">
-                            -{formatNPR(v.amount)}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    filteredChartOfAccounts.map((acc: any) => {
+                      const isGroup = acc.isGroup
+                      const isDebitNormal =
+                        acc.rootType === 'asset' || acc.rootType === 'expense'
+                      return (
+                        <TableRow
+                          key={acc.id}
+                          className={isGroup ? 'bg-muted/30 font-semibold' : ''}
+                        >
+                          <TableCell>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                !isGroup && handleDrillDownToLedger(acc.id)
+                              }
+                              className={`font-mono text-xs font-bold text-left ${
+                                !isGroup
+                                  ? 'text-primary hover:underline cursor-pointer'
+                                  : 'text-foreground'
+                              }`}
+                              title={
+                                !isGroup
+                                  ? 'Drill down into General Ledger'
+                                  : undefined
+                              }
+                            >
+                              {acc.code}
+                            </button>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {isGroup && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs px-1.5 py-0"
+                                >
+                                  GROUP
+                                </Badge>
+                              )}
+                              <span className="text-xs text-foreground font-medium">
+                                {acc.name}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="secondary"
+                              className={`text-xs capitalize ${
+                                acc.rootType === 'asset'
+                                  ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                  : acc.rootType === 'liability'
+                                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                    : acc.rootType === 'income'
+                                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                      : acc.rootType === 'expense'
+                                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                        : 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                              }`}
+                            >
+                              {acc.rootType}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs text-muted-foreground">
+                              {acc.ownerType
+                                ? `${acc.ownerType} ledger`
+                                : isGroup
+                                  ? 'Parent Group'
+                                  : 'Ledger Account'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                            {acc.totalDebit > 0
+                              ? formatNPR(acc.totalDebit)
+                              : '—'}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                            {acc.totalCredit > 0
+                              ? formatNPR(acc.totalCredit)
+                              : '—'}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-bold">
+                            <span
+                              className={
+                                acc.netBalance > 0
+                                  ? isDebitNormal
+                                    ? 'text-primary'
+                                    : 'text-emerald-600 dark:text-emerald-400'
+                                  : acc.netBalance < 0
+                                    ? 'text-destructive'
+                                    : 'text-muted-foreground'
+                              }
+                            >
+                              {formatNPR(acc.netBalance)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {!isGroup && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDrillDownToLedger(acc.id)}
+                                className="h-7 px-2 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10"
+                                title="Drill down into General Ledger"
+                              >
+                                <span>Ledger</span>
+                                <ArrowRight className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                   )}
                 </TableBody>
               </Table>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ==================================================== */}
-      {/* 6. SUB-ACCOUNT: CHART OF ACCOUNTS                    */}
-      {/* ==================================================== */}
-      {activeTab === 'chart-of-accounts' && (
-        <div className="space-y-6">
-          {/* Root Category KPI Cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <KpiCard
-              label="Total Assets (1xxx)"
-              value={formatNPR(
-                rawChartOfAccounts
-                  .filter((a: any) => a.rootType === 'asset' && !a.isGroup)
-                  .reduce(
-                    (sum: number, a: any) => sum + Math.max(0, a.netBalance),
-                    0,
-                  ),
-              )}
-              note="Cash, fleet, bank, clearing"
-              icon={Wallet}
-            />
-            <KpiCard
-              label="Total Liabilities (2xxx)"
-              value={formatNPR(
-                rawChartOfAccounts
-                  .filter((a: any) => a.rootType === 'liability' && !a.isGroup)
-                  .reduce(
-                    (sum: number, a: any) => sum + Math.max(0, a.netBalance),
-                    0,
-                  ),
-              )}
-              note="Dealer AP, VAT 13%, TDS, riders"
-              icon={Store}
-              tone="warning"
-            />
-            <KpiCard
-              label="Equity (3xxx)"
-              value={formatNPR(
-                rawChartOfAccounts
-                  .filter((a: any) => a.rootType === 'equity' && !a.isGroup)
-                  .reduce(
-                    (sum: number, a: any) => sum + Math.max(0, a.netBalance),
-                    0,
-                  ),
-              )}
-              note="Capital & retained earnings"
-              icon={Coins}
-            />
-            <KpiCard
-              label="Total Revenue (4xxx)"
-              value={formatNPR(
-                rawChartOfAccounts
-                  .filter((a: any) => a.rootType === 'income' && !a.isGroup)
-                  .reduce(
-                    (sum: number, a: any) => sum + Math.max(0, a.netBalance),
-                    0,
-                  ),
-              )}
-              note="Liquor, grocery, delivery"
-              icon={TrendingUp}
-              tone="success"
-            />
-            <KpiCard
-              label="Total Expenses (5xxx)"
-              value={formatNPR(
-                rawChartOfAccounts
-                  .filter((a: any) => a.rootType === 'expense' && !a.isGroup)
-                  .reduce(
-                    (sum: number, a: any) => sum + Math.max(0, a.netBalance),
-                    0,
-                  ),
-              )}
-              note="COGS, commission, overhead"
-              icon={ArrowUpRight}
-              tone="danger"
-            />
-          </div>
+        {/* ==================================================== */}
+        {/* 7. SUB-ACCOUNT: FINANCIAL REPORTS (ERP DESK)         */}
+        {/* ==================================================== */}
+        {activeTab === 'financial-reports' && (
+          <FinancialReportsTab
+            chartOfAccounts={rawChartOfAccounts}
+            onDrillDown={handleDrillDownToLedger}
+            settings={{
+              legalName: ops.settings.legalName,
+              address: ops.settings.address,
+              pan: ops.settings.pan,
+            }}
+            fiscalYearName={
+              rawFiscalYears.find((fy: any) => !fy.isClosed)?.name || '2083/84'
+            }
+          />
+        )}
 
-          {/* Filters & Search */}
-          <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 md:flex-row md:items-center md:justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Search account code (e.g. 1011) or name..."
-                value={coaSearch}
-                onChange={(e) => setCoaSearch(e.target.value)}
-                className="h-8 pl-9 text-xs"
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge
-                variant="outline"
-                className="text-xs py-1 px-2.5 gap-1.5 border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
-              >
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                Active FY:{' '}
-                {rawFiscalYears.find((fy: any) => !fy.isClosed)?.name ||
-                  '2083/84'}
-              </Badge>
-
-              <NativeSelect
-                value={coaCategoryFilter}
-                onChange={(e) => setCoaCategoryFilter(e.target.value)}
-                size="sm"
-                className="h-8 text-xs"
-              >
-                <NativeSelectOption value="all">
-                  All Root Types ({rawChartOfAccounts.length})
-                </NativeSelectOption>
-                <NativeSelectOption value="asset">
-                  Assets (1000s)
-                </NativeSelectOption>
-                <NativeSelectOption value="liability">
-                  Liabilities (2000s)
-                </NativeSelectOption>
-                <NativeSelectOption value="equity">
-                  Equity (3000s)
-                </NativeSelectOption>
-                <NativeSelectOption value="income">
-                  Income / Revenue (4000s)
-                </NativeSelectOption>
-                <NativeSelectOption value="expense">
-                  Expenses / COGS (5000s)
-                </NativeSelectOption>
-              </NativeSelect>
-            </div>
-          </div>
-
-          {/* Chart of Accounts Table */}
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs w-[120px]">
-                    Account Code
-                  </TableHead>
-                  <TableHead className="text-xs">
-                    Account Title & Ledger
-                  </TableHead>
-                  <TableHead className="text-xs">Root Type</TableHead>
-                  <TableHead className="text-xs">Classification</TableHead>
-                  <TableHead className="text-right text-xs">
-                    Total Debit
-                  </TableHead>
-                  <TableHead className="text-right text-xs">
-                    Total Credit
-                  </TableHead>
-                  <TableHead className="text-right text-xs">
-                    Net Balance
-                  </TableHead>
-                  <TableHead className="text-right text-xs w-[90px]">
-                    Action
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredChartOfAccounts.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="p-0">
-                      <EmptyState
-                        title="No accounts match filter"
-                        description="Try adjusting your search or category filter."
-                      />
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredChartOfAccounts.map((acc: any) => {
-                    const isGroup = acc.isGroup
-                    const isDebitNormal =
-                      acc.rootType === 'asset' || acc.rootType === 'expense'
-                    return (
-                      <TableRow
-                        key={acc.id}
-                        className={isGroup ? 'bg-muted/30 font-semibold' : ''}
-                      >
-                        <TableCell>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              !isGroup && handleDrillDownToLedger(acc.id)
-                            }
-                            className={`font-mono text-xs font-bold text-left ${
-                              !isGroup
-                                ? 'text-primary hover:underline cursor-pointer'
-                                : 'text-foreground'
-                            }`}
-                            title={
-                              !isGroup
-                                ? 'Drill down into General Ledger'
-                                : undefined
-                            }
-                          >
-                            {acc.code}
-                          </button>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {isGroup && (
-                              <Badge
-                                variant="outline"
-                                className="text-xs px-1.5 py-0"
-                              >
-                                GROUP
-                              </Badge>
-                            )}
-                            <span className="text-xs text-foreground font-medium">
-                              {acc.name}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="secondary"
-                            className={`text-xs capitalize ${
-                              acc.rootType === 'asset'
-                                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                                : acc.rootType === 'liability'
-                                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                                  : acc.rootType === 'income'
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                    : acc.rootType === 'expense'
-                                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                                      : 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                            }`}
-                          >
-                            {acc.rootType}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs text-muted-foreground">
-                            {acc.ownerType
-                              ? `${acc.ownerType} ledger`
-                              : isGroup
-                                ? 'Parent Group'
-                                : 'Ledger Account'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                          {acc.totalDebit > 0 ? formatNPR(acc.totalDebit) : '—'}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                          {acc.totalCredit > 0
-                            ? formatNPR(acc.totalCredit)
-                            : '—'}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs font-bold">
-                          <span
-                            className={
-                              acc.netBalance > 0
-                                ? isDebitNormal
-                                  ? 'text-primary'
-                                  : 'text-emerald-600 dark:text-emerald-400'
-                                : acc.netBalance < 0
-                                  ? 'text-destructive'
-                                  : 'text-muted-foreground'
-                            }
-                          >
-                            {formatNPR(acc.netBalance)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {!isGroup && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDrillDownToLedger(acc.id)}
-                              className="h-7 px-2 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10"
-                              title="Drill down into General Ledger"
-                            >
-                              <span>Ledger</span>
-                              <ArrowRight className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      )}
-
-      {/* ==================================================== */}
-      {/* 7. SUB-ACCOUNT: FINANCIAL REPORTS (ERP DESK)         */}
-      {/* ==================================================== */}
-      {activeTab === 'financial-reports' && (
-        <FinancialReportsTab
-          chartOfAccounts={rawChartOfAccounts}
-          onDrillDown={handleDrillDownToLedger}
-          settings={{
-            legalName: ops.settings.legalName,
-            address: ops.settings.address,
-            pan: ops.settings.pan,
-          }}
-          fiscalYearName={
-            rawFiscalYears.find((fy: any) => !fy.isClosed)?.name || '2083/84'
-          }
-        />
-      )}
+        {/* ==================================================== */}
+        {/* 8. SUB-ACCOUNT: ACCOUNT DEFAULTS & POSTING RULES     */}
+        {/* ==================================================== */}
+        {(activeTab === 'account-defaults' || activeTab === 'settings') && (
+          <AccountDefaultsTab />
+        )}
       </DataSection>
 
       {/* ==================================================== */}
@@ -3890,126 +3909,6 @@ export function AccountsPanel() {
               </Button>
               <Button type="submit" size="sm" disabled={isSubmitting}>
                 {isSubmitting ? 'Receiving...' : 'Verify & Post RV'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Disburse Salary Dialog */}
-      <Dialog open={isSalaryModalOpen} onOpenChange={setIsSalaryModalOpen}>
-        <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
-          <form
-            onSubmit={handlePostSalaryDisbursement}
-            className="flex flex-col h-full min-h-0"
-          >
-            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
-              <DialogTitle className="text-sm font-semibold">
-                Disburse Salary / Rider Commission
-              </DialogTitle>
-              <DialogDescription className="text-xs">
-                Records a payroll disbursement debit voucher into the general
-                ledger.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Recipient / Rider (optional)</Label>
-                <NativeSelect
-                  value={salaryForm.riderId}
-                  onChange={(e) => {
-                    const r = ops.riders.find(
-                      (rider) => rider.id === e.target.value,
-                    )
-                    setSalaryForm({
-                      ...salaryForm,
-                      riderId: e.target.value,
-                      recipientName: r?.name || '',
-                      memo: r
-                        ? `Courier compensation: ${r.name}`
-                        : salaryForm.memo,
-                    })
-                  }}
-                  size="sm"
-                  className="w-full text-xs"
-                >
-                  <NativeSelectOption value="">
-                    General courier / staff pool
-                  </NativeSelectOption>
-                  {ops.riders.map((rider) => (
-                    <NativeSelectOption key={rider.id} value={rider.id}>
-                      {rider.name} ({rider.phone})
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Payroll memo *</Label>
-                <Input
-                  required
-                  value={salaryForm.memo}
-                  onChange={(e) =>
-                    setSalaryForm({ ...salaryForm, memo: e.target.value })
-                  }
-                  className="h-8 text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Payout source</Label>
-                  <NativeSelect
-                    value={salaryForm.account}
-                    onChange={(e) =>
-                      setSalaryForm({ ...salaryForm, account: e.target.value })
-                    }
-                    size="sm"
-                    className="w-full text-xs"
-                  >
-                    <NativeSelectOption value="bank">
-                      Bank account
-                    </NativeSelectOption>
-                    <NativeSelectOption value="cash">
-                      Cash remittance
-                    </NativeSelectOption>
-                    <NativeSelectOption value="esewa">
-                      eSewa wallet transfer
-                    </NativeSelectOption>
-                  </NativeSelect>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Amount (in Rs. NPR) *</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    required
-                    value={salaryForm.amountInRs}
-                    onChange={(e) =>
-                      setSalaryForm({
-                        ...salaryForm,
-                        amountInRs: Number(e.target.value),
-                      })
-                    }
-                    className="h-8 font-mono text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setIsSalaryModalOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" size="sm" disabled={isSubmitting}>
-                {isSubmitting ? 'Recording...' : 'Disburse salary'}
               </Button>
             </DialogFooter>
           </form>

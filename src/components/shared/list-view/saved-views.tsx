@@ -168,7 +168,8 @@ export function SavedViews({
                 Save Current View
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Give this filtered search configuration a memorable name for quick access.
+                Give this filtered search configuration a memorable name for
+                quick access.
               </DialogDescription>
             </DialogHeader>
 
@@ -195,11 +196,7 @@ export function SavedViews({
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={!newViewName.trim()}
-              >
+              <Button type="submit" size="sm" disabled={!newViewName.trim()}>
                 Save View
               </Button>
             </DialogFooter>

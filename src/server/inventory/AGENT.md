@@ -11,6 +11,12 @@
 - **Reserve** on dealer assignment, **finalize** on delivery, **release** on cancel/failed. Prevent overselling with conditional updates (`WHERE qty >= :n`) or `SELECT … FOR UPDATE` inside `dbTx`.
 - Distance: haversine in `#/lib/geo` (PostGIS not needed at this scale).
 
+## Transaction Safety (INFRA-1)
+
+- Multi-statement inventory and dealer mutations (`upsertDealerQuery`, `deleteDealerQuery`, `assignDealerItemsQuery`, `assignItemDealersQuery`) execute inside `dbTx.transaction()` with atomic rollbacks.
+- Each function accepts optional `externalTx?: DbTx` allowing callers to participate in parent transactions.
+- Automated rollback tests in `src/server/db-transactions.test.ts`.
+
 ## Functions
 
 | Function                                                   | Roles              | Purpose                            | Status |

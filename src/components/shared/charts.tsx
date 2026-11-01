@@ -48,7 +48,11 @@ function formatXAxisDate(dateStr: string): string {
   try {
     const parts = dateStr.split('-')
     if (parts.length === 3) {
-      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+      const d = new Date(
+        Number(parts[0]),
+        Number(parts[1]) - 1,
+        Number(parts[2]),
+      )
       if (!isNaN(d.getTime())) {
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       }
@@ -132,7 +136,10 @@ export function LineChart({
           tickMargin={8}
           fontSize={11}
           stroke="var(--muted-foreground)"
-          domain={[0, (dataMax: number) => Math.max(dataMax * 1.15, money ? 1000 : 5)]}
+          domain={[
+            0,
+            (dataMax: number) => Math.max(dataMax * 1.15, money ? 1000 : 5),
+          ]}
           tickFormatter={(v: number) => (money ? formatAxisRupees(v) : `${v}`)}
         />
         <ChartTooltip
@@ -159,7 +166,9 @@ export function LineChart({
               formatter={(value, name) => (
                 <div className="flex items-center justify-between gap-4 w-full">
                   <span className="text-muted-foreground font-normal">
-                    {chartConfig[name as string]?.label ?? (money ? 'Revenue' : 'Count')}:
+                    {chartConfig[name as string]?.label ??
+                      (money ? 'Revenue' : 'Count')}
+                    :
                   </span>
                   <span className="font-mono font-bold text-foreground">
                     {money

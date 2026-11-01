@@ -1,6 +1,9 @@
 import * as React from 'react'
 import { cn } from '#/lib/utils'
-import { DataRefreshButton, type DataRefreshButtonProps } from './data-refresh-button'
+import {
+  DataRefreshButton,
+  type DataRefreshButtonProps,
+} from './data-refresh-button'
 import type { QueryKey } from '@tanstack/react-query'
 
 export interface DataSectionProps {
@@ -84,13 +87,16 @@ export function DataSection({
   className,
   contentClassName,
 }: DataSectionProps) {
-  const hasHeader = Boolean(title || description || actions || showRefreshButton)
+  const hasHeader = Boolean(
+    title || description || actions || showRefreshButton,
+  )
 
   return (
     <div
       className={cn(
         'relative w-full min-w-0 transition-all duration-300',
-        variant === 'card' && 'rounded-xl border border-border bg-card p-4 shadow-2xs',
+        variant === 'card' &&
+          'rounded-xl border border-border bg-card p-4 shadow-2xs',
         className,
       )}
     >

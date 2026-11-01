@@ -3,7 +3,10 @@ import { useSuspenseQuery } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
-import { DateRangeFilter, useDateFilter } from '#/components/shared/date-range-filter'
+import {
+  DateRangeFilter,
+  useDateFilter,
+} from '#/components/shared/date-range-filter'
 import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
@@ -50,9 +53,11 @@ import {
 } from '#/components/ui/table'
 
 export function ReportsPanel() {
-  const { data: reportsData, isFetching, refetch } = useSuspenseQuery(
-    adminQueries.reports(),
-  )
+  const {
+    data: reportsData,
+    isFetching,
+    refetch,
+  } = useSuspenseQuery(adminQueries.reports())
   const ops = reportsData.ops
 
   const { dateFilter, setDateFilter, bounds, filterItems } =
@@ -69,7 +74,10 @@ export function ReportsPanel() {
   const [marginTab, setMarginTab] = useState<'product' | 'dealer'>('product')
 
   // Aggregate Metrics based on selected date period (default: Today)
-  const grossSalesTotal = dateFilteredOrders.reduce((sum, o) => sum + o.total, 0)
+  const grossSalesTotal = dateFilteredOrders.reduce(
+    (sum, o) => sum + o.total,
+    0,
+  )
   const totalDeliveriesCount = ops.riders.reduce(
     (sum, r) => sum + r.deliveries,
     0,
@@ -288,247 +296,247 @@ export function ReportsPanel() {
 
       <DataSection isRefreshing={isFetching}>
         <div className="space-y-6">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <KpiCard
+              label="Cumulative sales audit"
+              value={formatNPR(grossSalesTotal)}
+              note={
+                bounds.isFiltered
+                  ? `Revenue for ${bounds.label}`
+                  : 'Gross order checkout revenue'
+              }
+              icon={DollarSign}
+            />
+            <KpiCard
+              label="Realized gross profit"
+              value={`${formatNPR(totalGrossProfit)} (${overallMarginPercent}%)`}
+              note={
+                bounds.isFiltered
+                  ? `Gross profit for ${bounds.label}`
+                  : 'Revenue minus dealer snapshot cost'
+              }
+              icon={TrendingUp}
+              tone="success"
+            />
+            <KpiCard
+              label="Dealer sourcing cost (COGS)"
+              value={formatNPR(totalDealerCost)}
+              note={
+                bounds.isFiltered
+                  ? `Dealer COGS for ${bounds.label}`
+                  : 'Payable to partner merchant shops'
+              }
+              icon={Store}
+            />
+            <KpiCard
+              label="Fleet logistics deliveries"
+              value={totalDeliveriesCount}
+              note="Parcels completed in Butwal hub"
+              icon={Truck}
+            />
+          </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard
-          label="Cumulative sales audit"
-          value={formatNPR(grossSalesTotal)}
-          note={
-            bounds.isFiltered
-              ? `Revenue for ${bounds.label}`
-              : 'Gross order checkout revenue'
-          }
-          icon={DollarSign}
-        />
-        <KpiCard
-          label="Realized gross profit"
-          value={`${formatNPR(totalGrossProfit)} (${overallMarginPercent}%)`}
-          note={
-            bounds.isFiltered
-              ? `Gross profit for ${bounds.label}`
-              : 'Revenue minus dealer snapshot cost'
-          }
-          icon={TrendingUp}
-          tone="success"
-        />
-        <KpiCard
-          label="Dealer sourcing cost (COGS)"
-          value={formatNPR(totalDealerCost)}
-          note={
-            bounds.isFiltered
-              ? `Dealer COGS for ${bounds.label}`
-              : 'Payable to partner merchant shops'
-          }
-          icon={Store}
-        />
-        <KpiCard
-          label="Fleet logistics deliveries"
-          value={totalDeliveriesCount}
-          note="Parcels completed in Butwal hub"
-          icon={Truck}
-        />
-      </div>
+          {/* Reports Grid */}
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* Report 1: Sales Audit */}
+            <Card className="flex flex-col justify-between">
+              <CardHeader>
+                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
+                  <DollarSign className="h-4 w-4" />
+                </div>
+                <CardTitle className="text-sm font-semibold">
+                  Fiscal sales and revenue audit
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Detailed breakdown of order transaction numbers, customer
+                  contact profiles, delivery surcharges, applied discounts, and
+                  net realized turnover.
+                </CardDescription>
+              </CardHeader>
+              <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
+                <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+                  {formatNPR(grossSalesTotal)}
+                </span>
+                <Button
+                  size="sm"
+                  onClick={handleExportSalesCSV}
+                  className="h-8 gap-1.5 text-xs cursor-pointer"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download CSV
+                </Button>
+              </CardFooter>
+            </Card>
 
-      {/* Reports Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Report 1: Sales Audit */}
-        <Card className="flex flex-col justify-between">
-          <CardHeader>
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
-              <DollarSign className="h-4 w-4" />
-            </div>
-            <CardTitle className="text-sm font-semibold">
-              Fiscal sales and revenue audit
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Detailed breakdown of order transaction numbers, customer contact
-              profiles, delivery surcharges, applied discounts, and net realized
-              turnover.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
-            <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
-              {formatNPR(grossSalesTotal)}
-            </span>
-            <Button
-              size="sm"
-              onClick={handleExportSalesCSV}
-              className="h-8 gap-1.5 text-xs cursor-pointer"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Download CSV
-            </Button>
-          </CardFooter>
-        </Card>
+            {/* Report 2: Profit & Margin Sourcing Intelligence */}
+            <Card className="flex flex-col justify-between">
+              <CardHeader>
+                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 mb-2">
+                  <TrendingUp className="h-4 w-4" />
+                </div>
+                <CardTitle className="text-sm font-semibold">
+                  Profit & margin sourcing intelligence
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Item-level margins, dealer snapshot costs, net retail
+                  realization, and gross profit percentage across liquor &amp;
+                  grocery catalog lines.
+                </CardDescription>
+              </CardHeader>
+              <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
+                <span className="font-mono text-xs font-semibold text-emerald-600 tabular-nums">
+                  {formatNPR(totalGrossProfit)} ({overallMarginPercent}%)
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsMarginModalOpen(true)}
+                    className="h-8 gap-1.5 text-xs cursor-pointer"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    Preview &amp; Breakdown
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleExportProfitMarginCSV}
+                    className="h-8 gap-1.5 text-xs cursor-pointer"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download CSV
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
 
-        {/* Report 2: Profit & Margin Sourcing Intelligence */}
-        <Card className="flex flex-col justify-between">
-          <CardHeader>
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 mb-2">
-              <TrendingUp className="h-4 w-4" />
-            </div>
-            <CardTitle className="text-sm font-semibold">
-              Profit & margin sourcing intelligence
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Item-level margins, dealer snapshot costs, net retail realization,
-              and gross profit percentage across liquor &amp; grocery catalog
-              lines.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
-            <span className="font-mono text-xs font-semibold text-emerald-600 tabular-nums">
-              {formatNPR(totalGrossProfit)} ({overallMarginPercent}%)
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsMarginModalOpen(true)}
-                className="h-8 gap-1.5 text-xs cursor-pointer"
-              >
-                <Eye className="h-3.5 w-3.5" />
-                Preview &amp; Breakdown
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleExportProfitMarginCSV}
-                className="h-8 gap-1.5 text-xs cursor-pointer"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Download CSV
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
+            {/* Report 3: Fleet Performance */}
+            <Card className="flex flex-col justify-between">
+              <CardHeader>
+                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
+                  <Truck className="h-4 w-4" />
+                </div>
+                <CardTitle className="text-sm font-semibold">
+                  Fleet delivery logistics performance
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Courier-wise completion metrics, active COD floats in transit,
+                  star ratings, and commission disbursements for Butwal,
+                  Tilottama &amp; Siddharthanagar corridors.
+                </CardDescription>
+              </CardHeader>
+              <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
+                <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+                  {totalDeliveriesCount} parcels
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsFleetModalOpen(true)}
+                    className="h-8 gap-1.5 text-xs cursor-pointer"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    Preview Fleet SLA
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleExportFleetCSV}
+                    className="h-8 gap-1.5 text-xs cursor-pointer"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download CSV
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
 
-        {/* Report 3: Fleet Performance */}
-        <Card className="flex flex-col justify-between">
-          <CardHeader>
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
-              <Truck className="h-4 w-4" />
-            </div>
-            <CardTitle className="text-sm font-semibold">
-              Fleet delivery logistics performance
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Courier-wise completion metrics, active COD floats in transit,
-              star ratings, and commission disbursements for Butwal, Tilottama
-              &amp; Siddharthanagar corridors.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
-            <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
-              {totalDeliveriesCount} parcels
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsFleetModalOpen(true)}
-                className="h-8 gap-1.5 text-xs cursor-pointer"
-              >
-                <Eye className="h-3.5 w-3.5" />
-                Preview Fleet SLA
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleExportFleetCSV}
-                className="h-8 gap-1.5 text-xs cursor-pointer"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Download CSV
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
+            {/* Report 4: IRD VAT Annex 13 */}
+            <Card className="flex flex-col justify-between">
+              <CardHeader>
+                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
+                  <Building className="h-4 w-4" />
+                </div>
+                <CardTitle className="text-sm font-semibold">
+                  Nepal IRD VAT Annex 13 (बिक्री खाता)
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Official Government of Nepal Inland Revenue Department monthly
+                  sales ledger format ready for tax audit submission.
+                </CardDescription>
+              </CardHeader>
+              <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
+                <span className="font-mono text-xs text-muted-foreground">
+                  PAN: {ops.settings.pan || '609823415'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsIrdModalOpen(true)}
+                    className="h-8 gap-1.5 text-xs cursor-pointer"
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                    Preview
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleExportIrdVatCSV}
+                    className="h-8 gap-1.5 text-xs cursor-pointer"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download CSV
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
 
-        {/* Report 4: IRD VAT Annex 13 */}
-        <Card className="flex flex-col justify-between">
-          <CardHeader>
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-foreground mb-2">
-              <Building className="h-4 w-4" />
-            </div>
-            <CardTitle className="text-sm font-semibold">
-              Nepal IRD VAT Annex 13 (बिक्री खाता)
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Official Government of Nepal Inland Revenue Department monthly
-              sales ledger format ready for tax audit submission.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
-            <span className="font-mono text-xs text-muted-foreground">
-              PAN: {ops.settings.pan || '609823415'}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsIrdModalOpen(true)}
-                className="h-8 gap-1.5 text-xs cursor-pointer"
-              >
-                <Printer className="h-3.5 w-3.5" />
-                Preview
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleExportIrdVatCSV}
-                className="h-8 gap-1.5 text-xs cursor-pointer"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Download CSV
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
-
-        {/* Report 5: Product Velocity & Sourcing Intelligence */}
-        <Card className="flex flex-col justify-between">
-          <CardHeader>
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-amber-500/10 text-amber-500 mb-2">
-              <Flame className="h-4 w-4" />
-            </div>
-            <CardTitle className="text-sm font-semibold">
-              Product velocity &amp; sourcing intelligence
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Top products, slow movers &amp; dead stock risks, most-unavailable
-              catalog items, and merchant substitution rates across Butwal
-              operations.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
-            <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
-              {ops.sourcingIntelligence?.summary
-                .networkSubstitutionRatePercent ?? 0}
-              % substitution &middot;{' '}
-              {ops.sourcingIntelligence?.topProducts.length ?? 0} active lines
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsVelocityModalOpen(true)}
-                className="h-8 gap-1.5 text-xs cursor-pointer"
-              >
-                <Eye className="h-3.5 w-3.5" />
-                Preview Intelligence
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleExportProductVelocityCSV}
-                className="h-8 gap-1.5 text-xs cursor-pointer"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Download CSV
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
-      </div>
-      </div>
+            {/* Report 5: Product Velocity & Sourcing Intelligence */}
+            <Card className="flex flex-col justify-between">
+              <CardHeader>
+                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-amber-500/10 text-amber-500 mb-2">
+                  <Flame className="h-4 w-4" />
+                </div>
+                <CardTitle className="text-sm font-semibold">
+                  Product velocity &amp; sourcing intelligence
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Top products, slow movers &amp; dead stock risks,
+                  most-unavailable catalog items, and merchant substitution
+                  rates across Butwal operations.
+                </CardDescription>
+              </CardHeader>
+              <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">
+                <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
+                  {ops.sourcingIntelligence?.summary
+                    .networkSubstitutionRatePercent ?? 0}
+                  % substitution &middot;{' '}
+                  {ops.sourcingIntelligence?.topProducts.length ?? 0} active
+                  lines
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsVelocityModalOpen(true)}
+                    className="h-8 gap-1.5 text-xs cursor-pointer"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    Preview Intelligence
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleExportProductVelocityCSV}
+                    className="h-8 gap-1.5 text-xs cursor-pointer"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download CSV
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
       </DataSection>
 
       {/* Profit & Margin Analytics Preview Dialog */}
