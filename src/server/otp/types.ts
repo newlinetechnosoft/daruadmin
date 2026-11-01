@@ -4,6 +4,11 @@ export interface SmsProvider {
     phone: string,
     message: string,
   ) => Promise<{ success: boolean; messageId?: string; error?: string }>
+  readonly verifyOtpRemote?: (
+    phone: string,
+    code: string,
+    otpId?: string,
+  ) => Promise<{ success: boolean; error?: string }>
 }
 
 export interface SendOtpResult {
@@ -18,4 +23,5 @@ export interface VerifyOtpResult {
   reason?: 'not_found' | 'expired' | 'max_attempts' | 'invalid_code'
   message?: string
   attemptsRemaining?: number
+  userId?: string
 }

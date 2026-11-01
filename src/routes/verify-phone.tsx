@@ -38,7 +38,7 @@ import { getPendingSignup, clearPendingSignup } from '#/lib/pending-auth'
 const verifyPhoneSearchSchema = z.object({
   phone: z
     .union([z.string(), z.number()])
-    .transform((val) => String(val).trim())
+    .transform((val) => String(val).replace(/^["']|["']$/g, '').trim())
     .optional()
     .default(''),
   redirect: z.string().optional(),
@@ -122,30 +122,22 @@ function VerifyPhonePage() {
         })
 
         if (result.success) {
-          // If there is pending registration in sessionStorage, NOW create the account
           const pending = getPendingSignup()
-          if (pending && pending.phone === normalizedPhone) {
-            const signupRes = await authClient.signUp.email({
-              name: pending.name,
-              email: pending.email,
-              password: pending.password,
-              phone: pending.phone,
-              image: pending.image,
-            })
+          clearPendingSignup()
 
-            if (signupRes.error) {
-              // If user was already in DB unverified, sign in with their credentials
+          // If session is not active, attempt auto sign-in with pending credentials
+          try {
+            const access = await queryClient.fetchQuery(adminQueries.access())
+            if (!access.authenticated && pending?.email && pending?.password) {
               const signInRes = await authClient.signIn.email({
                 email: pending.email,
                 password: pending.password,
                 rememberMe: true,
               })
               if (signInRes.error) {
-                toast.error(
-                  signupRes.error.message ||
-                    'Account verification succeeded, but sign-in failed. Please log in.',
+                toast.success(
+                  'Account verified successfully! Please sign in with your password.',
                 )
-                clearPendingSignup()
                 navigate({
                   to: '/login',
                   search: { redirect: search.redirect },
@@ -153,16 +145,13 @@ function VerifyPhonePage() {
                 return
               }
             }
-
-            clearPendingSignup()
-            toast.success(
-              'Account created and mobile number verified successfully! Welcome to Mezmani.',
-            )
-          } else {
-            toast.success(
-              'Mobile number verified successfully! Welcome to Mezmani.',
-            )
+          } catch {
+            // ignore fallback query errors
           }
+
+          toast.success(
+            'Account and mobile number verified successfully! Welcome to Mezmani.',
+          )
 
           queryClient.clear()
           await router.invalidate()

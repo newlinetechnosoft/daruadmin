@@ -22,7 +22,7 @@ import { normalizeNepaliPhone } from '#/server/orders/order.schemas'
 import {
   resolveLoginIdentifierFn,
   sendPhoneOtpFn,
-  checkPhoneRegisteredFn,
+  prepareSignupFn,
 } from '#/server/otp/otp.functions'
 import { setPendingSignup } from '#/lib/pending-auth'
 
@@ -123,6 +123,16 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
               data: { phone: phoneToVerify },
             })
           } catch {}
+          if (resolution.email) {
+            setPendingSignup({
+              name: '',
+              email: resolution.email,
+              password: loginPassword,
+              phone: phoneToVerify,
+              gender: 'male',
+              image: '',
+            })
+          }
           toast.error(
             'Your mobile number is not verified yet. Please verify your phone to log in.',
           )
@@ -215,7 +225,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
     }
   }
 
-  // Handle Sign Up submission: STRICT - Do not create account until phone is verified
+  // Handle Sign Up submission: creates user in DB with phoneVerified=false & emailVerified=false, then sends OTP
   const handleSignUp = async (e: FormEvent) => {
     e.preventDefault()
     if (!signupName.trim() || signupName.trim().length < 2) {
@@ -258,25 +268,56 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
 
     setIsSignupLoading(true)
     try {
-      const phoneCheck = await checkPhoneRegisteredFn({
-        data: { phone: normalizedPhone },
-      })
-
-      if (phoneCheck.exists && phoneCheck.phoneVerified) {
-        toast.error(
-          'This mobile number is already registered and verified. Please sign in.',
-        )
-        handleModeSwitch('login')
-        setIsSignupLoading(false)
-        return
-      }
-
       const emailToUse =
         signupEmail && signupEmail.trim().length > 0
           ? signupEmail.trim().toLowerCase()
           : `${normalizedPhone}@phone.mezmani.local`
 
-      // Save pending registration payload in sessionStorage WITHOUT creating account in DB yet!
+      // 1. Validate & prepare signup: check phone/email duplicates or clear unverified stale attempts
+      const prep = await prepareSignupFn({
+        data: {
+          phone: normalizedPhone,
+          email: emailToUse,
+        },
+      })
+
+      if (!prep.allowed) {
+        toast.error(prep.message || 'Unable to sign up with these details')
+        if (prep.code === 'ALREADY_REGISTERED') {
+          handleModeSwitch('login')
+        }
+        setIsSignupLoading(false)
+        return
+      }
+
+      // 2. Clear any lingering session before creating the account
+      try {
+        await authClient.signOut()
+      } catch {}
+
+      // 3. Create user in database user table immediately via Better-Auth
+      // This inserts user with:
+      // - id: unique user id
+      // - name: signupName
+      // - email: emailToUse
+      // - phone: normalizedPhone
+      // - emailVerified: false (default)
+      // - phoneVerified: false (default)
+      const res = await authClient.signUp.email({
+        name: signupName.trim(),
+        email: emailToUse,
+        password: signupPassword,
+        phone: normalizedPhone,
+        image: `/images/gender/${signupGender}.png`,
+      })
+
+      if (res.error) {
+        toast.error(res.error.message || 'Failed to create account')
+        setIsSignupLoading(false)
+        return
+      }
+
+      // 4. Save pending signup payload in sessionStorage as fallback
       setPendingSignup({
         name: signupName.trim(),
         email: emailToUse,
@@ -286,13 +327,13 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
         image: `/images/gender/${signupGender}.png`,
       })
 
-      // Send OTP code to verify mobile number first
+      // 5. Send OTP code to verify mobile number
       await sendPhoneOtpFn({
         data: { phone: normalizedPhone },
       })
 
       toast.success(
-        'Verification code sent! Please verify your mobile number to create your account.',
+        'Account created! A 6-digit verification code has been sent to your mobile number.',
       )
       navigate({
         to: '/verify-phone',

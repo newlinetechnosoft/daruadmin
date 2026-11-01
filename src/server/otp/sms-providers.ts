@@ -143,26 +143,45 @@ export class AakashSmsProvider implements SmsProvider {
 }
 
 /**
- * NepalOTP Provider (https://nepalotp.com/docs)
- * Direct carrier routing for Nepal (NTC, Ncell) with < 1.4s delivery speed.
+ * Normalizes NepalOTP API base URL to https://nepalotp.com/api/v1
+ */
+export function getNepalOtpBaseUrl(): string {
+  const envUrl = process.env.NEPALOTP_BASE_URL?.trim()
+  if (!envUrl || envUrl === 'undefined') return 'https://nepalotp.com/api/v1'
+  const clean = envUrl.replace(/\/+$/, '')
+  if (clean.endsWith('/v1')) return clean
+  if (clean.endsWith('/api')) return `${clean}/v1`
+  return `${clean}/api/v1`
+}
+
+/**
+ * Formats a 10-digit Nepali mobile number into standard international format (+977...)
+ */
+export function formatNepalPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '')
+  const local10 = digits.slice(-10)
+  return `+977${local10}`
+}
+
+/**
+ * NepalOTP Provider (https://nepalotp.com/code-examples#nextjs)
+ * Ultra-fast direct carrier routing for Nepal (NTC, Ncell) with < 1.4s delivery.
  *
  * Required environment variables:
- * - NEPALOTP_API_KEY: API Key from nepalotp.com dashboard
- * - NEPALOTP_BASE_URL: (Optional) Base API URL, default https://api.nepalotp.com
+ * - NEPALOTP_API_KEY: API Key from nepalotp.com dashboard (e.g. npot_live_... or sandbox)
+ * - NEPALOTP_BASE_URL: (Optional) Base API URL, default https://nepalotp.com/api/v1
  * - NEPALOTP_SENDER_ID: (Optional) Sender ID registered with NepalOTP (e.g., "Mezmani")
+ * - NEPALOTP_OTP_TTL: (Optional) Time-to-live in seconds (default: 300)
  */
 export class NepalOtpProvider implements SmsProvider {
   readonly name = 'nepalotp'
 
   readonly sendSms = async (phone: string, message: string) => {
-    const apiKey = process.env.NEPALOTP_API_KEY
-    const baseUrl = process.env.NEPALOTP_BASE_URL || 'https://api.nepalotp.com'
-    const sender = process.env.NEPALOTP_SENDER_ID || 'Mezmani'
-
-    // Format phone with +977 country code prefix
-    const rawDigits = phone.replace(/\D/g, '')
-    const local10 = rawDigits.slice(-10)
-    const formattedPhone = `+977${local10}`
+    const apiKey = process.env.NEPALOTP_API_KEY?.trim()
+    const baseUrl = getNepalOtpBaseUrl()
+    const sender = process.env.NEPALOTP_SENDER_ID?.trim() || 'Mezmani'
+    const ttl = Number(process.env.NEPALOTP_OTP_TTL) || 300
+    const formattedPhone = formatNepalPhone(phone)
 
     if (!apiKey) {
       if (process.env.NODE_ENV !== 'production') {
@@ -170,10 +189,11 @@ export class NepalOtpProvider implements SmsProvider {
         console.log(
           '[NepalOTP] (Demo / Local Mode - No NEPALOTP_API_KEY configured)',
         )
+        console.log(`[NepalOTP] Endpoint:  ${baseUrl}/otp/send`)
         console.log(`[NepalOTP] Recipient: ${formattedPhone}`)
         console.log(`[NepalOTP] Message:   ${message}`)
         console.log(
-          '[NepalOTP] Set NEPALOTP_API_KEY in .env to dispatch real SMS',
+          '[NepalOTP] Set NEPALOTP_API_KEY in .env to dispatch real SMS via NTC/Ncell',
         )
         console.log('----------------------------------------------------')
         return {
@@ -190,51 +210,145 @@ export class NepalOtpProvider implements SmsProvider {
       const otpMatch = message.match(/\b\d{6}\b/)
       const otpCode = otpMatch ? otpMatch[0] : undefined
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         phone: formattedPhone,
-        otp: otpCode,
+        phoneNumber: formattedPhone,
         message,
         sender,
-        ttl: 300,
+        sender_id: sender,
+        ttl,
+      }
+      if (otpCode) {
+        payload.otp = otpCode
+        payload.code = otpCode
       }
 
-      const res = await fetch(`${baseUrl}/v1/otp/send`, {
+      const res = await fetch(`${baseUrl}/otp/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Accept: 'application/json',
           Authorization: `Bearer ${apiKey}`,
           'x-api-key': apiKey,
         },
         body: JSON.stringify(payload),
       })
 
+      const resText = await res.text()
+      let data: any = {}
+      try {
+        data = JSON.parse(resText)
+      } catch {}
+
       if (!res.ok) {
-        const errText = await res.text()
+        console.error(`[NepalOTP Send] Error HTTP ${res.status}:`, resText)
         return {
           success: false,
-          error: `NepalOTP error ${res.status}: ${errText}`,
+          error: data.message || data.error || `NepalOTP error ${res.status}`,
         }
       }
 
-      const data = (await res.json()) as {
-        success?: boolean
-        message?: string
-        id?: string
-        data?: { id?: string }
+      console.log(`[NepalOTP Send] Success HTTP ${res.status}:`, resText)
+
+      const messageId =
+        data.otp_id ||
+        data.data?.otp_id ||
+        data.otpId ||
+        data.id ||
+        data.sessionId ||
+        data.data?.id ||
+        data.data?.otpId ||
+        data.data?.sessionId
+
+      return {
+        success: true,
+        messageId: messageId ? String(messageId) : undefined,
+      }
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err)
+      console.error('[NepalOTP Send] Exception:', err)
+      return { success: false, error }
+    }
+  }
+
+  readonly verifyOtpRemote = async (
+    phone: string,
+    code: string,
+    otpId?: string,
+  ): Promise<{ success: boolean; error?: string }> => {
+    const apiKey = process.env.NEPALOTP_API_KEY?.trim()
+    if (!apiKey) {
+      // In dev or mock mode without API key, remote verification is skipped
+      return { success: true }
+    }
+
+    const baseUrl = getNepalOtpBaseUrl()
+    const formattedPhone = formatNepalPhone(phone)
+
+    try {
+      const cleanCode = code.trim()
+      const payload: Record<string, unknown> = {
+        phone: formattedPhone,
+        phoneNumber: formattedPhone,
+        code: cleanCode,
+        otp: cleanCode,
+      }
+      if (otpId) {
+        payload.otp_id = otpId
+        payload.id = otpId
+        payload.otpId = otpId
       }
 
-      if (data.success !== false) {
+      console.log(`[NepalOTP Verify] Calling ${baseUrl}/otp/verify with:`, {
+        ...payload,
+        code: '***' + cleanCode.slice(-2),
+        otp: '***' + cleanCode.slice(-2),
+      })
+
+      const res = await fetch(`${baseUrl}/otp/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+          'x-api-key': apiKey,
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const resText = await res.text()
+      console.log(`[NepalOTP Verify] Response HTTP ${res.status}:`, resText)
+
+      let data: any = {}
+      try {
+        data = JSON.parse(resText)
+      } catch {}
+
+      if (!res.ok) {
         return {
-          success: true,
-          messageId: data.id || data.data?.id,
+          success: false,
+          error: data.message || data.error || `NepalOTP verification error ${res.status}`,
         }
+      }
+
+      if (
+        data.success === true ||
+        data.status === 'approved' ||
+        data.status === 'success' ||
+        data.status === 'valid' ||
+        data.verified === true ||
+        data.data?.status === 'approved' ||
+        data.data?.success === true
+      ) {
+        return { success: true }
       }
 
       return {
         success: false,
-        error: data.message || 'Failed to dispatch via NepalOTP',
+        error: data.message || 'Verification code failed NepalOTP validation',
       }
     } catch (err) {
+      console.error('[NepalOTP Verify] Exception:', err)
       const error = err instanceof Error ? err.message : String(err)
       return { success: false, error }
     }

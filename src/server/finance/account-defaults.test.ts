@@ -6,9 +6,9 @@ import { drizzle } from 'drizzle-orm/pglite'
 import { eq } from 'drizzle-orm'
 import * as schema from '#/db/schema'
 import type { DbTx } from '#/server/finance/types'
+import type { Order } from '#/server/operations/types'
 import {
   ACCOUNT_KEYS,
-  ACCOUNT_KEY_METADATA,
   invalidateAccountDefaultsCache,
   resolveAccount,
   resolveAllAccounts,
@@ -17,7 +17,6 @@ import type { AccountKey } from './account-keys'
 import {
   postOrderDeliveredTx,
   postCashHandoverTx,
-  postDealerSettlementTx,
 } from './double-entry'
 import {
   getAccountDefaultsQuery,
@@ -107,7 +106,7 @@ describe('Accounting Settings & Default Accounts (ACC-1.1)', () => {
 
     const posting1 = await db.transaction(async (tx) => {
       return postOrderDeliveredTx(tx as DbTx, {
-        order: order1,
+        order: order1 as unknown as Order,
         items: [],
         actor,
       })
@@ -149,7 +148,7 @@ describe('Accounting Settings & Default Accounts (ACC-1.1)', () => {
 
     const posting2 = await db.transaction(async (tx) => {
       return postOrderDeliveredTx(tx as DbTx, {
-        order: order2,
+        order: order2 as unknown as Order,
         items: [],
         actor,
       })

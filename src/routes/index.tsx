@@ -195,11 +195,6 @@ function FoodCategoryCard({
 
       {/* Top badges */}
       <div className="relative z-10 mb-auto flex items-center justify-between w-full">
-        <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/40 backdrop-blur-md px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-[11px] font-bold text-white shadow-sm">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          {String(index + 1).padStart(2, '0')}
-        </span>
-
         <span className="grid h-7 w-7 sm:h-10 sm:w-10 place-items-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-white transition-all duration-300 group-hover:bg-primary group-hover:border-primary group-hover:text-primary-foreground group-hover:scale-110 group-hover:rotate-[-45deg] shadow-md">
           <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
         </span>
@@ -207,18 +202,12 @@ function FoodCategoryCard({
 
       {/* Bottom Content */}
       <div className="relative z-10 pt-2 sm:pt-6">
+        <div className="mt-1.5 sm:mt-4 flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold text-amber-300 group-hover:text-amber-200 transition-colors uppercase tracking-wider">
+          <span>Explore</span>
+        </div>
         <h3 className="text-sm sm:text-2xl md:text-3xl font-black uppercase tracking-tight text-white drop-shadow-md transition-transform duration-300 group-hover:translate-x-1 line-clamp-1 sm:line-clamp-none">
           {category.name}
         </h3>
-        {category.description && (
-          <p className="hidden sm:block mt-2 text-xs text-gray-300/90 line-clamp-2 leading-relaxed drop-shadow">
-            {category.description}
-          </p>
-        )}
-        <div className="mt-1.5 sm:mt-4 flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold text-amber-300 group-hover:text-amber-200 transition-colors uppercase tracking-wider">
-          <span>Explore</span>
-          <ArrowRight className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
-        </div>
       </div>
     </Link>
   )
@@ -841,18 +830,11 @@ function HomePage() {
             <div className="mb-8 flex flex-col justify-between gap-4 sm:mb-12 sm:flex-row sm:items-end">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-primary uppercase">
-                    <Sparkles className="h-3 w-3" /> Fresh &amp; Ready
-                  </span>
                   <span className={eyebrow}>Fast Delivery</span>
                 </div>
                 <h2 className="mt-3 text-4xl font-black uppercase leading-none tracking-tighter sm:text-6xl text-foreground">
                   Shop by food
                 </h2>
-                <p className="mt-2.5 max-w-xl text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Hot meals, late-night bites, and essential snacks delivered
-                  fresh to your doorstep in 30 minutes.
-                </p>
               </div>
 
               <Link
@@ -984,25 +966,6 @@ function HomePage() {
                   Get App
                 </button>
               </form>
-
-              <div className="mt-4 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  className="h-11 border border-border bg-card px-5 text-sm font-semibold text-foreground transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-md"
-                  onClick={() => toast.success('iOS App download link sent!')}
-                >
-                  App Store
-                </button>
-                <button
-                  type="button"
-                  className="h-11 border border-border bg-card px-5 text-sm font-semibold text-foreground transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-md"
-                  onClick={() =>
-                    toast.success('Google Play download link sent!')
-                  }
-                >
-                  Google Play
-                </button>
-              </div>
             </div>
           </div>
         </section>

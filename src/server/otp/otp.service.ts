@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
-import { eq } from 'drizzle-orm'
+import { eq, or } from 'drizzle-orm'
 import { db } from '#/db'
 import { user, verification } from '#/db/schema'
 import { normalizeNepaliPhone } from '#/server/orders/order.schemas'
@@ -107,11 +107,96 @@ function recordRateLimitUsage(phone: string, ip?: string) {
 }
 
 /**
+ * Prepares user signup by checking for existing verified accounts and cleaning up
+ * any stale, unverified registrations so Better-Auth can create the fresh user row cleanly.
+ */
+export async function prepareSignupQuery(
+  phoneRaw: string,
+  emailRaw: string,
+  d: any = db,
+): Promise<{
+  allowed: boolean
+  code?: 'INVALID_PHONE' | 'ALREADY_REGISTERED' | 'OK'
+  message?: string
+  normalizedPhone?: string
+  email?: string
+}> {
+  const normalized = normalizeNepaliPhone(phoneRaw)
+  if (!normalized) {
+    return {
+      allowed: false,
+      code: 'INVALID_PHONE',
+      message:
+        'Enter a valid 10-digit Nepali mobile number starting with 98 or 97.',
+    }
+  }
+
+  const email = emailRaw.trim().toLowerCase()
+
+  // Find any existing users with matching phone or email
+  const existingUsers = await d
+    .select({
+      id: user.id,
+      phone: user.phone,
+      email: user.email,
+      phoneVerified: user.phoneVerified,
+      emailVerified: user.emailVerified,
+    })
+    .from(user)
+    .where(or(eq(user.phone, normalized), eq(user.email, email)))
+
+  // Check if any verified account already exists with this phone
+  const verifiedPhoneUser = existingUsers.find(
+    (u: any) => u.phone === normalized && u.phoneVerified,
+  )
+  if (verifiedPhoneUser) {
+    return {
+      allowed: false,
+      code: 'ALREADY_REGISTERED',
+      message:
+        'This mobile number is already registered and verified. Please sign in.',
+    }
+  }
+
+  // Check if any verified account already exists with this email (excluding fallback domain)
+  const verifiedEmailUser = existingUsers.find(
+    (u: any) =>
+      u.email === email &&
+      (u.emailVerified || u.phoneVerified) &&
+      !email.endsWith('@phone.mezmani.local'),
+  )
+  if (verifiedEmailUser) {
+    return {
+      allowed: false,
+      code: 'ALREADY_REGISTERED',
+      message:
+        'An account with this email is already registered. Please sign in.',
+    }
+  }
+
+  // Clean up any stale/abandoned unverified user records with matching phone or email
+  const unverifiedUsers = existingUsers.filter(
+    (u: any) => !u.phoneVerified && !u.emailVerified,
+  )
+  for (const u of unverifiedUsers) {
+    await d.delete(user).where(eq(user.id, u.id))
+  }
+
+  return {
+    allowed: true,
+    code: 'OK',
+    normalizedPhone: normalized,
+    email,
+  }
+}
+
+/**
  * Sends a 6-digit verification OTP to the normalized Nepali mobile number.
  */
 export async function sendOtp(
   phoneRaw: string,
   ip?: string,
+  d: any = db,
 ): Promise<SendOtpResult> {
   const normalizedPhone = normalizeNepaliPhone(phoneRaw)
   if (!normalizedPhone) {
@@ -121,7 +206,7 @@ export async function sendOtp(
   const identifier = getVerificationIdentifier(normalizedPhone)
 
   // 1. Check existing verification row for resend cooldown
-  const existingRows = await db
+  const existingRows = await d
     .select()
     .from(verification)
     .where(eq(verification.identifier, identifier))
@@ -156,35 +241,7 @@ export async function sendOtp(
   const hashedCode = hashOtp(code)
   const expiresAt = new Date(now + OTP_EXPIRY_MS)
 
-  // 4. Upsert verification row (hashed code + attempts counter initialized to 0)
-  // Format: "hashedCode:0"
-  const valuePayload = `${hashedCode}:0`
-
-  if (existingRows.length > 0) {
-    await db
-      .update(verification)
-      .set({
-        value: valuePayload,
-        expiresAt,
-        createdAt: new Date(now),
-        updatedAt: new Date(now),
-      })
-      .where(eq(verification.id, existingRows[0].id))
-  } else {
-    const id = `ver_${randomBytes(12).toString('hex')}`
-    await db.insert(verification).values({
-      id,
-      identifier,
-      value: valuePayload,
-      expiresAt,
-      createdAt: new Date(now),
-      updatedAt: new Date(now),
-    })
-  }
-
-  recordRateLimitUsage(normalizedPhone, ip)
-
-  // 5. Dispatch via configured SMS Provider (Mock / Sparrow / Aakash)
+  // 4. Dispatch via configured SMS Provider (NepalOTP / Mock / Sparrow / Aakash) FIRST
   const smsProvider = getSmsProvider()
   const smsMessage = `Your Mezmani verification code is ${code}. Valid for 5 minutes. Do not share this code.`
 
@@ -196,9 +253,40 @@ export async function sendOtp(
     )
     return {
       success: false,
-      message: 'Failed to send SMS code. Please try again shortly.',
+      message:
+        dispatchResult.error ||
+        'Failed to send SMS code. Please try again shortly.',
     }
   }
+
+  // 5. Store verification row with remote session/tracking ID
+  // Format: "hashedCode:0:remoteOtpId"
+  const remoteId = dispatchResult.messageId || ''
+  const valuePayload = `${hashedCode}:0:${remoteId}`
+
+  if (existingRows.length > 0) {
+    await d
+      .update(verification)
+      .set({
+        value: valuePayload,
+        expiresAt,
+        createdAt: new Date(now),
+        updatedAt: new Date(now),
+      })
+      .where(eq(verification.id, existingRows[0].id))
+  } else {
+    const id = `ver_${randomBytes(12).toString('hex')}`
+    await d.insert(verification).values({
+      id,
+      identifier,
+      value: valuePayload,
+      expiresAt,
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
+    })
+  }
+
+  recordRateLimitUsage(normalizedPhone, ip)
 
   return {
     success: true,
@@ -214,6 +302,7 @@ export async function sendOtp(
 export async function verifyOtp(
   phoneRaw: string,
   codeRaw: string,
+  d: any = db,
 ): Promise<VerifyOtpResult> {
   const normalizedPhone = normalizeNepaliPhone(phoneRaw)
   if (!normalizedPhone) {
@@ -234,7 +323,7 @@ export async function verifyOtp(
   }
 
   const identifier = getVerificationIdentifier(normalizedPhone)
-  const rows = await db
+  const rows = await d
     .select()
     .from(verification)
     .where(eq(verification.identifier, identifier))
@@ -253,7 +342,7 @@ export async function verifyOtp(
 
   // Check expiration
   if (row.expiresAt < now) {
-    await db.delete(verification).where(eq(verification.id, row.id))
+    await d.delete(verification).where(eq(verification.id, row.id))
     return {
       success: false,
       reason: 'expired',
@@ -261,12 +350,12 @@ export async function verifyOtp(
     }
   }
 
-  const [storedHash, attemptsStr] = row.value.split(':')
+  const [storedHash, attemptsStr, remoteOtpId] = row.value.split(':')
   const attempts = Number.parseInt(attemptsStr || '0', 10)
 
   // Check max attempts
   if (attempts >= MAX_ATTEMPTS) {
-    await db.delete(verification).where(eq(verification.id, row.id))
+    await d.delete(verification).where(eq(verification.id, row.id))
     return {
       success: false,
       reason: 'max_attempts',
@@ -275,18 +364,48 @@ export async function verifyOtp(
   }
 
   // Check code match:
-  // In development and mock mode, also accept fixed code "123456" for easy testing.
-  // Never log or accept the fixed code in production.
+  // 1. Check salted SHA-256 hash match against database
+  // 2. In development and mock mode, accept fixed dev OTP "123456"
   const isDevMock =
     process.env.NODE_ENV !== 'production' &&
     (process.env.SMS_PROVIDER || 'mock').toLowerCase() === 'mock'
   const isDevFixedCodeMatch = isDevMock && code === DEV_FIXED_OTP
   const isHashMatch = hashOtp(code) === storedHash
 
-  if (!isHashMatch && !isDevFixedCodeMatch) {
+  let isVerified = isHashMatch || isDevFixedCodeMatch
+
+  // 3. If not matched locally and NepalOTP is the active provider with an API key,
+  // query NepalOTP's remote verify endpoint (https://nepalotp.com/code-examples#nextjs)
+  const smsProvider = getSmsProvider()
+  if (
+    !isVerified &&
+    smsProvider.name === 'nepalotp' &&
+    process.env.NEPALOTP_API_KEY &&
+    smsProvider.verifyOtpRemote
+  ) {
+    try {
+      const remoteResult = await smsProvider.verifyOtpRemote(
+        normalizedPhone,
+        code,
+        remoteOtpId,
+      )
+      if (remoteResult.success) {
+        isVerified = true
+      } else {
+        console.warn(
+          `[OTP Service] NepalOTP verification declined for ${normalizedPhone}:`,
+          remoteResult.error,
+        )
+      }
+    } catch (err) {
+      console.error('[OTP Service] Remote verify exception:', err)
+    }
+  }
+
+  if (!isVerified) {
     const nextAttempts = attempts + 1
     if (nextAttempts >= MAX_ATTEMPTS) {
-      await db.delete(verification).where(eq(verification.id, row.id))
+      await d.delete(verification).where(eq(verification.id, row.id))
       return {
         success: false,
         reason: 'max_attempts',
@@ -294,11 +413,11 @@ export async function verifyOtp(
       }
     }
 
-    // Update attempts counter
-    await db
+    // Update attempts counter (preserves remoteOtpId)
+    await d
       .update(verification)
       .set({
-        value: `${storedHash}:${nextAttempts}`,
+        value: `${storedHash}:${nextAttempts}:${remoteOtpId || ''}`,
         updatedAt: new Date(),
       })
       .where(eq(verification.id, row.id))
@@ -312,21 +431,24 @@ export async function verifyOtp(
     }
   }
 
-  // Success! Clean up verification row and mark phone as verified on user record
-  await db.delete(verification).where(eq(verification.id, row.id))
+  // Success! Clean up verification row and mark phone & email as verified on user record
+  await d.delete(verification).where(eq(verification.id, row.id))
 
-  // Update user in DB
-  await db
+  // Update user in DB: both phoneVerified and emailVerified become true
+  const updatedUsers = await d
     .update(user)
     .set({
       phoneVerified: true,
+      emailVerified: true,
       updatedAt: new Date(),
     })
     .where(eq(user.phone, normalizedPhone))
+    .returning({ id: user.id })
 
   return {
     success: true,
     message: 'Mobile number verified successfully.',
+    userId: updatedUsers[0]?.id,
   }
 }
 
@@ -336,6 +458,7 @@ export async function verifyOtp(
 export async function resendOtp(
   phoneRaw: string,
   ip?: string,
+  d: any = db,
 ): Promise<SendOtpResult> {
-  return sendOtp(phoneRaw, ip)
+  return sendOtp(phoneRaw, ip, d)
 }

@@ -5,7 +5,12 @@ import { eq } from 'drizzle-orm'
 import { db } from '#/db'
 import { user } from '#/db/schema'
 import { normalizeNepaliPhone } from '#/server/orders/order.schemas'
-import { sendOtp, verifyOtp, resendOtp } from './otp.service'
+import {
+  sendOtp,
+  verifyOtp,
+  resendOtp,
+  prepareSignupQuery,
+} from './otp.service'
 
 function getClientIp(): string | undefined {
   try {
@@ -28,6 +33,19 @@ function getClientIp(): string | undefined {
   }
   return undefined
 }
+
+export const prepareSignupFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        phone: z.string().min(1, 'Phone number is required'),
+        email: z.string().min(1, 'Email is required'),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    return prepareSignupQuery(data.phone, data.email)
+  })
 
 export const sendPhoneOtpFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>

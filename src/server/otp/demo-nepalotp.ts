@@ -1,5 +1,5 @@
 import { config } from 'dotenv'
-import { NepalOtpProvider } from './sms-providers'
+import { NepalOtpProvider, getNepalOtpBaseUrl } from './sms-providers'
 import { sendOtp, verifyOtp } from './otp.service'
 
 config({ path: ['.env.local', '.env'] })
@@ -7,7 +7,7 @@ config({ path: ['.env.local', '.env'] })
 async function runNepalOtpDemo() {
   const targetPhone = process.argv[2] || '9801234567'
   const apiKey = process.env.NEPALOTP_API_KEY
-  const baseUrl = process.env.NEPALOTP_BASE_URL || 'https://api.nepalotp.com'
+  const baseUrl = getNepalOtpBaseUrl()
   const senderId = process.env.NEPALOTP_SENDER_ID || 'Mezmani'
 
   console.log('====================================================')
