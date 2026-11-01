@@ -34,32 +34,44 @@ import {
 config({ path: ['.env.local', '.env'] })
 
 async function main() {
-  const isConfirmed = process.argv.includes('--confirm')
-  const isDryRun = !isConfirmed
-
   const rawUrl = process.env.DATABASE_URL || ''
-  let host = 'unknown'
-  let dbName = 'unknown'
+  if (!rawUrl.trim()) {
+    console.error('❌ SAFETY ABORT: DATABASE_URL is empty or not set.')
+    process.exit(1)
+  }
+
+  let host = ''
+  let dbName = ''
   try {
     const parsed = new URL(rawUrl)
     host = parsed.hostname
     dbName = parsed.pathname.slice(1)
+    if (!host) {
+      throw new Error('No hostname in DATABASE_URL')
+    }
   } catch {
-    // rawUrl format fallback
+    console.error('❌ SAFETY ABORT: DATABASE_URL is malformed.')
+    process.exit(1)
   }
+
+  const neonBranch = process.env.NEON_BRANCH || 'unknown'
 
   console.log('='.repeat(70))
   console.log('               MEZMANI DATABASE CLEANUP & AUDIT               ')
   console.log('='.repeat(70))
-  console.log(`Connected Host:    ${host}`)
-  console.log(`Database Name:     ${dbName}`)
-  console.log(
-    `Mode:              ${isDryRun ? 'DRY-RUN (Safe, no changes)' : 'EXECUTE (--confirm provided)'}`,
-  )
-  console.log(
-    `Backup Reference:  Neon branch "backup-pre-migration-20261012" (br-autumn-meadow-b595mdp9)`,
-  )
+  console.log(`Target database host: ${host}`)
+  console.log(`Database Name:        ${dbName}`)
+  console.log(`Neon branch:          ${neonBranch}`)
   console.log('='.repeat(70))
+
+  const isConfirmed = process.argv.includes('--confirm')
+  if (!isConfirmed) {
+    console.error(
+      '\n❌ SAFETY ABORT: Refusing to run cleanup without explicit --confirm flag.',
+    )
+    console.error('To run cleanup, pass --confirm explicitly.\n')
+    process.exit(1)
+  }
 
   // 1. Audit Auth Users
   const allUsers = await db.select().from(user)
@@ -124,17 +136,6 @@ async function main() {
   console.log(`- Coupons:           ${couponCount[0]?.c ?? 0} rows`)
   console.log(`- Complaints:        ${complaintCount[0]?.c ?? 0} rows`)
 
-  if (isDryRun) {
-    console.log('\n' + '='.repeat(70))
-    console.log('DRY-RUN COMPLETE: No changes were made.')
-    console.log(
-      'To execute cleanup of demo operational data and initialize clean defaults, run:',
-    )
-    console.log('  bun run db:clean --confirm')
-    console.log('='.repeat(70))
-    process.exit(0)
-  }
-
   // EXECUTE MODE:
   console.log('\n[EXECUTING CLEANUP]')
   await dbTx.transaction(async (tx) => {
@@ -145,7 +146,6 @@ async function main() {
     await tx.delete(riderCashHandovers)
     await tx.delete(settlements)
     await tx.delete(riders)
-    await tx.delete(ledgerEntries)
     await tx.delete(payments)
     await tx.delete(notifications)
     await tx.delete(auditLogs)

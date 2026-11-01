@@ -6,9 +6,8 @@ import { DataSection } from '#/components/shared/data-section'
 import {
   upsertRiderFn,
   deleteRiderFn,
-  updateRiderLiveFn,
-  addLedgerFn,
 } from '#/server/operations/operations.functions'
+import { recordManagerCashHandoverFn } from '#/server/finance/finance.functions'
 import type { Rider } from '#/server/operations/types'
 import { formatNPR, fromPaisa } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
@@ -200,25 +199,16 @@ export function RidersPanel() {
       setIsSubmitting(true)
       const amount = rider.cashOnHand
 
-      await updateRiderLiveFn({
+      await recordManagerCashHandoverFn({
         data: {
-          id: rider.id,
-          cashOnHand: 0,
-        },
-      })
-
-      await addLedgerFn({
-        data: {
-          type: 'credit',
-          category: 'cod',
-          account: 'bank',
-          memo: `Rider COD Remittance Reconciled: ${rider.name} (${rider.phone})`,
-          amount: amount,
+          riderId: rider.id,
+          amountInRs: amount / 100,
+          notes: `Rider COD Remittance Reconciled: ${rider.name} (${rider.phone})`,
         },
       })
 
       toast.success(
-        `Settled ${formatNPR(amount)} from ${rider.name}! Credited to bank in ledger.`,
+        `Settled ${formatNPR(amount)} from ${rider.name}! Receipt voucher posted.`,
       )
       await invalidateRiders()
     } catch {

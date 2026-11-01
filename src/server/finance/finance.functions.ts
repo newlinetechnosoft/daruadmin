@@ -112,7 +112,7 @@ export const postManualJournalVoucherFn = createServerFn({ method: 'POST' })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const { user } = await requirePermission('accounts', 'create')
+    const { user } = await requirePermission('accounts', 'approve')
 
     const totalDebit = data.lines.reduce((acc, l) => acc + l.debit, 0)
     const totalCredit = data.lines.reduce((acc, l) => acc + l.credit, 0)
@@ -175,7 +175,7 @@ export const recordDealerDisbursementFn = createServerFn({ method: 'POST' })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    const { user } = await requirePermission('accounts', 'create')
+    const { user } = await requirePermission('accounts', 'approve')
 
     const dealerRow = await dbTx
       .select()
@@ -469,7 +469,12 @@ export const recordManagerCashHandoverFn = createServerFn({ method: 'POST' })
   })
 
 /**
- * Reverses a posted journal voucher (Admin only).
+ * Reverses a posted journal voucher (Admin only, requires accounts:approve).
+ * Hardened per ACC-0.4 (G2):
+ * - Requires accounts:approve permission.
+ * - Mandatory reason of min 5 chars.
+ * - Enforces append-only reversal with isReversed/reversedBy linking.
+ * - Audit logs the reversal.
  */
 export const reverseJournalVoucherFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>
@@ -477,6 +482,7 @@ export const reverseJournalVoucherFn = createServerFn({ method: 'POST' })
       .object({
         journalEntryId: z.string().min(1),
         reason: z.string().min(5),
+        postingDate: z.string().optional(),
       })
       .parse(d),
   )
@@ -488,6 +494,7 @@ export const reverseJournalVoucherFn = createServerFn({ method: 'POST' })
         originalEntryId: data.journalEntryId,
         narration: `Reversal: ${data.reason}`,
         createdBy: user.name,
+        postingDate: data.postingDate ? new Date(data.postingDate) : undefined,
       })
     })
 

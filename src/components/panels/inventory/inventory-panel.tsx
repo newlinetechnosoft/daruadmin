@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
-import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
+import { useSuspenseQuery } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
-import { addLedgerFn } from '#/server/operations/operations.functions'
 import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
@@ -13,7 +12,6 @@ import {
   Download,
   AlertTriangle,
   Boxes,
-  Plus,
   Wine,
   ShoppingBag,
   ArrowUpRight,
@@ -21,7 +19,6 @@ import {
 import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
-import { Label } from '#/components/ui/label'
 import { Badge } from '#/components/ui/badge'
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import {
@@ -32,18 +29,9 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '#/components/ui/dialog'
 import { EmptyState } from '#/components/shared/empty-state'
 
 export function InventoryPanel() {
-  const queryClient = useQueryClient()
   const { data, isFetching, refetch } = useSuspenseQuery(
     adminQueries.inventory(),
   )
@@ -54,17 +42,6 @@ export function InventoryPanel() {
     'all' | 'liquor' | 'grocery'
   >('all')
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
-  const [restockItem, setRestockItem] = useState<{
-    id: string
-    name: string
-    variantName: string
-    sku: string
-    stock: number
-    price: number
-  } | null>(null)
-  const [restockQty, setRestockQty] = useState(24)
-  const [costPerUnit, setCostPerUnit] = useState(1200)
-  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Flatten catalog items
   const inventoryItems = useMemo(() => {
@@ -151,39 +128,6 @@ export function InventoryPanel() {
   const lowStockCount = inventoryItems.filter(
     (i) => i.stock <= i.lowStockThreshold,
   ).length
-
-  const handleQuickRestock = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!restockItem) return
-
-    try {
-      setIsSubmitting(true)
-      const totalExpense = restockQty * costPerUnit
-
-      await addLedgerFn({
-        data: {
-          type: 'debit',
-          category: 'purchase',
-          account: 'bank',
-          memo: `Inventory Restock: ${restockQty} units of ${restockItem.name} (${restockItem.variantName})`,
-          amount: totalExpense,
-        },
-      })
-
-      toast.success(
-        `Restocked ${restockQty} units. COGS bill of ${formatNPR(totalExpense)} logged to Ledger.`,
-      )
-      setRestockItem(null)
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'ledger'] })
-      await queryClient.invalidateQueries({ queryKey: ['catalog'] })
-      await queryClient.invalidateQueries({ queryKey: ['storefront'] })
-    } catch {
-      toast.error('Failed to log restock purchase')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
 
   const handleExportCSV = () => {
     const headers =
@@ -317,13 +261,12 @@ export function InventoryPanel() {
               <TableHead className="text-xs">Retail price</TableHead>
               <TableHead className="text-xs">Units on hand</TableHead>
               <TableHead className="text-xs">Status</TableHead>
-              <TableHead className="text-right text-xs">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="p-0">
+                <TableCell colSpan={6} className="p-0">
                   <EmptyState
                     title="No inventory records match"
                     description="Try clearing filters or search terms."
@@ -398,21 +341,6 @@ export function InventoryPanel() {
                         </Badge>
                       )}
                     </TableCell>
-
-                    <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setRestockItem(item)
-                          setCostPerUnit(Math.round(item.price * 0.65))
-                        }}
-                        className="h-7 gap-1 px-2 text-xs"
-                      >
-                        <Plus className="h-3 w-3" />
-                        Restock
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 )
               })
@@ -421,85 +349,6 @@ export function InventoryPanel() {
         </Table>
       </div>
       </DataSection>
-
-      {/* Quick Restock Dialog */}
-      <Dialog
-        open={Boolean(restockItem)}
-        onOpenChange={(open) => !open && setRestockItem(null)}
-      >
-        {restockItem && (
-          <DialogContent className="sm:max-w-lg md:max-w-xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
-            <form
-              onSubmit={handleQuickRestock}
-              className="flex flex-col h-full min-h-0"
-            >
-              <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
-                <DialogTitle className="text-sm font-semibold">
-                  Restock inventory
-                </DialogTitle>
-                <DialogDescription className="text-xs">
-                  {restockItem.name} ({restockItem.variantName})
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Units to add to warehouse *</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    required
-                    value={restockQty}
-                    onChange={(e) => setRestockQty(Number(e.target.value))}
-                    className="h-8 text-xs font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs">
-                    Vendor purchase cost per unit (NPR) *
-                  </Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    required
-                    value={costPerUnit}
-                    onChange={(e) => setCostPerUnit(Number(e.target.value))}
-                    className="h-8 text-xs font-mono"
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    Automatically logged as COGS purchase bill in the general
-                    ledger
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between rounded-md bg-muted/40 p-3 text-xs">
-                  <span className="text-muted-foreground">
-                    Total purchase expenditure:
-                  </span>
-                  <span className="font-mono text-sm font-bold text-foreground">
-                    {formatNPR(restockQty * costPerUnit)}
-                  </span>
-                </div>
-              </div>
-
-              <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20 shrink-0 flex items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRestockItem(null)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm" disabled={isSubmitting}>
-                  {isSubmitting ? 'Posting...' : 'Confirm restock and log COGS'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        )}
-      </Dialog>
     </div>
   )
 }

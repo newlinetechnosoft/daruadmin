@@ -123,6 +123,8 @@ export const journalEntries = pgTable(
     event: text('event'), // 'order_delivered', 'cash_handover', 'dealer_settlement', etc.
     postingStatus: text('posting_status').notNull().default('submitted'), // 'draft', 'submitted', 'cancelled'
     reversalOf: text('reversal_of'),
+    isReversed: boolean('is_reversed').notNull().default(false),
+    reversedBy: text('reversed_by'),
     metadata: jsonb('metadata'),
     createdBy: text('created_by').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -138,6 +140,8 @@ export const journalEntries = pgTable(
     index('journal_entries_date_idx').on(table.postingDate),
     index('journal_entries_status_idx').on(table.postingStatus),
     index('journal_entries_ref_idx').on(table.refType, table.refId),
+    index('journal_entries_is_reversed_idx').on(table.isReversed),
+    index('journal_entries_reversed_by_idx').on(table.reversedBy),
     uniqueIndex('journal_entries_ref_event_uniq_idx')
       .on(table.refType, table.refId, table.event)
       .where(

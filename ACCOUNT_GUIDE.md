@@ -1,0 +1,642 @@
+# ACCOUNT_GUIDE.md — Accounting System Map & Roadmap (Mezmani)
+
+> **Purpose:** The single source of truth for evolving Mezmani's accounting module into an ERPNext-class system, adapted to this project's stack, conventions and Nepal market.
+> **Audience:** AI coding agents and the owner. Agents are started with `PROMPT.md`, which points here.
+> **Read when:** any task touching the ledger, vouchers, invoices, tax, payroll accounting, settlements, reconciliation, financial reports or the `/admin/accounts` UI.
+> **Not here:** generic server rules → `src/server/AGENT.md` · tables/migrations → `src/db/AGENT.md` · look & feel → `UI_APPROACH.md` + `src/components/AGENT.md` · roles → `src/lib/AGENT.md`.
+> **Reference model:** ERPNext (Frappe) Accounts module. We copy its _concepts and guarantees_, not its code, and skip what this business does not need (see §1.3).
+
+---
+
+## 0. How to use this file
+
+1. Work is split into **phases** (§7) of **tasks** with IDs like `ACC-2.3`. Do one task (or a small named group) at a time.
+2. Each task lists **files to touch**, **what to build** and **acceptance criteria**. A task is done only when all acceptance criteria pass and §13 (Definition of Done) is satisfied.
+3. After each task: update the **Progress log** (§14), update the `AGENT.md` of every directory you touched (especially `src/server/finance/AGENT.md`, which is currently stale), and report back.
+4. If a decision is not documented here or in an `AGENT.md`, **ask the owner**. Items needing the accountant's confirmation are listed in §11 — never invent tax rules, rates or legal formats.
+5. Status legend: `[ ]` pending · `[~]` partly exists, needs rework · `[x]` done and verified in code · `[?]` claimed done elsewhere (e.g. `TODO.md`) but **not verified** — verify before relying on it.
+
+---
+
+## 1. Principles
+
+### 1.1 Non-negotiables (inherited from root `AGENT.md`)
+
+- Money is **integer paisa** everywhere. Format only at the UI edge (`formatNPR`, `<MoneyText />`).
+- Every ledger/money/stock change runs inside **one `dbTx.transaction()`**. Reads may use `db`.
+- The ledger is **append-only**. Corrections are **reversing entries**, never `UPDATE`/`DELETE` of posted lines.
+- **All ledger writes go through the posting engine** (`src/server/finance/double-entry.ts` → `postJournalTx`). No other code inserts `journal_*` rows.
+- Every server function: Zod validation, `requirePermission(...)`/role check, audit log for mutations, no client-supplied prices/totals/user ids.
+- No secrets in client code. Never read, print or commit `.env*` files.
+- Don't hand-edit `src/routeTree.gen.ts`. UI is built from shadcn primitives only.
+
+### 1.2 Accounting guarantees we must be able to prove (ERPNext-grade)
+
+1. **Balanced:** for every voucher, `Σdebit = Σcredit > 0` (code **and** DB-level).
+2. **Immutable:** submitted vouchers and lines can't be edited or deleted (code **and** DB trigger).
+3. **Idempotent:** the same business event can never post twice (`refType + refId + event`).
+4. **Gapless, per-fiscal-year voucher numbers** (row-locked sequences).
+5. **Period-safe:** no posting into closed fiscal years or locked periods.
+6. **Traceable:** every voucher links back to its source document and actor; every change is in the audit log.
+7. **Sub-ledger = control account:** `Σ party balances` of Dealer Payable / Rider Cash / Rider Payable always equals the control account balance (checked by a report, §ACC-2.5).
+8. **Reproducible reports:** any report for a date range can be re-run later and gives the same numbers (no dependence on `now()`, no client-side aggregation).
+
+### 1.3 What we deliberately do NOT copy from ERPNext
+
+Multi-company, multi-currency/exchange revaluation, central inventory valuation / perpetual inventory asset accounting (**the business holds no central warehouse stock** — dealers are third-party shops; stock is tracked per-dealer in `dealer_stock` for operational availability, and purchases are expensed to COGS on delivery directly against dealer payable), subscriptions, dunning, loyalty, POS profiles, deferred revenue, bank-guarantee, cheque printing. Fixed assets/depreciation are optional and only if the owner asks (e.g. delivery bikes).
+
+---
+
+## 2. Current state (verified from code)
+
+### 2.1 File map
+
+| Layer       | Path                                                                                                                  | What it holds                                                                                                                                                                                                                       |
+| ----------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Schema      | `src/db/schema/finance.ts`                                                                                            | `fiscal_years`, `voucher_sequences`, `ledger_accounts`, `journal_entries`, `journal_lines`, `dealer_settlements`, `payments`, legacy `ledger_entries`, `legacy_ledger_archive`                                                      |
+| Schema      | `src/db/schema/riders.ts`                                                                                             | `riders`, `rider_cash_handovers`, `settlements`, `rider_shifts`                                                                                                                                                                     |
+| Migration   | `drizzle/0007_double_entry_accounting.sql`                                                                            | Seeds FY 2081/82–2083/84, voucher sequences, Nepal chart of accounts                                                                                                                                                                |
+| Engine      | `src/server/finance/double-entry.ts`                                                                                  | `postJournalTx`, `reverseJournalTx`, `postOrderDeliveredTx`, `postCashHandoverTx`, `postDealerSettlementTx`, `postRiderSalaryAccrualTx`, `postRiderPayoutTx`                                                                        |
+| Reads       | `src/server/finance/finance.queries.ts`                                                                               | journal entries, general ledger, chart with balances, fiscal years, dealer payables, rider accounts, public voucher, unsettled items, settlements                                                                                   |
+| API         | `src/server/finance/finance.functions.ts`                                                                             | `getAccountingOverviewFn`, `postManualJournalVoucherFn`, `recordDealerDisbursementFn`, `createDealerSettlementBatchFn`, `getUnsettledDealerItemsFn`, `getPublicVoucherFn`, `recordManagerCashHandoverFn`, `reverseJournalVoucherFn` |
+| Callers     | `src/server/orders/order.transitions.ts`, `src/server/riders/rider.queries.ts`                                        | Trigger postings on delivery / handover / payroll                                                                                                                                                                                   |
+| Helpers     | `src/lib/money.ts`, `src/lib/tax.ts`, `src/lib/nepal-date.ts`                                                         | paisa↔NPR, VAT-inclusive math (13% default), `adToBs`, `formatBS`, `getNepalFiscalYear`                                                                                                                                             |
+| Auth        | `src/server/auth/{permissions,permissions-shared,guards}.ts`, `src/server/operations/types.ts`                        | `requirePermission`, `can()`, `guardModule`, `MODULES`/`ACTIONS`                                                                                                                                                                    |
+| Route       | `src/routes/admin/accounts.tsx`                                                                                       | Tabs: `ledger`, `transactions`, `dealer-ledger`, `sales-account`, `salary-account`, `chart-of-accounts`, `financial-reports`; search params `account`, `voucherType`, `partyType`, `partyId`                                        |
+| UI          | `src/components/panels/accounts/*`                                                                                    | `accounts-panel.tsx` (~4,200 lines, monolith), `financial-reports-tab.tsx`, `batch-dealer-settlement-dialog.tsx`, `rider-payroll-run-dialog.tsx`, `rider-settlement-approval-dialog.tsx`, `voucher-details-dialog.tsx`              |
+| Reusable UI | `src/components/shared/{list-view,form-view,child-table,link-field,data-table,kpi-card,charts,date-range-filter,...}` | ERPNext-style list/form building blocks — **read before building new screens**                                                                                                                                                      |
+
+### 2.2 Posting engine behaviour (as implemented)
+
+`postJournalTx(tx, params)` enforces: ≥2 lines; no negatives; exactly one of debit/credit per line; balanced and non-zero total; idempotency on `(refType, refId, event)` (returns the existing voucher with `isDuplicate: true`); open fiscal year (auto-creates a missing FY row); row-locked gapless sequence → voucher no. `JV-2083-00001`. Voucher types: `JV` journal, `PV` payment, `RV` receipt, `CV` contra, `SV` sales (system).
+
+### 2.3 Standard postings that exist
+
+| Event                  | Voucher | Dr                                                                     | Cr                                                                                                                                                       |
+| ---------------------- | ------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Order delivered        | SV      | Rider COD cash `1031` (COD) or eSewa clearing `1021`; discounts `5112` | Sales `4010` (net of VAT), VAT output `2021`, delivery income `4020`; COGS `5011/5012` ↔ dealer payable `2011`; rider comp `5111` ↔ rider payable `2031` |
+| Rider cash handover    | RV      | Cash in hand `1011`                                                    | Rider COD cash `1031`                                                                                                                                    |
+| Dealer settlement paid | PV      | Dealer payable `2011` (gross)                                          | Bank `1012`/Cash `1011` (net), TDS payable `2023`                                                                                                        |
+| Rider salary accrual   | JV      | Rider expense `5111`                                                   | Rider payable `2031`                                                                                                                                     |
+| Rider payout           | PV      | Rider payable `2031`                                                   | Cash/Bank (net), COD shortage `1031`, advances `1042`                                                                                                    |
+
+### 2.4 Chart of accounts in use (semantic keys in `account-keys.ts`)
+
+Introduced in ACC-0.6 via `src/server/finance/account-keys.ts` (`ACCOUNT_KEYS`), mapping semantic constants to current IDs:
+`1011` Cash in Hand · `1012` Main Bank · `1021` eSewa Clearing · `1022` Khalti Clearing · `1031` Rider Undeposited COD Cash · `1041` Customer Receivables · `1042` Staff & Rider Advances · `2011` Dealer Procurement Payable · `2021` VAT Output 13% · `2022` VAT Input · `2023` TDS Payable · `2031` Rider Salary & Commission Payable · `3010` Owner Capital · `3020` Retained Earnings · `4010` Sales · `4020` Delivery Fee Income · `4030` Other Operating Income · `5011` COGS Liquor · `5012` COGS Grocery · `5111` Rider Payout & Commission · `5112` Discounts · `5113` Gateway Commission · `5114` Round-off · `5120` Rent & Utilities · `5130` General Admin. (IDs are `acc_<code>`; groups are `acc_grp_<code>`.)
+
+---
+
+## 3. Known gaps & risks (audit findings — fix first, see Phase 0)
+
+| #   | Finding                                                                                                                                                                                                                                                                           | Why it matters                                                                               |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| G1  | `postJournalTx` does not reject **group**, **inactive** or (future) **frozen** accounts, and does not require a **party** on party-controlled accounts (`2011`, `1031`, `2031`).                                                                                                  | Garbage-in postings; sub-ledger can't tie to control account.                                |
+| G2  | `reverseJournalTx` idempotency relies on `(refType, refId, event)`; **manual vouchers have no refs**, so they can be reversed repeatedly. Reversal uses `now()` as posting date, and the original is not flagged as reversed.                                                     | Double reversal; period/date confusion.                                                      |
+| G3  | Balance is enforced **only in code**; DB only checks each line has exactly one positive side. No trigger prevents `UPDATE`/`DELETE` on posted rows.                                                                                                                               | Any direct SQL or future bug can break the books.                                            |
+| G4  | Account IDs (`acc_1031`, …) hard-coded in the engine.                                                                                                                                                                                                                             | **Resolved in ACC-0.6** via `src/server/finance/account-keys.ts` (`ACCOUNT_KEYS`); runtime resolver in ACC-1.1. |
+| G5  | Reports are computed **client-side** from all-time account balances (`getChartOfAccountsWithBalancesQuery` has no date range; `FinancialReportsTab` derives P&L/Balance Sheet in JS). Overview fetch is capped at 100 vouchers / 250 GL rows.                                     | No date-range, no comparison, no opening balance, doesn't scale, not reproducible.           |
+| G6  | **No year-end closing voucher**; closing a FY only blocks posting. P&L never resets into Retained Earnings.                                                                                                                                                                       | Balance sheet equity is computed ad hoc.                                                     |
+| G7  | **No tables found** for invoices, credit/debit notes, expenses, cost centers (cost center is a free-text string on lines), budgets, bank accounts/transactions, payroll runs, accounting settings. `TODO.md` B3–B6 marks many of these `[x]` — **treat as `[?]` until verified**. | Roadmap must not assume they exist.                                                          |
+| G8  | Manager default grants are `accounts: ['view','export']`.                                                                                                                                                                                                                         | **Decided, see §14.2** (managers create drafts and record cash handovers; cannot pay/approve settlements, reverse vouchers, post manual JVs, or override periods). Implemented in ACC-0.7. |
+| G9  | `tx: any` and `Record<string, any>` throughout the engine; `accounts-panel.tsx` is a ~4,200-line monolith; `finance/AGENT.md` describes an older design (`ledger_transactions`, `finance/post.ts`) and says "not started".                                                        | Maintainability; misleading docs.                                                            |
+| G10 | Possible double count of rider compensation: order-delivered posting accrues per-drop + commission to `5111/2031`.                                                                                                                                                                | **Decided, see §14.2** (Option A adopted: ledger balance on `RIDER_PAYABLE` is source of truth; order history is reconciliation check only; ACC-0.10). |
+| G11 | The uploaded archive contained `.env.local` and `.neon`.                                                                                                                                                                                                                          | **Decided, see §14.2** (rotate exposed credentials; Neon only; never read/echo secrets). |
+| G12 | Migration journal & tracking desync: 0009–0014 uncatalogued in `_journal.json`, 0015 missing (`grocery_brands`), corrupted row 8 in Neon (`0007_double_entry_accounting` tag as hash and older timestamp `1792148989282`), snapshots disconnected at 0001. Real files: `0005_order_state_machine.sql` (mild: flags orders with rider and no dealer as legacy), `0006_dealer_sourcing.sql` (DANGEROUS: unconditionally resets order_items `sourcing_status` to assigned), `0007_double_entry_accounting.sql` (safe: IF NOT EXISTS / ON CONFLICT DO NOTHING), `0008_pricing_promotions_and_settlements.sql` (DANGEROUS: overwrites shipping zones), 0009–0015 safe. | Automated `db:migrate` would re-run 0006/0008 destructively. Fixed in INFRA-2 via journal registration, idempotent 0015, and tracking repair SQL. |
+
+---
+
+## 4. ERPNext → Mezmani feature map
+
+| ERPNext feature                                                              | Mezmani today                                                  | Target (task)                       |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------- |
+| Chart of Accounts tree, account types, root types, "balance must be", freeze | Tree via `parentId`/`isGroup`; no types, no freeze, no CRUD UI | ACC-1.2                             |
+| Accounts Settings / Company default accounts                                 | Hard-coded IDs                                                 | ACC-0.6, ACC-1.1                    |
+| Cost Centers (tree)                                                          | Free-text on lines                                             | ACC-1.3                             |
+| GL Entry (materialised ledger)                                               | `journal_lines` + joins                                        | ACC-1.4 (view/denormalised columns) |
+| Fiscal Year, Accounting Period, "Frozen upto"                                | FY only; blocks closed FY                                      | ACC-1.5, ACC-5.x                    |
+| Journal Entry (draft → submit → cancel; entry types)                         | Posts immediately; JV/PV/RV/CV; reverse only                   | ACC-1.6, ACC-3.1                    |
+| Payment Entry (party, allocations, deductions/TDS)                           | Dealer settlement + rider handover as special cases            | ACC-3.2                             |
+| Contra Entry                                                                 | `CV` type exists in UI filter; no dedicated flow               | ACC-3.3                             |
+| Expense Claim / expenses with approval                                       | None found                                                     | ACC-3.4                             |
+| Opening Entry / Opening Balance import                                       | None                                                           | ACC-3.6                             |
+| Auto Repeat (recurring JV)                                                   | None                                                           | ACC-3.5                             |
+| Sales Invoice, Credit/Debit Note, tax templates                              | None found (order totals + SV posting only)                    | ACC-4.1–4.3                         |
+| Sales / Purchase Register, VAT return                                        | None found                                                     | ACC-4.4                             |
+| Withholding tax (TDS)                                                        | Flat TDS on dealer settlement                                  | ACC-4.5                             |
+| Period Closing Voucher                                                       | None                                                           | ACC-5.1                             |
+| General Ledger report                                                        | Limited list (250 rows)                                        | ACC-2.2                             |
+| Trial Balance (opening/period/closing, tree)                                 | All-time, client-side                                          | ACC-2.1                             |
+| P&L, Balance Sheet, Cash Flow (compare periods)                              | Client-side, no range                                          | ACC-2.3                             |
+| Accounts Payable/Receivable aging & party statement                          | Dealer/rider summaries only                                    | ACC-2.4                             |
+| Day Book / Voucher register                                                  | Transactions tab (capped)                                      | ACC-2.4                             |
+| Bank Reconciliation / Statement import                                       | None                                                           | Phase 6                             |
+| Budget & variance                                                            | None                                                           | ACC-7.2                             |
+| Dashboard charts                                                             | Basic KPIs                                                     | ACC-7.3                             |
+| Repost / Ledger health checks                                                | None                                                           | ACC-2.5                             |
+| Audit trail / version history                                                | `audit_logs`                                                   | ACC-0.x, ACC-8.4                    |
+| Print formats (voucher, invoice, payslip)                                    | Public voucher by slug                                         | ACC-4.1, ACC-2.6                    |
+
+---
+
+## 5. Target architecture
+
+### 5.1 Layering (one-way dependencies)
+
+```
+UI (routes + panels)            → calls only server functions via src/queries/admin.ts
+server functions (*.functions)  → auth + Zod + audit; thin
+domain services (*.queries / *.service)  → business logic, run inside dbTx
+posting engine (double-entry.ts)         → ONLY writer of journal_*; knows nothing about orders/UI
+account resolver (account-keys / settings) → maps semantic keys → ledger account ids
+```
+
+### 5.2 Proposed `src/server/finance/` layout (create files as tasks need them)
+
+```
+double-entry.ts            # engine only: postJournalTx, reverseJournalTx (+ validations)
+postings/                  # one file per business event; each returns lines + metadata
+  order-delivered.ts  cash-handover.ts  dealer-settlement.ts  rider-payroll.ts
+  expense.ts  refund.ts  credit-note.ts  opening.ts  period-closing.ts
+account-keys.ts            # ACCOUNT_KEYS const + resolveAccount(tx, key)
+finance.schemas.ts         # Zod schemas shared with forms
+finance.queries.ts         # existing reads
+reports/                   # trial-balance.ts general-ledger.ts pnl.ts balance-sheet.ts
+                           # cash-flow.ts aging.ts day-book.ts party-statement.ts integrity.ts
+tax/                       # tax-rates.ts invoice.ts vat-return.ts tds.ts
+reconciliation/            # bank-import.ts matcher.ts
+finance.functions.ts       # keep; split into <topic>.functions.ts if > ~600 lines
+```
+
+Keep the existing `*.schemas.ts / *.queries.ts / *.functions.ts` convention from `src/server/AGENT.md`.
+
+### 5.3 Account keys (replace hard-coded IDs, ACC-0.6 → ACC-1.1)
+
+Semantic keys resolved to ledger accounts: `CASH_IN_HAND` (1011) · `BANK_MAIN` (1012) · `ESEWA_CLEARING` (1021) · `KHALTI_CLEARING` (1022) · `RIDER_COD_CASH` (1031) · `CUSTOMER_RECEIVABLE` (1041) · `STAFF_RIDER_ADVANCES` (1042) · `DEALER_PAYABLE` (2011) · `VAT_OUTPUT` (2021) · `VAT_INPUT` (2022) · `TDS_PAYABLE` (2023) · `RIDER_PAYABLE` (2031) · `OWNER_CAPITAL` (3010) · `RETAINED_EARNINGS` (3020) · `SALES` (4010) · `DELIVERY_INCOME` (4020) · `OTHER_INCOME` (4030) · `COGS_LIQUOR` (5011) · `COGS_GROCERY` (5012) · `RIDER_EXPENSE` (5111) · `DISCOUNTS` (5112) · `GATEWAY_FEES` (5113) · `ROUND_OFF` (5114) · `RENT_UTILITIES` (5120) · `ADMIN_EXPENSE` (5130).
+Phase 0 = a typed constants file with the current IDs (no behaviour change). Phase 1 = a DB table so the owner can remap in settings.
+
+### 5.4 Voucher lifecycle & the "cancel" design decision
+
+ERPNext: Draft → Submitted → Cancelled. Here (append-only):
+
+- **Draft**: lines saved, **no voucher number, not in GL**. (Requires `journal_entries.voucher_no` to become nullable until submit; unique index ignores nulls. Numbers are assigned at submit to stay gapless.)
+- **Submitted**: numbered, in GL, immutable.
+- **Cancel = post an exact reversal** and link both (`reversalOf` on the reversal, new `reversedBy` on the original). **Keep both entries `submitted`** so every report (which sums submitted lines) nets to zero. Do **not** set the original to `cancelled` while reports include only `submitted` rows — that would count the reversal without the original. Use `isReversed`/`reversedBy` for display and for blocking a second reversal.
+- Reversal posting date: default = original posting date if that period is open, otherwise today; both permitted only with `accounts.approve`.
+
+### 5.5 Reporting read model
+
+Reports must run as **SQL aggregates** over a normalised GL source. Start with a SQL view (`gl_entries_v`: line + entry columns `postingDate`, `fiscalYearId`, `voucherType`, `voucherNo`, `refType`, `refId`, `postingStatus` + account `code/rootType/accountType`). Add indexes `(account_id, posting_date)`, `(party_type, party_id, posting_date)`. Only denormalise onto `journal_lines` if measured too slow (ACC-8.3).
+
+---
+
+## 6. Data model additions (Drizzle, `src/db/schema/finance.ts` unless noted)
+
+All tables: text/uuid id, `createdAt/updatedAt` (timestamptz), indexes on FKs and filters, money in integer paisa, archive instead of delete. Hand-written idempotent SQL (`drizzle/XXXX_*.sql`); register each in `drizzle/meta/_journal.json` with `when` timestamp greater than the previous entry; extend `src/db/migrations.test.ts`; show the SQL to the owner; the **OWNER** applies it in Neon SQL Editor after a Neon branch backup. The agent never runs `db:migrate` or `db:push`. `db:generate` is not used (snapshots stop at 0001). See `src/db/AGENT.md`.
+
+| Table / change                                     | Key columns                                                                                                                                                                                                           | Task     |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `ledger_accounts` (alter)                          | `accountType` (cash, bank, receivable, payable, tax, stock_adjustment, round_off, income, expense, cogs, equity, fixed_asset, other), `balanceMustBe` (`debit`/`credit`/null), `isFrozen`, `description`, `sortOrder` | 1.2      |
+| `account_defaults`                                 | `key` (unique), `accountId`                                                                                                                                                                                           | 1.1      |
+| `accounting_settings` (or rows in `site_settings`) | `frozenUpTo`, `roundingPolicy`, `approvalThresholds` json, `defaultCostCenterId`, `invoicePrefix`                                                                                                                     | 1.1, 1.5 |
+| `cost_centers`                                     | `id`, `code`, `name`, `parentId`, `isGroup`, `isActive` (seed: general, liquor, grocery, delivery); `journal_lines.costCenterId` FK                                                                                   | 1.3      |
+| `accounting_periods`                               | `fiscalYearId`, `name` (BS month), `startDate`, `endDate`, `status` (open/closed), `closedBy/At`                                                                                                                      | 1.5      |
+| `journal_entries` (alter)                          | nullable `voucherNo` until submit, `reversedBy`, `isReversed`, `approvedBy/At`, `entryType`                                                                                                                           | 1.6      |
+| `voucher_attachments`                              | `journalEntryId`, `url`, `name`, `size`, `uploadedBy`                                                                                                                                                                 | 1.7      |
+| `payment_entries` + `payment_allocations`          | party, mode, account, amount, deductions json, allocations → invoice/settlement/order                                                                                                                                 | 3.2      |
+| `expense_categories`, `expenses`                   | category→expense account, amount, receipt urls, status (draft/submitted/approved/rejected/paid), approver, `journalEntryId`                                                                                           | 3.4      |
+| `recurring_vouchers`                               | template lines json, schedule, `nextRunAt`, `isActive`                                                                                                                                                                | 3.5      |
+| `tax_rates`                                        | `category`, `rateBps`, `effectiveFrom`, `isActive`                                                                                                                                                                    | 4.3      |
+| `tax_invoices` + `tax_invoice_lines`               | `invoiceNo` (per FY), orderId, seller PAN/VAT snapshot, buyer PAN?, taxable, vat, total, status; `creditNoteOf`                                                                                                       | 4.1–4.2  |
+| `dealers` (alter)                                  | `providesVatBill` (default false), `tdsRateBps` (default null/off)                                                                                                                                                    | 4.4–4.5  |
+| `bank_accounts`, `bank_transactions`               | ledger account link, imported rows (date, amount, ref, description), `matchedTo`, `status`                                                                                                                            | 6.1–6.2  |
+| `budgets`                                          | fiscalYearId, accountId/costCenterId, month, amount                                                                                                                                                                   | 7.2      |
+| `period_closing_vouchers`                          | fiscalYearId, closingAccountId, journalEntryId, closedBy                                                                                                                                                              | 5.1      |
+
+---
+
+## 7. Roadmap
+
+Order matters: **Phase 0 → 1 → 2** unlock everything else. Phases 3–7 can be reordered by owner priority. Every task ends with tests + doc updates (§13).
+
+### Phase 0 — Baseline audit & hardening (no new features)
+
+| ID       | Status | Task                                                                                                                                                                                                                                                                                                                                                                                               | Files                                                                                                | Acceptance                                                                                                                                                    |
+| -------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ACC-0.1  | [x]    | **Truth audit.** Compare `TODO.md` B2–B6 + B14 checkboxes with real code/schema. Produce a table in §14 (claimed / found / gap). Check G10 (rider comp double count). **No code changes.**                                                                                                                                                                                                       | `TODO.md`, schema, `double-entry.ts`, `rider.queries.ts`                                             | Table committed to §14; each `[x]` re-marked `[x]`/`[?]`/`[ ]` in this guide                                                                                  |
+| ACC-0.2  | [x]    | **Secrets hygiene.** Confirm `.env*`/`.neon` are gitignored and not referenced in docs. List which keys the owner must rotate (do **not** open the files).                                                                                                                                                                                                                                       | `.gitignore`, `.env.example`                                                                         | Owner gets a rotate-list; `.env.example` has names only                                                                                                       |
+| ACC-0.3  | [x]    | **Engine guards (G1).** Reject posting to group/inactive accounts; unknown account → clear error; require `partyType+partyId` for party-controlled accounts (`DEALER_PAYABLE`, `RIDER_COD_CASH`, `RIDER_PAYABLE`, `CUSTOMER_RECEIVABLE`, `STAFF_RIDER_ADVANCES`); validate `partyType` ∈ allowed set.                                                                                              | `double-entry.ts`, `double-entry.test.ts`                                                            | Unit tests (`bun test`) for each rejection; existing postings still pass                                                                                      |
+| ACC-0.4  | [x]    | **Reversal hardening (G2).** Add `reversedBy`/`isReversed`; block reversing an entry already reversed (incl. manual vouchers) and reversing a reversal; reversal date policy per §5.4; require `accounts.approve`; reason mandatory; audit log.                                                                                                                                                    | schema + migration, `double-entry.ts`, `finance.functions.ts`                                        | Test: second reversal of a manual voucher fails; net of original+reversal = 0 per account                                                                     |
+| ACC-0.5  | [x]    | **DB-level integrity (G3).** Migration adding (a) a deferred constraint trigger asserting `Σdebit=Σcredit` per entry at commit, (b) triggers blocking `UPDATE/DELETE` on `journal_lines` and on submitted `journal_entries` (except the allowed `reversedBy/isReversed` flags). Show the SQL to the owner before running; Neon branch backup first.                                                | `drizzle/0017_db_level_integrity.sql`                                                               | Direct SQL attempts to unbalance/edit/delete fail; normal postings pass; migration reversible in notes                                                        |
+| ACC-0.6  | [x]    | **Account keys (G4).** Create `account-keys.ts` with typed `ACCOUNT_KEYS` → current IDs; replace every literal `acc_xxxx` in engine and callers. No behaviour change.                                                                                                                                                                                                                              | `double-entry.ts`, callers                                                                           | `grep -rn "acc_[0-9]" src/server` returns only `account-keys.ts` and tests                                                                                    |
+| INFRA-2  | [x]    | **Migration tracking & journal repair (G12).** Registered 0009–0017 in journal; generated tracking SQL via `tracking-sql.ts`; backed up Neon branch to `backup-before-phase-0-hardening` and applied 0015, 0016, 0017, and tracking records directly to Neon via Neon MCP transaction; 100% verified on Neon and automated unit tests on PGlite (`migrations.test.ts`); eSewa production guard active. | `drizzle/*`, `src/db/tools/*`, `src/db/migrations.test.ts`, `src/server/orders/order.functions.ts` | 18 migrations pass in order on PGlite; tracking verified on Neon; triggers active; eSewa production guard throws on missing keys. |
+| ACC-0.7  | [x]    | **Permission mismatch (G8).** (Decided, see §14.2). Align `DEFAULT_GRANTS_BY_ROLE`, function guards and docs. Managers may record handovers and create settlement drafts; cannot pay/approve settlements, reverse vouchers, or override periods. `postManualJournalVoucherFn` must be guarded by admin/`accounts.approve` so managers holding `accounts.create` cannot post manual JVs.               | `permissions-shared.ts`, `finance.functions.ts`, tests                                              | Written decision in §14.2; tests for manager allowed/denied cases                                                                                            |
+| ACC-0.8  | [x]    | **Types.** Introduce `DbTx` type; remove `tx: any` and `Record<string, any>` in finance code; export shared `PostJournalParams` types.                                                                                                                                                                                                                                                             | `src/server/finance/*`                                                                               | `bunx tsc --noEmit` clean; no new `any`                                                                                                                       |
+| ACC-0.9  | [x]    | **Rewrite `finance/AGENT.md`** to match reality + point to this guide.                                                                                                                                                                                                                                                                                                                             | `src/server/finance/AGENT.md`                                                                        | Describes journal-entry model, engine, file map, status table                                                                                                 |
+| ACC-0.10 | [x]    | **Fix rider payroll to follow ledger (G10 / Option A).** Precondition: read-only count of `journal_lines` on `RIDER_PAYABLE` with null party; report and wait for owner decision. Payout reads accrued `RIDER_PAYABLE` balance; recalculation from orders is reconciliation check only; run inside `dbTx.transaction()`; script compares existing balances vs past payouts.                       | `operations.functions.ts`, `approveSettlementFn`, `rider.queries.ts`, `double-entry.ts`, tests       | Payout debits `RIDER_PAYABLE` for actual ledger balance; diff view reports mismatches; control account never negative/unbalanced; zero fixes without approval |
+| ACC-0.11 | [x]    | **Remove legacy single-entry writes.** Stop writes to `ledger_entries`; manual entries go only through posting engine; redirect UI entry points; keep table and archive read-only.                                                                                                                                                                                                                  | `operations.functions.ts` (`createManualLedgerEntryFn` etc.), settlement workflows, UI callers       | Zero writes to `ledger_entries`; manual journals go through `postManualJournalVoucherFn`; legacy reads preserved; grep/tests verify zero writes               |
+
+> **Note on INFRA-1 (Transaction safety for multi-step writes):** Scheduled immediately after Phase 0 (or pulled earlier if needed). Wraps multi-table mutations inside `dbTx.transaction()` with rollback verification tests. Reconciled scope: non-ledger multi-table mutations (`upsertLiquorProductQuery`, `upsertGroceryProductQuery`, `updateDealerPricesQuery` / dealer stock, `restoreRecycleBinItemQuery`, `deleteRiderQuery`, `saveSettingsFn`). Note: ledger-integrated operations (`createDealerSettlementBatchFn`, `transitionOrderFn` / `transitionOrderTx`, `approveSettlementFn`) already run within or delegate to the double-entry posting engine inside `dbTx.transaction()`.
+
+### Phase 1 — Foundation (ERPNext "Accounts Settings", CoA, cost centers, periods, voucher lifecycle)
+
+| ID      | Task                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Acceptance                                                                                                                                           |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ACC-1.1 | **Accounting settings & default accounts.** `account_defaults` + settings UI (Select of accounts filtered by type). `resolveAccount(tx, key)` reads DB (cached per request), falls back to seed. Postings call the resolver.                                                                                                                                                                                                                                                                        | Remapping `SALES` to another income account changes the next posting; missing mapping fails with a clear message; seeded defaults identical to today |
+| ACC-1.2 | **Chart of Accounts management.** Add `accountType`, `balanceMustBe`, `isFrozen`. CRUD server functions (create/rename/move/disable). Rules: code unique; root type inherited from parent; cannot change `rootType`/delete when lines exist; cannot make a group out of an account with lines; engine rejects frozen accounts and enforces `balanceMustBe` at report/health-check level. Tree UI (expand/collapse, balances, quick-add child, disable). Backfill `accountType` for seeded accounts. | Tests for each rule; tree renders 5 roots; audit-logged                                                                                              |
+| ACC-1.3 | **Cost centers.** Table + seed (`general`, `liquor`, `grocery`, `delivery`), FK on lines, backfill from the old string, selector in manual voucher lines, filter in reports.                                                                                                                                                                                                                                                                                                                        | No free-text cost center remains; old data mapped                                                                                                    |
+| ACC-1.4 | **GL read model.** Create `gl_entries_v` view + indexes (§5.5); switch existing queries to it.                                                                                                                                                                                                                                                                                                                                                                                                      | Same numbers as before on seed data; `EXPLAIN` shows index use                                                                                       |
+| ACC-1.5 | **Periods & locking.** `accounting_periods` (one per BS month, generated per FY), `frozenUpTo` setting; engine rejects closed periods; override only with `accounts.approve` + audit.                                                                                                                                                                                                                                                                                                               | Posting into a closed month fails; admin override works and is logged                                                                                |
+| ACC-1.6 | **Voucher lifecycle.** Draft (no number) → Submit (assign number, post) → Cancel (reversal per §5.4). Drafts editable; approval for amounts over threshold (maker-checker). Reuse `form-view/workflow-bar`, `child-table`, `link-field`, `activity-timeline`.                                                                                                                                                                                                                                       | Draft not in any report; number assigned only at submit and stays gapless under concurrent submits (test)                                            |
+| ACC-1.7 | **Attachments** on vouchers via the storage adapter (`#/lib/storage`), image compression helper where applicable.                                                                                                                                                                                                                                                                                                                                                                                   | Upload/list/remove on draft; read-only after submit                                                                                                  |
+
+### Phase 2 — Reporting engine (server-side, date-ranged, exportable)
+
+All reports: input `{ from, to, fiscalYearId?, costCenterId?, accountIds?, partyType?, partyId?, compare? }`, SQL aggregation, paginate where row-heavy, CSV export on the server, print-friendly view. Dates shown in BS + AD (`formatDualDate`).
+
+| ID      | Report                                  | Spec                                                                                                                                                                                                                                                                   |
+| ------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ACC-2.1 | **Trial Balance**                       | Columns: opening Dr/Cr, period Dr/Cr, closing Dr/Cr; group roll-ups from tree; `includeZero`; "exclude period-closing entries" toggle; footer proves ΣDr = ΣCr                                                                                                         |
+| ACC-2.2 | **General Ledger**                      | Filter by account(s), party, cost center, voucher type, date range; opening-balance row; running balance via window function; group-by account/voucher/party; cursor pagination; drill-through to voucher                                                              |
+| ACC-2.3 | **P&L, Balance Sheet, Cash Flow**       | P&L by cost center and with comparison periods (prev period / prev FY); Balance Sheet "as on" date where current-period profit is shown inside equity until year close; Cash Flow (direct via cash/bank/clearing accounts grouped by voucher event; indirect optional) |
+| ACC-2.4 | **Day Book, Party Statement, AP Aging** | Day book per date; statement per dealer/rider/customer with running balance; dealer AP aging buckets (0–30/31–60/61–90/90+) by voucher date; receivable aging only if credit customers exist (not at launch)                                                           |
+| ACC-2.5 | **Integrity report**                    | Σ party balances vs control account for `DEALER_PAYABLE`, `RIDER_COD_CASH`, `RIDER_PAYABLE`; global ΣDr=ΣCr; orders delivered without SV voucher; vouchers with missing source; `balanceMustBe` violations; runs on demand and nightly (Phase 7)                       |
+| ACC-2.6 | **Export & print**                      | CSV from server; print CSS pages for A4; PDF only if a server PDF lib is approved by the owner                                                                                                                                                                         |
+| ACC-2.7 | **UI refactor**                         | Split `accounts-panel.tsx` into `tabs/*.tsx` + `accounts-overview`; reports page consumes server queries via `src/queries/admin.ts`; delete client-side aggregation; use `date-range-filter`, `data-table`, `kpi-card`, `charts`                                       |
+| ACC-2.8 | **Performance**                         | Seed 100k lines; each report < 1 s p95 on Neon dev; add indexes as measured                                                                                                                                                                                            |
+
+### Phase 3 — Vouchers, payments, expenses
+
+| ID      | Task                          | Notes                                                                                                                                                                                            |
+| ------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ACC-3.1 | **Voucher types & forms**     | JV, PV, RV, CV user-creatable; SV (and system events) never user-creatable. Per-type form with sensible default accounts. Multi-line child table with live Dr/Cr totals and difference.          |
+| ACC-3.2 | **Payment Entry**             | Pay dealer / pay rider / receive from party; mode cash/bank/eSewa; allocate to settlements/orders; deductions (TDS, write-off to `ROUND_OFF`); posts PV/RV; unallocated amounts become advances. |
+| ACC-3.3 | **Contra**                    | Cash↔bank deposit/withdrawal; CV voucher; guarded by cash-in-hand ≥ 0 warning.                                                                                                                   |
+| ACC-3.4 | **Expenses**                  | Categories → expense accounts; staff submit with receipt; approver per threshold; approval posts `Dr expense / Cr cash                                                                           | bank | payable`; rejected stays unposted; audit trail. |
+| ACC-3.5 | **Recurring vouchers**        | Templates (rent etc.) → creates **drafts** on schedule via Vercel Cron; owner reviews.                                                                                                           |
+| ACC-3.6 | **Opening balances**          | CSV import → single `OB`/JV with `event:'opening'` per party (dealer payable, rider cash, bank, capital); dry-run preview must balance before commit.                                            |
+| ACC-3.7 | **Refunds & returns posting** | `postRefund`/sales-return flow tied to order returns; cash vs wallet; reversal of COGS when dealer credits goods. Verify what exists first (ACC-0.1).                                            |
+
+### Phase 4 — Invoices & Nepal tax (needs accountant sign-off, §11)
+
+| ID      | Task                                       | Notes                                                                                                                                                                                                                                       |
+| ------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ACC-4.1 | **Tax invoice**                            | Auto-created when an order is delivered; sequential per FY (`voucher_sequences` type `INV`); seller PAN/VAT from settings; optional buyer PAN; per-line taxable/VAT/total snapshot; printable A4 + 80 mm thermal; linked to the SV voucher. |
+| ACC-4.2 | **Credit / debit notes**                   | Linked to invoice; cancellation = credit note only (no delete); posts reversing amounts; numbered.                                                                                                                                          |
+| ACC-4.3 | **Tax rates by category & effective date** | Default 13% VAT-inclusive; excise/other duties as separate disabled-by-default components — **no invented rates**.                                                                                                                          |
+| ACC-4.4 | **Sales Register & VAT return**            | Monthly by BS month: output VAT − input VAT; input VAT is zero unless dealer `providesVatBill`; Purchase Register only for flagged dealers. Export CSV.                                                                                     |
+| ACC-4.5 | **TDS**                                    | Per-dealer config, default OFF, **no hard-coded rate**; gross/TDS/net recorded separately; TDS payable report.                                                                                                                              |
+| ACC-4.6 | **Rounding policy**                        | Define paisa rounding once (invoice vs order level); differences post to `ROUND_OFF`; tests for odd totals.                                                                                                                                 |
+
+### Phase 5 — Period close & year-end
+
+| ID      | Task                                | Acceptance                                                                                                                                                                                                                                                        |
+| ------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ACC-5.1 | **Period Closing Voucher**          | Admin-only; moves each income/expense balance for the FY into `RETAINED_EARNINGS` in one balanced JV (type `PC`, cost-center aware); sets FY closed; blocked while drafts/unreconciled items exist (see 5.4). Test: P&L = 0 after close; balance sheet unchanged. |
+| ACC-5.2 | **FY rollover**                     | Create next FY + all voucher sequences (JV, PV, RV, CV, SV, INV, PC, OB) + 12 BS-month periods automatically (cron + on-demand); no manual SQL seeds.                                                                                                             |
+| ACC-5.3 | **Reports after close**             | TB/P&L/BS toggle "include/exclude closing entries"; comparatives across closed years.                                                                                                                                                                             |
+| ACC-5.4 | **Pre-close checklist UI**          | Unsettled dealer items, rider cash outstanding, draft vouchers, integrity report (2.5) must be reviewed/acknowledged.                                                                                                                                             |
+| ACC-5.5 | **Day-end cash closing (Z-report)** | Expected vs counted cash; shortage/excess posts to a mapped account; verify existing implementation first.                                                                                                                                                        |
+
+### Phase 6 — Reconciliation
+
+| ID      | Task                                                                           | Notes                                                                                                                                             |
+| ------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ACC-6.1 | Bank accounts + statement import (CSV; bank and eSewa/Khalti settlement files) | Parse server-side, dedupe by hash, preview before saving                                                                                          |
+| ACC-6.2 | Matching                                                                       | Auto-match on amount + reference + date window; manual match/split; unmatched → create payment/expense entry; sets `payments.status='reconciled'` |
+| ACC-6.3 | Reconciliation statement                                                       | Book balance vs bank balance with outstanding items and differences                                                                               |
+| ACC-6.4 | Gateway fees                                                                   | Post commission to `GATEWAY_FEES` on settlement; refunds via manual ledger entry where API absent                                                 |
+| ACC-6.5 | Rider cash reconciliation                                                      | Cash on hand vs ledger, overdue handovers, limit alerts — verify existing                                                                         |
+
+### Phase 7 — Payroll, budgets, dashboards, jobs
+
+| ID      | Task                         | Notes                                                                                                                                                               |
+| ------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ACC-7.1 | Payroll posting hardening    | Resolve G10; separate components (base, per-drop, % of delivery fee, bonus, deductions) in postings; staff (manager) salary reuses the same flow; payslip printable |
+| ACC-7.2 | Budgets & variance           | Per account/cost center/month; warning (not block) on expense approval; variance report                                                                             |
+| ACC-7.3 | Accounting dashboard         | Cash position, payables (aging), VAT payable this month, rider cash outstanding, top expenses, margin by cost center; use `kpi-card` + `charts`                     |
+| ACC-7.4 | Scheduled jobs (Vercel Cron) | Nightly integrity report, recurring drafts, unpaid settlement digest, FY rollover check                                                                             |
+| ACC-7.5 | Field-level permissions      | Managers can't see cost price/profit if owner wants (TODO B13)                                                                                                      |
+
+### Phase 8 — Quality, security, docs
+
+| ID      | Task                   | Acceptance                                                                                              |
+| ------- | ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| ACC-8.1 | Property-style tests   | Random event sequences always leave ΣDr=ΣCr; replays are no-ops                                         |
+| ACC-8.2 | End-to-end ledger test | place → deliver → handover → settle → payroll → close; control accounts tie to sub-ledgers; TB balances |
+| ACC-8.3 | Load & `EXPLAIN`       | Targets from ACC-2.8 hold with 1M lines                                                                 |
+| ACC-8.4 | Security review        | Every finance function has Zod + permission + audit; tests for 403 paths; rate limits on auth           |
+| ACC-8.5 | Docs                   | `finance/AGENT.md`, `db/AGENT.md`, `lib/AGENT.md` (roles), root phase table all current                 |
+
+---
+
+## 8. Permissions plan
+
+Today there is a single `accounts` module with actions `view/create/edit/delete/export/approve`. Keep it (back-compat via `can()` fallbacks) and add finer modules when Phase 3+ lands:
+
+| Module key       | Covers                           | Admin | Manager (proposal — confirm, ACC-0.7)   |
+| ---------------- | -------------------------------- | ----- | --------------------------------------- |
+| `accounts`       | ledger, reports, CoA view        | all   | view, export                            |
+| `vouchers`       | create/submit JV/PV/RV/CV        | all   | create (drafts only), submit admin-only |
+| `expenses`       | submit/approve expenses          | all   | create; approve ≤ threshold             |
+| `tax`            | invoices, notes, VAT/TDS reports | all   | view                                    |
+| `payroll`        | payroll runs                     | all   | view                                    |
+| `reconciliation` | bank import/matching             | all   | none                                    |
+
+Rules: `approve` = cancel/reverse, period override, closing, large vouchers. Maker ≠ checker for vouchers over threshold. Denied attempts are already audit-logged by `requirePermission`. Update `MODULES`, `PERMISSION_SECTIONS`, `DEFAULT_GRANTS_BY_ROLE`, `can()`, and the staff permissions UI together.
+
+---
+
+## 9. UI plan (`/admin/accounts`)
+
+Follow `UI_APPROACH.md` (Vercel-style minimal, shadcn only, no emoji) and `src/components/AGENT.md` (loading/empty/error/pending states, server-side pagination with URL search params). Reuse `components/shared/list-view`, `form-view`, `child-table`, `link-field`, `date-range-filter`, `money-text`, `status-badge`, `awesomebar`.
+
+Suggested tabs (keep `tab` search param): **Overview** · **Vouchers** (list-view; detail via form-view with workflow bar, attachments, timeline) · **General ledger** · **Chart of accounts** (tree) · **Parties** (dealer/rider statements, aging) · **Expenses** · **Tax** (invoices, notes, VAT, TDS) · **Reconciliation** · **Reports** · **Settings** (default accounts, periods, thresholds). Existing tab names (`ledger`, `transactions`, `dealer-ledger`, `sales-account`, `salary-account`, `chart-of-accounts`, `financial-reports`) must keep working via redirects/aliases until removed deliberately.
+
+Split the 4,200-line panel first (ACC-2.7) so later UI tasks stay small and reviewable. UI-only tasks must not change server functions, loaders or data shapes.
+
+---
+
+## 10. Nepal specifics
+
+- Money in NPR paisa; prices **VAT-inclusive**, default **13%**, configurable by category and effective date (`src/lib/tax.ts`).
+- Fiscal year = Shrawan 1 → Ashadh end (`getNepalFiscalYear`); DB stores AD, UI shows BS (and dual dates where useful). Period names use BS months.
+- Mezmani Retail Pvt. Ltd. (repo seller of record, formerly referred to as Daru Gang in early notes; ask owner to confirm) is the seller of record; dealers give **no VAT bills** by default → no input VAT, COGS at full dealer cost; per-dealer `providesVatBill` flag stays OFF until the accountant confirms.
+- Invoices: sequential per FY, seller PAN/VAT, optional buyer PAN.
+- Gateways: COD live; eSewa live & server-side verified (INFRA-2); Khalti/Fonepay later.
+
+---
+
+## 11. Open questions (owner / accountant) — never assume
+
+1. Is VAT-inclusive pricing @13% correct for **all** products? Any excise/duty that must appear on invoices?
+2. Exact IRD invoice/register formats required for this business; is any billing-software registration needed?
+3. Input VAT: will any dealer provide VAT bills? Purchase register needed?
+4. TDS: applicable to which dealers/services, rate, certificate format.
+5. (Decided, see §14.2) Rider pay formula: Option A adopted; ledger balance on `RIDER_PAYABLE` is source of truth for payout; order history is reconciliation check only (ACC-0.10).
+6. (Decided, see §14.2) Manager permissions on handover/disbursement/settlement: managers may record cash handovers and create settlement drafts; cannot pay/approve settlements, reverse vouchers, post manual JVs, or override periods (ACC-0.7).
+7. Approval thresholds (expense, refund, manual voucher, dealer price change).
+8. Rounding policy (order vs invoice vs line).
+9. Is PDF generation on the server acceptable (new dependency) or print-CSS only?
+10. Opening balances: dealer payable, rider cash, bank, capital — source and cut-over date.
+
+---
+
+## 12. Testing strategy
+
+- **Unit (`bun test`):** engine guards, posting builders (each balanced), VAT/rounding, reversal rules, period locks, account resolver, report math on fixture ledgers.
+- **Integration:** against a Neon dev branch or test DB — full order→deliver→handover→settle→payroll→close; concurrent submits for gapless numbering; idempotent replays.
+- **DB tests:** triggers reject unbalanced/edit/delete (ACC-0.5).
+- **Report checks:** TB equals ΣDr=ΣCr; BS: Assets = Liabilities + Equity (+ current profit); P&L ties to GL; integrity report clean.
+- Run the project's test command (`bun test`; existing examples: `src/server/finance/double-entry.test.ts`, `src/db/migrations.test.ts`, `src/lib/pricing.test.ts`).
+
+---
+
+## 13. Definition of Done (every task)
+
+- [ ] Acceptance criteria met; no unrelated changes.
+- [ ] Money in paisa; ledger writes only via the engine; inside `dbTx.transaction()`.
+- [ ] Zod schemas (shared with forms), permission check, audit log on every new mutation.
+- [ ] Hand-written idempotent SQL migration added (`drizzle/XXXX_*.sql`), registered in `drizzle/meta/_journal.json` with monotonic `when` timestamp, covered by `src/db/migrations.test.ts`, and shown to owner for execution. Agent never runs `db:migrate` or `db:push`. `db:generate` not used.
+- [ ] Tests added/updated and passing; `bun run lint`, `bun run check` (prettier), `bunx tsc --noEmit` pass.
+- [ ] UI: required states (loading/empty/error/pending), responsive, accessible labels, BS dates, `MoneyText`.
+- [ ] `AGENT.md` files of touched directories updated; this guide's task status + §14 log updated.
+- [ ] **No commit/push** unless the owner explicitly asks; when asked, follow `COMMIT_RULE.md`.
+
+---
+
+## 14. Progress log
+
+| Task     | Status | Date       | Notes / PR                                                                                                                                                                                                                                                                                                                  |
+| -------- | ------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ACC-0.1  | [x]    | 2026-10-30 | Truth audit completed. Audited TODO.md B2–B6 + B14 against code & schema. Detailed audit table populated; G10 rider compensation verified; questions and Phase 0 sequence proposed. No code changes.                                                                                                                         |
+| ACC-0.2  | [x]    | 2026-10-30 | Secrets hygiene. Verified .env*/.neon exclusion, audited environment variable definitions, updated .gitignore for .env.*, provided rotation checklist.                                                                                                                                                                      |
+| ACC-0.6  | [x]    | 2026-10-30 | Account keys. Introduced `ACCOUNT_KEYS` semantic constants and replaced literal `acc_xxxx` strings across server. Verified grep criteria and tests.                                                                                                                                                                         |
+| INFRA-2  | [~]    | 2026-10-30 | Migration tracking & journal repair (G12). Files and tests done; owner still has to run schema-check and tracking SQL on Neon dev, then production. Registered 0009–0015 in journal, wrote idempotent 0015, created `tracking-sql.ts`, `schema-check.ts`, automated tests in `migrations.test.ts`, and eSewa live guard. |
+| ACC-0.10 | [ ]    |            | Fix rider payroll to follow ledger (G10 / Option A). Source of truth is `RIDER_PAYABLE` balance; order recalculation becomes reconciliation check only; run inside `dbTx.transaction()`.                                                                                                                                    |
+| ACC-0.11 | [x]    | 2026-10-30 | Remove legacy single-entry writes. Deprecate writes to `ledger_entries`; redirect UI; preserve table/archive as read-only.                                                                                                                                                                                                  |
+| ACC-0.8  | [x]    | 2026-11-01 | Strict types and zero 'any' in finance. Created `src/server/finance/types.ts` exporting `DbTx`, `PostJournalParams`, `JournalLineInput`, and standard posting parameters. Replaced `tx: any`, `Record<string, any>`, and `metadata: any` in `double-entry.ts`, `finance.queries.ts`, and `double-entry.test.ts`. 0 `any` remain in `src/server/finance/*`. `bunx tsc --noEmit` and `bun test` pass cleanly. |
+| ACC-0.3  | [x]    | 2026-11-01 | Engine guards (G1) implemented in `postJournalTx`. Rejects posting to group or inactive accounts; rejects unknown accounts not in Chart of Accounts; enforces mandatory `partyType` and non-empty `partyId` for party-controlled accounts (`DEALER_PAYABLE`, `RIDER_COD_CASH`, `RIDER_PAYABLE`, `CUSTOMER_RECEIVABLE`, `STAFF_RIDER_ADVANCES`); enforces `partyType` ∈ `[dealer, rider, customer, supplier]`. Added 14 unit test assertions in `double-entry.test.ts`; all 112 tests pass. |
+| INFRA-1  | [ ]    |            | Transaction safety for multi-step writes. Wrap non-ledger multi-table mutations (`upsertLiquorProductQuery`, `upsertGroceryProductQuery`, `updateDealerPricesQuery` / dealer stock, `restoreRecycleBinItemQuery`, `deleteRiderQuery`, `saveSettingsFn`) in `dbTx.transaction()` with rollback tests.                        |
+
+### 14.1 Audit table (filled by ACC-0.1)
+
+> [!WARNING]
+> **WARNING: Do NOT create manual ledger entries through legacy `createManualLedgerEntryFn` (ACC-0.11).** Legacy single-entry writes are being phased out in favour of the posting engine (`postManualJournalVoucherFn`).
+>
+> **WARNING: Do NOT run monthly payroll generation in production until ACC-0.10 is completed.** `generateMonthlyRiderPayrollRunFn` recalculates deliveries from order history with current rates rather than reading accrued liability on `RIDER_PAYABLE` (`acc_2031`), desynchronizing control accounts.
+
+#### B2. Double-Entry Accounting Core
+
+| TODO.md item                                                               | Claimed | Found in code/schema                                                                                                                  | Gap / action                                                                                                                                                                                                                                              | Status |
+| -------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| New tables: `ledger_accounts`, `journal_entries`, `journal_lines`          | `[x]`   | Tables exist in `src/db/schema/finance.ts` & `drizzle/0007_double_entry_accounting.sql`.                                              | `journal_entries.voucher_no` is `NOT NULL` (blocks unnumbered draft vouchers, ACC-1.6). `cost_center` on `journal_lines` is raw text (needs `cost_centers` table, ACC-1.3). `ledger_accounts` lacks `accountType`, `balanceMustBe`, `isFrozen` (ACC-1.2). | `[~]`  |
+| DB CHECK / code guard: sum(debit) = sum(credit) per journal entry          | `[x]`   | Runtime code guard in `double-entry.ts` (`postJournalTx`). Single-row DB check in `journal_lines` (`debit >= 0 AND credit >= 0 ...`). | **No DB-level check or constraint trigger** enforces balance across lines of an entry (G3). Add deferred constraint trigger in ACC-0.5.                                                                                                                   | `[~]`  |
+| Single helper `postJournal(tx, …)` — ONLY way to write ledger rows         | `[x]`   | `postJournalTx` in `double-entry.ts` writes to `journal_entries` and `journal_lines`.                                                 | Legacy single-entry table `ledger_entries` is still written to by `approveSettlementFn` (`operations.functions.ts:2578`). Must retire legacy writes.                                                                                                      | `[~]`  |
+| Append-only; corrections via `reverseJournal` (admin), never UPDATE/DELETE | `[x]`   | `reverseJournalTx` exists in `double-entry.ts`; `reverseJournalVoucherFn` in `finance.functions.ts`.                                  | **No DB trigger prevents UPDATE/DELETE** on posted rows (G3 / ACC-0.5). Manual vouchers lack ref idempotency and can be reversed multiple times; original voucher not marked `isReversed` (G2 / ACC-0.4).                                                 | `[~]`  |
+| Seed current Nepal FY 2083/84 and previous one                             | `[x]`   | FY 2081/82, 2082/83, 2083/84 seeded in `0007_double_entry_accounting.sql`.                                                            | None. Clean.                                                                                                                                                                                                                                              | `[x]`  |
+| Seed Nepal chart of accounts (25 standard accounts)                        | `[x]`   | Seeded in `0007_double_entry_accounting.sql` with IDs `acc_1011` through `acc_5130`.                                                  | Hard-coded account string literals (`acc_xxxx`) across codebase (G4). Map to typed semantic keys in ACC-0.6 & DB table in ACC-1.1.                                                                                                                        | `[x]`  |
+| Legacy `ledger_entries` archived to `legacy_ledger_archive`                | `[x]`   | `legacy_ledger_archive` table created and populated in migration `0007`.                                                              | Legacy table `ledger_entries` remains active and receives writes during settlements; should be made read-only or dropped.                                                                                                                                 | `[~]`  |
+| Fiscal year table, period locking, year-end closing entry                  | `[x]`   | `fiscal_years` table exists; `postJournalTx` rejects closed fiscal years.                                                             | **Monthly period locking missing** (`accounting_periods` table not created, ACC-1.5). **Year-end closing voucher completely missing** (G6 / ACC-5.1).                                                                                                     | `[~]`  |
+| Bikram Sambat date display + BS↔AD conversion helper                       | `[x]`   | `src/lib/nepal-date.ts` (`adToBs`, `formatBS`, `formatDualDate`, `getNepalFiscalYear`) fully implemented and tested.                  | None. Used across UI and query layers.                                                                                                                                                                                                                    | `[x]`  |
+| Cost centers (Liquor / Grocery / Delivery / General)                       | `[x]`   | Free-text string `'liquor'\|'grocery'\|'delivery'\|'general'` placed on `journal_lines.cost_center`.                                  | **No `cost_centers` table**, no hierarchy/tree, no foreign key, no cost center management (G7 / ACC-1.3).                                                                                                                                                 | `[~]`  |
+| Round-off handling account for paisa rounding                              | `[x]`   | `acc_5114` ("Round-off & Adjustments") seeded in Chart of Accounts.                                                                   | Neither `postOrderDeliveredTx` nor pricing engine routes rounding differences to `acc_5114` (ACC-4.6).                                                                                                                                                    | `[~]`  |
+
+#### B3. Standard Postings (Automatic)
+
+| TODO.md item                                                                | Claimed | Found in code/schema                                                                                                                                                  | Gap / action                                                                                                              | Status |
+| --------------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `postOrderDelivered`                                                        | `[x]`   | Implemented as `postOrderDeliveredTx` in `double-entry.ts`; called in `order.transitions.ts:245`.                                                                     | Hardcoded account IDs; lacks party validation guards (G1); potential compensation synchronization gap with payroll (G10). | `[x]`  |
+| `postCashHandover`                                                          | `[x]`   | Implemented as `postCashHandoverTx` in `double-entry.ts`; called in `finance.functions.ts`.                                                                           | Hardcoded account IDs; lacks party validation guards (G1).                                                                | `[x]`  |
+| `postDealerSettlement`                                                      | `[x]`   | Implemented as `postDealerSettlementTx` in `double-entry.ts`; called in `finance.functions.ts`.                                                                       | Hardcoded account IDs; lacks party validation guards (G1).                                                                | `[x]`  |
+| `postRefund`                                                                | `[x]`   | **Not found anywhere in codebase.**                                                                                                                                   | Function, transition triggers, and return journal logic do not exist. To be built in ACC-3.7.                             | `[ ]`  |
+| `postSalary`                                                                | `[x]`   | `postRiderSalaryAccrualTx` and `postRiderPayoutTx` exist for riders in `double-entry.ts`.                                                                             | No staff/manager salary posting; rider salary recomputes order earnings rather than pulling accrued ledger balance (G10). | `[~]`  |
+| `postExpense`                                                               | `[x]`   | **Not found anywhere in codebase.**                                                                                                                                   | No expense tables, functions, approval workflow, or postings exist. To be built in ACC-3.4.                               | `[ ]`  |
+| `postDealerCreditNote`                                                      | `[x]`   | **Not found anywhere in codebase.**                                                                                                                                   | Credit note schema and postings do not exist. To be built in ACC-4.2.                                                     | `[ ]`  |
+| Idempotency on `ref_type + ref_id + event`                                  | `[x]`   | Partial unique index `journal_entries_ref_event_uniq_idx` and check in `postJournalTx`.                                                                               | Manual vouchers have `NULL` refs and bypass idempotency; manual reversals can be duplicated (G2 / ACC-0.4).               | `[~]`  |
+| VAT rule: seller of record, dealer `providesVatBill` flag default OFF       | `[x]`   | `providesVatBill` column on `dealers` (default false); COGS takes full dealer cost with zero input VAT.                                                               | Engine has no input VAT posting branch if flag is toggled ON (ACC-4.4). Correctly kept OFF.                               | `[x]`  |
+| Rider delivery pay posted as own component, no double count of delivery fee | `[x]`   | `postOrderDeliveredTx` debits `acc_5111` (Expense) and credits `acc_2031` (Payable) for per-drop + commission. Delivery fee credited to `acc_4020` (Delivery Income). | See G10 deep dive below for monthly recalculation risks.                                                                  | `[x]`  |
+
+#### B4. Accounting Features
+
+| TODO.md item                                                                                        | Claimed | Found in code/schema                                                                                                                                                                                                           | Gap / action                                                                                                                                                                                                                  | Status |
+| --------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| General Ledger, Trial Balance, Balance Sheet, P&L, Cash Flow (date range, compare periods, CSV/PDF) | `[x]`   | `getGeneralLedgerQuery` exists (capped at 500 rows, running balance starts at 0 without opening balance). `financial-reports-tab.tsx` calculates TB, P&L, BS **entirely client-side in React `useMemo`** on all-time balances. | **No server-side reporting engine** (G5). No date range filtering on financial statements; no period comparisons; Cash Flow does not exist; CSV is client-side only; PDF is browser `window.print()`. Phase 2 rebuild needed. | `[~]`  |
+| Account statement per account / per party with running balance                                      | `[x]`   | `getDealerPayablesSummaryQuery` and `getRiderAccountsSummaryQuery` return single aggregate numbers.                                                                                                                            | No chronological party statement with running balance or date ranges (ACC-2.4).                                                                                                                                               | `[~]`  |
+| Manual journal voucher UI (multi-line, balanced check, attachments)                                 | `[x]`   | UI exists in `accounts-panel.tsx` calling `postManualJournalVoucherFn`.                                                                                                                                                        | **No attachments supported** (`voucher_attachments` table does not exist, ACC-1.7).                                                                                                                                           | `[~]`  |
+| Payment vouchers / receipt vouchers / contra                                                        | `[x]`   | Voucher types `PV`, `RV`, `CV` supported as enum option in manual journal dialog.                                                                                                                                              | No dedicated Contra (cash↔bank with cash >= 0 guard) or Payment Entry forms (ACC-3.2, ACC-3.3).                                                                                                                               | `[~]`  |
+| Expense management: categories, receipts upload, approval flow                                      | `[x]`   | **Not found anywhere in codebase.**                                                                                                                                                                                            | No `expenses` or `expense_categories` tables; zero server functions or UI. To be built in ACC-3.4.                                                                                                                            | `[ ]`  |
+| Bank/eSewa reconciliation                                                                           | `[ ]`   | Not implemented.                                                                                                                                                                                                               | Correctly marked pending in `TODO.md`. Phase 6.                                                                                                                                                                               | `[ ]`  |
+| Customer credit / store credit wallet                                                               | `[ ]`   | Not implemented.                                                                                                                                                                                                               | Correctly marked pending in `TODO.md`. Future.                                                                                                                                                                                | `[ ]`  |
+| Accounts Payable aging (dealers)                                                                    | `[x]`   | **Not found anywhere in codebase.**                                                                                                                                                                                            | Only single all-time `outstandingPayable` exists in `getDealerPayablesSummaryQuery`. Zero aging buckets (0–30, 31–60, 61–90, 90+). Must build in ACC-2.4.                                                                     | `[ ]`  |
+| Budgeting per category with variance report                                                         | `[ ]`   | Not implemented.                                                                                                                                                                                                               | Correctly marked pending in `TODO.md`. ACC-7.2.                                                                                                                                                                               | `[ ]`  |
+| Day-end cash closing (Z-report): expected vs counted cash                                           | `[x]`   | **Not found anywhere in codebase.**                                                                                                                                                                                            | No Z-report queries, tables, or cash count screens. Must build in ACC-5.5.                                                                                                                                                    | `[ ]`  |
+| Rider cash reconciliation                                                                           | `[x]`   | Rs. 20,000 cash limit enforced in `order-status.ts` and UI. Handover flow exists.                                                                                                                                              | No overdue handover alerts or formal automated audit reconciliation reports.                                                                                                                                                  | `[~]`  |
+| Audit trail: who posted/reversed what, immutable                                                    | `[x]`   | `audit_logs` table and `logAudit` calls in finance functions.                                                                                                                                                                  | Mutations only log simple string summaries, not before/after JSON diffs; no DB trigger prevents deleting or editing audit logs.                                                                                               | `[~]`  |
+
+#### B5. Tax (Nepal)
+
+| TODO.md item                                                                 | Claimed | Found in code/schema                                                                                    | Gap / action                                                                                                                     | Status |
+| ---------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| VAT default 13%, configurable by category and effective date                 | `[x]`   | `src/lib/tax.ts` provides `DEFAULT_NEPAL_VAT_RATE = 13` and mathematical helpers.                       | **Not configurable by category or date**; no `tax_rates` table exists (ACC-4.3). Hard-coded 13% constant.                        | `[~]`  |
+| Excise/other duties: separate configurable components                        | `[x]`   | **Not found anywhere in codebase.**                                                                     | No excise fields, tables, or calculation logic exist.                                                                            | `[ ]`  |
+| Sequential tax invoices per FY, seller PAN, buyer PAN, printable A4/80mm     | `[x]`   | **Not found anywhere in codebase.**                                                                     | No `tax_invoices` table, no tax invoice counter sequence, no thermal/A4 print views (orders only have `orders.number`). ACC-4.1. | `[ ]`  |
+| Credit notes / debit notes linked to invoice                                 | `[x]`   | **Not found anywhere in codebase.**                                                                     | No credit/debit note tables, numbering, or postings exist (ACC-4.2).                                                             | `[ ]`  |
+| Sales Register (IRD format) + monthly VAT return summary + Purchase Register | `[x]`   | **Not found anywhere in codebase.**                                                                     | No register generation queries, tables, or CSV exports exist (ACC-4.4).                                                          | `[ ]`  |
+| TDS on dealer payments: configurable per dealer, default OFF                 | `[x]`   | `dealers.tdsRate` exists; `dealer_settlements` tracks TDS; `postDealerSettlementTx` credits `acc_2023`. | No TDS payable report (ACC-4.5).                                                                                                 | `[~]`  |
+| Invoice cancellation rules (credit note only, no delete)                     | `[x]`   | **Not found anywhere in codebase.**                                                                     | Invoices do not exist yet, so cancellation rules do not exist.                                                                   | `[ ]`  |
+
+#### B6. Rider Payroll & Commissions
+
+| TODO.md item                                                 | Claimed | Found in code/schema                                                                                                                          | Gap / action                                                                                            | Status |
+| ------------------------------------------------------------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------ |
+| Rider pay config per rider: base salary + per-drop           | `[x]`   | `baseSalary`, `perDropRate`, `commissionRate` on `riders` table.                                                                              | Distance bonus and incentive tiers not implemented; advances table does not exist.                      | `[~]`  |
+| Existing riders keep current commission rate                 | `[x]`   | Commission rate stored per rider in DB.                                                                                                       | None.                                                                                                   | `[x]`  |
+| Attendance / shift feeding salary                            | `[x]`   | `riderShifts` table and stats query exist.                                                                                                    | `generateMonthlyRiderPayrollRunFn` **completely ignores shifts and attendance** when computing payroll. | `[~]`  |
+| Monthly payroll run: draft → approve → pay → posts to ledger | `[x]`   | `generateMonthlyRiderPayrollRunFn` creates draft `settlements`; `approveSettlementFn` posts `postRiderSalaryAccrualTx` + `postRiderPayoutTx`. | Does not deduce TDS; recalculates delivered orders instead of reading `acc_2031` liability (G10).       | `[~]`  |
+| Payslip (printable/PDF), history per rider                   | `[x]`   | Public voucher slug (`/voucher/:slug`) rendered with dual dates.                                                                              | Print CSS only; no server-side PDF generator.                                                           | `[~]`  |
+| Cash shortage deducted from salary                           | `[x]`   | `settlements.cashShortageDeducted` column and credit to `acc_1031` in `postRiderPayoutTx`.                                                    | Auto-calculation of shortage is hardcoded to 0 in payroll run; requires manual entry.                   | `[~]`  |
+| Fix: commission formula separated                            | `[x]`   | Stored separately on rider record and settlement.                                                                                             | Combined into single line in delivery posting `postOrderDeliveredTx`.                                   | `[~]`  |
+| Staff (manager) salary                                       | `[ ]`   | Not implemented.                                                                                                                              | Correctly marked pending in `TODO.md`. ACC-7.1.                                                         | `[ ]`  |
+
+#### B14. Reports & Dashboards
+
+| TODO.md item                                                             | Claimed | Found in code/schema                                                                            | Gap / action                                                                                   | Status |
+| ------------------------------------------------------------------------ | ------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------ |
+| Daily / weekly / monthly / yearly sales                                  | `[x]`   | Implemented in `reports-panel.tsx` via client-side JavaScript filtering over all loaded orders. | Client-side aggregation of full tables; does not scale; no server-side SQL date-range queries. | `[~]`  |
+| Profit & margin by product, brand, category, dealer                      | `[x]`   | Computed client-side in `reports-panel.tsx` from loaded orders and sourcing intelligence.       | Client-side calculation; lacks server-side date filtering.                                     | `[~]`  |
+| Top products, slow movers, most-unavailable items                        | `[x]`   | Implemented on server in `getProductVelocityAndSourcingIntelligenceQuery`.                      | Verified working on server.                                                                    | `[x]`  |
+| Rider performance, COD outstanding, delivery SLA                         | `[x]`   | Computed client-side in `reports-panel.tsx` from raw arrays.                                    | Needs server-side aggregation.                                                                 | `[~]`  |
+| Customer cohorts / coupon ROI / scheduled daily summaries                | `[ ]`   | Not implemented.                                                                                | Correctly marked pending in `TODO.md`.                                                         | `[ ]`  |
+| All reports: date range, filters, CSV + PDF, server-side SQL aggregation | `[ ]`   | Not implemented.                                                                                | Correctly marked pending in `TODO.md`. Core requirement of Phase 2.                            | `[ ]`  |
+
+---
+
+### 14.1.1 Deep Dive: G10 Audit Findings (Rider Compensation Double-Count & Desync)
+
+We performed a line-by-line inspection of `double-entry.ts`, `order.transitions.ts`, `operations.functions.ts`, and `rider.queries.ts`. Here are the findings:
+
+1. **Is Expense `acc_5111` double-counted?**
+   - **No, but with a critical caveat.**
+   - On delivery (`postOrderDeliveredTx`):
+     - Dr. `acc_5111` (Rider Compensation Expense) = `perDrop + commission`
+     - Cr. `acc_2031` (Rider Salary & Commission Payable) = `perDrop + commission`
+   - On monthly payroll approval (`approveSettlementFn`):
+     - If `baseSalaryAmount > 0`, it calls `postRiderSalaryAccrualTx`:
+       - Dr. `acc_5111` (Expense) = `baseSalaryAmount`
+       - Cr. `acc_2031` (Payable) = `baseSalaryAmount`
+     - Then it calls `postRiderPayoutTx`:
+       - Dr. `acc_2031` (Payable) = `grossEarnings` (`baseSalary + perDrop + commission`)
+       - Cr. `acc_1011`/`acc_1012` (Cash/Bank) = `netPayout`
+       - Cr. `acc_1031` (COD Shortage)
+       - Cr. `acc_1042` (Advances)
+   - Because `postRiderPayoutTx` debits liability account `acc_2031` rather than expense account `acc_5111`, expense `5111` is **not** double-debited.
+
+2. **The Real Bug: Discrepancy & Control Account Desynchronization Risk:**
+   - In `generateMonthlyRiderPayrollRunFn` (`operations.functions.ts:2652-2666`), the payroll run does **not** read the accumulated credit balance from `journal_lines` for `acc_2031`.
+   - Instead, it loops through `orders` in the date range and **recalculates** `deliveriesCount * rider.perDropRate + sum(deliveryCharge * rider.commissionRate)`.
+   - **Failure modes:**
+     - If a rider's `perDropRate` or `commissionRate` was changed mid-month, `generateMonthlyRiderPayrollRunFn` applies the _new_ rate to _past_ deliveries, producing a different number than what was posted on delivery.
+     - If an order was transitioned to delivered without a rider record loaded (or later modified), delivery accrual may be 0, but payroll will calculate non-zero.
+     - When `approveSettlementFn` clears `grossEarnings` by debiting `acc_2031`, the amount debited will **not match** the sum of credits posted on delivery.
+     - **Result:** `acc_2031` (Rider Payable) fails to clear to zero, leaving a persistent phantom balance that corrupts the sub-ledger and violates accounting guarantee #7 (`Σ party balances = control account balance`).
+   - In addition, `approveSettlementFn:2578` inserts directly into the legacy single-entry `ledger_entries` table, creating duplicate single-entry records alongside double-entry journals.
+
+---
+
+### 14.1.2 Questions for the Owner / Accountant
+
+1. **Manager Permissions on Financial Mutations (ACC-0.7 / G8):**
+   - Current default permissions in `DEFAULT_GRANTS_BY_ROLE` grant managers `accounts: ['view', 'export']`.
+   - However, functions `recordManagerCashHandoverFn`, `recordDealerDisbursementFn`, and `createDealerSettlementBatchFn` enforce `requirePermission('accounts', 'create')`, and `approveSettlementFn` requires `requirePermission('accounts', 'approve')`.
+   - _Question:_ Should operational managers be granted permissions to record cash handovers, disburse dealer payments, and create draft settlements, while reserving approval and journal reversals strictly for Admin?
+2. **Rider Compensation Accrual Timing (G10 Architecture):**
+   - _Option A (Accrual on Delivery):_ Continue accruing per-drop + commission at delivery (`SV` voucher) to `acc_2031`, and make the monthly payroll run simply pay out the actual outstanding ledger balance of `acc_2031` for that rider (adding base salary accrual at month end).
+   - _Option B (Accrual at Month-End Payroll Only):_ Remove courier compensation lines from `postOrderDeliveredTx`. Record delivery metrics in operational tables, and post the entire compensation (base salary + per-drop + commission) during the monthly payroll run as a single `JV`.
+   - _Recommendation:_ Option A provides real-time liability tracking, but the payroll run must strictly pull the accrued balance from `acc_2031` rather than recalculating from orders.
+3. **Draft Voucher Numbering & Gapless Guarantee (ACC-1.6):**
+   - Should draft vouchers exist without a voucher number (numbered only upon submit to ensure strict gapless sequences per FY), or should drafts carry a temporary `DRAFT-xxxx` tag? (We recommend un-numbered with `voucher_no` nullable until submit, per ERPNext standard).
+4. **Scope of Legacy Table Retirement:**
+   - Can we safely stop inserting into `ledger_entries` (single-entry table) during settlements and disbursements, treating `legacy_ledger_archive` as historical archive only?
+
+---
+
+### 14.1.3 Proposed Execution Order for Remaining Phase 0 Tasks
+
+All Phase 0 tasks are purely hardening, safety, types, and documentation—no new features.
+
+Execution order: **`ACC-0.2 → ACC-0.6 → INFRA-2 → ACC-0.11 → ACC-0.8 → ACC-0.3 → ACC-0.4 → ACC-0.10 → ACC-0.5 → ACC-0.7 → ACC-0.9, then INFRA-1`**
+
+1. **`ACC-0.2`: Secrets Hygiene**
+   - Audit `.gitignore` and `.env.example`. Ensure no `.env*` or `.neon` files can be committed.
+   - Provide the owner with a clear key-rotation checklist without printing or inspecting secrets.
+2. **`ACC-0.6`: Account Keys (G4)**
+   - Create `src/server/finance/account-keys.ts` with typed constant `ACCOUNT_KEYS` mapped to current IDs (`acc_1011`, etc.).
+   - Replace raw string literals across `double-entry.ts`, `finance.queries.ts`, `order.transitions.ts`, and `operations.functions.ts`.
+   - _Rationale:_ Provides immediate compile-time safety for all subsequent engine and workflow changes.
+3. **`INFRA-2`: Migration Journal & Tracking Repair (G12)**
+   - Register 0009–0015 in `drizzle/meta/_journal.json` with strictly increasing timestamps.
+   - Author idempotent `drizzle/0015_grocery_brands.sql`.
+   - Provide `src/db/tools/tracking-sql.ts` (repairs Neon `drizzle.__drizzle_migrations`) and `src/db/tools/schema-check.ts`.
+   - Automate verification via `src/db/migrations.test.ts` (runs in `bun test`).
+   - Implement eSewa production credentials guard with unit tests.
+   - _Rationale:_ Must precede any new migrations (ACC-0.4, ACC-0.5) so that `db:migrate` does not re-run destructive scripts (0006, 0008).
+4. **`ACC-0.11`: Remove Legacy Single-Entry Writes**
+   - Deprecate and remove direct writes to legacy `ledger_entries` (e.g. `createManualLedgerEntryFn`, `approveSettlementFn`).
+   - Redirect manual entries to `postManualJournalVoucherFn` / the posting engine; preserve legacy tables for read-only access.
+   - _Rationale:_ Eliminates legacy writes before we harden types and engine guards.
+5. **`ACC-0.8`: Types & Strictness (G9)**
+   - Replace `tx: any` and `Record<string, any>` across `src/server/finance/*` with strict `DbTx` (using Drizzle transaction types) and explicit interfaces (`PostJournalParams`, etc.).
+   - Ensure clean `bunx tsc --noEmit`.
+6. **`ACC-0.3`: Engine Guards (G1)**
+   - Update `postJournalTx` in `double-entry.ts`: reject posting to group accounts (`isGroup: true`) or inactive accounts (`isActive: false`).
+   - Enforce mandatory `partyType` and `partyId` for party-controlled accounts (`acc_2011`, `acc_1031`, `acc_2031`, `acc_1041`, `acc_1042`).
+   - Validate `partyType` is within allowed set.
+   - Add comprehensive bun test unit tests in `double-entry.test.ts`.
+7. **`ACC-0.4`: Reversal Hardening (G2)**
+   - Add schema columns `reversedBy` (FK to `journal_entries.id`) and `isReversed` (boolean) to `journal_entries`.
+   - Prevent reversing an entry already reversed, and block reversing a reversal entry.
+   - Enforce idempotency on reversals even when `refType/refId` are null (e.g. manual vouchers).
+   - Require `accounts.approve` permission, mandatory reason, and audit logging.
+8. **`ACC-0.10`: Fix Rider Payroll to Follow the Ledger (G10 / Option A)**
+   - **Precondition:** Run a read-only count of `journal_lines` on `RIDER_PAYABLE` (`acc_2031`) with null party; report and wait for owner decision.
+   - Make `RIDER_PAYABLE` (`acc_2031`) accrued balance the source of truth for payroll payouts.
+   - Convert recalculation from order history into an automated reconciliation check flagging differences.
+   - Wrap payroll run in `dbTx.transaction()`; write read-only audit script to check existing balances against past payouts.
+   - _Rationale:_ Must precede DB triggers (ACC-0.5) because current payroll generation would violate DB integrity triggers if executed.
+9. **`ACC-0.5`: DB-Level Integrity (G3)**
+   - Prepare Drizzle migration for PostgreSQL deferred constraint trigger checking `Σdebit = Σcredit` per journal entry at transaction commit.
+   - Add triggers blocking `UPDATE` or `DELETE` on `journal_lines` and on submitted `journal_entries` (except allowed reversal link flags).
+   - Present SQL to owner before executing; neon branch backup first.
+10. **`ACC-0.7`: Permission Realignment (G8)**
+    - Implement owner decision on manager permissions: managers may record rider cash handovers and create dealer settlement drafts, but cannot pay/approve settlements, reverse vouchers, post manual JVs, or override periods.
+    - Guard `postManualJournalVoucherFn` with admin/`accounts.approve` so managers holding `accounts.create` cannot post manual JVs.
+    - Align `DEFAULT_GRANTS_BY_ROLE`, `finance.functions.ts`, and `operations.functions.ts`; add test coverage.
+11. **`ACC-0.9`: Rewrite `src/server/finance/AGENT.md`**
+    - Update `src/server/finance/AGENT.md` from its stale scaffold to describe the real double-entry engine, file structure, and references to `ACCOUNT_GUIDE.md`.
+12. **`INFRA-1`: Transaction Safety for Multi-Step Writes**
+    - Reconciled scope: wrap non-ledger multi-table mutations (`upsertLiquorProductQuery`, `upsertGroceryProductQuery`, `updateDealerPricesQuery` / dealer stock, `restoreRecycleBinItemQuery`, `deleteRiderQuery`, `saveSettingsFn`) inside `dbTx.transaction()` with rollback verification tests. (Note: ledger-integrated operations `createDealerSettlementBatchFn`, `transitionOrderFn`/`Tx`, `approveSettlementFn` already run inside or call the posting engine within `dbTx.transaction()`).
+
+---
+
+### 14.2 Decisions log
+
+| Date       | Decision                                                                                                                                                                                                                                                                                                  | By               |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| 2026-10-30 | ACC-0.1 Truth Audit confirmed: TODO.md B2–B6 & B14 contained widespread false `[x]` markings. Invoices, expenses, credit notes, AP aging, Z-reports, and server-side reports do not exist yet.                                                                                                            | Void & Assistant |
+| 2026-10-30 | G10 verified: Expense 5111 is not double-debited, but recalculation in monthly payroll run threatens control account synchronization with `acc_2031`.                                                                                                                                                     | Void & Assistant |
+| 2026-10-30 | **Manager permissions (resolves G8 / ACC-0.7 direction):** Managers may record rider cash handovers and create dealer settlement drafts. Managers may NOT pay or approve settlements, reverse vouchers, post manual journal vouchers, or override periods (admin-only until finer-grained modules exist). | owner            |
+| 2026-10-30 | **Draft vouchers:** `journal_entries.voucher_no` becomes nullable until submit. Numbers are assigned only at submit, so numbering stays gapless. Implementation in ACC-1.6.                                                                                                                               | owner            |
+| 2026-10-30 | **Legacy `ledger_entries`:** Stop writing to it. Keep it as a read-only archive. Remove every remaining legacy single-entry write (ACC-0.11). Do not delete the table or its data.                                                                                                                        | owner            |
+| 2026-10-30 | **Rider payroll (G10, Option A):** The ledger balance on `RIDER_PAYABLE` (`acc_2031`) is the source of truth for rider payouts. Payout reads that balance. Recalculation from order history becomes a reconciliation check only. Implementation in ACC-0.10.                                              | owner            |
+| 2026-10-30 | **Migration tracking repair (G12 / INFRA-2):** Database is Neon-only. Drizzle journal registered 0009–0015; Neon tracking repair SQL generated via `tracking-sql.ts`; automated verification enforced by `migrations.test.ts`; eSewa production guard enforced.                                         | owner / Assistant |
+| 2026-10-30 | INFRA-2 hashes verified against disk: all 16 match                                                                                                                                                                                                                                                        | owner            |
+| 2026-10-30 | **ACC-0.11 completed:** Removed all 5 legacy single-entry writes across `src` (`order.functions.ts:486`, `operations.functions.ts:1768, 2138, 2578, 3124`, `clean.ts:149`). Removed `addLedgerFn`. Redirected UI entry points (`riders-panel` -> `recordManagerCashHandoverFn`, `accounts-panel` -> `postManualJournalVoucherFn`, `inventory-panel` mock restock removed). Added automated test `legacy-ledger-guard.test.ts` to assert zero writes to `ledgerEntries` across `src`. | Assistant        |
+| 2026-11-01 | **ACC-0.8 completed:** Types & strictness. Created `src/server/finance/types.ts` (`DbTx`, `PostJournalParams`, `JournalLineInput`, posting params, etc.). Replaced all `tx: any` and `Record<string, any>` across `src/server/finance/*`. Exactly 0 TypeScript `any` remain in `src/server/finance/*`. | Assistant        |
+| 2026-11-01 | **ACC-0.3 completed:** Engine guards (G1). Enforced allowed `partyType` (`['dealer', 'rider', 'customer', 'supplier']`), enforced mandatory party on party-controlled accounts (`DEALER_PAYABLE`, `RIDER_COD_CASH`, `RIDER_PAYABLE`, `CUSTOMER_RECEIVABLE`, `STAFF_RIDER_ADVANCES`), and rejected unknown/group/inactive accounts against `ledgerAccounts`. Added 14 unit test assertions. | Assistant        |
+| 2026-11-01 | **ACC-0.4 completed:** Reversal hardening (G2). Added `isReversed` (boolean default false) and `reversedBy` (FK to `journal_entries.id`) to `journalEntries` schema and authored idempotent migration `drizzle/0016_reversal_hardening.sql`. Added G2 guards in `reverseJournalTx`: blocked reversing already reversed entry and reversing a reversal; enforced idempotency on reversals with fixed ref keys; enforced reversal date policy per §5.4 (retains original posting date if FY open, defaults to today if FY closed); required `accounts.approve` and mandatory reason in `reverseJournalVoucherFn`. Added 5 reversal hardening unit tests (117 total repository tests pass). | Assistant        |
+| 2026-11-01 | **ACC-0.10 completed:** Fix rider payroll to follow ledger (G10 / Option A). Verified precondition on Neon: 0 lines on `RIDER_PAYABLE` (`acc_2031`) with null party (100% clean). Added `getRiderLedgerBalanceQuery` to read real-time sub-ledger balances across `RIDER_PAYABLE`, `RIDER_COD_CASH`, and `STAFF_RIDER_ADVANCES`. Updated `generateMonthlyRiderPayrollRunFn` to use the ledger accrued balance on `acc_2031` as the source of truth for deliveries compensation, while running order-history recalculation as an automated reconciliation check recording variances. Wrapped payroll run in `dbTx.transaction()`, deduplicated existing drafts, and added double-approval guards to `approveSettlementFn`. Created read-only audit tool `src/db/tools/audit-rider-balances.ts` and added 5 unit tests in `src/server/finance/rider-payroll.test.ts` (122 total repository tests pass). | Assistant        |
+| 2026-11-01 | **ACC-0.5 completed:** DB-level integrity (G3). Authored idempotent migration `drizzle/0017_db_level_integrity.sql` and registered in `drizzle/meta/_journal.json` (`idx: 17`, `when: 1793500000000`). Added deferred constraint triggers on `journal_lines` and `journal_entries` checking `Σdebit = Σcredit > 0` and line count >= 2 at commit (`check_journal_entry_balanced_fn`). Added `BEFORE UPDATE OR DELETE` triggers blocking mutations on `journal_lines` and submitted `journal_entries` (`prevent_journal_lines_mutation_fn` and `prevent_journal_entries_mutation_fn`), strictly permitting only reversal links (`is_reversed`, `reversed_by`, `reversal_of`, `updated_at`). Added 15 automated unit tests in `src/server/finance/db-integrity.test.ts` verifying all direct SQL tamper attempts fail and posting engine methods succeed against PGlite (137 total repository tests pass). | Assistant        |
+| 2026-11-01 | **ACC-0.7 completed:** Permission mismatch (G8). Updated `DEFAULT_GRANTS_BY_ROLE.manager` to include `accounts: ['view', 'create', 'export']`. Guarded financial payout and approval endpoints (`postManualJournalVoucherFn`, `recordDealerDisbursementFn`, `approveSettlementFn`, `reverseJournalVoucherFn`) with `requirePermission('accounts', 'approve')`, strictly preventing managers from disbursing funds, posting unconstrained manual journals, or reversing entries. Kept operational creation actions (`recordManagerCashHandoverFn`, `createDealerSettlementBatchFn`, `generateMonthlyRiderPayrollRunFn`) on `accounts.create` so managers can record shift handovers and prepare settlement batches. Added 14 unit test assertions in `src/server/auth/permissions.test.ts` verifying all role grants, allowed actions, and denied mutations (151 total repository tests pass). | Assistant        |
+| 2026-11-01 | **ACC-0.9 completed:** Rewrote `src/server/finance/AGENT.md`. Replaced the outdated scaffold with accurate documentation of the double-entry engine (`postJournalTx`), 7 ERPNext guarantees (including DB constraint triggers and immutability), file map, typed semantic account keys (`ACCOUNT_KEYS`), strict types (`DbTx`, zero `any`), standard posting flows, role permission boundaries (`accounts.create` vs `accounts.approve`), and direct cross-references to `ACCOUNT_GUIDE.md`. | Assistant        |
+| 2026-11-01 | **INFRA-2 & Phase 0 Live Migration completed on Neon:** User instructed migration via Neon CLI/MCP. Created safety backup branch `backup-before-phase-0-hardening` (`br-cold-rain-azmg5jbw`) from `production`. Executed 21-statement consolidated transaction on `production` applying migration 0015 (`brand_id` on `grocery_products`), migration 0016 (`is_reversed`, `reversed_by` on `journal_entries`), migration 0017 (deferred balance constraint triggers + mutation prevention triggers on `journal_lines` and `journal_entries`), and tracking table repair aligning `drizzle.__drizzle_migrations` with all 18 migrations (0000 through 0017). Live read verification confirmed all 18 migration rows present and all 4 triggers active. | Assistant (user request) |

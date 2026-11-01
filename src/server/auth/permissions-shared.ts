@@ -30,7 +30,7 @@ export const DEFAULT_GRANTS_BY_ROLE: Record<string, UserGrants> = {
     riders: ['view', 'edit'],
     staff: ['view'],
     users: ['view', 'edit'],
-    accounts: ['view', 'export'],
+    accounts: ['view', 'create', 'export'],
     payments: ['view'],
     shipping: ['view', 'edit'],
     marketing: ['view', 'create', 'edit'],
