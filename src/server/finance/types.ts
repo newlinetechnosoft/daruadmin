@@ -1,11 +1,8 @@
-import type { dbTx } from '#/db'
+import type { DbTx } from '#/db'
 import type { SessionUser } from '#/server/auth/permissions'
 import type { Order, OrderItem } from '#/server/operations/types'
 
-/**
- * Database transaction client type inferred from the primary Neon serverless pool.
- */
-export type DbTx = Parameters<Parameters<typeof dbTx.transaction>[0]>[0]
+export type { DbTx }
 
 export const ALLOWED_PARTY_TYPES = [
   'dealer',

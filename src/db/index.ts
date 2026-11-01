@@ -12,3 +12,5 @@ export const db = drizzleHttp(neon(poolUrl), { schema })
 export const dbTx = drizzlePool(new Pool({ connectionString: poolUrl }), {
   schema,
 })
+
+export type DbTx = Parameters<Parameters<typeof dbTx.transaction>[0]>[0]

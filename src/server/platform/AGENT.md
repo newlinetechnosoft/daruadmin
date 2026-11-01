@@ -28,6 +28,12 @@ Table `payment_gateways` (`provider`, `mode` test/live, `config` **AES-GCM encry
 
 `audit_logs` (`actorId`, `action`, `entityType`, `entityId`, `before`, `after`, `ip`, `createdAt`). Written by `audit.ts` for every admin/manager mutation. Append-only.
 
+## Transaction Safety (INFRA-1)
+
+- Multi-statement mutations (`saveUserPermissionsQuery`, `deleteCouponQuery`, `deleteBannerQuery`, `deleteOfferQuery`) execute inside `dbTx.transaction()` with atomic rollbacks.
+- Each function accepts optional `externalTx?: DbTx` allowing callers to participate in parent transactions.
+- Automated rollback tests in `src/server/db-transactions.test.ts`.
+
 ## Functions
 
 | Function                                                                    | Roles                                  | Purpose                       | Status |

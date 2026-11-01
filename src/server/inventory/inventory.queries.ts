@@ -1,5 +1,5 @@
 import { moveToRecycleBin } from '#/server/recycle-bin/recycle-bin.queries'
-import { db } from '#/db'
+import { db, dbTx, type DbTx } from '#/db'
 import {
   dealers,
   dealerItems,
@@ -224,11 +224,13 @@ export async function getAllDealersQuery(): Promise<DealerDto[]> {
 
 export async function getDealerByIdQuery(
   id: string,
+  tx?: DbTx,
 ): Promise<DealerDto | null> {
+  const client = tx ?? db
   const [dealerRows, itemRows, liquorList, groceryList] = await Promise.all([
-    db.select().from(dealers).where(eq(dealers.id, id)).limit(1),
-    db.select().from(dealerItems).where(eq(dealerItems.dealerId, id)),
-    db
+    client.select().from(dealers).where(eq(dealers.id, id)).limit(1),
+    client.select().from(dealerItems).where(eq(dealerItems.dealerId, id)),
+    client
       .select({
         id: liquorProducts.id,
         name: liquorProducts.name,
@@ -241,7 +243,7 @@ export async function getDealerByIdQuery(
         eq(liquorProducts.categoryId, liquorCategories.id),
       )
       .leftJoin(liquorBrands, eq(liquorProducts.brandId, liquorBrands.id)),
-    db
+    client
       .select({
         id: groceryProducts.id,
         name: groceryProducts.name,
@@ -322,191 +324,232 @@ export async function getDealerByIdQuery(
 
 export async function upsertDealerQuery(
   input: UpsertDealerInput,
+  externalTx?: DbTx,
 ): Promise<DealerDto> {
-  const dealerId = input.id || crypto.randomUUID()
+  const run = async (tx: DbTx) => {
+    const dealerId = input.id || crypto.randomUUID()
 
-  const payload = {
-    id: dealerId,
-    name: input.name.trim(),
-    contact: input.contact.trim(),
-    whatsappNumber: input.whatsappNumber?.trim() || null,
-    pan: input.pan?.trim() || null,
-    vatNumber: input.vatNumber?.trim() || null,
-    providesVatBill: input.providesVatBill,
-    tdsRate: String(input.tdsRate),
-    creditLimit: input.creditLimit,
-    paymentTermsDays: input.paymentTermsDays,
-    openingBalance: input.openingBalance,
-    address: input.address.trim(),
-    city: input.city.trim() || 'Butwal',
-    lat:
-      input.lat !== undefined && input.lat !== null ? String(input.lat) : null,
-    lng:
-      input.lng !== undefined && input.lng !== null ? String(input.lng) : null,
-    isActive: input.isActive,
-    updatedAt: new Date(),
+    const payload = {
+      id: dealerId,
+      name: input.name.trim(),
+      contact: input.contact.trim(),
+      whatsappNumber: input.whatsappNumber?.trim() || null,
+      pan: input.pan?.trim() || null,
+      vatNumber: input.vatNumber?.trim() || null,
+      providesVatBill: input.providesVatBill,
+      tdsRate: String(input.tdsRate),
+      creditLimit: input.creditLimit,
+      paymentTermsDays: input.paymentTermsDays,
+      openingBalance: input.openingBalance,
+      address: input.address.trim(),
+      city: input.city.trim() || 'Butwal',
+      lat:
+        input.lat !== undefined && input.lat !== null
+          ? String(input.lat)
+          : null,
+      lng:
+        input.lng !== undefined && input.lng !== null
+          ? String(input.lng)
+          : null,
+      isActive: input.isActive,
+      updatedAt: new Date(),
+    }
+
+    await tx
+      .insert(dealers)
+      .values(payload)
+      .onConflictDoUpdate({
+        target: dealers.id,
+        set: {
+          name: payload.name,
+          contact: payload.contact,
+          whatsappNumber: payload.whatsappNumber,
+          pan: payload.pan,
+          vatNumber: payload.vatNumber,
+          providesVatBill: payload.providesVatBill,
+          tdsRate: payload.tdsRate,
+          creditLimit: payload.creditLimit,
+          paymentTermsDays: payload.paymentTermsDays,
+          openingBalance: payload.openingBalance,
+          address: payload.address,
+          city: payload.city,
+          lat: payload.lat,
+          lng: payload.lng,
+          isActive: payload.isActive,
+          updatedAt: payload.updatedAt,
+        },
+      })
+
+    // Synchronize assigned items if explicitly provided
+    if (input.assignedItems !== undefined) {
+      await tx.delete(dealerItems).where(eq(dealerItems.dealerId, dealerId))
+
+      if (input.assignedItems.length > 0) {
+        // Deduplicate items
+        const seen = new Set<string>()
+        const uniqueItems = input.assignedItems.filter((item) => {
+          const key = `${item.catalogType}:${item.productId}`
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+
+        if (uniqueItems.length > 0) {
+          await tx.insert(dealerItems).values(
+            uniqueItems.map((item) => ({
+              id: crypto.randomUUID(),
+              dealerId,
+              catalogType: item.catalogType,
+              productId: item.productId,
+              costPrice: item.costPrice ?? 0,
+              isAvailable: item.isAvailable ?? true,
+            })),
+          )
+
+          // Record price history for priced items
+          const priceHistoryRows = uniqueItems
+            .filter(
+              (item) => item.costPrice !== undefined && item.costPrice > 0,
+            )
+            .map((item) => ({
+              id: crypto.randomUUID(),
+              dealerId,
+              catalogType: item.catalogType,
+              productId: item.productId,
+              costPrice: item.costPrice!,
+              effectiveFrom: new Date(),
+            }))
+
+          if (priceHistoryRows.length > 0) {
+            await tx.insert(dealerPriceHistory).values(priceHistoryRows)
+          }
+        }
+      }
+    }
+
+    const result = await getDealerByIdQuery(dealerId, tx)
+    if (!result) {
+      throw new Error('Failed to retrieve upserted dealer')
+    }
+    return result
   }
 
-  await db
-    .insert(dealers)
-    .values(payload)
-    .onConflictDoUpdate({
-      target: dealers.id,
-      set: {
-        name: payload.name,
-        contact: payload.contact,
-        whatsappNumber: payload.whatsappNumber,
-        pan: payload.pan,
-        vatNumber: payload.vatNumber,
-        providesVatBill: payload.providesVatBill,
-        tdsRate: payload.tdsRate,
-        creditLimit: payload.creditLimit,
-        paymentTermsDays: payload.paymentTermsDays,
-        openingBalance: payload.openingBalance,
-        address: payload.address,
-        city: payload.city,
-        lat: payload.lat,
-        lng: payload.lng,
-        isActive: payload.isActive,
-        updatedAt: payload.updatedAt,
-      },
-    })
+  if (externalTx) {
+    return run(externalTx)
+  }
+  return dbTx.transaction((tx) => run(tx))
+}
 
-  // Synchronize assigned items if explicitly provided
-  if (input.assignedItems !== undefined) {
-    await db.delete(dealerItems).where(eq(dealerItems.dealerId, dealerId))
+export async function deleteDealerQuery(
+  id: string,
+  externalTx?: DbTx,
+): Promise<{ success: boolean; id: string }> {
+  const run = async (tx: DbTx) => {
+    const [dealer] = await tx
+      .select()
+      .from(dealers)
+      .where(eq(dealers.id, id))
+      .limit(1)
 
-    if (input.assignedItems.length > 0) {
-      // Deduplicate items
+    if (dealer) {
+      const dItems = await tx
+        .select()
+        .from(dealerItems)
+        .where(eq(dealerItems.dealerId, id))
+
+      await moveToRecycleBin(
+        {
+          entityType: 'dealer',
+          entityId: dealer.id,
+          name: dealer.name,
+          description: dealer.contact,
+          data: { dealer, dealerItems: dItems },
+        },
+        tx,
+      )
+    }
+
+    await tx.delete(dealerItems).where(eq(dealerItems.dealerId, id))
+    await tx.delete(dealers).where(eq(dealers.id, id))
+    return { success: true, id }
+  }
+
+  if (externalTx) {
+    return run(externalTx)
+  }
+  return dbTx.transaction((tx) => run(tx))
+}
+
+export async function assignDealerItemsQuery(
+  input: AssignDealerItemsInput,
+  externalTx?: DbTx,
+): Promise<{ success: boolean; count: number }> {
+  const run = async (tx: DbTx) => {
+    await tx.delete(dealerItems).where(eq(dealerItems.dealerId, input.dealerId))
+
+    if (input.items.length > 0) {
       const seen = new Set<string>()
-      const uniqueItems = input.assignedItems.filter((item) => {
+      const unique = input.items.filter((item) => {
         const key = `${item.catalogType}:${item.productId}`
         if (seen.has(key)) return false
         seen.add(key)
         return true
       })
 
-      if (uniqueItems.length > 0) {
-        await db.insert(dealerItems).values(
-          uniqueItems.map((item) => ({
+      if (unique.length > 0) {
+        await tx.insert(dealerItems).values(
+          unique.map((item) => ({
             id: crypto.randomUUID(),
-            dealerId,
+            dealerId: input.dealerId,
             catalogType: item.catalogType,
             productId: item.productId,
-            costPrice: item.costPrice ?? 0,
-            isAvailable: item.isAvailable ?? true,
           })),
         )
-
-        // Record price history for priced items
-        const priceHistoryRows = uniqueItems
-          .filter((item) => item.costPrice !== undefined && item.costPrice > 0)
-          .map((item) => ({
-            id: crypto.randomUUID(),
-            dealerId,
-            catalogType: item.catalogType,
-            productId: item.productId,
-            costPrice: item.costPrice!,
-            effectiveFrom: new Date(),
-          }))
-
-        if (priceHistoryRows.length > 0) {
-          await db.insert(dealerPriceHistory).values(priceHistoryRows)
-        }
       }
     }
+
+    return { success: true, count: input.items.length }
   }
 
-  const result = await getDealerByIdQuery(dealerId)
-  if (!result) {
-    throw new Error('Failed to retrieve upserted dealer')
+  if (externalTx) {
+    return run(externalTx)
   }
-  return result
-}
-
-export async function deleteDealerQuery(
-  id: string,
-): Promise<{ success: boolean; id: string }> {
-  const [dealer] = await db
-    .select()
-    .from(dealers)
-    .where(eq(dealers.id, id))
-    .limit(1)
-
-  if (dealer) {
-    const dItems = await db
-      .select()
-      .from(dealerItems)
-      .where(eq(dealerItems.dealerId, id))
-
-    await moveToRecycleBin({
-      entityType: 'dealer',
-      entityId: dealer.id,
-      name: dealer.name,
-      description: dealer.contact,
-      data: { dealer, dealerItems: dItems },
-    })
-  }
-
-  await db.delete(dealerItems).where(eq(dealerItems.dealerId, id))
-  await db.delete(dealers).where(eq(dealers.id, id))
-  return { success: true, id }
-}
-
-export async function assignDealerItemsQuery(
-  input: AssignDealerItemsInput,
-): Promise<{ success: boolean; count: number }> {
-  await db.delete(dealerItems).where(eq(dealerItems.dealerId, input.dealerId))
-
-  if (input.items.length > 0) {
-    const seen = new Set<string>()
-    const unique = input.items.filter((item) => {
-      const key = `${item.catalogType}:${item.productId}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-
-    if (unique.length > 0) {
-      await db.insert(dealerItems).values(
-        unique.map((item) => ({
-          id: crypto.randomUUID(),
-          dealerId: input.dealerId,
-          catalogType: item.catalogType,
-          productId: item.productId,
-        })),
-      )
-    }
-  }
-
-  return { success: true, count: input.items.length }
+  return dbTx.transaction((tx) => run(tx))
 }
 
 export async function assignItemDealersQuery(
   input: AssignItemDealersInput,
+  externalTx?: DbTx,
 ): Promise<{ success: boolean; count: number }> {
-  await db
-    .delete(dealerItems)
-    .where(
-      and(
-        eq(dealerItems.catalogType, input.catalogType),
-        eq(dealerItems.productId, input.productId),
-      ),
-    )
+  const run = async (tx: DbTx) => {
+    await tx
+      .delete(dealerItems)
+      .where(
+        and(
+          eq(dealerItems.catalogType, input.catalogType),
+          eq(dealerItems.productId, input.productId),
+        ),
+      )
 
-  if (input.dealerIds.length > 0) {
-    const uniqueDealers = Array.from(new Set(input.dealerIds))
-    await db.insert(dealerItems).values(
-      uniqueDealers.map((dealerId) => ({
-        id: crypto.randomUUID(),
-        dealerId,
-        catalogType: input.catalogType,
-        productId: input.productId,
-      })),
-    )
+    if (input.dealerIds.length > 0) {
+      const uniqueDealers = Array.from(new Set(input.dealerIds))
+      await tx.insert(dealerItems).values(
+        uniqueDealers.map((dealerId) => ({
+          id: crypto.randomUUID(),
+          dealerId,
+          catalogType: input.catalogType,
+          productId: input.productId,
+        })),
+      )
+    }
+
+    return { success: true, count: input.dealerIds.length }
   }
 
-  return { success: true, count: input.dealerIds.length }
+  if (externalTx) {
+    return run(externalTx)
+  }
+  return dbTx.transaction((tx) => run(tx))
 }
 
 export async function getDealersByItemQuery(
