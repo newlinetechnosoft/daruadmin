@@ -1,4 +1,4 @@
-import type { SmsProvider } from './types'
+import type { SmsProvider, SendSmsOptions } from './types'
 
 /**
  * Mock SMS Provider for local development and staging environments.
@@ -8,11 +8,21 @@ import type { SmsProvider } from './types'
 export class MockSmsProvider implements SmsProvider {
   readonly name = 'mock'
 
-  async sendSms(phone: string, message: string) {
+  async sendSms(phone: string, message: string, options?: SendSmsOptions) {
+    const customerName = options?.customerName?.trim() || 'Customer'
+    const otpCode =
+      options?.otpCode?.trim() || message.match(/\b\d{6}\b/)?.[0] || ''
+    const templateMessage = otpCode
+      ? `Welcome to Mezmani, ${customerName}! Your verification OTP is ${otpCode}. Do not share it with anyone.`
+      : message
+
     if (process.env.NODE_ENV !== 'production') {
       console.log('----------------------------------------------------')
       console.log(`[SMS MOCK PROVIDER] Recipient: ${phone}`)
-      console.log(`[SMS MOCK PROVIDER] Message:   ${message}`)
+      console.log(`[SMS MOCK PROVIDER] Message:   ${templateMessage}`)
+      if (options?.templateId) {
+        console.log(`[SMS MOCK PROVIDER] Template:  ${options.templateId}`)
+      }
       console.log('----------------------------------------------------')
     }
     return {
@@ -33,7 +43,7 @@ export class MockSmsProvider implements SmsProvider {
 export class SparrowSmsProvider implements SmsProvider {
   readonly name = 'sparrow'
 
-  async sendSms(phone: string, message: string) {
+  async sendSms(phone: string, message: string, _options?: SendSmsOptions) {
     const token = process.env.SPARROW_SMS_TOKEN
     const from = process.env.SPARROW_SMS_FROM || 'Mezmani'
 
@@ -97,7 +107,7 @@ export class SparrowSmsProvider implements SmsProvider {
 export class AakashSmsProvider implements SmsProvider {
   readonly name = 'aakash'
 
-  async sendSms(phone: string, message: string) {
+  async sendSms(phone: string, message: string, _options?: SendSmsOptions) {
     const authToken = process.env.AAKASH_SMS_AUTH_TOKEN
 
     if (!authToken) {
@@ -176,12 +186,31 @@ export function formatNepalPhone(phone: string): string {
 export class NepalOtpProvider implements SmsProvider {
   readonly name = 'nepalotp'
 
-  readonly sendSms = async (phone: string, message: string) => {
+  readonly sendSms = async (
+    phone: string,
+    message: string,
+    options?: SendSmsOptions,
+  ) => {
     const apiKey = process.env.NEPALOTP_API_KEY?.trim()
     const baseUrl = getNepalOtpBaseUrl()
     const sender = process.env.NEPALOTP_SENDER_ID?.trim() || 'Mezmani'
     const ttl = Number(process.env.NEPALOTP_OTP_TTL) || 300
     const formattedPhone = formatNepalPhone(phone)
+    const local10Phone = phone.replace(/\D/g, '').slice(-10)
+
+    const customerName = options?.customerName?.trim() || 'Customer'
+    const otpCode =
+      options?.otpCode?.trim() || message.match(/\b\d{6}\b/)?.[0] || ''
+    const templateId =
+      options?.templateId?.trim() ||
+      process.env.NEPALOTP_TEMPLATE_ID?.trim() ||
+      'tpl_custom_k3cnb1NtBLO4'
+
+    // Format approved custom template:
+    // "Welcome to Mezmani, {{ customer_name }}! Your verification OTP is {{ otp_code }}. Do not share it with anyone."
+    const formattedMessage = otpCode
+      ? `Welcome to Mezmani, ${customerName}! Your verification OTP is ${otpCode}. Do not share it with anyone.`
+      : message
 
     if (!apiKey) {
       if (process.env.NODE_ENV !== 'production') {
@@ -191,7 +220,10 @@ export class NepalOtpProvider implements SmsProvider {
         )
         console.log(`[NepalOTP] Endpoint:  ${baseUrl}/otp/send`)
         console.log(`[NepalOTP] Recipient: ${formattedPhone}`)
-        console.log(`[NepalOTP] Message:   ${message}`)
+        console.log(`[NepalOTP] Template:  ${templateId}`)
+        console.log(`[NepalOTP] Customer:  ${customerName}`)
+        console.log(`[NepalOTP] OTP Code:  ${otpCode}`)
+        console.log(`[NepalOTP] Message:   ${formattedMessage}`)
         console.log(
           '[NepalOTP] Set NEPALOTP_API_KEY in .env to dispatch real SMS via NTC/Ncell',
         )
@@ -206,24 +238,35 @@ export class NepalOtpProvider implements SmsProvider {
     }
 
     try {
-      // Extract 6-digit OTP code if message contains one
-      const otpMatch = message.match(/\b\d{6}\b/)
-      const otpCode = otpMatch ? otpMatch[0] : undefined
-
-      const payload: Record<string, unknown> = {
+      // Build comprehensive payload for NepalOTP
+      // Supporting template variables {{ customer_name }} & {{ otp_code }}
+      // As documented in https://nepalotp.com/docs#template-variables
+      const otpPayload: Record<string, unknown> = {
         phone: formattedPhone,
         phoneNumber: formattedPhone,
-        message,
+        message: formattedMessage,
         sender,
         sender_id: sender,
         ttl,
+        template_id: templateId,
+        templateId: templateId,
+        variables: {
+          customer_name: customerName,
+          otp_code: otpCode,
+        },
+        customer_name: customerName,
+        otp_code: otpCode,
       }
       if (otpCode) {
-        payload.otp = otpCode
-        payload.code = otpCode
+        otpPayload.otp = otpCode
+        otpPayload.code = otpCode
       }
 
-      const res = await fetch(`${baseUrl}/otp/send`, {
+      console.log(
+        `[NepalOTP Send] Dispatching OTP via ${baseUrl}/otp/send with template ${templateId}`,
+      )
+
+      let res = await fetch(`${baseUrl}/otp/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -231,20 +274,84 @@ export class NepalOtpProvider implements SmsProvider {
           Authorization: `Bearer ${apiKey}`,
           'x-api-key': apiKey,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(otpPayload),
       })
 
-      const resText = await res.text()
+      let resText = await res.text()
       let data: any = {}
       try {
         data = JSON.parse(resText)
       } catch {}
 
+      // If /otp/send rejected the custom template or returned an error, attempt /sms/send
       if (!res.ok) {
-        console.error(`[NepalOTP Send] Error HTTP ${res.status}:`, resText)
+        console.warn(
+          `[NepalOTP Send] /otp/send HTTP ${res.status}: ${resText}. Trying fallback via /sms/send...`,
+        )
+
+        const smsPayload: Record<string, unknown> = {
+          phone: local10Phone,
+          phoneNumber: formattedPhone,
+          template_id: templateId,
+          templateId: templateId,
+          variables: {
+            customer_name: customerName,
+            otp_code: otpCode,
+          },
+          customer_name: customerName,
+          otp_code: otpCode,
+          message: formattedMessage,
+          sender,
+          sender_id: sender,
+        }
+
+        const smsRes = await fetch(`${baseUrl}/sms/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+            'x-api-key': apiKey,
+          },
+          body: JSON.stringify(smsPayload),
+        })
+
+        const smsResText = await smsRes.text()
+        let smsData: any = {}
+        try {
+          smsData = JSON.parse(smsResText)
+        } catch {}
+
+        if (smsRes.ok) {
+          console.log(
+            `[NepalOTP Send] Fallback /sms/send success HTTP ${smsRes.status}:`,
+            smsResText,
+          )
+          const fallbackMessageId =
+            smsData.otp_id ||
+            smsData.data?.otp_id ||
+            smsData.message_id ||
+            smsData.data?.message_id ||
+            smsData.id ||
+            smsData.data?.id
+          return {
+            success: true,
+            messageId: fallbackMessageId ? String(fallbackMessageId) : undefined,
+          }
+        }
+
+        console.error(
+          `[NepalOTP Send] Fallback /sms/send also failed HTTP ${smsRes.status}:`,
+          smsResText,
+        )
         return {
           success: false,
-          error: data.message || data.error || `NepalOTP error ${res.status}`,
+          error:
+            data.message ||
+            smsData.message ||
+            data.error ||
+            smsData.error ||
+            `NepalOTP error ${res.status}`,
         }
       }
 
@@ -282,6 +389,13 @@ export class NepalOtpProvider implements SmsProvider {
       return { success: true }
     }
 
+    if (!otpId) {
+      console.log(
+        '[NepalOTP Verify] No remote otp_id available; relied on local secure hash verification.',
+      )
+      return { success: true }
+    }
+
     const baseUrl = getNepalOtpBaseUrl()
     const formattedPhone = formatNepalPhone(phone)
 
@@ -292,11 +406,9 @@ export class NepalOtpProvider implements SmsProvider {
         phoneNumber: formattedPhone,
         code: cleanCode,
         otp: cleanCode,
-      }
-      if (otpId) {
-        payload.otp_id = otpId
-        payload.id = otpId
-        payload.otpId = otpId
+        otp_id: otpId,
+        id: otpId,
+        otpId: otpId,
       }
 
       console.log(`[NepalOTP Verify] Calling ${baseUrl}/otp/verify with:`, {
@@ -327,7 +439,10 @@ export class NepalOtpProvider implements SmsProvider {
       if (!res.ok) {
         return {
           success: false,
-          error: data.message || data.error || `NepalOTP verification error ${res.status}`,
+          error:
+            data.message ||
+            data.error ||
+            `NepalOTP verification error ${res.status}`,
         }
       }
 

@@ -216,9 +216,11 @@ function VerifyPhonePage() {
     setErrorMessage(null)
 
     try {
+      const pending = getPendingSignup()
       const result = await resendPhoneOtpFn({
         data: {
           phone: normalizedPhone,
+          customerName: pending?.name?.trim() || undefined,
         },
       })
 

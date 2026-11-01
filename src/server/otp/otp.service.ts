@@ -192,15 +192,38 @@ export async function prepareSignupQuery(
 
 /**
  * Sends a 6-digit verification OTP to the normalized Nepali mobile number.
+ * Formats message according to approved NepalOTP template:
+ * "Welcome to Mezmani, {{ customer_name }}! Your verification OTP is {{ otp_code }}. Do not share it with anyone."
  */
 export async function sendOtp(
   phoneRaw: string,
   ip?: string,
   d: any = db,
+  customerName?: string,
 ): Promise<SendOtpResult> {
   const normalizedPhone = normalizeNepaliPhone(phoneRaw)
   if (!normalizedPhone) {
     return { success: false, message: 'Invalid Nepali mobile number.' }
+  }
+
+  // Look up customer name from user table if not explicitly passed
+  let resolvedCustomerName = customerName?.trim()
+  if (!resolvedCustomerName) {
+    try {
+      const existingUsers = await d
+        .select({ name: user.name })
+        .from(user)
+        .where(eq(user.phone, normalizedPhone))
+        .limit(1)
+      if (existingUsers.length > 0 && existingUsers[0].name?.trim()) {
+        resolvedCustomerName = existingUsers[0].name.trim()
+      }
+    } catch {
+      // Fall back if query cannot be executed
+    }
+  }
+  if (!resolvedCustomerName) {
+    resolvedCustomerName = 'Customer'
   }
 
   const identifier = getVerificationIdentifier(normalizedPhone)
@@ -241,11 +264,19 @@ export async function sendOtp(
   const hashedCode = hashOtp(code)
   const expiresAt = new Date(now + OTP_EXPIRY_MS)
 
-  // 4. Dispatch via configured SMS Provider (NepalOTP / Mock / Sparrow / Aakash) FIRST
+  // 4. Dispatch via configured SMS Provider (NepalOTP / Mock / Sparrow / Aakash)
+  // Matching approved NepalOTP template:
+  // "Welcome to Mezmani, {{ customer_name }}! Your verification OTP is {{ otp_code }}. Do not share it with anyone."
+  const templateId =
+    process.env.NEPALOTP_TEMPLATE_ID?.trim() || 'tpl_custom_k3cnb1NtBLO4'
   const smsProvider = getSmsProvider()
-  const smsMessage = `Your Mezmani verification code is ${code}. Valid for 5 minutes. Do not share this code.`
+  const smsMessage = `Welcome to Mezmani, ${resolvedCustomerName}! Your verification OTP is ${code}. Do not share it with anyone.`
 
-  const dispatchResult = await smsProvider.sendSms(normalizedPhone, smsMessage)
+  const dispatchResult = await smsProvider.sendSms(normalizedPhone, smsMessage, {
+    customerName: resolvedCustomerName,
+    otpCode: code,
+    templateId,
+  })
   if (!dispatchResult.success) {
     console.error(
       `[OTP Service] Failed to send SMS via ${smsProvider.name}:`,
@@ -459,6 +490,7 @@ export async function resendOtp(
   phoneRaw: string,
   ip?: string,
   d: any = db,
+  customerName?: string,
 ): Promise<SendOtpResult> {
-  return sendOtp(phoneRaw, ip, d)
+  return sendOtp(phoneRaw, ip, d, customerName)
 }

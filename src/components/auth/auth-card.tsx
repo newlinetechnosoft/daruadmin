@@ -120,12 +120,15 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
         if (phoneToVerify) {
           try {
             await sendPhoneOtpFn({
-              data: { phone: phoneToVerify },
+              data: {
+                phone: phoneToVerify,
+                customerName: (resolution as any).name || undefined,
+              },
             })
           } catch {}
           if (resolution.email) {
             setPendingSignup({
-              name: '',
+              name: (resolution as any).name || '',
               email: resolution.email,
               password: loginPassword,
               phone: phoneToVerify,
@@ -182,7 +185,13 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
         if (phoneToVerify) {
           try {
             await sendPhoneOtpFn({
-              data: { phone: phoneToVerify },
+              data: {
+                phone: phoneToVerify,
+                customerName:
+                  (res.data as any)?.user?.name ||
+                  (resolution as any).name ||
+                  undefined,
+              },
             })
           } catch {}
           toast.error(
@@ -329,7 +338,10 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
 
       // 5. Send OTP code to verify mobile number
       await sendPhoneOtpFn({
-        data: { phone: normalizedPhone },
+        data: {
+          phone: normalizedPhone,
+          customerName: signupName.trim(),
+        },
       })
 
       toast.success(

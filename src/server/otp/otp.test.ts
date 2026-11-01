@@ -311,6 +311,7 @@ describe('User Signup & OTP Account Verification Lifecycle', () => {
         const res = await provider.sendSms(
           '9841234567',
           'Your Mezmani verification code is 482910. Valid for 5 minutes.',
+          { customerName: 'Amrit' },
         )
 
         expect(res.success).toBe(true)
@@ -320,6 +321,12 @@ describe('User Signup & OTP Account Verification Lifecycle', () => {
         expect(capturedBody.phone).toBe('+9779841234567')
         expect(capturedBody.otp).toBe('482910')
         expect(capturedBody.ttl).toBe(300)
+        expect(capturedBody.template_id).toBe('tpl_custom_k3cnb1NtBLO4')
+        expect(capturedBody.variables.customer_name).toBe('Amrit')
+        expect(capturedBody.variables.otp_code).toBe('482910')
+        expect(capturedBody.message).toBe(
+          'Welcome to Mezmani, Amrit! Your verification OTP is 482910. Do not share it with anyone.',
+        )
       } finally {
         if (origKey !== undefined) {
           process.env.NEPALOTP_API_KEY = origKey
@@ -361,6 +368,62 @@ describe('User Signup & OTP Account Verification Lifecycle', () => {
         expect(capturedBody.phone).toBe('+9779841234567')
         expect(capturedBody.code).toBe('482910')
         expect(capturedBody.id).toBe('req_test_123')
+      } finally {
+        if (origKey !== undefined) {
+          process.env.NEPALOTP_API_KEY = origKey
+        } else {
+          delete process.env.NEPALOTP_API_KEY
+        }
+        globalThis.fetch = origFetch
+      }
+    })
+
+    it('falls back to /sms/send if /otp/send fails', async () => {
+      const origKey = process.env.NEPALOTP_API_KEY
+      const origFetch = globalThis.fetch
+
+      try {
+        process.env.NEPALOTP_API_KEY = 'npot_test_sandbox_secret_key'
+        const calls: { url: string; body: any }[] = []
+
+        globalThis.fetch = (async (url: string, init?: RequestInit) => {
+          const body = init?.body ? JSON.parse(init.body as string) : null
+          calls.push({ url, body })
+
+          if (url.includes('/otp/send')) {
+            return new Response(
+              JSON.stringify({ success: false, message: 'Custom templates require /sms/send' }),
+              { status: 400, headers: { 'Content-Type': 'application/json' } },
+            )
+          }
+
+          if (url.includes('/sms/send')) {
+            return new Response(
+              JSON.stringify({ success: true, message_id: 'sms_fallback_999' }),
+              { status: 200, headers: { 'Content-Type': 'application/json' } },
+            )
+          }
+
+          return new Response('Not Found', { status: 404 })
+        }) as typeof fetch
+
+        const provider = new NepalOtpProvider()
+        const res = await provider.sendSms(
+          '9841234567',
+          'Your verification code is 112233',
+          { customerName: 'Suman' },
+        )
+
+        expect(res.success).toBe(true)
+        expect(res.messageId).toBe('sms_fallback_999')
+        expect(calls.length).toBe(2)
+        expect(calls[0].url).toContain('/otp/send')
+        expect(calls[1].url).toContain('/sms/send')
+        expect(calls[1].body.variables.customer_name).toBe('Suman')
+        expect(calls[1].body.variables.otp_code).toBe('112233')
+        expect(calls[1].body.message).toBe(
+          'Welcome to Mezmani, Suman! Your verification OTP is 112233. Do not share it with anyone.',
+        )
       } finally {
         if (origKey !== undefined) {
           process.env.NEPALOTP_API_KEY = origKey

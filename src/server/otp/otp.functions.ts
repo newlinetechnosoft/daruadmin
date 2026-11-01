@@ -52,12 +52,13 @@ export const sendPhoneOtpFn = createServerFn({ method: 'POST' })
     z
       .object({
         phone: z.string().min(1, 'Phone number is required'),
+        customerName: z.string().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     const ip = getClientIp()
-    return sendOtp(data.phone, ip)
+    return sendOtp(data.phone, ip, db, data.customerName)
   })
 
 export const verifyPhoneOtpFn = createServerFn({ method: 'POST' })
@@ -78,12 +79,13 @@ export const resendPhoneOtpFn = createServerFn({ method: 'POST' })
     z
       .object({
         phone: z.string().min(1, 'Phone number is required'),
+        customerName: z.string().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     const ip = getClientIp()
-    return resendOtp(data.phone, ip)
+    return resendOtp(data.phone, ip, db, data.customerName)
   })
 
 export const checkPhoneRegisteredFn = createServerFn({ method: 'POST' })
@@ -137,6 +139,7 @@ export const resolveLoginIdentifierFn = createServerFn({ method: 'POST' })
       const rows = await db
         .select({
           id: user.id,
+          name: user.name,
           email: user.email,
           phone: user.phone,
           phoneVerified: user.phoneVerified,
@@ -148,6 +151,7 @@ export const resolveLoginIdentifierFn = createServerFn({ method: 'POST' })
       if (rows.length > 0) {
         return {
           found: true,
+          name: rows[0].name,
           email: rows[0].email,
           phone: rows[0].phone,
           phoneVerified: rows[0].phoneVerified,
@@ -170,6 +174,7 @@ export const resolveLoginIdentifierFn = createServerFn({ method: 'POST' })
     const rows = await db
       .select({
         id: user.id,
+        name: user.name,
         email: user.email,
         phone: user.phone,
         phoneVerified: user.phoneVerified,
@@ -181,6 +186,7 @@ export const resolveLoginIdentifierFn = createServerFn({ method: 'POST' })
     if (rows.length > 0) {
       return {
         found: true,
+        name: rows[0].name,
         email: rows[0].email,
         phone: rows[0].phone,
         phoneVerified: rows[0].phoneVerified,

@@ -1,8 +1,15 @@
+export interface SendSmsOptions {
+  customerName?: string
+  otpCode?: string
+  templateId?: string
+}
+
 export interface SmsProvider {
   readonly name: string
   readonly sendSms: (
     phone: string,
     message: string,
+    options?: SendSmsOptions,
   ) => Promise<{ success: boolean; messageId?: string; error?: string }>
   readonly verifyOtpRemote?: (
     phone: string,
