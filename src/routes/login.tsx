@@ -17,10 +17,10 @@ function LoginPage() {
   const search = Route.useSearch()
 
   return (
-    <div className="storefront min-h-screen bg-background text-foreground flex flex-col font-sans transition-colors duration-300">
+    <div className="storefront min-h-screen bg-background text-foreground flex flex-col font-sans transition-colors duration-300 w-full overflow-x-hidden">
       <Header />
 
-      <main className="flex-1 flex items-center justify-center py-8 sm:py-12 md:py-16 px-4">
+      <main className="flex-1 flex items-center justify-center py-8 sm:py-12 md:py-16 px-4 w-full overflow-x-hidden">
         <AuthCard initialMode="login" redirect={search.redirect} />
       </main>
 

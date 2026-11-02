@@ -357,8 +357,10 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
   return (
     <div className="w-full max-w-[960px] mx-auto relative z-10">
       {/* Decorative ambient background glows aligned to system theme */}
-      <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-blue-500/15 dark:bg-blue-600/10 blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-16 -right-16 w-80 h-80 rounded-full bg-amber-500/15 dark:bg-amber-600/10 blur-3xl pointer-events-none" />
+      <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
+        <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-blue-500/15 dark:bg-blue-600/10 blur-3xl" />
+        <div className="absolute -bottom-16 -right-16 w-80 h-80 rounded-full bg-amber-500/15 dark:bg-amber-600/10 blur-3xl" />
+      </div>
 
       {/* Main Auth Card Container */}
       <div className="relative w-full rounded-[28px] sm:rounded-[36px] bg-card dark:bg-[#1c2023] shadow-[0_20px_50px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-border dark:border-[#2a2f34] overflow-hidden flex flex-col md:flex-row transition-all duration-300">
@@ -413,7 +415,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
                     placeholder="User Name"
-                    className="bg-transparent border-0 outline-none w-full text-[16px] text-gray-900 placeholder:text-gray-400 font-medium"
+                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-gray-900 placeholder:text-gray-400 font-medium"
                   />
                   {/* Email validation icon if user types an email */}
                   {isLoginEmailCheck !== null && (
@@ -444,7 +446,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="Password"
-                    className="bg-transparent border-0 outline-none w-full text-[16px] text-gray-900 placeholder:text-gray-400 font-medium pr-2"
+                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-gray-900 placeholder:text-gray-400 font-medium pr-2"
                   />
                   {/* Eye Toggle Icon */}
                   <button
@@ -602,7 +604,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     value={signupName}
                     onChange={(e) => setSignupName(e.target.value)}
                     placeholder="Full Name"
-                    className="bg-transparent border-0 outline-none w-full text-[16px] text-gray-900 placeholder:text-gray-400 font-medium"
+                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-gray-900 placeholder:text-gray-400 font-medium"
                   />
                 </div>
 
@@ -617,7 +619,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     value={signupPhone}
                     onChange={(e) => setSignupPhone(e.target.value)}
                     placeholder="Mobile (98XXXXXXXX)"
-                    className="bg-transparent border-0 outline-none w-full text-[16px] text-gray-900 placeholder:text-gray-400 font-medium font-mono"
+                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-gray-900 placeholder:text-gray-400 font-medium font-mono"
                   />
                 </div>
 
@@ -630,7 +632,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
                     placeholder="Email Address"
-                    className="bg-transparent border-0 outline-none w-full text-[16px] text-gray-900 placeholder:text-gray-400 font-medium"
+                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-gray-900 placeholder:text-gray-400 font-medium"
                   />
                   {/* Validation Indicator: Green Tick or Red Cross */}
                   {isSignupEmailValid !== null && (
@@ -661,7 +663,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
                     placeholder="Password (min 8 chars)"
-                    className="bg-transparent border-0 outline-none w-full text-[16px] text-gray-900 placeholder:text-gray-400 font-medium pr-2"
+                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-gray-900 placeholder:text-gray-400 font-medium pr-2"
                   />
                   <button
                     type="button"
@@ -692,7 +694,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     value={signupConfirmPassword}
                     onChange={(e) => setSignupConfirmPassword(e.target.value)}
                     placeholder="Confirm Password"
-                    className="bg-transparent border-0 outline-none w-full text-[16px] text-gray-900 placeholder:text-gray-400 font-medium pr-2"
+                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-gray-900 placeholder:text-gray-400 font-medium pr-2"
                   />
                   {/* Match Indicator */}
                   {passwordsMatch !== null && (

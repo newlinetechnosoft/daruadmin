@@ -38,7 +38,11 @@ import { getPendingSignup, clearPendingSignup } from '#/lib/pending-auth'
 const verifyPhoneSearchSchema = z.object({
   phone: z
     .union([z.string(), z.number()])
-    .transform((val) => String(val).replace(/^["']|["']$/g, '').trim())
+    .transform((val) =>
+      String(val)
+        .replace(/^["']|["']$/g, '')
+        .trim(),
+    )
     .optional()
     .default(''),
   redirect: z.string().optional(),
@@ -249,14 +253,16 @@ function VerifyPhonePage() {
   }
 
   return (
-    <div className="storefront min-h-screen bg-background text-foreground flex flex-col font-sans transition-colors duration-300">
+    <div className="storefront min-h-screen bg-background text-foreground flex flex-col font-sans transition-colors duration-300 w-full overflow-x-hidden">
       <Header />
 
-      <main className="flex-1 flex items-center justify-center py-8 sm:py-12 md:py-16 px-4">
+      <main className="flex-1 flex items-center justify-center py-8 sm:py-12 md:py-16 px-4 w-full overflow-x-hidden">
         <div className="w-full max-w-[960px] mx-auto relative z-10">
           {/* Decorative ambient background glows aligned to system theme */}
-          <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-blue-500/15 dark:bg-blue-600/10 blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-16 -right-16 w-80 h-80 rounded-full bg-amber-500/15 dark:bg-amber-600/10 blur-3xl pointer-events-none" />
+          <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
+            <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-blue-500/15 dark:bg-blue-600/10 blur-3xl" />
+            <div className="absolute -bottom-16 -right-16 w-80 h-80 rounded-full bg-amber-500/15 dark:bg-amber-600/10 blur-3xl" />
+          </div>
 
           {/* Main Card Container with Split Design Format */}
           <div className="relative w-full rounded-[28px] sm:rounded-[36px] bg-card dark:bg-[#1c2023] shadow-[0_20px_50px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-border dark:border-[#2a2f34] overflow-hidden flex flex-col md:flex-row transition-all duration-300">
