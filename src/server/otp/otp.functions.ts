@@ -163,7 +163,7 @@ export const resolveLoginIdentifierFn = createServerFn({ method: 'POST' })
       return {
         found: false,
         error:
-          'Please enter a valid email or 10-digit Nepali mobile number (98/97...)',
+          'Please enter a valid phone number.',
       }
     }
 

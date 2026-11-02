@@ -217,7 +217,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
         return
       }
       navigate({
-        to: redirect || '/drinks',
+        to: redirect || '/',
       })
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Sign in failed')

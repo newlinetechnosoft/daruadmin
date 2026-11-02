@@ -44,7 +44,7 @@ export function Footer() {
 
             <div className="flex items-center gap-4 pt-2">
               <a
-                href="https://facebook.com"
+                href="https://www.facebook.com/profile.php?id=61596202793413"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Facebook"
@@ -54,7 +54,7 @@ export function Footer() {
               </a>
 
               <a
-                href="https://instagram.com"
+                href="https://www.instagram.com/mezmani_/"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"
@@ -64,7 +64,7 @@ export function Footer() {
               </a>
 
               <a
-                href="https://tiktok.com"
+                href="https://www.tiktok.com/@mezmani1"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="TikTok"
