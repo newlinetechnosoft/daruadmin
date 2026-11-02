@@ -481,7 +481,7 @@ export async function postOrderDeliveredTx(
   // Group dealer cost by dealer and catalog type
   const dealerCostGroups = new Map<
     string,
-    { dealerId: string; liquorCost: number; groceryCost: number }
+    { dealerId: string; liquorCost: number; foodCost: number }
   >()
 
   for (const it of items) {
@@ -490,19 +490,19 @@ export async function postOrderDeliveredTx(
       const existing = dealerCostGroups.get(it.dealerId) || {
         dealerId: it.dealerId,
         liquorCost: 0,
-        groceryCost: 0,
+        foodCost: 0,
       }
       if (it.catalogType === 'liquor') {
         existing.liquorCost += lineCost
       } else {
-        existing.groceryCost += lineCost
+        existing.foodCost += lineCost
       }
       dealerCostGroups.set(it.dealerId, existing)
     }
   }
 
   for (const g of dealerCostGroups.values()) {
-    const totalDealerCost = g.liquorCost + g.groceryCost
+    const totalDealerCost = g.liquorCost + g.foodCost
     if (totalDealerCost > 0) {
       if (g.liquorCost > 0) {
         lines.push({
@@ -512,12 +512,12 @@ export async function postOrderDeliveredTx(
           narration: `COGS Liquor sourced for order ${order.number}`,
         })
       }
-      if (g.groceryCost > 0) {
+      if (g.foodCost > 0) {
         lines.push({
-          accountId: accounts.COGS_GROCERY,
-          debit: g.groceryCost,
-          costCenter: 'grocery',
-          narration: `COGS Grocery sourced for order ${order.number}`,
+          accountId: accounts.COGS_FOOD,
+          debit: g.foodCost,
+          costCenter: 'food',
+          narration: `COGS Food sourced for order ${order.number}`,
         })
       }
       lines.push({

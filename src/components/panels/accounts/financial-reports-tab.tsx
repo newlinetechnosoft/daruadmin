@@ -548,7 +548,7 @@ export function FinancialReportsTab({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/50 pb-4">
               <div>
                 <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">
-                  {settings.legalName || 'MEZMANI LIQUOR & GROCERY PVT. LTD.'}
+                  {settings.legalName || 'MEZMANI LIQUOR & FOOD PVT. LTD.'}
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   {settings.address ||

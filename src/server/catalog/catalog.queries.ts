@@ -6,11 +6,11 @@ import {
   liquorProducts,
   liquorVariants,
   liquorImages,
-  groceryCategories,
-  groceryBrands,
-  groceryProducts,
-  groceryVariants,
-  groceryImages,
+  foodCategories,
+  foodBrands,
+  foodProducts,
+  foodVariants,
+  foodImages,
   dealerStock,
   dealerItems,
   dealers,
@@ -33,9 +33,9 @@ import {
 } from 'drizzle-orm'
 import type {
   ListLiquorInput,
-  ListGroceryInput,
+  ListFoodInput,
   UpsertLiquorProductInput,
-  UpsertGroceryProductInput,
+  UpsertFoodProductInput,
   ToggleProductStatusInput,
   UpsertCategoryInput,
   ToggleCategoryStatusInput,
@@ -179,47 +179,47 @@ export async function getAllLiquorBrandsQuery() {
   return setCatalogCached('all_liquor_brands', result, 60_000)
 }
 
-export async function getGroceryBrandsQuery() {
-  const cached = getCatalogCached<any[]>('grocery_brands')
+export async function getFoodBrandsQuery() {
+  const cached = getCatalogCached<any[]>('food_brands')
   if (cached) return cached
 
   const rows = await db
     .select()
-    .from(groceryBrands)
-    .where(eq(groceryBrands.isActive, true))
-    .orderBy(asc(groceryBrands.name))
+    .from(foodBrands)
+    .where(eq(foodBrands.isActive, true))
+    .orderBy(asc(foodBrands.name))
 
-  return setCatalogCached('grocery_brands', rows, 60_000)
+  return setCatalogCached('food_brands', rows, 60_000)
 }
 
-export async function getAllGroceryBrandsQuery() {
-  const cached = getCatalogCached<any[]>('all_grocery_brands')
+export async function getAllFoodBrandsQuery() {
+  const cached = getCatalogCached<any[]>('all_food_brands')
   if (cached) return cached
 
   const rows = await db
     .select({
-      id: groceryBrands.id,
-      name: groceryBrands.name,
-      slug: groceryBrands.slug,
-      origin: groceryBrands.origin,
-      description: groceryBrands.description,
-      logoUrl: groceryBrands.logoUrl,
-      isActive: groceryBrands.isActive,
-      createdAt: groceryBrands.createdAt,
-      updatedAt: groceryBrands.updatedAt,
-      productCount: count(groceryProducts.id),
+      id: foodBrands.id,
+      name: foodBrands.name,
+      slug: foodBrands.slug,
+      origin: foodBrands.origin,
+      description: foodBrands.description,
+      logoUrl: foodBrands.logoUrl,
+      isActive: foodBrands.isActive,
+      createdAt: foodBrands.createdAt,
+      updatedAt: foodBrands.updatedAt,
+      productCount: count(foodProducts.id),
     })
-    .from(groceryBrands)
-    .leftJoin(groceryProducts, eq(groceryBrands.id, groceryProducts.brandId))
-    .groupBy(groceryBrands.id)
-    .orderBy(asc(groceryBrands.name))
+    .from(foodBrands)
+    .leftJoin(foodProducts, eq(foodBrands.id, foodProducts.brandId))
+    .groupBy(foodBrands.id)
+    .orderBy(asc(foodBrands.name))
 
   const result = rows.map((r) => ({
     ...r,
     productCount: Number(r.productCount),
   }))
 
-  return setCatalogCached('all_grocery_brands', result, 60_000)
+  return setCatalogCached('all_food_brands', result, 60_000)
 }
 
 export async function getLiquorProductsQuery(input: ListLiquorInput) {
@@ -312,89 +312,89 @@ export async function getLiquorProductsQuery(input: ListLiquorInput) {
   }))
 }
 
-export async function getGroceryCategoriesQuery() {
-  const cached = getCatalogCached<any[]>('grocery_categories')
+export async function getFoodCategoriesQuery() {
+  const cached = getCatalogCached<any[]>('food_categories')
   if (cached) return cached
 
   const rows = await db
     .select()
-    .from(groceryCategories)
-    .where(eq(groceryCategories.isActive, true))
-    .orderBy(asc(groceryCategories.sortOrder), asc(groceryCategories.name))
+    .from(foodCategories)
+    .where(eq(foodCategories.isActive, true))
+    .orderBy(asc(foodCategories.sortOrder), asc(foodCategories.name))
 
-  return setCatalogCached('grocery_categories', rows, 60_000)
+  return setCatalogCached('food_categories', rows, 60_000)
 }
 
-export async function getAllGroceryCategoriesQuery() {
-  const cached = getCatalogCached<any[]>('all_grocery_categories')
+export async function getAllFoodCategoriesQuery() {
+  const cached = getCatalogCached<any[]>('all_food_categories')
   if (cached) return cached
 
   const rows = await db
     .select({
-      id: groceryCategories.id,
-      name: groceryCategories.name,
-      slug: groceryCategories.slug,
-      description: groceryCategories.description,
-      imageUrl: groceryCategories.imageUrl,
-      sortOrder: groceryCategories.sortOrder,
-      isActive: groceryCategories.isActive,
-      showOnLandingPage: groceryCategories.showOnLandingPage,
-      createdAt: groceryCategories.createdAt,
-      updatedAt: groceryCategories.updatedAt,
-      productCount: count(groceryProducts.id),
+      id: foodCategories.id,
+      name: foodCategories.name,
+      slug: foodCategories.slug,
+      description: foodCategories.description,
+      imageUrl: foodCategories.imageUrl,
+      sortOrder: foodCategories.sortOrder,
+      isActive: foodCategories.isActive,
+      showOnLandingPage: foodCategories.showOnLandingPage,
+      createdAt: foodCategories.createdAt,
+      updatedAt: foodCategories.updatedAt,
+      productCount: count(foodProducts.id),
     })
-    .from(groceryCategories)
+    .from(foodCategories)
     .leftJoin(
-      groceryProducts,
-      eq(groceryCategories.id, groceryProducts.categoryId),
+      foodProducts,
+      eq(foodCategories.id, foodProducts.categoryId),
     )
-    .groupBy(groceryCategories.id)
-    .orderBy(asc(groceryCategories.sortOrder), asc(groceryCategories.name))
+    .groupBy(foodCategories.id)
+    .orderBy(asc(foodCategories.sortOrder), asc(foodCategories.name))
 
   const result = rows.map((r) => ({
     ...r,
     productCount: Number(r.productCount),
   }))
 
-  return setCatalogCached('all_grocery_categories', result, 60_000)
+  return setCatalogCached('all_food_categories', result, 60_000)
 }
 
-export async function getGroceryProductsQuery(input: ListGroceryInput) {
-  const conditions = [eq(groceryProducts.isActive, true)]
+export async function getFoodProductsQuery(input: ListFoodInput) {
+  const conditions = [eq(foodProducts.isActive, true)]
 
   if (input.categorySlug) {
-    conditions.push(eq(groceryCategories.slug, input.categorySlug))
+    conditions.push(eq(foodCategories.slug, input.categorySlug))
   }
 
   if (input.isFeatured !== undefined) {
-    conditions.push(eq(groceryProducts.isFeatured, input.isFeatured))
+    conditions.push(eq(foodProducts.isFeatured, input.isFeatured))
   }
 
   if (input.query) {
     conditions.push(
       or(
-        ilike(groceryProducts.name, `%${input.query}%`),
-        ilike(groceryProducts.description, `%${input.query}%`),
+        ilike(foodProducts.name, `%${input.query}%`),
+        ilike(foodProducts.description, `%${input.query}%`),
       )!,
     )
   }
 
   const productsList = await db
     .select({
-      id: groceryProducts.id,
-      name: groceryProducts.name,
-      slug: groceryProducts.slug,
-      description: groceryProducts.description,
-      isFeatured: groceryProducts.isFeatured,
-      customBadge: groceryProducts.customBadge,
-      customDiscountLabel: groceryProducts.customDiscountLabel,
-      categoryName: groceryCategories.name,
-      categorySlug: groceryCategories.slug,
+      id: foodProducts.id,
+      name: foodProducts.name,
+      slug: foodProducts.slug,
+      description: foodProducts.description,
+      isFeatured: foodProducts.isFeatured,
+      customBadge: foodProducts.customBadge,
+      customDiscountLabel: foodProducts.customDiscountLabel,
+      categoryName: foodCategories.name,
+      categorySlug: foodCategories.slug,
     })
-    .from(groceryProducts)
+    .from(foodProducts)
     .innerJoin(
-      groceryCategories,
-      eq(groceryProducts.categoryId, groceryCategories.id),
+      foodCategories,
+      eq(foodProducts.categoryId, foodCategories.id),
     )
     .where(and(...conditions))
     .limit(input.limit)
@@ -407,17 +407,17 @@ export async function getGroceryProductsQuery(input: ListGroceryInput) {
   const [variants, images] = await Promise.all([
     db
       .select()
-      .from(groceryVariants)
+      .from(foodVariants)
       .where(
         and(
-          eq(groceryVariants.isActive, true),
-          inArray(groceryVariants.productId, productIds),
+          eq(foodVariants.isActive, true),
+          inArray(foodVariants.productId, productIds),
         ),
       ),
     db
       .select()
-      .from(groceryImages)
-      .where(inArray(groceryImages.productId, productIds)),
+      .from(foodImages)
+      .where(inArray(foodImages.productId, productIds)),
   ])
 
   const variantsMap = new Map<string, typeof variants>()
@@ -436,7 +436,7 @@ export async function getGroceryProductsQuery(input: ListGroceryInput) {
 
   return productsList.map((p) => ({
     ...p,
-    catalogType: 'grocery' as const,
+    catalogType: 'food' as const,
     primaryImage: imagesMap.get(p.id) ?? null,
     variants: (variantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
   }))
@@ -449,26 +449,26 @@ export async function getGroceryProductsQuery(input: ListGroceryInput) {
 export async function getAdminStatsQuery() {
   const [
     liquorRes,
-    groceryRes,
+    foodRes,
     brandRes,
-    grocBrandRes,
+    foodBrandRes,
     liquorCatRes,
-    groceryCatRes,
+    foodCatRes,
     userRes,
     customersRes,
     liqStockRes,
-    grocStockRes,
+    foodStockRes,
     liqValRes,
-    grocValRes,
+    foodValRes,
     liqLowRes,
-    grocLowRes,
+    foodLowRes,
   ] = await Promise.all([
     db.select({ total: count() }).from(liquorProducts),
-    db.select({ total: count() }).from(groceryProducts),
+    db.select({ total: count() }).from(foodProducts),
     db.select({ total: count() }).from(liquorBrands),
-    db.select({ total: count() }).from(groceryBrands),
+    db.select({ total: count() }).from(foodBrands),
     db.select({ total: count() }).from(liquorCategories),
-    db.select({ total: count() }).from(groceryCategories),
+    db.select({ total: count() }).from(foodCategories),
     db.select({ total: count() }).from(user),
     db
       .select({ total: count() })
@@ -477,7 +477,7 @@ export async function getAdminStatsQuery() {
         or(isNull(user.role), eq(user.role, 'customer'), eq(user.role, 'user')),
       ),
     db.select({ totalStock: sum(liquorVariants.stock) }).from(liquorVariants),
-    db.select({ totalStock: sum(groceryVariants.stock) }).from(groceryVariants),
+    db.select({ totalStock: sum(foodVariants.stock) }).from(foodVariants),
     db
       .select({
         totalValue: sql<string>`coalesce(sum(${liquorVariants.price} * ${liquorVariants.stock}), 0)`,
@@ -485,36 +485,36 @@ export async function getAdminStatsQuery() {
       .from(liquorVariants),
     db
       .select({
-        totalValue: sql<string>`coalesce(sum(${groceryVariants.price} * ${groceryVariants.stock}), 0)`,
+        totalValue: sql<string>`coalesce(sum(${foodVariants.price} * ${foodVariants.stock}), 0)`,
       })
-      .from(groceryVariants),
+      .from(foodVariants),
     db
       .select({ lowStock: count() })
       .from(liquorVariants)
       .where(lte(liquorVariants.stock, 20)),
     db
       .select({ lowStock: count() })
-      .from(groceryVariants)
-      .where(lte(groceryVariants.stock, 20)),
+      .from(foodVariants)
+      .where(lte(foodVariants.stock, 20)),
   ])
 
   const totalStockLiquor = Number(liqStockRes[0]?.totalStock ?? 0)
-  const totalStockGrocery = Number(grocStockRes[0]?.totalStock ?? 0)
+  const totalStockFood = Number(foodStockRes[0]?.totalStock ?? 0)
   const totalValueLiquor = Number(liqValRes[0]?.totalValue ?? 0)
-  const totalValueGrocery = Number(grocValRes[0]?.totalValue ?? 0)
+  const totalValueFood = Number(foodValRes[0]?.totalValue ?? 0)
   const lowStockCount =
-    (liqLowRes[0]?.lowStock ?? 0) + (grocLowRes[0]?.lowStock ?? 0)
+    (liqLowRes[0]?.lowStock ?? 0) + (foodLowRes[0]?.lowStock ?? 0)
 
   return {
     totalLiquorProducts: liquorRes[0]?.total ?? 0,
-    totalGroceryProducts: groceryRes[0]?.total ?? 0,
-    totalBrands: (brandRes[0]?.total ?? 0) + (grocBrandRes[0]?.total ?? 0),
+    totalFoodProducts: foodRes[0]?.total ?? 0,
+    totalBrands: (brandRes[0]?.total ?? 0) + (foodBrandRes[0]?.total ?? 0),
     totalCategories:
-      (liquorCatRes[0]?.total ?? 0) + (groceryCatRes[0]?.total ?? 0),
+      (liquorCatRes[0]?.total ?? 0) + (foodCatRes[0]?.total ?? 0),
     totalUsers: userRes[0]?.total ?? 0,
     totalCustomers: customersRes[0]?.total ?? 0,
-    totalStockUnits: totalStockLiquor + totalStockGrocery,
-    totalInventoryValue: totalValueLiquor + totalValueGrocery,
+    totalStockUnits: totalStockLiquor + totalStockFood,
+    totalInventoryValue: totalValueLiquor + totalValueFood,
     lowStockCount,
   }
 }
@@ -615,32 +615,32 @@ export async function getAdminLiquorProductsQuery() {
   })
 }
 
-export async function getAdminGroceryProductsQuery() {
+export async function getAdminFoodProductsQuery() {
   const productsList = await db
     .select({
-      id: groceryProducts.id,
-      name: groceryProducts.name,
-      slug: groceryProducts.slug,
-      description: groceryProducts.description,
-      isFeatured: groceryProducts.isFeatured,
-      customBadge: groceryProducts.customBadge,
-      customDiscountLabel: groceryProducts.customDiscountLabel,
-      isActive: groceryProducts.isActive,
-      categoryId: groceryProducts.categoryId,
-      brandId: groceryProducts.brandId,
-      createdAt: groceryProducts.createdAt,
-      categoryName: groceryCategories.name,
-      categorySlug: groceryCategories.slug,
-      brandName: groceryBrands.name,
-      brandSlug: groceryBrands.slug,
+      id: foodProducts.id,
+      name: foodProducts.name,
+      slug: foodProducts.slug,
+      description: foodProducts.description,
+      isFeatured: foodProducts.isFeatured,
+      customBadge: foodProducts.customBadge,
+      customDiscountLabel: foodProducts.customDiscountLabel,
+      isActive: foodProducts.isActive,
+      categoryId: foodProducts.categoryId,
+      brandId: foodProducts.brandId,
+      createdAt: foodProducts.createdAt,
+      categoryName: foodCategories.name,
+      categorySlug: foodCategories.slug,
+      brandName: foodBrands.name,
+      brandSlug: foodBrands.slug,
     })
-    .from(groceryProducts)
+    .from(foodProducts)
     .innerJoin(
-      groceryCategories,
-      eq(groceryProducts.categoryId, groceryCategories.id),
+      foodCategories,
+      eq(foodProducts.categoryId, foodCategories.id),
     )
-    .leftJoin(groceryBrands, eq(groceryProducts.brandId, groceryBrands.id))
-    .orderBy(desc(groceryProducts.createdAt))
+    .leftJoin(foodBrands, eq(foodProducts.brandId, foodBrands.id))
+    .orderBy(desc(foodProducts.createdAt))
 
   if (productsList.length === 0) return []
 
@@ -648,12 +648,12 @@ export async function getAdminGroceryProductsQuery() {
   const [variants, images, assignedDealerRows] = await Promise.all([
     db
       .select()
-      .from(groceryVariants)
-      .where(inArray(groceryVariants.productId, productIds)),
+      .from(foodVariants)
+      .where(inArray(foodVariants.productId, productIds)),
     db
       .select()
-      .from(groceryImages)
-      .where(inArray(groceryImages.productId, productIds)),
+      .from(foodImages)
+      .where(inArray(foodImages.productId, productIds)),
     db
       .select({
         productId: dealerItems.productId,
@@ -664,7 +664,7 @@ export async function getAdminGroceryProductsQuery() {
       .innerJoin(dealers, eq(dealerItems.dealerId, dealers.id))
       .where(
         and(
-          eq(dealerItems.catalogType, 'grocery'),
+          eq(dealerItems.catalogType, 'food'),
           inArray(dealerItems.productId, productIds),
         ),
       ),
@@ -699,7 +699,7 @@ export async function getAdminGroceryProductsQuery() {
     const assigned = dealersMap.get(p.id) ?? []
     return {
       ...p,
-      catalogType: 'grocery' as const,
+      catalogType: 'food' as const,
       primaryImage: imagesMap.get(p.id) ?? null,
       images: (allImagesMap.get(p.id) ?? []).sort(
         (a, b) => a.sortOrder - b.sortOrder,
@@ -895,8 +895,8 @@ export async function upsertLiquorProductQuery(
   return dbTx.transaction((tx) => run(tx))
 }
 
-export async function upsertGroceryProductQuery(
-  input: UpsertGroceryProductInput,
+export async function upsertFoodProductQuery(
+  input: UpsertFoodProductInput,
   externalTx?: DbTx,
 ) {
   const run = async (tx: DbTx) => {
@@ -906,7 +906,7 @@ export async function upsertGroceryProductQuery(
 
     if (productId) {
       await tx
-        .update(groceryProducts)
+        .update(foodProducts)
         .set({
           name: input.name,
           slug,
@@ -918,10 +918,10 @@ export async function upsertGroceryProductQuery(
           customDiscountLabel: input.customDiscountLabel ?? null,
           isActive: input.isActive,
         })
-        .where(eq(groceryProducts.id, productId))
+        .where(eq(foodProducts.id, productId))
     } else {
       const [inserted] = await tx
-        .insert(groceryProducts)
+        .insert(foodProducts)
         .values({
           name: input.name,
           slug,
@@ -933,16 +933,16 @@ export async function upsertGroceryProductQuery(
           customDiscountLabel: input.customDiscountLabel ?? null,
           isActive: input.isActive,
         })
-        .returning({ id: groceryProducts.id })
+        .returning({ id: foodProducts.id })
       productId = inserted.id
     }
 
     if (input.images !== undefined) {
       await tx
-        .delete(groceryImages)
-        .where(eq(groceryImages.productId, productId))
+        .delete(foodImages)
+        .where(eq(foodImages.productId, productId))
       if (input.images.length > 0) {
-        await tx.insert(groceryImages).values(
+        await tx.insert(foodImages).values(
           input.images.map((img) => ({
             productId,
             url: img.url,
@@ -954,18 +954,18 @@ export async function upsertGroceryProductQuery(
       }
     } else if (input.imageUrl) {
       const existingImg = await tx
-        .select({ id: groceryImages.id })
-        .from(groceryImages)
-        .where(eq(groceryImages.productId, productId))
+        .select({ id: foodImages.id })
+        .from(foodImages)
+        .where(eq(foodImages.productId, productId))
         .limit(1)
 
       if (existingImg.length > 0) {
         await tx
-          .update(groceryImages)
+          .update(foodImages)
           .set({ url: input.imageUrl, alt: input.name, isPrimary: true })
-          .where(eq(groceryImages.id, existingImg[0].id))
+          .where(eq(foodImages.id, existingImg[0].id))
       } else {
-        await tx.insert(groceryImages).values({
+        await tx.insert(foodImages).values({
           productId,
           url: input.imageUrl,
           alt: input.name,
@@ -981,12 +981,12 @@ export async function upsertGroceryProductQuery(
 
       if (keptVariantIds.length > 0) {
         const removedVariants = await tx
-          .select({ id: groceryVariants.id })
-          .from(groceryVariants)
+          .select({ id: foodVariants.id })
+          .from(foodVariants)
           .where(
             and(
-              eq(groceryVariants.productId, productId),
-              notInArray(groceryVariants.id, keptVariantIds),
+              eq(foodVariants.productId, productId),
+              notInArray(foodVariants.id, keptVariantIds),
             ),
           )
         const removedIds = removedVariants.map((v) => v.id)
@@ -995,13 +995,13 @@ export async function upsertGroceryProductQuery(
             .delete(dealerStock)
             .where(
               and(
-                eq(dealerStock.catalogType, 'grocery'),
+                eq(dealerStock.catalogType, 'food'),
                 inArray(dealerStock.variantId, removedIds),
               ),
             )
           await tx
-            .delete(groceryVariants)
-            .where(inArray(groceryVariants.id, removedIds))
+            .delete(foodVariants)
+            .where(inArray(foodVariants.id, removedIds))
         }
       }
     }
@@ -1009,7 +1009,7 @@ export async function upsertGroceryProductQuery(
     for (const v of input.variants) {
       if (v.id) {
         await tx
-          .update(groceryVariants)
+          .update(foodVariants)
           .set({
             name: v.name,
             unit: v.unit,
@@ -1020,10 +1020,10 @@ export async function upsertGroceryProductQuery(
             stock: v.stock,
             isActive: v.isActive,
           })
-          .where(eq(groceryVariants.id, v.id))
+          .where(eq(foodVariants.id, v.id))
       } else {
         await tx
-          .insert(groceryVariants)
+          .insert(foodVariants)
           .values({
             productId,
             name: v.name,
@@ -1036,7 +1036,7 @@ export async function upsertGroceryProductQuery(
             isActive: v.isActive,
           })
           .onConflictDoUpdate({
-            target: groceryVariants.sku,
+            target: foodVariants.sku,
             set: {
               name: v.name,
               unit: v.unit,
@@ -1055,7 +1055,7 @@ export async function upsertGroceryProductQuery(
         .delete(dealerItems)
         .where(
           and(
-            eq(dealerItems.catalogType, 'grocery'),
+            eq(dealerItems.catalogType, 'food'),
             eq(dealerItems.productId, productId),
           ),
         )
@@ -1065,7 +1065,7 @@ export async function upsertGroceryProductQuery(
           uniqueDealers.map((dealerId) => ({
             id: crypto.randomUUID(),
             dealerId,
-            catalogType: 'grocery',
+            catalogType: 'food',
             productId,
           })),
         )
@@ -1091,9 +1091,9 @@ export async function toggleProductStatusQuery(
       .where(eq(liquorProducts.id, input.id))
   } else {
     await db
-      .update(groceryProducts)
+      .update(foodProducts)
       .set({ [input.field]: input.value })
-      .where(eq(groceryProducts.id, input.id))
+      .where(eq(foodProducts.id, input.id))
   }
   return { success: true }
 }
@@ -1130,7 +1130,7 @@ export async function upsertCategoryQuery(input: UpsertCategoryInput) {
     } else {
       if (input.id) {
         await db
-          .update(groceryCategories)
+          .update(foodCategories)
           .set({
             name: input.name,
             slug,
@@ -1140,9 +1140,9 @@ export async function upsertCategoryQuery(input: UpsertCategoryInput) {
             isActive: input.isActive,
             showOnLandingPage: input.showOnLandingPage ?? false,
           })
-          .where(eq(groceryCategories.id, input.id))
+          .where(eq(foodCategories.id, input.id))
       } else {
-        await db.insert(groceryCategories).values({
+        await db.insert(foodCategories).values({
           name: input.name,
           slug,
           description: input.description ?? null,
@@ -1173,10 +1173,10 @@ export async function upsertBrandQuery(input: UpsertBrandInput) {
   const slug = slugify(input.slug?.trim() || input.name)
 
   try {
-    if (input.catalogType === 'grocery') {
+    if (input.catalogType === 'food') {
       if (input.id) {
         const [updated] = await db
-          .update(groceryBrands)
+          .update(foodBrands)
           .set({
             name: input.name,
             slug,
@@ -1185,13 +1185,13 @@ export async function upsertBrandQuery(input: UpsertBrandInput) {
             logoUrl: input.logoUrl ?? null,
             isActive: input.isActive,
           })
-          .where(eq(groceryBrands.id, input.id))
+          .where(eq(foodBrands.id, input.id))
           .returning()
         invalidateCatalogCache()
         return { success: true, brand: updated }
       } else {
         const [inserted] = await db
-          .insert(groceryBrands)
+          .insert(foodBrands)
           .values({
             name: input.name,
             slug,
@@ -1319,29 +1319,29 @@ export async function deleteItemQuery(
           )
       }
       await tx.delete(liquorProducts).where(eq(liquorProducts.id, input.id))
-    } else if (input.catalogType === 'grocery') {
+    } else if (input.catalogType === 'food') {
       const [prod] = await tx
         .select()
-        .from(groceryProducts)
-        .where(eq(groceryProducts.id, input.id))
+        .from(foodProducts)
+        .where(eq(foodProducts.id, input.id))
         .limit(1)
 
       if (prod) {
         const [variants, images, dItems] = await Promise.all([
           tx
             .select()
-            .from(groceryVariants)
-            .where(eq(groceryVariants.productId, input.id)),
+            .from(foodVariants)
+            .where(eq(foodVariants.productId, input.id)),
           tx
             .select()
-            .from(groceryImages)
-            .where(eq(groceryImages.productId, input.id)),
+            .from(foodImages)
+            .where(eq(foodImages.productId, input.id)),
           tx
             .select()
             .from(dealerItems)
             .where(
               and(
-                eq(dealerItems.catalogType, 'grocery'),
+                eq(dealerItems.catalogType, 'food'),
                 eq(dealerItems.productId, input.id),
               ),
             ),
@@ -1349,7 +1349,7 @@ export async function deleteItemQuery(
 
         await moveToRecycleBin(
           {
-            entityType: 'grocery_product',
+            entityType: 'food_product',
             entityId: prod.id,
             name: prod.name,
             description: prod.slug,
@@ -1363,26 +1363,26 @@ export async function deleteItemQuery(
         .delete(dealerItems)
         .where(
           and(
-            eq(dealerItems.catalogType, 'grocery'),
+            eq(dealerItems.catalogType, 'food'),
             eq(dealerItems.productId, input.id),
           ),
         )
       const variantRows = await tx
-        .select({ id: groceryVariants.id })
-        .from(groceryVariants)
-        .where(eq(groceryVariants.productId, input.id))
+        .select({ id: foodVariants.id })
+        .from(foodVariants)
+        .where(eq(foodVariants.productId, input.id))
       const variantIds = variantRows.map((v) => v.id)
       if (variantIds.length > 0) {
         await tx
           .delete(dealerStock)
           .where(
             and(
-              eq(dealerStock.catalogType, 'grocery'),
+              eq(dealerStock.catalogType, 'food'),
               inArray(dealerStock.variantId, variantIds),
             ),
           )
       }
-      await tx.delete(groceryProducts).where(eq(groceryProducts.id, input.id))
+      await tx.delete(foodProducts).where(eq(foodProducts.id, input.id))
     } else if (input.catalogType === 'liquor-category') {
       const [cat] = await tx
         .select()
@@ -1434,17 +1434,17 @@ export async function deleteItemQuery(
         }
       }
       await tx.delete(liquorCategories).where(eq(liquorCategories.id, input.id))
-    } else if (input.catalogType === 'grocery-category') {
+    } else if (input.catalogType === 'food-category') {
       const [cat] = await tx
         .select()
-        .from(groceryCategories)
-        .where(eq(groceryCategories.id, input.id))
+        .from(foodCategories)
+        .where(eq(foodCategories.id, input.id))
         .limit(1)
 
       if (cat) {
         await moveToRecycleBin(
           {
-            entityType: 'grocery_category',
+            entityType: 'food_category',
             entityId: cat.id,
             name: cat.name,
             description: cat.slug,
@@ -1455,49 +1455,49 @@ export async function deleteItemQuery(
       }
 
       const products = await tx
-        .select({ id: groceryProducts.id })
-        .from(groceryProducts)
-        .where(eq(groceryProducts.categoryId, input.id))
+        .select({ id: foodProducts.id })
+        .from(foodProducts)
+        .where(eq(foodProducts.categoryId, input.id))
       const productIds = products.map((p) => p.id)
       if (productIds.length > 0) {
         await tx
           .delete(dealerItems)
           .where(
             and(
-              eq(dealerItems.catalogType, 'grocery'),
+              eq(dealerItems.catalogType, 'food'),
               inArray(dealerItems.productId, productIds),
             ),
           )
         const variantRows = await tx
-          .select({ id: groceryVariants.id })
-          .from(groceryVariants)
-          .where(inArray(groceryVariants.productId, productIds))
+          .select({ id: foodVariants.id })
+          .from(foodVariants)
+          .where(inArray(foodVariants.productId, productIds))
         const variantIds = variantRows.map((v) => v.id)
         if (variantIds.length > 0) {
           await tx
             .delete(dealerStock)
             .where(
               and(
-                eq(dealerStock.catalogType, 'grocery'),
+                eq(dealerStock.catalogType, 'food'),
                 inArray(dealerStock.variantId, variantIds),
               ),
             )
         }
       }
       await tx
-        .delete(groceryCategories)
-        .where(eq(groceryCategories.id, input.id))
-    } else if (input.catalogType === 'grocery-brand') {
+        .delete(foodCategories)
+        .where(eq(foodCategories.id, input.id))
+    } else if (input.catalogType === 'food-brand') {
       const [brand] = await tx
         .select()
-        .from(groceryBrands)
-        .where(eq(groceryBrands.id, input.id))
+        .from(foodBrands)
+        .where(eq(foodBrands.id, input.id))
         .limit(1)
 
       if (brand) {
         await moveToRecycleBin(
           {
-            entityType: 'grocery_brand',
+            entityType: 'food_brand',
             entityId: brand.id,
             name: brand.name,
             description: brand.slug,
@@ -1507,7 +1507,7 @@ export async function deleteItemQuery(
         )
       }
 
-      await tx.delete(groceryBrands).where(eq(groceryBrands.id, input.id))
+      await tx.delete(foodBrands).where(eq(foodBrands.id, input.id))
     } else if (input.catalogType === 'liquor-brand') {
       const [brand] = await tx
         .select()
@@ -1572,7 +1572,7 @@ export async function toggleCategoryStatusQuery(
   input: ToggleCategoryStatusInput,
 ) {
   const table =
-    input.catalogType === 'liquor' ? liquorCategories : groceryCategories
+    input.catalogType === 'liquor' ? liquorCategories : foodCategories
   await db
     .update(table)
     .set({
@@ -1617,7 +1617,7 @@ export async function updateUserRoleQuery(input: {
 export async function getProductsByIdsQuery(ids: string[]) {
   if (ids.length === 0) return []
 
-  const [liquorRows, groceryRows] = await Promise.all([
+  const [liquorRows, foodRows] = await Promise.all([
     db
       .select({
         id: liquorProducts.id,
@@ -1644,33 +1644,33 @@ export async function getProductsByIdsQuery(ids: string[]) {
 
     db
       .select({
-        id: groceryProducts.id,
-        name: groceryProducts.name,
-        slug: groceryProducts.slug,
-        description: groceryProducts.description,
-        isFeatured: groceryProducts.isFeatured,
-        customBadge: groceryProducts.customBadge,
-        customDiscountLabel: groceryProducts.customDiscountLabel,
-        categoryName: groceryCategories.name,
-        categorySlug: groceryCategories.slug,
+        id: foodProducts.id,
+        name: foodProducts.name,
+        slug: foodProducts.slug,
+        description: foodProducts.description,
+        isFeatured: foodProducts.isFeatured,
+        customBadge: foodProducts.customBadge,
+        customDiscountLabel: foodProducts.customDiscountLabel,
+        categoryName: foodCategories.name,
+        categorySlug: foodCategories.slug,
       })
-      .from(groceryProducts)
+      .from(foodProducts)
       .innerJoin(
-        groceryCategories,
-        eq(groceryProducts.categoryId, groceryCategories.id),
+        foodCategories,
+        eq(foodProducts.categoryId, foodCategories.id),
       )
       .where(
         and(
-          eq(groceryProducts.isActive, true),
-          inArray(groceryProducts.id, ids),
+          eq(foodProducts.isActive, true),
+          inArray(foodProducts.id, ids),
         ),
       ),
   ])
 
   const liquorIds = liquorRows.map((p) => p.id)
-  const groceryIds = groceryRows.map((p) => p.id)
+  const foodIds = foodRows.map((p) => p.id)
 
-  const [liqVariants, liqImages, grocVariants, grocImages] = await Promise.all([
+  const [liqVariants, liqImages, foodVariantsRows, foodImagesRows] = await Promise.all([
     liquorIds.length > 0
       ? db
           .select()
@@ -1688,22 +1688,22 @@ export async function getProductsByIdsQuery(ids: string[]) {
           .from(liquorImages)
           .where(inArray(liquorImages.productId, liquorIds))
       : [],
-    groceryIds.length > 0
+    foodIds.length > 0
       ? db
           .select()
-          .from(groceryVariants)
+          .from(foodVariants)
           .where(
             and(
-              eq(groceryVariants.isActive, true),
-              inArray(groceryVariants.productId, groceryIds),
+              eq(foodVariants.isActive, true),
+              inArray(foodVariants.productId, foodIds),
             ),
           )
       : [],
-    groceryIds.length > 0
+    foodIds.length > 0
       ? db
           .select()
-          .from(groceryImages)
-          .where(inArray(groceryImages.productId, groceryIds))
+          .from(foodImages)
+          .where(inArray(foodImages.productId, foodIds))
       : [],
   ])
 
@@ -1721,17 +1721,17 @@ export async function getProductsByIdsQuery(ids: string[]) {
     }
   }
 
-  const groceryVariantsMap = new Map<string, typeof grocVariants>()
-  for (const v of grocVariants) {
-    const list = groceryVariantsMap.get(v.productId) ?? []
+  const foodVariantsMap = new Map<string, typeof foodVariantsRows>()
+  for (const v of foodVariantsRows) {
+    const list = foodVariantsMap.get(v.productId) ?? []
     list.push(v)
-    groceryVariantsMap.set(v.productId, list)
+    foodVariantsMap.set(v.productId, list)
   }
 
-  const groceryImagesMap = new Map<string, string>()
-  for (const img of grocImages) {
-    if (img.isPrimary || !groceryImagesMap.has(img.productId)) {
-      groceryImagesMap.set(img.productId, img.url)
+  const foodImagesMap = new Map<string, string>()
+  for (const img of foodImagesRows) {
+    if (img.isPrimary || !foodImagesMap.has(img.productId)) {
+      foodImagesMap.set(img.productId, img.url)
     }
   }
 
@@ -1744,13 +1744,13 @@ export async function getProductsByIdsQuery(ids: string[]) {
         (a, b) => a.price - b.price,
       ),
     })),
-    ...groceryRows.map((p) => ({
+    ...foodRows.map((p) => ({
       ...p,
       brandName: null,
       brandSlug: null,
-      catalogType: 'grocery' as const,
-      primaryImage: groceryImagesMap.get(p.id) ?? null,
-      variants: (groceryVariantsMap.get(p.id) ?? []).sort(
+      catalogType: 'food' as const,
+      primaryImage: foodImagesMap.get(p.id) ?? null,
+      variants: (foodVariantsMap.get(p.id) ?? []).sort(
         (a, b) => a.price - b.price,
       ),
     })),
@@ -1761,13 +1761,13 @@ export async function getProductsByIdsQuery(ids: string[]) {
 }
 
 export async function deleteProductImageQuery(
-  catalogType: 'liquor' | 'grocery',
+  catalogType: 'liquor' | 'food',
   imageId: string,
 ) {
   if (catalogType === 'liquor') {
     await db.delete(liquorImages).where(eq(liquorImages.id, imageId))
   } else {
-    await db.delete(groceryImages).where(eq(groceryImages.id, imageId))
+    await db.delete(foodImages).where(eq(foodImages.id, imageId))
   }
   return { success: true }
 }

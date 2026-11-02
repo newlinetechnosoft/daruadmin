@@ -51,7 +51,7 @@ describe('Product Velocity & Sourcing Intelligence Metrics', () => {
         {
           productId: 'p_tonic',
           name: 'Himalayan Tonic Water',
-          catalogType: 'grocery',
+          catalogType: 'food',
           categoryName: 'Mixers',
           unitsSold: 0,
           grossRevenue: 0,

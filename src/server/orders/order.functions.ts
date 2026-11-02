@@ -6,8 +6,8 @@ import { db, dbTx } from '#/db'
 import {
   liquorVariants,
   liquorProducts,
-  groceryVariants,
-  groceryProducts,
+  foodVariants,
+  foodProducts,
   user,
   orders,
   orderItems,
@@ -205,19 +205,19 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         ),
       db
         .select({
-          variant: groceryVariants,
-          product: groceryProducts,
+          variant: foodVariants,
+          product: foodProducts,
         })
-        .from(groceryVariants)
+        .from(foodVariants)
         .innerJoin(
-          groceryProducts,
-          eq(groceryVariants.productId, groceryProducts.id),
+          foodProducts,
+          eq(foodVariants.productId, foodProducts.id),
         )
         .where(
           and(
-            eq(groceryVariants.isActive, true),
-            eq(groceryProducts.isActive, true),
-            inArray(groceryVariants.id, variantIds),
+            eq(foodVariants.isActive, true),
+            eq(foodProducts.isActive, true),
+            inArray(foodVariants.id, variantIds),
           ),
         ),
     ])
@@ -231,7 +231,7 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         sku: string
         price: number
         productId: string
-        catalogType: 'liquor' | 'grocery'
+        catalogType: 'liquor' | 'food'
       }
     >()
 
@@ -255,14 +255,14 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         sku: row.variant.sku,
         price: row.variant.price,
         productId: row.product.id,
-        catalogType: 'grocery',
+        catalogType: 'food',
       })
     }
 
     // Verify all requested items are active
     const verifiedOrderItems: {
       id: string
-      catalogType: 'liquor' | 'grocery'
+      catalogType: 'liquor' | 'food'
       productId: string
       variantId: string
       name: string

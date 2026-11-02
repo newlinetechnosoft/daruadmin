@@ -1,6 +1,6 @@
 export * from './auth'
 export * from './liquor'
-export * from './grocery'
+export * from './food'
 export * from './orders'
 export * from './riders'
 export * from './inventory'

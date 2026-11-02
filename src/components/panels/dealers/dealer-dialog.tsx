@@ -80,7 +80,7 @@ export function DealerDialog({
 
   // Item filter state inside dialog
   const [itemSearch, setItemSearch] = useState('')
-  const [catalogTab, setCatalogTab] = useState<'all' | 'liquor' | 'grocery'>(
+  const [catalogTab, setCatalogTab] = useState<'all' | 'liquor' | 'food'>(
     'all',
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -170,7 +170,7 @@ export function DealerDialog({
   }, [catalogItems, catalogTab, itemSearch])
 
   // Selection helpers
-  const toggleItem = (catalogType: 'liquor' | 'grocery', productId: string) => {
+  const toggleItem = (catalogType: 'liquor' | 'food', productId: string) => {
     const key = `${catalogType}:${productId}`
     setSelectedItemKeys((prev) => {
       const next = new Set(prev)
@@ -200,12 +200,12 @@ export function DealerDialog({
   // Count breakdown
   const selectedCounts = useMemo(() => {
     let liquor = 0
-    let grocery = 0
+    let food = 0
     selectedItemKeys.forEach((key) => {
       if (key.startsWith('liquor:')) liquor++
-      else if (key.startsWith('grocery:')) grocery++
+      else if (key.startsWith('food:')) food++
     })
-    return { liquor, grocery, total: selectedItemKeys.size }
+    return { liquor, food, total: selectedItemKeys.size }
   }, [selectedItemKeys])
 
   // Submit handler
@@ -229,7 +229,7 @@ export function DealerDialog({
     try {
       const assignedItems = Array.from(selectedItemKeys).map((key) => {
         const [catalogType, productId] = key.split(':') as [
-          'liquor' | 'grocery',
+          'liquor' | 'food',
           string,
         ]
         return { catalogType, productId }
@@ -265,7 +265,7 @@ export function DealerDialog({
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'dealers'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'liquor'] }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'food'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] }),
       ])
 
@@ -552,7 +552,7 @@ export function DealerDialog({
                     Assigned Catalog Items
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Select the specific liquor or grocery products supplied by
+                    Select the specific liquor or food products supplied by
                     this dealer.
                   </p>
                 </div>
@@ -560,7 +560,7 @@ export function DealerDialog({
                   <Badge variant="outline" className="text-xs font-medium">
                     {selectedCounts.total} selected
                     {selectedCounts.total > 0 &&
-                      ` (${selectedCounts.liquor} Liquor, ${selectedCounts.grocery} Grocery)`}
+                      ` (${selectedCounts.liquor} Liquor, ${selectedCounts.food} Food)`}
                   </Badge>
                   {selectedCounts.total > 0 && (
                     <Button
@@ -595,11 +595,11 @@ export function DealerDialog({
                       Liquor
                     </TabsTrigger>
                     <TabsTrigger
-                      value="grocery"
+                      value="food"
                       className="text-xs px-2.5 flex items-center gap-1"
                     >
                       <ShoppingBag className="h-3 w-3" />
-                      Grocery
+                      Food
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>

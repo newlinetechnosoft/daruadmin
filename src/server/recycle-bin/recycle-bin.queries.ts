@@ -6,11 +6,11 @@ import {
   liquorImages,
   liquorCategories,
   liquorBrands,
-  groceryProducts,
-  groceryVariants,
-  groceryImages,
-  groceryCategories,
-  groceryBrands,
+  foodProducts,
+  foodVariants,
+  foodImages,
+  foodCategories,
+  foodBrands,
   dealers,
   dealerItems,
   coupons,
@@ -23,11 +23,11 @@ import { desc, eq, lte } from 'drizzle-orm'
 export interface MoveToRecycleBinParams {
   entityType:
     | 'liquor_product'
-    | 'grocery_product'
+    | 'food_product'
     | 'liquor_category'
-    | 'grocery_category'
+    | 'food_category'
     | 'liquor_brand'
-    | 'grocery_brand'
+    | 'food_brand'
     | 'dealer'
     | 'coupon'
     | 'banner'
@@ -289,22 +289,22 @@ export async function restoreRecycleBinItemQuery(
         break
       }
 
-      case 'grocery_product': {
+      case 'food_product': {
         const { product, variants, images, dealerItems: dItems } = data
         if (!product) throw new Error('Invalid product data in Recycle Bin')
 
         // Check category exists
         let targetCategoryId = product.categoryId
         const catExists = await tx
-          .select({ id: groceryCategories.id })
-          .from(groceryCategories)
-          .where(eq(groceryCategories.id, targetCategoryId))
+          .select({ id: foodCategories.id })
+          .from(foodCategories)
+          .where(eq(foodCategories.id, targetCategoryId))
           .limit(1)
 
         if (catExists.length === 0) {
           const fallbackCat = await tx
-            .select({ id: groceryCategories.id })
-            .from(groceryCategories)
+            .select({ id: foodCategories.id })
+            .from(foodCategories)
             .limit(1)
           if (fallbackCat.length > 0) {
             targetCategoryId = fallbackCat[0].id
@@ -314,9 +314,9 @@ export async function restoreRecycleBinItemQuery(
         // Check unique slug collision
         let targetSlug = product.slug
         const slugExists = await tx
-          .select({ id: groceryProducts.id })
-          .from(groceryProducts)
-          .where(eq(groceryProducts.slug, targetSlug))
+          .select({ id: foodProducts.id })
+          .from(foodProducts)
+          .where(eq(foodProducts.slug, targetSlug))
           .limit(1)
 
         if (slugExists.length > 0) {
@@ -324,7 +324,7 @@ export async function restoreRecycleBinItemQuery(
         }
 
         // Restore product
-        await tx.insert(groceryProducts).values({
+        await tx.insert(foodProducts).values({
           id: product.id,
           name: product.name,
           slug: targetSlug,
@@ -346,15 +346,15 @@ export async function restoreRecycleBinItemQuery(
           for (const v of variants) {
             let variantSku = v.sku
             const skuExists = await tx
-              .select({ id: groceryVariants.id })
-              .from(groceryVariants)
-              .where(eq(groceryVariants.sku, variantSku))
+              .select({ id: foodVariants.id })
+              .from(foodVariants)
+              .where(eq(foodVariants.sku, variantSku))
               .limit(1)
             if (skuExists.length > 0) {
               variantSku = `${v.sku}-restored`
             }
 
-            await tx.insert(groceryVariants).values({
+            await tx.insert(foodVariants).values({
               id: v.id,
               productId: product.id,
               name: v.name,
@@ -374,7 +374,7 @@ export async function restoreRecycleBinItemQuery(
 
         // Restore images
         if (Array.isArray(images) && images.length > 0) {
-          await tx.insert(groceryImages).values(
+          await tx.insert(foodImages).values(
             images.map((img: any) => ({
               id: img.id,
               productId: product.id,
@@ -393,7 +393,7 @@ export async function restoreRecycleBinItemQuery(
               await tx.insert(dealerItems).values({
                 id: di.id || crypto.randomUUID(),
                 dealerId: di.dealerId,
-                catalogType: 'grocery',
+                catalogType: 'food',
                 productId: product.id,
                 costPrice: di.costPrice || 0,
                 isAvailable: di.isAvailable !== false,
@@ -434,20 +434,20 @@ export async function restoreRecycleBinItemQuery(
         break
       }
 
-      case 'grocery_category': {
+      case 'food_category': {
         const cat = data.category || data
         let targetSlug = cat.slug
         const slugExists = await tx
-          .select({ id: groceryCategories.id })
-          .from(groceryCategories)
-          .where(eq(groceryCategories.slug, targetSlug))
+          .select({ id: foodCategories.id })
+          .from(foodCategories)
+          .where(eq(foodCategories.slug, targetSlug))
           .limit(1)
 
         if (slugExists.length > 0) {
           targetSlug = `${cat.slug}-restored`
         }
 
-        await tx.insert(groceryCategories).values({
+        await tx.insert(foodCategories).values({
           id: cat.id,
           name: cat.name,
           slug: targetSlug,
@@ -489,20 +489,20 @@ export async function restoreRecycleBinItemQuery(
         break
       }
 
-      case 'grocery_brand': {
+      case 'food_brand': {
         const brand = data.brand || data
         let targetSlug = brand.slug
         const slugExists = await tx
-          .select({ id: groceryBrands.id })
-          .from(groceryBrands)
-          .where(eq(groceryBrands.slug, targetSlug))
+          .select({ id: foodBrands.id })
+          .from(foodBrands)
+          .where(eq(foodBrands.slug, targetSlug))
           .limit(1)
 
         if (slugExists.length > 0) {
           targetSlug = `${brand.slug}-restored`
         }
 
-        await tx.insert(groceryBrands).values({
+        await tx.insert(foodBrands).values({
           id: brand.id,
           name: brand.name,
           slug: targetSlug,

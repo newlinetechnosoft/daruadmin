@@ -77,7 +77,7 @@ export const orderItems = pgTable(
     orderId: text('order_id')
       .notNull()
       .references(() => orders.id, { onDelete: 'cascade' }),
-    catalogType: text('catalog_type').notNull(), // 'liquor' | 'grocery'
+    catalogType: text('catalog_type').notNull(), // 'liquor' | 'food'
     productId: text('product_id').notNull(),
     variantId: text('variant_id').notNull(),
     name: text('name').notNull(),

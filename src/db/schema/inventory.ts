@@ -53,7 +53,7 @@ export const dealerItems = pgTable(
     dealerId: text('dealer_id')
       .notNull()
       .references(() => dealers.id, { onDelete: 'cascade' }),
-    catalogType: text('catalog_type').notNull(), // 'liquor' | 'grocery'
+    catalogType: text('catalog_type').notNull(), // 'liquor' | 'food'
     productId: uuid('product_id').notNull(),
     costPrice: integer('cost_price').notNull().default(0), // in paisa
     isAvailable: boolean('is_available').notNull().default(true),
@@ -82,7 +82,7 @@ export const dealerPriceHistory = pgTable(
     dealerId: text('dealer_id')
       .notNull()
       .references(() => dealers.id, { onDelete: 'cascade' }),
-    catalogType: text('catalog_type').notNull(), // 'liquor' | 'grocery'
+    catalogType: text('catalog_type').notNull(), // 'liquor' | 'food'
     productId: uuid('product_id').notNull(),
     costPrice: integer('cost_price').notNull(), // paisa
     effectiveFrom: timestamp('effective_from', { withTimezone: true })
@@ -109,7 +109,7 @@ export const dealerStock = pgTable(
     dealerId: text('dealer_id')
       .notNull()
       .references(() => dealers.id, { onDelete: 'cascade' }),
-    catalogType: text('catalog_type').notNull(), // 'liquor' | 'grocery'
+    catalogType: text('catalog_type').notNull(), // 'liquor' | 'food'
     variantId: text('variant_id').notNull(),
     qty: integer('qty').notNull().default(0),
     costPrice: integer('cost_price').notNull().default(0), // paisa
@@ -133,7 +133,7 @@ export const stockMovements = pgTable(
   'stock_movements',
   {
     id: text('id').primaryKey(),
-    catalogType: text('catalog_type').notNull(), // 'liquor' | 'grocery'
+    catalogType: text('catalog_type').notNull(), // 'liquor' | 'food'
     variantId: text('variant_id').notNull(),
     dealerId: text('dealer_id').references(() => dealers.id, {
       onDelete: 'set null',

@@ -37,7 +37,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-type CatalogTab = 'liquor' | 'grocery'
+type CatalogTab = 'liquor' | 'food'
 
 export function BrandsPanel() {
   const queryClient = useQueryClient()
@@ -67,8 +67,8 @@ export function BrandsPanel() {
   const [isDeleting, setIsDeleting] = useState(false)
 
   const liquorBrands = brandsData.liquorBrands as unknown as BrandData[]
-  const groceryBrands = brandsData.groceryBrands as unknown as BrandData[]
-  const currentBrands = activeTab === 'liquor' ? liquorBrands : groceryBrands
+  const foodBrands = brandsData.foodBrands as unknown as BrandData[]
+  const currentBrands = activeTab === 'liquor' ? liquorBrands : foodBrands
 
   // Filter fields config
   const filterableFields: FilterableField[] = [
@@ -135,7 +135,7 @@ export function BrandsPanel() {
       await deleteItemFn({
         data: {
           catalogType:
-            activeTab === 'liquor' ? 'liquor-brand' : 'grocery-brand',
+            activeTab === 'liquor' ? 'liquor-brand' : 'food-brand',
           id: deleteTarget.id,
         },
       })
@@ -291,7 +291,7 @@ export function BrandsPanel() {
       <PageHeader
         kicker="Catalog Management"
         title="Brands"
-        description="Master brand directory for liquor and grocery product catalogs."
+        description="Master brand directory for liquor and food product catalogs."
         count={filteredBrands.length}
         actions={
           canCreate && (
@@ -342,13 +342,13 @@ export function BrandsPanel() {
                 </span>
               </TabsTrigger>
               <TabsTrigger
-                value="grocery"
+                value="food"
                 className="h-7 text-xs gap-1.5 data-[state=active]:bg-background"
               >
                 <ShoppingBag className="size-3.5" />
-                <span>Grocery Brands</span>
+                <span>Food Brands</span>
                 <span className="font-mono text-xs text-muted-foreground ml-1">
-                  ({groceryBrands.length})
+                  ({foodBrands.length})
                 </span>
               </TabsTrigger>
             </TabsList>

@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
 import {
-  upsertGroceryProductFn,
+  upsertFoodProductFn,
   toggleProductStatusFn,
   deleteItemFn,
   deleteProductImageFn,
@@ -62,7 +62,7 @@ import {
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { EmptyState } from '#/components/shared/empty-state'
 
-interface GroceryVariantItem {
+interface FoodVariantItem {
   id?: string
   name: string
   unit: string
@@ -74,13 +74,13 @@ interface GroceryVariantItem {
   isActive: boolean
 }
 
-export function GroceryPanel() {
+export function FoodPanel() {
   const queryClient = useQueryClient()
   const {
     data: products,
     isFetching,
     refetch,
-  } = useSuspenseQuery(adminQueries.groceryProducts())
+  } = useSuspenseQuery(adminQueries.foodProducts())
   const { data: taxonomy } = useSuspenseQuery(adminQueries.taxonomy())
   const { data: access } = useSuspenseQuery(adminQueries.access())
 
@@ -114,7 +114,7 @@ export function GroceryPanel() {
     try {
       await deleteItemFn({
         data: {
-          catalogType: 'grocery-brand',
+          catalogType: 'food-brand',
           id: deleteBrandTarget.id,
         },
       })
@@ -126,7 +126,7 @@ export function GroceryPanel() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'brands'] }),
         queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] }),
-        queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin', 'food'] }),
       ])
     } catch (err: any) {
       toast.error(err?.message || 'Failed to delete brand')
@@ -153,7 +153,7 @@ export function GroceryPanel() {
   const [formDealerIds, setFormDealerIds] = useState<string[]>([])
   const [dealerDialogOpen, setDealerDialogOpen] = useState(false)
 
-  const [formVariants, setFormVariants] = useState<GroceryVariantItem[]>([
+  const [formVariants, setFormVariants] = useState<FoodVariantItem[]>([
     {
       name: 'Pack of 1',
       unit: 'pack',
@@ -201,7 +201,7 @@ export function GroceryPanel() {
     setEditingId(null)
     setFormName('')
     setFormSlug('')
-    setFormCategoryId(taxonomy.groceryCategories[0]?.id ?? '')
+    setFormCategoryId(taxonomy.foodCategories[0]?.id ?? '')
     setFormBrandId('')
     setFormDescription('')
     setFormImageUrl('')
@@ -217,7 +217,7 @@ export function GroceryPanel() {
         name: 'Pack of 1',
         unit: 'pack',
         quantity: '1.00',
-        sku: 'GROC-' + Math.floor(1000 + Math.random() * 9000),
+        sku: 'FOOD-' + Math.floor(1000 + Math.random() * 9000),
         price: 150,
         mrp: 180,
         stock: 50,
@@ -315,7 +315,7 @@ export function GroceryPanel() {
         formImageUrl.trim() ||
         null
 
-      await upsertGroceryProductFn({
+      await upsertFoodProductFn({
         data: {
           id: editingId ?? undefined,
           name: formName.trim(),
@@ -335,7 +335,7 @@ export function GroceryPanel() {
             name: v.name.trim(),
             unit: v.unit.trim() || 'pack',
             quantity: String(v.quantity || '1.00'),
-            sku: v.sku.trim() || `GROC-${Date.now()}`,
+            sku: v.sku.trim() || `FOOD-${Date.now()}`,
             price: toPaisa(v.price),
             mrp: v.mrp ? toPaisa(v.mrp) : null,
             stock: Number(v.stock),
@@ -345,17 +345,17 @@ export function GroceryPanel() {
       })
 
       toast.success(
-        editingId ? 'Grocery item updated!' : 'Grocery item created!',
+        editingId ? 'Food item updated!' : 'Food item created!',
       )
       setModalOpen(false)
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'food'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'dealers'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
       await queryClient.invalidateQueries({ queryKey: ['catalog'] })
       await queryClient.invalidateQueries({ queryKey: ['storefront'] })
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to save grocery product')
+      toast.error(err?.message || 'Failed to save food product')
     } finally {
       setIsSubmitting(false)
     }
@@ -369,14 +369,14 @@ export function GroceryPanel() {
     try {
       await toggleProductStatusFn({
         data: {
-          catalogType: 'grocery',
+          catalogType: 'food',
           id,
           field,
           value: !currentVal,
         },
       })
       toast.success('Updated status')
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'food'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
       await queryClient.invalidateQueries({ queryKey: ['catalog'] })
       await queryClient.invalidateQueries({ queryKey: ['storefront'] })
@@ -390,23 +390,23 @@ export function GroceryPanel() {
     try {
       await deleteItemFn({
         data: {
-          catalogType: 'grocery',
+          catalogType: 'food',
           id: deleteTarget.id,
         },
       })
-      toast.success('Grocery product deleted')
+      toast.success('Food product deleted')
       setDeleteTarget(null)
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'food'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
       await queryClient.invalidateQueries({ queryKey: ['catalog'] })
       await queryClient.invalidateQueries({ queryKey: ['storefront'] })
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to delete grocery product')
+      toast.error(err?.message || 'Failed to delete food product')
     }
   }
 
-  const updateVariant = (i: number, patch: Partial<GroceryVariantItem>) =>
+  const updateVariant = (i: number, patch: Partial<FoodVariantItem>) =>
     setFormVariants((prev) =>
       prev.map((item, idx) => (idx === i ? { ...item, ...patch } : item)),
     )
@@ -415,13 +415,13 @@ export function GroceryPanel() {
     <div className="space-y-6">
       <PageHeader
         kicker="Catalog"
-        title="Grocery and munchies"
+        title="Food and snacks"
         description="Manage snacks, chips, party ice, mixers, energy drinks, and midnight snacks."
         actions={
           <div className="flex items-center gap-2">
             <DataRefreshButton
               queryKeys={[
-                adminQueries.groceryProducts().queryKey,
+                adminQueries.foodProducts().queryKey,
                 adminQueries.taxonomy().queryKey,
               ]}
               onRefresh={() => refetch()}
@@ -437,7 +437,7 @@ export function GroceryPanel() {
               className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add grocery SKU
+              Add food SKU
             </Button>
           </div>
         }
@@ -462,9 +462,9 @@ export function GroceryPanel() {
           className="h-9 text-xs sm:text-sm font-medium"
         >
           <NativeSelectOption value="all">
-            All categories ({taxonomy.groceryCategories.length})
+            All categories ({taxonomy.foodCategories.length})
           </NativeSelectOption>
-          {taxonomy.groceryCategories.map((c) => (
+          {taxonomy.foodCategories.map((c) => (
             <NativeSelectOption key={c.id} value={c.id}>
               {c.name}
             </NativeSelectOption>
@@ -479,9 +479,9 @@ export function GroceryPanel() {
             className="h-9 text-xs sm:text-sm font-medium"
           >
             <NativeSelectOption value="all">
-              All brands ({taxonomy.groceryBrands.length})
+              All brands ({taxonomy.foodBrands.length})
             </NativeSelectOption>
-            {taxonomy.groceryBrands.map((b) => (
+            {taxonomy.foodBrands.map((b) => (
               <NativeSelectOption key={b.id} value={b.id}>
                 {b.name}
               </NativeSelectOption>
@@ -493,7 +493,7 @@ export function GroceryPanel() {
               variant="outline"
               size="sm"
               className="h-9 px-3 text-xs shrink-0"
-              title="Add new grocery brand"
+              title="Add new food brand"
               onClick={() => {
                 setEditingBrand(null)
                 setBrandDialogOpen(true)
@@ -533,7 +533,7 @@ export function GroceryPanel() {
                 <TableRow>
                   <TableCell colSpan={5} className="p-0">
                     <EmptyState
-                      title="No matching grocery products found"
+                      title="No matching food products found"
                       description="Try adjusting your filter or search query."
                     />
                   </TableCell>
@@ -715,7 +715,7 @@ export function GroceryPanel() {
           >
             <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
               <DialogTitle className="text-sm font-semibold">
-                {editingId ? 'Edit grocery item' : 'New grocery item'}
+                {editingId ? 'Edit food item' : 'New food item'}
               </DialogTitle>
               <DialogDescription className="text-xs">
                 Manage snack items, mixers, package sizes, and stock.
@@ -724,11 +724,11 @@ export function GroceryPanel() {
 
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 click-scroll">
               <div className="space-y-1.5">
-                <Label htmlFor="gro-name" className="text-xs">
+                <Label htmlFor="food-name" className="text-xs">
                   Item name *
                 </Label>
                 <Input
-                  id="gro-name"
+                  id="food-name"
                   required
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
@@ -739,18 +739,18 @@ export function GroceryPanel() {
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="gro-cat" className="text-xs">
+                  <Label htmlFor="food-cat" className="text-xs">
                     Category *
                   </Label>
                   <NativeSelect
-                    id="gro-cat"
+                    id="food-cat"
                     value={formCategoryId}
                     onChange={(e) => setFormCategoryId(e.target.value)}
                     required
                     size="sm"
                     className="w-full text-xs"
                   >
-                    {taxonomy.groceryCategories.map((c) => (
+                    {taxonomy.foodCategories.map((c) => (
                       <NativeSelectOption key={c.id} value={c.id}>
                         {c.name}
                       </NativeSelectOption>
@@ -760,7 +760,7 @@ export function GroceryPanel() {
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="gro-brand" className="text-xs">
+                    <Label htmlFor="food-brand" className="text-xs">
                       Brand (optional)
                     </Label>
                     {canCreateBrand && (
@@ -781,7 +781,7 @@ export function GroceryPanel() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <NativeSelect
-                      id="gro-brand"
+                      id="food-brand"
                       value={formBrandId}
                       onChange={(e) => setFormBrandId(e.target.value)}
                       size="sm"
@@ -790,7 +790,7 @@ export function GroceryPanel() {
                       <NativeSelectOption value="">
                         No specific brand
                       </NativeSelectOption>
-                      {taxonomy.groceryBrands.map((b) => (
+                      {taxonomy.foodBrands.map((b) => (
                         <NativeSelectOption key={b.id} value={b.id}>
                           {b.name}
                         </NativeSelectOption>
@@ -806,7 +806,7 @@ export function GroceryPanel() {
                             className="h-8 px-2 text-xs"
                             title="Edit selected brand"
                             onClick={() => {
-                              const found = taxonomy.groceryBrands.find(
+                              const found = taxonomy.foodBrands.find(
                                 (b) => b.id === formBrandId,
                               )
                               if (found) {
@@ -826,7 +826,7 @@ export function GroceryPanel() {
                             className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
                             title="Delete selected brand"
                             onClick={() => {
-                              const found = taxonomy.groceryBrands.find(
+                              const found = taxonomy.foodBrands.find(
                                 (b) => b.id === formBrandId,
                               )
                               if (found) {
@@ -844,11 +844,11 @@ export function GroceryPanel() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="gro-slug" className="text-xs">
+                <Label htmlFor="food-slug" className="text-xs">
                   URL slug (optional)
                 </Label>
                 <Input
-                  id="gro-slug"
+                  id="food-slug"
                   value={formSlug}
                   onChange={(e) => setFormSlug(e.target.value)}
                   placeholder="auto-generated-from-name"
@@ -865,7 +865,7 @@ export function GroceryPanel() {
                       Supplying Dealers
                     </Label>
                     <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                      Select dealers who supply and fulfill this grocery item.
+                      Select dealers who supply and fulfill this food item.
                     </p>
                   </div>
                   <Button
@@ -955,32 +955,32 @@ export function GroceryPanel() {
                 </Label>
                 <ImageUploader
                   ref={imageUploaderRef}
-                  draftKey={`grocery-${editingId || 'new'}`}
+                  draftKey={`food-${editingId || 'new'}`}
                   existingImages={existingImagesList}
                   onDeleteExisting={async (img) => {
                     if (img.id) {
                       await deleteProductImageFn({
                         data: {
-                          catalogType: 'grocery',
+                          catalogType: 'food',
                           imageId: img.id,
                           imageUrl: img.url,
                         },
                       })
                       await queryClient.invalidateQueries({
-                        queryKey: ['admin', 'grocery'],
+                        queryKey: ['admin', 'food'],
                       })
                     }
                   }}
-                  prefix="products/grocery"
+                  prefix="products/food"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="gro-desc" className="text-xs">
+                <Label htmlFor="food-desc" className="text-xs">
                   Description
                 </Label>
                 <Textarea
-                  id="gro-desc"
+                  id="food-desc"
                   rows={2}
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
@@ -991,14 +991,14 @@ export function GroceryPanel() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="gro-custom-badge" className="text-xs">
+                  <Label htmlFor="food-custom-badge" className="text-xs">
                     Custom Badge Label{' '}
                     <span className="text-muted-foreground font-normal">
                       (optional)
                     </span>
                   </Label>
                   <Input
-                    id="gro-custom-badge"
+                    id="food-custom-badge"
                     value={formCustomBadge}
                     onChange={(e) => setFormCustomBadge(e.target.value)}
                     placeholder="e.g. Popular, Top Pick, Organic"
@@ -1010,14 +1010,14 @@ export function GroceryPanel() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="gro-custom-discount" className="text-xs">
+                  <Label htmlFor="food-custom-discount" className="text-xs">
                     Custom Discount Label{' '}
                     <span className="text-muted-foreground font-normal">
                       (optional)
                     </span>
                   </Label>
                   <Input
-                    id="gro-custom-discount"
+                    id="food-custom-discount"
                     value={formCustomDiscountLabel}
                     onChange={(e) => setFormCustomDiscountLabel(e.target.value)}
                     placeholder="e.g. 86% off, Special Offer, Save Rs 500"
@@ -1208,7 +1208,7 @@ export function GroceryPanel() {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Delete grocery item"
+        title="Delete food item"
         description={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
         confirmLabel="Delete"
         tone="destructive"
@@ -1219,7 +1219,7 @@ export function GroceryPanel() {
       <BrandDialog
         open={brandDialogOpen}
         onOpenChange={setBrandDialogOpen}
-        catalogType="grocery"
+        catalogType="food"
         brand={editingBrand}
         onSuccess={(saved) => {
           if (saved.id) {

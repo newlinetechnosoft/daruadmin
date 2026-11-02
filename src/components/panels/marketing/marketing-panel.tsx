@@ -103,7 +103,7 @@ export function MarketingPanel() {
     imageUrl:
       'https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=800&auto=format&fit=crop&q=80',
     href: '/drinks',
-    placement: 'home' as 'home' | 'drinks' | 'grocery',
+    placement: 'home' as 'home' | 'drinks' | 'food',
     active: true,
   })
 
@@ -937,13 +937,13 @@ export function MarketingPanel() {
                       setBannerForm({
                         ...bannerForm,
                         placement: e.target.value as
-                          'home' | 'drinks' | 'grocery',
+                          'home' | 'drinks' | 'food',
                       })
                     }
                   >
                     <option value="home">Homepage Hero</option>
                     <option value="drinks">Liquor Drinks Catalog</option>
-                    <option value="grocery">Grocery Catalog</option>
+                    <option value="food">Food Catalog</option>
                   </NativeSelect>
                 </div>
                 <div className="space-y-1.5">

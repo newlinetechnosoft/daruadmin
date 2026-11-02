@@ -10,8 +10,8 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
-export const groceryCategories = pgTable(
-  'grocery_categories',
+export const foodCategories = pgTable(
+  'food_categories',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     name: text('name').notNull(),
@@ -29,11 +29,11 @@ export const groceryCategories = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index('grocery_categories_slug_idx').on(table.slug)],
+  (table) => [index('food_categories_slug_idx').on(table.slug)],
 )
 
-export const groceryBrands = pgTable(
-  'grocery_brands',
+export const foodBrands = pgTable(
+  'food_brands',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     name: text('name').notNull(),
@@ -50,19 +50,19 @@ export const groceryBrands = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index('grocery_brands_slug_idx').on(table.slug)],
+  (table) => [index('food_brands_slug_idx').on(table.slug)],
 )
 
-export const groceryProducts = pgTable(
-  'grocery_products',
+export const foodProducts = pgTable(
+  'food_products',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     name: text('name').notNull(),
     slug: text('slug').notNull().unique(),
     categoryId: uuid('category_id')
       .notNull()
-      .references(() => groceryCategories.id, { onDelete: 'cascade' }),
-    brandId: uuid('brand_id').references(() => groceryBrands.id, {
+      .references(() => foodCategories.id, { onDelete: 'cascade' }),
+    brandId: uuid('brand_id').references(() => foodBrands.id, {
       onDelete: 'set null',
     }),
     description: text('description'),
@@ -79,19 +79,19 @@ export const groceryProducts = pgTable(
       .notNull(),
   },
   (table) => [
-    index('grocery_products_slug_idx').on(table.slug),
-    index('grocery_products_category_idx').on(table.categoryId),
-    index('grocery_products_brand_idx').on(table.brandId),
+    index('food_products_slug_idx').on(table.slug),
+    index('food_products_category_idx').on(table.categoryId),
+    index('food_products_brand_idx').on(table.brandId),
   ],
 )
 
-export const groceryVariants = pgTable(
-  'grocery_variants',
+export const foodVariants = pgTable(
+  'food_variants',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     productId: uuid('product_id')
       .notNull()
-      .references(() => groceryProducts.id, { onDelete: 'cascade' }),
+      .references(() => foodProducts.id, { onDelete: 'cascade' }),
     name: text('name').notNull(), // e.g. "Pack of 1", "500 g", "1 kg"
     unit: text('unit').notNull(), // e.g. "g", "kg", "pcs", "pack"
     quantity: numeric('quantity', { precision: 8, scale: 2 }).notNull(),
@@ -110,18 +110,18 @@ export const groceryVariants = pgTable(
       .notNull(),
   },
   (table) => [
-    index('grocery_variants_product_idx').on(table.productId),
-    index('grocery_variants_sku_idx').on(table.sku),
+    index('food_variants_product_idx').on(table.productId),
+    index('food_variants_sku_idx').on(table.sku),
   ],
 )
 
-export const groceryImages = pgTable(
-  'grocery_images',
+export const foodImages = pgTable(
+  'food_images',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     productId: uuid('product_id')
       .notNull()
-      .references(() => groceryProducts.id, { onDelete: 'cascade' }),
+      .references(() => foodProducts.id, { onDelete: 'cascade' }),
     url: text('url').notNull(),
     alt: text('alt'),
     sortOrder: integer('sort_order').default(0).notNull(),
@@ -134,49 +134,49 @@ export const groceryImages = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index('grocery_images_product_idx').on(table.productId)],
+  (table) => [index('food_images_product_idx').on(table.productId)],
 )
 
-export const groceryCategoriesRelations = relations(
-  groceryCategories,
+export const foodCategoriesRelations = relations(
+  foodCategories,
   ({ many }) => ({
-    products: many(groceryProducts),
+    products: many(foodProducts),
   }),
 )
 
-export const groceryProductsRelations = relations(
-  groceryProducts,
+export const foodProductsRelations = relations(
+  foodProducts,
   ({ one, many }) => ({
-    category: one(groceryCategories, {
-      fields: [groceryProducts.categoryId],
-      references: [groceryCategories.id],
+    category: one(foodCategories, {
+      fields: [foodProducts.categoryId],
+      references: [foodCategories.id],
     }),
-    brand: one(groceryBrands, {
-      fields: [groceryProducts.brandId],
-      references: [groceryBrands.id],
+    brand: one(foodBrands, {
+      fields: [foodProducts.brandId],
+      references: [foodBrands.id],
     }),
-    variants: many(groceryVariants),
-    images: many(groceryImages),
+    variants: many(foodVariants),
+    images: many(foodImages),
   }),
 )
 
-export const groceryBrandsRelations = relations(groceryBrands, ({ many }) => ({
-  products: many(groceryProducts),
+export const foodBrandsRelations = relations(foodBrands, ({ many }) => ({
+  products: many(foodProducts),
 }))
 
-export const groceryVariantsRelations = relations(
-  groceryVariants,
+export const foodVariantsRelations = relations(
+  foodVariants,
   ({ one }) => ({
-    product: one(groceryProducts, {
-      fields: [groceryVariants.productId],
-      references: [groceryProducts.id],
+    product: one(foodProducts, {
+      fields: [foodVariants.productId],
+      references: [foodProducts.id],
     }),
   }),
 )
 
-export const groceryImagesRelations = relations(groceryImages, ({ one }) => ({
-  product: one(groceryProducts, {
-    fields: [groceryImages.productId],
-    references: [groceryProducts.id],
+export const foodImagesRelations = relations(foodImages, ({ one }) => ({
+  product: one(foodProducts, {
+    fields: [foodImages.productId],
+    references: [foodProducts.id],
   }),
 }))

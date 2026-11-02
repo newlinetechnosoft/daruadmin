@@ -20,7 +20,7 @@ import {
   getPublicDeliverySettingsFn,
 } from '#/server/operations/operations.functions'
 import {
-  getAdminGroceryProductsFn,
+  getAdminFoodProductsFn,
   getAdminLiquorProductsFn,
   getAdminUsersFn,
   getAllTaxonomyFn,
@@ -162,10 +162,10 @@ export const adminQueries = {
       staleTime: 1000 * 60 * 2,
     }),
 
-  groceryProducts: () =>
+  foodProducts: () =>
     queryOptions({
-      queryKey: ['admin', 'grocery'],
-      queryFn: () => getAdminGroceryProductsFn(),
+      queryKey: ['admin', 'food'],
+      queryFn: () => getAdminFoodProductsFn(),
       staleTime: 1000 * 60 * 2,
     }),
 

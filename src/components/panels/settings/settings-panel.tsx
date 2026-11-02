@@ -88,7 +88,7 @@ export function SettingsPanel() {
     isFetching,
     refetch,
   } = useSuspenseQuery(adminQueries.settings())
-  const { ops, liquor, grocery } = settingsData
+  const { ops, liquor, food } = settingsData
 
   const invalidateSettings = async () => {
     await queryClient.invalidateQueries({
@@ -205,7 +205,7 @@ export function SettingsPanel() {
     }))
   }
 
-  const totalCatalogItems = liquor.length + grocery.length
+  const totalCatalogItems = liquor.length + food.length
 
   return (
     <div className="space-y-6">

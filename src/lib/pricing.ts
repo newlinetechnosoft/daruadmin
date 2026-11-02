@@ -1,7 +1,7 @@
 import { vatFromInclusive, DEFAULT_NEPAL_VAT_RATE } from './tax'
 
 export interface PricingItemInput {
-  catalogType: 'liquor' | 'grocery'
+  catalogType: 'liquor' | 'food'
   productId: string
   variantId: string
   name: string

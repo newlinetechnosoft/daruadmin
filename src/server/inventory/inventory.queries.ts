@@ -6,11 +6,11 @@ import {
   dealerPriceHistory,
   stockMovements,
   liquorProducts,
-  groceryProducts,
+  foodProducts,
   liquorCategories,
-  groceryCategories,
+  foodCategories,
   liquorBrands,
-  groceryBrands,
+  foodBrands,
   orderItems,
 } from '#/db/schema'
 import { desc, eq, and, isNotNull } from 'drizzle-orm'
@@ -23,7 +23,7 @@ import type {
 
 export interface AssignedItemDto {
   id: string
-  catalogType: 'liquor' | 'grocery'
+  catalogType: 'liquor' | 'food'
   productId: string
   productName: string
   categoryName?: string | null
@@ -67,7 +67,7 @@ export interface DealerDto {
 
 export interface StockMovementDto {
   id: string
-  catalogType: 'liquor' | 'grocery'
+  catalogType: 'liquor' | 'food'
   variantId: string
   dealerId: string | null
   delta: number
@@ -81,14 +81,14 @@ export interface StockMovementDto {
 
 export interface CatalogItemSummary {
   id: string
-  catalogType: 'liquor' | 'grocery'
+  catalogType: 'liquor' | 'food'
   name: string
   categoryName?: string | null
   brandName?: string | null
 }
 
 export async function getAllDealersQuery(): Promise<DealerDto[]> {
-  const [dealerRows, itemRows, liquorList, groceryList, orderItemRows] =
+  const [dealerRows, itemRows, liquorList, foodList, orderItemRows] =
     await Promise.all([
       db.select().from(dealers).orderBy(desc(dealers.createdAt)),
       db.select().from(dealerItems),
@@ -107,17 +107,17 @@ export async function getAllDealersQuery(): Promise<DealerDto[]> {
         .leftJoin(liquorBrands, eq(liquorProducts.brandId, liquorBrands.id)),
       db
         .select({
-          id: groceryProducts.id,
-          name: groceryProducts.name,
-          categoryName: groceryCategories.name,
-          brandName: groceryBrands.name,
+          id: foodProducts.id,
+          name: foodProducts.name,
+          categoryName: foodCategories.name,
+          brandName: foodBrands.name,
         })
-        .from(groceryProducts)
+        .from(foodProducts)
         .leftJoin(
-          groceryCategories,
-          eq(groceryProducts.categoryId, groceryCategories.id),
+          foodCategories,
+          eq(foodProducts.categoryId, foodCategories.id),
         )
-        .leftJoin(groceryBrands, eq(groceryProducts.brandId, groceryBrands.id)),
+        .leftJoin(foodBrands, eq(foodProducts.brandId, foodBrands.id)),
       db
         .select({
           dealerId: orderItems.dealerId,
@@ -129,7 +129,7 @@ export async function getAllDealersQuery(): Promise<DealerDto[]> {
 
   // Map product metadata lookup
   const liquorMap = new Map(liquorList.map((p) => [p.id, p]))
-  const groceryMap = new Map(groceryList.map((p) => [p.id, p]))
+  const foodMap = new Map(foodList.map((p) => [p.id, p]))
 
   // Group items by dealerId
   const itemsByDealer = new Map<string, AssignedItemDto[]>()
@@ -147,7 +147,7 @@ export async function getAllDealersQuery(): Promise<DealerDto[]> {
         brandName = p.brandName ?? null
       }
     } else {
-      const p = groceryMap.get(item.productId)
+      const p = foodMap.get(item.productId)
       if (p) {
         productName = p.name
         categoryName = p.categoryName ?? null
@@ -157,7 +157,7 @@ export async function getAllDealersQuery(): Promise<DealerDto[]> {
 
     list.push({
       id: item.id,
-      catalogType: item.catalogType as 'liquor' | 'grocery',
+      catalogType: item.catalogType as 'liquor' | 'food',
       productId: item.productId,
       productName,
       categoryName,
@@ -227,7 +227,7 @@ export async function getDealerByIdQuery(
   tx?: DbTx,
 ): Promise<DealerDto | null> {
   const client = tx ?? db
-  const [dealerRows, itemRows, liquorList, groceryList] = await Promise.all([
+  const [dealerRows, itemRows, liquorList, foodList] = await Promise.all([
     client.select().from(dealers).where(eq(dealers.id, id)).limit(1),
     client.select().from(dealerItems).where(eq(dealerItems.dealerId, id)),
     client
@@ -245,24 +245,24 @@ export async function getDealerByIdQuery(
       .leftJoin(liquorBrands, eq(liquorProducts.brandId, liquorBrands.id)),
     client
       .select({
-        id: groceryProducts.id,
-        name: groceryProducts.name,
-        categoryName: groceryCategories.name,
-        brandName: groceryBrands.name,
+        id: foodProducts.id,
+        name: foodProducts.name,
+        categoryName: foodCategories.name,
+        brandName: foodBrands.name,
       })
-      .from(groceryProducts)
+      .from(foodProducts)
       .leftJoin(
-        groceryCategories,
-        eq(groceryProducts.categoryId, groceryCategories.id),
+        foodCategories,
+        eq(foodProducts.categoryId, foodCategories.id),
       )
-      .leftJoin(groceryBrands, eq(groceryProducts.brandId, groceryBrands.id)),
+      .leftJoin(foodBrands, eq(foodProducts.brandId, foodBrands.id)),
   ])
 
   if (!dealerRows[0]) return null
   const d = dealerRows[0]
 
   const liquorMap = new Map(liquorList.map((p) => [p.id, p]))
-  const groceryMap = new Map(groceryList.map((p) => [p.id, p]))
+  const foodMap = new Map(foodList.map((p) => [p.id, p]))
 
   const assigned: AssignedItemDto[] = itemRows.map((item) => {
     let productName = 'Unknown Product'
@@ -277,7 +277,7 @@ export async function getDealerByIdQuery(
         brandName = p.brandName ?? null
       }
     } else {
-      const p = groceryMap.get(item.productId)
+      const p = foodMap.get(item.productId)
       if (p) {
         productName = p.name
         categoryName = p.categoryName ?? null
@@ -287,7 +287,7 @@ export async function getDealerByIdQuery(
 
     return {
       id: item.id,
-      catalogType: item.catalogType as 'liquor' | 'grocery',
+      catalogType: item.catalogType as 'liquor' | 'food',
       productId: item.productId,
       productName,
       categoryName,
@@ -553,7 +553,7 @@ export async function assignItemDealersQuery(
 }
 
 export async function getDealersByItemQuery(
-  catalogType: 'liquor' | 'grocery',
+  catalogType: 'liquor' | 'food',
   productId: string,
 ): Promise<DealerDto[]> {
   const matches = await db
@@ -574,7 +574,7 @@ export async function getDealersByItemQuery(
 }
 
 export async function getAdminDealersWithCatalogQuery() {
-  const [dealersList, liquorList, groceryList] = await Promise.all([
+  const [dealersList, liquorList, foodList] = await Promise.all([
     getAllDealersQuery(),
     db
       .select({
@@ -593,19 +593,19 @@ export async function getAdminDealersWithCatalogQuery() {
       .orderBy(liquorProducts.name),
     db
       .select({
-        id: groceryProducts.id,
-        name: groceryProducts.name,
-        categoryName: groceryCategories.name,
-        brandName: groceryBrands.name,
+        id: foodProducts.id,
+        name: foodProducts.name,
+        categoryName: foodCategories.name,
+        brandName: foodBrands.name,
       })
-      .from(groceryProducts)
+      .from(foodProducts)
       .leftJoin(
-        groceryCategories,
-        eq(groceryProducts.categoryId, groceryCategories.id),
+        foodCategories,
+        eq(foodProducts.categoryId, foodCategories.id),
       )
-      .leftJoin(groceryBrands, eq(groceryProducts.brandId, groceryBrands.id))
-      .where(eq(groceryProducts.isActive, true))
-      .orderBy(groceryProducts.name),
+      .leftJoin(foodBrands, eq(foodProducts.brandId, foodBrands.id))
+      .where(eq(foodProducts.isActive, true))
+      .orderBy(foodProducts.name),
   ])
 
   const catalogItems: CatalogItemSummary[] = [
@@ -616,9 +616,9 @@ export async function getAdminDealersWithCatalogQuery() {
       categoryName: l.categoryName ?? null,
       brandName: l.brandName ?? null,
     })),
-    ...groceryList.map((g) => ({
+    ...foodList.map((g) => ({
       id: g.id,
-      catalogType: 'grocery' as const,
+      catalogType: 'food' as const,
       name: g.name,
       categoryName: g.categoryName ?? null,
       brandName: g.brandName ?? null,
@@ -642,7 +642,7 @@ export async function getRecentStockMovementsQuery(
 
   return rows.map((m) => ({
     id: m.id,
-    catalogType: m.catalogType as 'liquor' | 'grocery',
+    catalogType: m.catalogType as 'liquor' | 'food',
     variantId: m.variantId,
     dealerId: m.dealerId,
     delta: m.delta,

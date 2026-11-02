@@ -455,7 +455,7 @@ export function AccountsPanel() {
       orderDate: string
       itemId: string
       itemName: string
-      catalogType: 'liquor' | 'grocery'
+      catalogType: 'liquor' | 'food'
       qty: number
       unitPrice: number
       lineTotal: number
@@ -646,13 +646,13 @@ export function AccountsPanel() {
   )
 
   let liquorRevenue = 0
-  let groceryRevenue = 0
+  let foodRevenue = 0
   for (const order of dateFilteredOrders) {
     for (const item of order.items) {
       if (item.catalogType === 'liquor') {
         liquorRevenue += item.lineTotal
       } else {
-        groceryRevenue += item.lineTotal
+        foodRevenue += item.lineTotal
       }
     }
   }
@@ -2537,13 +2537,13 @@ export function AccountsPanel() {
 
             {/* Catalog & Payment Breakdown Cards */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {/* Catalog Breakdown: Liquor vs Grocery */}
+              {/* Catalog Breakdown: Liquor vs Food */}
               <Card className="p-4 space-y-4">
                 <CardHeader className="p-0 pb-2 border-b border-border">
                   <CardTitle className="text-xs font-semibold flex items-center justify-between">
                     <span>Catalog Performance Breakdown</span>
                     <span className="text-xs font-normal text-muted-foreground">
-                      Liquor vs Grocery Revenue
+                      Liquor vs Food Revenue
                     </span>
                   </CardTitle>
                 </CardHeader>
@@ -2561,8 +2561,8 @@ export function AccountsPanel() {
                     </div>
                     <Progress
                       value={
-                        liquorRevenue + groceryRevenue > 0
-                          ? (liquorRevenue / (liquorRevenue + groceryRevenue)) *
+                        liquorRevenue + foodRevenue > 0
+                          ? (liquorRevenue / (liquorRevenue + foodRevenue)) *
                             100
                           : 50
                       }
@@ -2574,17 +2574,17 @@ export function AccountsPanel() {
                     <div className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-1.5 font-medium text-foreground">
                         <ShoppingBag className="h-3.5 w-3.5 text-emerald-500" />
-                        Grocery Catalog Revenue
+                        Food Catalog Revenue
                       </span>
                       <span className="font-mono font-semibold text-foreground">
-                        {formatNPR(groceryRevenue)}
+                        {formatNPR(foodRevenue)}
                       </span>
                     </div>
                     <Progress
                       value={
-                        liquorRevenue + groceryRevenue > 0
-                          ? (groceryRevenue /
-                              (liquorRevenue + groceryRevenue)) *
+                        liquorRevenue + foodRevenue > 0
+                          ? (foodRevenue /
+                              (liquorRevenue + foodRevenue)) *
                             100
                           : 50
                       }
@@ -3232,7 +3232,7 @@ export function AccountsPanel() {
                       0,
                     ),
                 )}
-                note="Liquor, grocery, delivery"
+                note="Liquor, food, delivery"
                 icon={TrendingUp}
                 tone="success"
               />
@@ -3940,7 +3940,7 @@ export function AccountsPanel() {
               <div>
                 <h2 className="text-xs font-bold text-foreground uppercase">
                   {ops.settings.legalName ||
-                    'MEZMANI LIQUOR & GROCERY PVT. LTD.'}
+                    'MEZMANI LIQUOR & FOOD PVT. LTD.'}
                 </h2>
                 <p className="text-muted-foreground">
                   {ops.settings.address || 'Traffic Chowk, Butwal, Nepal'}

@@ -28,7 +28,7 @@
 | —                                                        | `__root.tsx`                     | public            | Storefront root: AgeGate, CartSheet, Toaster, SEO                         | ✅     |
 | `/`                                                      | `index.tsx`                      | public            | Home (Butwal express storefront similar to Mezmani)                       | ✅     |
 | `/drinks`                                                | `drinks.tsx`                     | public            | Drinks/Alcohol listing (filters: category, brand, query) + variant picker | ✅     |
-| `/grocery`                                               | `grocery.tsx`                    | public            | Food & Munchies listing (filters: category, query)                        | ✅     |
+| `/food`                                                  | `food.tsx`                       | public            | Food & Munchies listing (filters: category, query)                        | ✅     |
 | `/checkout`                                              | `checkout.tsx`                   | customer          | Order checkout with map pin, live total, COD / eSewa                      | ✅     |
 | `/login`, `/signup`                                      | `login.tsx`, `signup.tsx`        | public            | Better-auth sign-in & sign-up forms                                       | ✅     |
 | `/favorites`                                             | `favorites.tsx`                  | public / customer | Local IndexedDB favorites panel with optimistic toggle                    | ✅     |

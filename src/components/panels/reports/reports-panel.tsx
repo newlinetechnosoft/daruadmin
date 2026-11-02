@@ -381,7 +381,7 @@ export function ReportsPanel() {
                 <CardDescription className="text-xs">
                   Item-level margins, dealer snapshot costs, net retail
                   realization, and gross profit percentage across liquor &amp;
-                  grocery catalog lines.
+                  food catalog lines.
                 </CardDescription>
               </CardHeader>
               <CardFooter className="flex items-center justify-between border-t border-border/50 pt-4">

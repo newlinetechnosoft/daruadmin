@@ -2,9 +2,9 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import {
   listLiquorSchema,
-  listGrocerySchema,
+  listFoodSchema,
   upsertLiquorProductSchema,
-  upsertGroceryProductSchema,
+  upsertFoodProductSchema,
   toggleProductStatusSchema,
   upsertCategorySchema,
   toggleCategoryStatusSchema,
@@ -19,16 +19,16 @@ import {
   getLiquorBrandsQuery,
   getAllLiquorBrandsQuery,
   getLiquorProductsQuery,
-  getGroceryCategoriesQuery,
-  getAllGroceryCategoriesQuery,
-  getGroceryBrandsQuery,
-  getAllGroceryBrandsQuery,
-  getGroceryProductsQuery,
+  getFoodCategoriesQuery,
+  getAllFoodCategoriesQuery,
+  getFoodBrandsQuery,
+  getAllFoodBrandsQuery,
+  getFoodProductsQuery,
   getAdminStatsQuery,
   getAdminLiquorProductsQuery,
-  getAdminGroceryProductsQuery,
+  getAdminFoodProductsQuery,
   upsertLiquorProductQuery,
-  upsertGroceryProductQuery,
+  upsertFoodProductQuery,
   toggleProductStatusQuery,
   upsertCategoryQuery,
   toggleCategoryStatusQuery,
@@ -60,9 +60,9 @@ export const getLiquorBrandsFn = createServerFn({ method: 'GET' }).handler(
   },
 )
 
-export const getGroceryBrandsFn = createServerFn({ method: 'GET' }).handler(
+export const getFoodBrandsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
-    return getGroceryBrandsQuery()
+    return getFoodBrandsQuery()
   },
 )
 
@@ -72,34 +72,34 @@ export const getLiquorProductsFn = createServerFn({ method: 'GET' })
     return getLiquorProductsQuery(data)
   })
 
-export const getGroceryCategoriesFn = createServerFn({ method: 'GET' }).handler(
+export const getFoodCategoriesFn = createServerFn({ method: 'GET' }).handler(
   async () => {
-    return getGroceryCategoriesQuery()
+    return getFoodCategoriesQuery()
   },
 )
 
-export const getGroceryProductsFn = createServerFn({ method: 'GET' })
-  .validator((d: unknown) => listGrocerySchema.parse(d ?? {}))
+export const getFoodProductsFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) => listFoodSchema.parse(d ?? {}))
   .handler(async ({ data }) => {
-    return getGroceryProductsQuery(data)
+    return getFoodProductsQuery(data)
   })
 
 export const getFrontpageDataFn = createServerFn({ method: 'GET' }).handler(
   async () => {
-    const [liquorCats, groceryCats, liquorProducts, groceryProducts, brands] =
+    const [liquorCats, foodCats, liquorProducts, foodProducts, brands] =
       await Promise.all([
         getLiquorCategoriesQuery(),
-        getGroceryCategoriesQuery(),
+        getFoodCategoriesQuery(),
         getLiquorProductsQuery({ limit: 12, offset: 0 }),
-        getGroceryProductsQuery({ limit: 8, offset: 0 }),
+        getFoodProductsQuery({ limit: 8, offset: 0 }),
         getLiquorBrandsQuery(),
       ])
 
     return {
       liquorCategories: liquorCats,
-      groceryCategories: groceryCats,
+      foodCategories: foodCats,
       featuredLiquor: liquorProducts,
-      featuredGrocery: groceryProducts,
+      featuredFood: foodProducts,
       brands,
     }
   },
@@ -131,11 +131,11 @@ export const getAdminLiquorProductsFn = createServerFn({
   return getAdminLiquorProductsQuery()
 })
 
-export const getAdminGroceryProductsFn = createServerFn({
+export const getAdminFoodProductsFn = createServerFn({
   method: 'GET',
 }).handler(async () => {
-  await requirePermission('grocery', 'view')
-  return getAdminGroceryProductsQuery()
+  await requirePermission('food', 'view')
+  return getAdminFoodProductsQuery()
 })
 
 export const getAllTaxonomyFn = createServerFn({ method: 'GET' }).handler(
@@ -146,25 +146,25 @@ export const getAllTaxonomyFn = createServerFn({ method: 'GET' }).handler(
       can(grants, 'categories', 'view') ||
       can(grants, 'brands', 'view') ||
       can(grants, 'liquor', 'view') ||
-      can(grants, 'grocery', 'view')
+      can(grants, 'food', 'view')
 
     if (!canView) {
       throw new Error('403: Forbidden: Insufficient permissions for taxonomy')
     }
 
-    const [liquorCategories, groceryCategories, liquorBrands, groceryBrands] =
+    const [liquorCategories, foodCategories, liquorBrands, foodBrands] =
       await Promise.all([
         getAllLiquorCategoriesQuery(),
-        getAllGroceryCategoriesQuery(),
+        getAllFoodCategoriesQuery(),
         getAllLiquorBrandsQuery(),
-        getAllGroceryBrandsQuery(),
+        getAllFoodBrandsQuery(),
       ])
 
     return {
       liquorCategories,
-      groceryCategories,
+      foodCategories,
       liquorBrands,
-      groceryBrands,
+      foodBrands,
     }
   },
 )
@@ -172,13 +172,13 @@ export const getAllTaxonomyFn = createServerFn({ method: 'GET' }).handler(
 export const getAdminBrandsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('brands', 'view')
-    const [liquorBrands, groceryBrands] = await Promise.all([
+    const [liquorBrands, foodBrands] = await Promise.all([
       getAllLiquorBrandsQuery(),
-      getAllGroceryBrandsQuery(),
+      getAllFoodBrandsQuery(),
     ])
     return {
       liquorBrands,
-      groceryBrands,
+      foodBrands,
     }
   },
 )
@@ -198,17 +198,17 @@ export const upsertLiquorProductFn = createServerFn({ method: 'POST' })
     return result
   })
 
-export const upsertGroceryProductFn = createServerFn({ method: 'POST' })
-  .validator((d: unknown) => upsertGroceryProductSchema.parse(d))
+export const upsertFoodProductFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => upsertFoodProductSchema.parse(d))
   .handler(async ({ data }) => {
     const action = data.id ? 'edit' : 'create'
-    const { user } = await requirePermission('grocery', action)
-    const result = await upsertGroceryProductQuery(data)
+    const { user } = await requirePermission('food', action)
+    const result = await upsertFoodProductQuery(data)
     await logAudit(
       user.name,
-      'grocery',
+      'food',
       action,
-      `${action === 'create' ? 'Created' : 'Updated'} grocery product: ${data.name}`,
+      `${action === 'create' ? 'Created' : 'Updated'} food product: ${data.name}`,
     )
     return result
   })
@@ -216,7 +216,7 @@ export const upsertGroceryProductFn = createServerFn({ method: 'POST' })
 export const toggleProductStatusFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => toggleProductStatusSchema.parse(d))
   .handler(async ({ data }) => {
-    const mod: ModuleKey = data.catalogType === 'liquor' ? 'liquor' : 'grocery'
+    const mod: ModuleKey = data.catalogType === 'liquor' ? 'liquor' : 'food'
     const { user } = await requirePermission(mod, 'edit')
     const result = await toggleProductStatusQuery(data)
     await logAudit(
@@ -279,10 +279,10 @@ export const deleteItemFn = createServerFn({ method: 'POST' })
     const mod: ModuleKey =
       data.catalogType === 'liquor'
         ? 'liquor'
-        : data.catalogType === 'grocery'
-          ? 'grocery'
+        : data.catalogType === 'food'
+          ? 'food'
           : data.catalogType === 'liquor-brand' ||
-              data.catalogType === 'grocery-brand'
+              data.catalogType === 'food-brand'
             ? 'brands'
             : 'categories'
     const { user } = await requirePermission(mod, action)
@@ -412,7 +412,7 @@ export const deleteProductImageFn = createServerFn({ method: 'POST' })
 export const verifyNeonServicesFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     const { db } = await import('#/db')
-    const { liquorProducts, groceryProducts } = await import('#/db/schema')
+    const { liquorProducts, foodProducts } = await import('#/db/schema')
     const { count } = await import('drizzle-orm')
     const { putObject, getObject, deleteObject, getPresignedUrl } =
       await import('#/lib/storage')
@@ -421,9 +421,9 @@ export const verifyNeonServicesFn = createServerFn({ method: 'GET' }).handler(
     const [liquorCount] = await db
       .select({ total: count() })
       .from(liquorProducts)
-    const [groceryCount] = await db
+    const [foodCount] = await db
       .select({ total: count() })
-      .from(groceryProducts)
+      .from(foodProducts)
 
     // 2. Verify Object Storage in ap-southeast-1
     const testKey = `health-check/${Date.now()}.txt`
@@ -441,7 +441,7 @@ export const verifyNeonServicesFn = createServerFn({ method: 'GET' }).handler(
         region: 'aws-ap-southeast-1',
         counts: {
           liquorProducts: liquorCount.total,
-          groceryProducts: groceryCount.total,
+          foodProducts: foodCount.total,
         },
       },
       objectStorage: {

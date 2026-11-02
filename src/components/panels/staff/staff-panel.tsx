@@ -118,7 +118,7 @@ const MODULE_ICONS: Record<
 > = {
   dashboard: LayoutDashboard,
   liquor: Wine,
-  grocery: ShoppingBag,
+  food: ShoppingBag,
   categories: Tags,
   brands: Award,
   orders: ClipboardList,

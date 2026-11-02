@@ -12,7 +12,7 @@ export interface CartItem {
   productSlug: string
   variantId: string
   variantName: string
-  catalogType: 'liquor' | 'grocery'
+  catalogType: 'liquor' | 'food'
   price: number // in paisa
   mrp?: number | null // in paisa
   imageUrl?: string | null

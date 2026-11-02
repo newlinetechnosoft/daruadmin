@@ -198,10 +198,10 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { label: 'Liquor', to: '/admin/liquor', icon: Wine, module: 'liquor' },
       {
-        label: 'Grocery',
-        to: '/admin/grocery',
+        label: 'Food',
+        to: '/admin/food',
         icon: ShoppingBag,
-        module: 'grocery',
+        module: 'food',
       },
       {
         label: 'Categories',

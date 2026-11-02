@@ -161,7 +161,7 @@ describe('Order Totals Calculation', () => {
         unitPrice: 35000, // Rs 350 each, total 140,000 (Rs. 1,400)
       },
       {
-        catalogType: 'grocery' as const,
+        catalogType: 'food' as const,
         productId: 'prod_chips',
         variantId: 'var_chips',
         categoryId: 'cat_snacks',

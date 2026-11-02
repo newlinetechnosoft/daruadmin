@@ -174,7 +174,7 @@ export const banners = pgTable(
     title: text('title').notNull(),
     imageUrl: text('image_url').notNull(),
     href: text('href').notNull(),
-    placement: text('placement').notNull().default('home'), // 'home' | 'drinks' | 'grocery'
+    placement: text('placement').notNull().default('home'), // 'home' | 'drinks' | 'food'
     active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()

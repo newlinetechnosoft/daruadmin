@@ -1,8 +1,8 @@
 import { queryOptions } from '@tanstack/react-query'
 import {
   getFrontpageDataFn,
-  getGroceryCategoriesFn,
-  getGroceryProductsFn,
+  getFoodCategoriesFn,
+  getFoodProductsFn,
   getLiquorBrandsFn,
   getLiquorCategoriesFn,
   getLiquorProductsFn,
@@ -37,17 +37,17 @@ export const storefrontQueries = {
       staleTime: 1000 * 60 * 3,
     }),
 
-  groceryCategories: () =>
+  foodCategories: () =>
     queryOptions({
-      queryKey: ['catalog', 'grocery', 'categories'],
-      queryFn: () => getGroceryCategoriesFn(),
+      queryKey: ['catalog', 'food', 'categories'],
+      queryFn: () => getFoodCategoriesFn(),
       staleTime: 1000 * 60 * 10,
     }),
 
-  groceryProducts: (filters: Record<string, any> = {}) =>
+  foodProducts: (filters: Record<string, any> = {}) =>
     queryOptions({
-      queryKey: ['catalog', 'grocery', 'products', filters],
-      queryFn: () => getGroceryProductsFn({ data: filters }),
+      queryKey: ['catalog', 'food', 'products', filters],
+      queryFn: () => getFoodProductsFn({ data: filters }),
       staleTime: 1000 * 60 * 3,
     }),
 }

@@ -43,12 +43,12 @@ type BrandFormValues = z.infer<typeof upsertBrandSchema>
 export interface BrandSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  catalogType: 'liquor' | 'grocery'
+  catalogType: 'liquor' | 'food'
   brand?: BrandData | null
   onSuccess?: (savedBrand: {
     id: string
     name: string
-    catalogType: 'liquor' | 'grocery'
+    catalogType: 'liquor' | 'food'
   }) => void
 }
 
@@ -183,7 +183,7 @@ export function BrandSheet({
       title={
         brand
           ? `Edit ${brand.name}`
-          : `New ${catalogType === 'liquor' ? 'Liquor' : 'Grocery'} Brand`
+          : `New ${catalogType === 'liquor' ? 'Liquor' : 'Food'} Brand`
       }
       description={`Manage master brand record and logo for ${catalogType} products.`}
     >
@@ -372,6 +372,6 @@ export function BrandSheet({
   )
 }
 
-// Alias for backwards compatibility with liquor/grocery panels
+// Alias for backwards compatibility with liquor/food panels
 export const BrandDialog = BrandSheet
 export type BrandDialogProps = BrandSheetProps

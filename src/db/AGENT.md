@@ -91,7 +91,7 @@ When Neon's `drizzle.__drizzle_migrations` table contains corrupted rows or has 
 - **Money = integer paisa** (never float/decimal-as-number). Timestamps `timestamptz`; `createdAt/updatedAt` on every table.
 - Index every FK and common filters (status, createdAt, slug, phone). Unique constraints for slug/sku/order_no/invoice_no.
 - Archive columns instead of deletes. Snapshot columns on `order_items` / orders (name, label, price, VAT, address).
-- **Polymorphic catalog ref:** `order_items`, `stock_movements`, `dealer_stock` use `catalogType ('liquor'|'grocery') + variantId` (no FK); validate in code via `resolveVariant`.
+- **Polymorphic catalog ref:** `order_items`, `stock_movements`, `dealer_stock` use `catalogType ('liquor'|'food') + variantId` (no FK); validate in code via `resolveVariant`.
 
 ## Planned tables
 
@@ -99,7 +99,7 @@ When Neon's `drizzle.__drizzle_migrations` table contains corrupted rows or has 
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | `auth.ts`      | `user`, `session`, `account`, `verification` + `role`, `phone`, `isActive`, `banned`                                                                                  | ✅        |
 | `liquor.ts`    | `liquor_categories`, `liquor_brands`, `liquor_products`, `liquor_variants` (`volumeMl`, `sku`, `price`, `mrp`, `abv`, `stock`, `isActive`), `liquor_images`           | ✅        |
-| `grocery.ts`   | `grocery_categories`, `grocery_products`, `grocery_variants` (`unit`, `quantity`, `sku`, `price`, `mrp`, `stock`, `isActive`), `grocery_images`                       | ✅        |
+| `food.ts`      | `food_categories`, `food_brands`, `food_products`, `food_variants` (`unit`, `quantity`, `sku`, `price`, `mrp`, `stock`, `isActive`), `food_images`                    | ✅        |
 | `orders.ts`    | `orders` (totals, address + lat/lng, `riderId`, `dealerId`, `paymentMethod/Status`, `ageVerifiedAtDelivery`, `idempotencyKey`), `order_items`, `order_status_history` | ✅        |
 | `riders.ts`    | `riders` (profile linked to `user.id`), `rider_cash_handovers`, `settlements`                                                                                         | ✅        |
 | `inventory.ts` | `dealers`, `dealer_stock`, `stock_movements` (append-only)                                                                                                            | ✅        |

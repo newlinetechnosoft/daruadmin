@@ -46,7 +46,7 @@ import {
 } from '#/components/ui/dialog'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 
-type ActiveTab = 'liquor-cat' | 'grocery-cat' | 'brands'
+type ActiveTab = 'liquor-cat' | 'food-cat' | 'brands'
 
 interface CategoryLike {
   id: string
@@ -202,10 +202,10 @@ export function TaxonomyPanel() {
         toast.success(
           editingId ? 'Liquor category updated' : 'Liquor category created',
         )
-      } else if (activeTab === 'grocery-cat') {
+      } else if (activeTab === 'food-cat') {
         await upsertCategoryFn({
           data: {
-            catalogType: 'grocery',
+            catalogType: 'food',
             id: editingId ?? undefined,
             name: formName.trim(),
             slug: formSlug.trim() || undefined,
@@ -217,7 +217,7 @@ export function TaxonomyPanel() {
           },
         })
         toast.success(
-          editingId ? 'Grocery category updated' : 'Grocery category created',
+          editingId ? 'Food category updated' : 'Food category created',
         )
       } else {
         await upsertBrandFn({
@@ -238,7 +238,7 @@ export function TaxonomyPanel() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'brands'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'liquor'] })
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'food'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
       await queryClient.invalidateQueries({ queryKey: ['catalog'] })
       await queryClient.invalidateQueries({ queryKey: ['storefront'] })
@@ -256,8 +256,8 @@ export function TaxonomyPanel() {
       const catalogType =
         activeTab === 'liquor-cat'
           ? 'liquor-category'
-          : activeTab === 'grocery-cat'
-            ? 'grocery-category'
+          : activeTab === 'food-cat'
+            ? 'food-category'
             : 'liquor-brand'
 
       await deleteItemFn({
@@ -271,7 +271,7 @@ export function TaxonomyPanel() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'brands'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'liquor'] })
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'food'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
       await queryClient.invalidateQueries({ queryKey: ['catalog'] })
       await queryClient.invalidateQueries({ queryKey: ['storefront'] })
@@ -293,9 +293,9 @@ export function TaxonomyPanel() {
       icon: Wine,
     },
     {
-      id: 'grocery-cat',
-      label: 'Grocery categories',
-      count: taxonomy.groceryCategories.length,
+      id: 'food-cat',
+      label: 'Food categories',
+      count: taxonomy.foodCategories.length,
       icon: ShoppingBag,
     },
     {
@@ -309,21 +309,21 @@ export function TaxonomyPanel() {
   const addLabel =
     activeTab === 'liquor-cat'
       ? 'New liquor category'
-      : activeTab === 'grocery-cat'
-        ? 'New grocery category'
+      : activeTab === 'food-cat'
+        ? 'New food category'
         : 'New liquor brand'
 
   const modalTitle = `${editingId ? 'Edit' : 'Create'} ${
     activeTab === 'liquor-cat'
       ? 'liquor category'
-      : activeTab === 'grocery-cat'
-        ? 'grocery category'
+      : activeTab === 'food-cat'
+        ? 'food category'
         : 'brand'
   }`
 
   const handleToggleLandingPage = async (cat: CategoryLike) => {
     try {
-      const catalogType = activeTab === 'liquor-cat' ? 'liquor' : 'grocery'
+      const catalogType = activeTab === 'liquor-cat' ? 'liquor' : 'food'
       const nextVal = !cat.showOnLandingPage
       await toggleCategoryStatusFn({
         data: {
@@ -624,8 +624,8 @@ export function TaxonomyPanel() {
           {activeTab === 'liquor-cat' &&
             taxonomy.liquorCategories.map((cat) => renderCategoryCard(cat))}
 
-          {activeTab === 'grocery-cat' &&
-            taxonomy.groceryCategories.map((cat) => renderCategoryCard(cat))}
+          {activeTab === 'food-cat' &&
+            taxonomy.foodCategories.map((cat) => renderCategoryCard(cat))}
 
           {activeTab === 'brands' &&
             taxonomy.liquorBrands.map((brand) => renderBrandCard(brand))}

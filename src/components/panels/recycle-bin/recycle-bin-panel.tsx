@@ -42,9 +42,9 @@ function getEntityMeta(entityType: string) {
         badgeClass:
           'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
       }
-    case 'grocery_product':
+    case 'food_product':
       return {
-        label: 'Grocery Product',
+        label: 'Food Product',
         group: 'products',
         icon: ShoppingBag,
         badgeClass:
@@ -58,18 +58,18 @@ function getEntityMeta(entityType: string) {
         badgeClass:
           'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
       }
-    case 'grocery_category':
+    case 'food_category':
       return {
-        label: 'Grocery Category',
+        label: 'Food Category',
         group: 'categories',
         icon: Tags,
         badgeClass:
           'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
       }
     case 'liquor_brand':
-    case 'grocery_brand':
+    case 'food_brand':
       return {
-        label: entityType === 'liquor_brand' ? 'Liquor Brand' : 'Grocery Brand',
+        label: entityType === 'liquor_brand' ? 'Liquor Brand' : 'Food Brand',
         group: 'brands',
         icon: Award,
         badgeClass:

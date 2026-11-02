@@ -19,7 +19,7 @@ export const DEFAULT_GRANTS_BY_ROLE: Record<string, UserGrants> = {
   manager: {
     dashboard: ['view'],
     liquor: ['view', 'create', 'edit'],
-    grocery: ['view', 'create', 'edit'],
+    food: ['view', 'create', 'edit'],
     categories: ['view', 'create', 'edit'],
     brands: ['view', 'create', 'edit'],
     products: ['view', 'create', 'edit'],
@@ -82,7 +82,7 @@ export function can(
   // 4. Backward compatibility fallback: 'products' umbrella grant for catalog/inventory/dealers
   if (
     (module === 'liquor' ||
-      module === 'grocery' ||
+      module === 'food' ||
       module === 'categories' ||
       module === 'brands' ||
       module === 'inventory' ||
@@ -106,7 +106,7 @@ export function can(
   if (module === 'products') {
     return Boolean(
       grants.liquor?.includes(action) ||
-      grants.grocery?.includes(action) ||
+      grants.food?.includes(action) ||
       grants.categories?.includes(action) ||
       grants.brands?.includes(action) ||
       grants.inventory?.includes(action) ||

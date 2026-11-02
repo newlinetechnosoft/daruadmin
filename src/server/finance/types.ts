@@ -12,7 +12,7 @@ export const ALLOWED_PARTY_TYPES = [
 ] as const
 
 export type PartyType = (typeof ALLOWED_PARTY_TYPES)[number]
-export type CostCenter = 'liquor' | 'grocery' | 'delivery' | 'general'
+export type CostCenter = 'liquor' | 'food' | 'delivery' | 'general'
 export type VoucherType = 'JV' | 'PV' | 'RV' | 'CV' | 'SV'
 
 export type SerializableValue =

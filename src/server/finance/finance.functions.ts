@@ -104,7 +104,7 @@ export const postManualJournalVoucherFn = createServerFn({ method: 'POST' })
                 .optional(),
               partyId: z.string().optional(),
               costCenter: z
-                .enum(['liquor', 'grocery', 'delivery', 'general'])
+                .enum(['liquor', 'food', 'delivery', 'general'])
                 .optional(),
               narration: z.string().optional(),
             }),

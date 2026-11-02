@@ -34,7 +34,7 @@ export interface ProductProps {
   brandName?: string | null
   brandSlug?: string | null
   primaryImage?: string | null
-  catalogType: 'liquor' | 'grocery'
+  catalogType: 'liquor' | 'food'
   variants: Variant[]
 }
 

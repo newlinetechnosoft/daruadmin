@@ -6,10 +6,10 @@ import {
   liquorProducts,
   liquorVariants,
   liquorImages,
-  groceryCategories,
-  groceryProducts,
-  groceryVariants,
-  groceryImages,
+  foodCategories,
+  foodProducts,
+  foodVariants,
+  foodImages,
   dealers,
   dealerItems,
   user,
@@ -1429,8 +1429,8 @@ export async function seed() {
     }
   }
 
-  // 5. Grocery & Snack Categories
-  const groceryCatsData = [
+  // 5. Food & Snack Categories
+  const foodCatsData = [
     {
       name: 'Snacks & Munchies',
       slug: 'snacks-munchies',
@@ -1466,12 +1466,12 @@ export async function seed() {
     },
   ]
 
-  for (const gc of groceryCatsData) {
+  for (const gc of foodCatsData) {
     await db
-      .insert(groceryCategories)
+      .insert(foodCategories)
       .values(gc)
       .onConflictDoUpdate({
-        target: groceryCategories.slug,
+        target: foodCategories.slug,
         set: {
           name: gc.name,
           description: gc.description,
@@ -1481,15 +1481,15 @@ export async function seed() {
       })
   }
 
-  const allGroceryCats = await db.select().from(groceryCategories)
-  const gCatMap = Object.fromEntries(allGroceryCats.map((c) => [c.slug, c.id]))
+  const allFoodCats = await db.select().from(foodCategories)
+  const fCatMap = Object.fromEntries(allFoodCats.map((c) => [c.slug, c.id]))
 
-  // 6. Grocery Products
-  const groceryItems = [
+  // 6. Food Products
+  const foodItems = [
     {
       name: 'Crystal Clear Party Ice Bag (3 kg)',
       slug: 'crystal-clear-ice-bag-3kg',
-      categoryId: gCatMap['party-essentials'],
+      categoryId: fCatMap['party-essentials'],
       description:
         'Triple-filtered hygienic crystal ice cubes in insulated zip seal bags, delivered chilled.',
       image:
@@ -1510,7 +1510,7 @@ export async function seed() {
     {
       name: 'Crystal Clear Party Ice Bag (5 kg Jumbo)',
       slug: 'crystal-clear-ice-bag-5kg',
-      categoryId: gCatMap['party-essentials'],
+      categoryId: fCatMap['party-essentials'],
       description:
         'Large party-size bag of solid crystal ice cubes for drinks and chilling beer bottles.',
       image:
@@ -1531,7 +1531,7 @@ export async function seed() {
     {
       name: 'Schweppes Tonic Water (330 ml)',
       slug: 'schweppes-tonic-water-330ml',
-      categoryId: gCatMap['beverages-mixers'],
+      categoryId: fCatMap['beverages-mixers'],
       description:
         'Classic crisp tonic water with quinine, ideal partner for gin and botanical cocktails.',
       image:
@@ -1561,7 +1561,7 @@ export async function seed() {
     {
       name: 'Schweppes Club Soda (300 ml)',
       slug: 'schweppes-club-soda-300ml',
-      categoryId: gCatMap['beverages-mixers'],
+      categoryId: fCatMap['beverages-mixers'],
       description:
         'Crisp, highly carbonated pure bubbling club soda for whiskey, vodka, and scotch highballs.',
       image:
@@ -1591,7 +1591,7 @@ export async function seed() {
     {
       name: 'Red Bull Energy Drink (250 ml)',
       slug: 'red-bull-energy-drink-250ml',
-      categoryId: gCatMap['beverages-mixers'],
+      categoryId: fCatMap['beverages-mixers'],
       description:
         'Vitalizes body and mind. The essential party booster for night owls and cocktail mixing.',
       image:
@@ -1621,7 +1621,7 @@ export async function seed() {
     {
       name: 'Coca-Cola Classic Can (330 ml)',
       slug: 'coca-cola-can-330ml',
-      categoryId: gCatMap['beverages-mixers'],
+      categoryId: fCatMap['beverages-mixers'],
       description:
         'Original refreshing taste of Coca-Cola, perfectly paired with dark rums and whiskeys.',
       image:
@@ -1651,7 +1651,7 @@ export async function seed() {
     {
       name: 'Sprite Lemon-Lime Can (330 ml)',
       slug: 'sprite-can-330ml',
-      categoryId: gCatMap['beverages-mixers'],
+      categoryId: fCatMap['beverages-mixers'],
       description:
         'Crisp, refreshing lemon-lime fizzy soda that cuts thirst and pairs brilliantly with clear spirits.',
       image:
@@ -1681,7 +1681,7 @@ export async function seed() {
     {
       name: 'Wai Wai Quick Chicken Noodles',
       slug: 'wai-wai-quick-chicken-noodles',
-      categoryId: gCatMap['late-night-bites'],
+      categoryId: fCatMap['late-night-bites'],
       description:
         'Nepal’s favourite instant midnight hunger rescue with roasted onions and chicken spice sachet.',
       image:
@@ -1702,7 +1702,7 @@ export async function seed() {
     {
       name: 'Current Hot & Spicy Instant Noodles',
       slug: 'current-hot-spicy-noodles',
-      categoryId: gCatMap['late-night-bites'],
+      categoryId: fCatMap['late-night-bites'],
       description:
         'Fiery extra hot red chili soup noodles for the ultimate spicy late-night kick.',
       image:
@@ -1723,7 +1723,7 @@ export async function seed() {
     {
       name: 'Kurkure Masala Munch (95 g)',
       slug: 'kurkure-masala-munch-95g',
-      categoryId: gCatMap['snacks-munchies'],
+      categoryId: fCatMap['snacks-munchies'],
       description:
         'Tedha hai par mera hai! Crispy, crunchy puffed rice & corn curls with authentic Indian spices.',
       image:
@@ -1744,7 +1744,7 @@ export async function seed() {
     {
       name: 'Lay’s India’s Magic Masala (78 g)',
       slug: 'lays-magical-masala-78g',
-      categoryId: gCatMap['snacks-munchies'],
+      categoryId: fCatMap['snacks-munchies'],
       description:
         'Thin cut crispy potato chips seasoned with a blend of fiery Indian spices.',
       image:
@@ -1765,7 +1765,7 @@ export async function seed() {
     {
       name: 'Pringles Sour Cream & Onion (107 g)',
       slug: 'pringles-sour-cream-onion-107g',
-      categoryId: gCatMap['snacks-munchies'],
+      categoryId: fCatMap['snacks-munchies'],
       description:
         'Savory onion flavor blended with creamy sour cream on iconic stackable potato crisps.',
       image:
@@ -1786,7 +1786,7 @@ export async function seed() {
     {
       name: 'Spicy Peri-Peri Roasted Cashews (200 g)',
       slug: 'spicy-peri-peri-cashews-200g',
-      categoryId: gCatMap['snacks-munchies'],
+      categoryId: fCatMap['snacks-munchies'],
       description:
         'Crunchy premium jumbo cashews gently roasted and tossed in exotic peri-peri seasoning.',
       image:
@@ -1807,7 +1807,7 @@ export async function seed() {
     {
       name: 'Himalayan Roasted Peanut Sadeko Mix (250 g)',
       slug: 'himalayan-peanut-sadeko-mix-250g',
-      categoryId: gCatMap['snacks-munchies'],
+      categoryId: fCatMap['snacks-munchies'],
       description:
         'Spicy, crunchy roasted Nepali peanuts with chili, roasted garlic, mustard oil and Himalayan pink salt.',
       image:
@@ -1828,7 +1828,7 @@ export async function seed() {
     {
       name: 'Party Disposable Cups & Eco Straws Set',
       slug: 'party-cups-and-straws-set',
-      categoryId: gCatMap['party-essentials'],
+      categoryId: fCatMap['party-essentials'],
       description:
         'Pack of 50 heavy-duty plastic party cups and 50 biodegradable straws for hassle-free house parties.',
       image:
@@ -1849,7 +1849,7 @@ export async function seed() {
     {
       name: 'Casino Quality Playing Cards Deck',
       slug: 'casino-quality-playing-cards',
-      categoryId: gCatMap['party-essentials'],
+      categoryId: fCatMap['party-essentials'],
       description:
         'Plastic-coated water-resistant playing card deck for flush, marriage and poker game nights.',
       image:
@@ -1869,9 +1869,9 @@ export async function seed() {
     },
   ]
 
-  for (const item of groceryItems) {
+  for (const item of foodItems) {
     const [insertedItem] = await db
-      .insert(groceryProducts)
+      .insert(foodProducts)
       .values({
         name: item.name,
         slug: item.slug,
@@ -1880,7 +1880,7 @@ export async function seed() {
         isFeatured: item.isFeatured,
       })
       .onConflictDoUpdate({
-        target: groceryProducts.slug,
+        target: foodProducts.slug,
         set: {
           name: item.name,
           categoryId: item.categoryId,
@@ -1894,7 +1894,7 @@ export async function seed() {
     if (!productId) continue
 
     await db
-      .insert(groceryImages)
+      .insert(foodImages)
       .values({
         productId,
         url: item.image,
@@ -1905,7 +1905,7 @@ export async function seed() {
 
     for (const v of item.variants) {
       await db
-        .insert(groceryVariants)
+        .insert(foodVariants)
         .values({
           productId,
           name: v.name,
@@ -1917,7 +1917,7 @@ export async function seed() {
           stock: v.stock,
         })
         .onConflictDoUpdate({
-          target: groceryVariants.sku,
+          target: foodVariants.sku,
           set: {
             name: v.name,
             unit: v.unit,
@@ -1945,7 +1945,7 @@ export async function seed() {
     },
     {
       id: 'dealer-himalayan-02',
-      name: 'Tinau Spirits & Grocery Distribution',
+      name: 'Tinau Spirits & Food Distribution',
       pan: '602384910',
       contact: '+977-9801827364',
       whatsappNumber: '+977-9801827364',

@@ -34,12 +34,12 @@ export const Route = createFileRoute('/offers/$slug')({
       const offer = await getOfferBySlugFn({ data: { slug: params.slug } })
 
       // Fetch products to display
-      const [liquorProducts, groceryProducts] = await Promise.all([
+      const [liquorProducts, foodProducts] = await Promise.all([
         context.queryClient.ensureQueryData(
           storefrontQueries.liquorProducts({ limit: 50 }),
         ),
         context.queryClient.ensureQueryData(
-          storefrontQueries.groceryProducts({ limit: 50 }),
+          storefrontQueries.foodProducts({ limit: 50 }),
         ),
       ])
 
@@ -48,9 +48,9 @@ export const Route = createFileRoute('/offers/$slug')({
           ...p,
           catalogType: 'liquor' as const,
         })),
-        ...groceryProducts.map((p: any) => ({
+        ...foodProducts.map((p: any) => ({
           ...p,
-          catalogType: 'grocery' as const,
+          catalogType: 'food' as const,
         })),
       ]
 

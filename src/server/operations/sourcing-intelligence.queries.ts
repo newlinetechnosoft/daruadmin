@@ -7,16 +7,16 @@ import {
   liquorProducts,
   liquorVariants,
   liquorCategories,
-  groceryProducts,
-  groceryVariants,
-  groceryCategories,
+  foodProducts,
+  foodVariants,
+  foodCategories,
 } from '#/db/schema'
 import { and, eq, gte, ne } from 'drizzle-orm'
 
 export interface TopProductMetric {
   productId: string
   name: string
-  catalogType: 'liquor' | 'grocery'
+  catalogType: 'liquor' | 'food'
   unitsSold: number
   ordersCount: number
   grossRevenue: number // paisa
@@ -29,7 +29,7 @@ export interface TopProductMetric {
 export interface SlowMoverMetric {
   productId: string
   name: string
-  catalogType: 'liquor' | 'grocery'
+  catalogType: 'liquor' | 'food'
   categoryName: string
   unitsSold: number
   grossRevenue: number // paisa
@@ -43,7 +43,7 @@ export interface SlowMoverMetric {
 export interface MostUnavailableMetric {
   productId: string
   name: string
-  catalogType: 'liquor' | 'grocery'
+  catalogType: 'liquor' | 'food'
   totalRequested: number
   unavailableCount: number
   fulfilledCount: number
@@ -134,22 +134,22 @@ export async function getProductVelocityAndSourcingIntelligenceQuery(
     liquorProds,
     liquorCats,
     liquorVars,
-    groceryProds,
-    groceryCats,
-    groceryVars,
+    foodProds,
+    foodCats,
+    foodVars,
     allDealerItems,
   ] = await Promise.all([
     db.select().from(liquorProducts),
     db.select().from(liquorCategories),
     db.select().from(liquorVariants),
-    db.select().from(groceryProducts),
-    db.select().from(groceryCategories),
-    db.select().from(groceryVariants),
+    db.select().from(foodProducts),
+    db.select().from(foodCategories),
+    db.select().from(foodVariants),
     db.select().from(dealerItems),
   ])
 
   const liquorCatMap = new Map(liquorCats.map((c) => [c.id, c.name]))
-  const groceryCatMap = new Map(groceryCats.map((c) => [c.id, c.name]))
+  const foodCatMap = new Map(foodCats.map((c) => [c.id, c.name]))
 
   // Map lowest/first variant price per product
   const productPriceMap = new Map<string, number>()
@@ -159,7 +159,7 @@ export async function getProductVelocityAndSourcingIntelligenceQuery(
       productPriceMap.set(v.productId, v.price)
     }
   }
-  for (const v of groceryVars) {
+  for (const v of foodVars) {
     const existing = productPriceMap.get(v.productId)
     if (!existing || v.price < existing) {
       productPriceMap.set(v.productId, v.price)
@@ -183,7 +183,7 @@ export async function getProductVelocityAndSourcingIntelligenceQuery(
     {
       productId: string
       name: string
-      catalogType: 'liquor' | 'grocery'
+      catalogType: 'liquor' | 'food'
       unitsSold: number
       ordersSet: Set<string>
       grossRevenue: number
@@ -196,7 +196,7 @@ export async function getProductVelocityAndSourcingIntelligenceQuery(
     const existing = productSalesMap.get(key) || {
       productId: item.productId,
       name: item.name,
-      catalogType: item.catalogType as 'liquor' | 'grocery',
+      catalogType: item.catalogType as 'liquor' | 'food',
       unitsSold: 0,
       ordersSet: new Set<string>(),
       grossRevenue: 0,
@@ -282,8 +282,8 @@ export async function getProductVelocityAndSourcingIntelligenceQuery(
     }
   }
 
-  // Check grocery products
-  for (const p of groceryProds) {
+  // Check food products
+  for (const p of foodProds) {
     const sales = productSalesMap.get(p.id)
     const unitsSold = sales?.unitsSold ?? 0
     const grossRevenue = sales?.grossRevenue ?? 0
@@ -300,8 +300,8 @@ export async function getProductVelocityAndSourcingIntelligenceQuery(
       slowMoversList.push({
         productId: p.id,
         name: p.name,
-        catalogType: 'grocery',
-        categoryName: groceryCatMap.get(p.categoryId) || 'Grocery',
+        catalogType: 'food',
+        categoryName: foodCatMap.get(p.categoryId) || 'Food',
         unitsSold,
         grossRevenue,
         lastOrderDate: lastDate ? lastDate.toISOString() : null,
@@ -331,7 +331,7 @@ export async function getProductVelocityAndSourcingIntelligenceQuery(
     {
       productId: string
       name: string
-      catalogType: 'liquor' | 'grocery'
+      catalogType: 'liquor' | 'food'
       totalRequested: number
       unavailableCount: number
       fulfilledCount: number
@@ -344,7 +344,7 @@ export async function getProductVelocityAndSourcingIntelligenceQuery(
     const existing = itemUnavailMap.get(key) || {
       productId: item.productId,
       name: item.name,
-      catalogType: item.catalogType as 'liquor' | 'grocery',
+      catalogType: item.catalogType as 'liquor' | 'food',
       totalRequested: 0,
       unavailableCount: 0,
       fulfilledCount: 0,

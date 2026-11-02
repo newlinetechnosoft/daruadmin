@@ -198,7 +198,7 @@ export const journalLines = pgTable(
     credit: integer('credit').notNull().default(0), // integer paisa
     partyType: text('party_type'), // 'dealer', 'rider', 'customer', 'supplier'
     partyId: text('party_id'),
-    costCenter: text('cost_center'), // 'liquor', 'grocery', 'delivery', 'general'
+    costCenter: text('cost_center'), // 'liquor', 'food', 'delivery', 'general'
     narration: text('narration'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()

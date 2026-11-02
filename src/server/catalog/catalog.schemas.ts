@@ -9,7 +9,7 @@ export const listLiquorSchema = z.object({
   offset: z.number().int().min(0).optional().default(0),
 })
 
-export const listGrocerySchema = z.object({
+export const listFoodSchema = z.object({
   categorySlug: z.string().optional(),
   query: z.string().optional(),
   isFeatured: z.boolean().optional(),
@@ -62,7 +62,7 @@ export const upsertLiquorProductSchema = z.object({
     .min(1),
 })
 
-export const upsertGroceryProductSchema = z.object({
+export const upsertFoodProductSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(2).max(200),
   slug: z.string().min(2).max(200).optional(),
@@ -104,14 +104,14 @@ export const upsertGroceryProductSchema = z.object({
 })
 
 export const toggleProductStatusSchema = z.object({
-  catalogType: z.enum(['liquor', 'grocery']),
+  catalogType: z.enum(['liquor', 'food']),
   id: z.string().uuid(),
   field: z.enum(['isActive', 'isFeatured']),
   value: z.boolean(),
 })
 
 export const upsertCategorySchema = z.object({
-  catalogType: z.enum(['liquor', 'grocery']),
+  catalogType: z.enum(['liquor', 'food']),
   id: z.string().uuid().optional(),
   name: z.string().min(2).max(100),
   slug: z.string().min(2).max(100).optional(),
@@ -123,14 +123,14 @@ export const upsertCategorySchema = z.object({
 })
 
 export const toggleCategoryStatusSchema = z.object({
-  catalogType: z.enum(['liquor', 'grocery']),
+  catalogType: z.enum(['liquor', 'food']),
   id: z.string().uuid(),
   field: z.enum(['isActive', 'showOnLandingPage']),
   value: z.boolean(),
 })
 
 export const upsertBrandSchema = z.object({
-  catalogType: z.enum(['liquor', 'grocery']).default('liquor'),
+  catalogType: z.enum(['liquor', 'food']).default('liquor'),
   id: z.string().uuid().optional(),
   name: z.string().min(2).max(100),
   slug: z.string().min(2).max(100).optional(),
@@ -143,18 +143,18 @@ export const upsertBrandSchema = z.object({
 export const deleteItemSchema = z.object({
   catalogType: z.enum([
     'liquor',
-    'grocery',
+    'food',
     'liquor-category',
-    'grocery-category',
+    'food-category',
     'liquor-brand',
-    'grocery-brand',
+    'food-brand',
     'dealer',
   ]),
   id: z.string(),
 })
 
 export const deleteProductImageSchema = z.object({
-  catalogType: z.enum(['liquor', 'grocery']),
+  catalogType: z.enum(['liquor', 'food']),
   imageId: z.string().uuid(),
   imageUrl: z.string().optional(),
 })
@@ -166,11 +166,11 @@ export const createImageUploadSchema = z.object({
 })
 
 export type ListLiquorInput = z.infer<typeof listLiquorSchema>
-export type ListGroceryInput = z.infer<typeof listGrocerySchema>
+export type ListFoodInput = z.infer<typeof listFoodSchema>
 export type SearchCatalogInput = z.infer<typeof searchCatalogSchema>
 export type UpsertLiquorProductInput = z.infer<typeof upsertLiquorProductSchema>
-export type UpsertGroceryProductInput = z.infer<
-  typeof upsertGroceryProductSchema
+export type UpsertFoodProductInput = z.infer<
+  typeof upsertFoodProductSchema
 >
 export type ToggleProductStatusInput = z.infer<typeof toggleProductStatusSchema>
 export type ToggleCategoryStatusInput = z.infer<

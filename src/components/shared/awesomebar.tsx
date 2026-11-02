@@ -313,12 +313,12 @@ export function Awesomebar({ open, onOpenChange }: AwesomebarProps) {
           </CommandItem>
           <CommandItem
             onSelect={() =>
-              handleSelect('/admin/grocery', 'Grocery Catalog', 'Navigation')
+              handleSelect('/admin/food', 'Food Catalog', 'Navigation')
             }
             className="flex items-center gap-2 text-xs"
           >
             <ShoppingBag className="size-4 text-muted-foreground" />
-            <span>Grocery Catalog</span>
+            <span>Food Catalog</span>
           </CommandItem>
           <CommandItem
             onSelect={() =>

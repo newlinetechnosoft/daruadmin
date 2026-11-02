@@ -14,7 +14,7 @@ import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as DrinksRouteImport } from './routes/drinks'
 import { Route as FavoritesRouteImport } from './routes/favorites'
-import { Route as GroceryRouteImport } from './routes/grocery'
+import { Route as FoodRouteImport } from './routes/food'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as RiderRouteRouteImport } from './routes/rider/route'
@@ -25,8 +25,8 @@ import { Route as AdminAccountsRouteImport } from './routes/admin/accounts'
 import { Route as AdminBrandsRouteImport } from './routes/admin/brands'
 import { Route as AdminCustomersRouteImport } from './routes/admin/customers'
 import { Route as AdminDealersRouteImport } from './routes/admin/dealers'
+import { Route as AdminFoodRouteImport } from './routes/admin/food'
 import { Route as AdminForbiddenRouteImport } from './routes/admin/forbidden'
-import { Route as AdminGroceryRouteImport } from './routes/admin/grocery'
 import { Route as AdminInventoryRouteImport } from './routes/admin/inventory'
 import { Route as AdminLiquorRouteImport } from './routes/admin/liquor'
 import { Route as AdminMarketingRouteImport } from './routes/admin/marketing'
@@ -82,9 +82,9 @@ const FavoritesRoute = FavoritesRouteImport.update({
   path: '/favorites',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GroceryRoute = GroceryRouteImport.update({
-  id: '/grocery',
-  path: '/grocery',
+const FoodRoute = FoodRouteImport.update({
+  id: '/food',
+  path: '/food',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -137,14 +137,14 @@ const AdminDealersRoute = AdminDealersRouteImport.update({
   path: '/dealers',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminFoodRoute = AdminFoodRouteImport.update({
+  id: '/food',
+  path: '/food',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminForbiddenRoute = AdminForbiddenRouteImport.update({
   id: '/forbidden',
   path: '/forbidden',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminGroceryRoute = AdminGroceryRouteImport.update({
-  id: '/grocery',
-  path: '/grocery',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminInventoryRoute = AdminInventoryRouteImport.update({
@@ -303,7 +303,7 @@ export interface FileRoutesByFullPath {
   '/checkout': typeof CheckoutRouteWithChildren
   '/drinks': typeof DrinksRoute
   '/favorites': typeof FavoritesRoute
-  '/grocery': typeof GroceryRoute
+  '/food': typeof FoodRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/signup': typeof SignupRoute
@@ -312,8 +312,8 @@ export interface FileRoutesByFullPath {
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/dealers': typeof AdminDealersRouteWithChildren
+  '/admin/food': typeof AdminFoodRoute
   '/admin/forbidden': typeof AdminForbiddenRoute
-  '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/liquor': typeof AdminLiquorRoute
   '/admin/marketing': typeof AdminMarketingRoute
@@ -350,7 +350,7 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRouteWithChildren
   '/drinks': typeof DrinksRoute
   '/favorites': typeof FavoritesRoute
-  '/grocery': typeof GroceryRoute
+  '/food': typeof FoodRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/signup': typeof SignupRoute
@@ -358,8 +358,8 @@ export interface FileRoutesByTo {
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/food': typeof AdminFoodRoute
   '/admin/forbidden': typeof AdminForbiddenRoute
-  '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/liquor': typeof AdminLiquorRoute
   '/admin/marketing': typeof AdminMarketingRoute
@@ -399,7 +399,7 @@ export interface FileRoutesById {
   '/checkout': typeof CheckoutRouteWithChildren
   '/drinks': typeof DrinksRoute
   '/favorites': typeof FavoritesRoute
-  '/grocery': typeof GroceryRoute
+  '/food': typeof FoodRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/signup': typeof SignupRoute
@@ -408,8 +408,8 @@ export interface FileRoutesById {
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/dealers': typeof AdminDealersRouteWithChildren
+  '/admin/food': typeof AdminFoodRoute
   '/admin/forbidden': typeof AdminForbiddenRoute
-  '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/liquor': typeof AdminLiquorRoute
   '/admin/marketing': typeof AdminMarketingRoute
@@ -450,7 +450,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/drinks'
     | '/favorites'
-    | '/grocery'
+    | '/food'
     | '/login'
     | '/orders'
     | '/signup'
@@ -459,8 +459,8 @@ export interface FileRouteTypes {
     | '/admin/brands'
     | '/admin/customers'
     | '/admin/dealers'
+    | '/admin/food'
     | '/admin/forbidden'
-    | '/admin/grocery'
     | '/admin/inventory'
     | '/admin/liquor'
     | '/admin/marketing'
@@ -497,7 +497,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/drinks'
     | '/favorites'
-    | '/grocery'
+    | '/food'
     | '/login'
     | '/orders'
     | '/signup'
@@ -505,8 +505,8 @@ export interface FileRouteTypes {
     | '/admin/accounts'
     | '/admin/brands'
     | '/admin/customers'
+    | '/admin/food'
     | '/admin/forbidden'
-    | '/admin/grocery'
     | '/admin/inventory'
     | '/admin/liquor'
     | '/admin/marketing'
@@ -545,7 +545,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/drinks'
     | '/favorites'
-    | '/grocery'
+    | '/food'
     | '/login'
     | '/orders'
     | '/signup'
@@ -554,8 +554,8 @@ export interface FileRouteTypes {
     | '/admin/brands'
     | '/admin/customers'
     | '/admin/dealers'
+    | '/admin/food'
     | '/admin/forbidden'
-    | '/admin/grocery'
     | '/admin/inventory'
     | '/admin/liquor'
     | '/admin/marketing'
@@ -595,7 +595,7 @@ export interface RootRouteChildren {
   CheckoutRoute: typeof CheckoutRouteWithChildren
   DrinksRoute: typeof DrinksRoute
   FavoritesRoute: typeof FavoritesRoute
-  GroceryRoute: typeof GroceryRoute
+  FoodRoute: typeof FoodRoute
   LoginRoute: typeof LoginRoute
   OrdersRoute: typeof OrdersRoute
   SignupRoute: typeof SignupRoute
@@ -646,11 +646,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FavoritesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/grocery': {
-      id: '/grocery'
-      path: '/grocery'
-      fullPath: '/grocery'
-      preLoaderRoute: typeof GroceryRouteImport
+    '/food': {
+      id: '/food'
+      path: '/food'
+      fullPath: '/food'
+      preLoaderRoute: typeof FoodRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -723,18 +723,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDealersRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/food': {
+      id: '/admin/food'
+      path: '/food'
+      fullPath: '/admin/food'
+      preLoaderRoute: typeof AdminFoodRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/forbidden': {
       id: '/admin/forbidden'
       path: '/forbidden'
       fullPath: '/admin/forbidden'
       preLoaderRoute: typeof AdminForbiddenRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/grocery': {
-      id: '/admin/grocery'
-      path: '/grocery'
-      fullPath: '/admin/grocery'
-      preLoaderRoute: typeof AdminGroceryRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/inventory': {
@@ -964,8 +964,8 @@ interface AdminRouteRouteChildren {
   AdminBrandsRoute: typeof AdminBrandsRoute
   AdminCustomersRoute: typeof AdminCustomersRoute
   AdminDealersRoute: typeof AdminDealersRouteWithChildren
+  AdminFoodRoute: typeof AdminFoodRoute
   AdminForbiddenRoute: typeof AdminForbiddenRoute
-  AdminGroceryRoute: typeof AdminGroceryRoute
   AdminInventoryRoute: typeof AdminInventoryRoute
   AdminLiquorRoute: typeof AdminLiquorRoute
   AdminMarketingRoute: typeof AdminMarketingRoute
@@ -987,8 +987,8 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminBrandsRoute: AdminBrandsRoute,
   AdminCustomersRoute: AdminCustomersRoute,
   AdminDealersRoute: AdminDealersRouteWithChildren,
+  AdminFoodRoute: AdminFoodRoute,
   AdminForbiddenRoute: AdminForbiddenRoute,
-  AdminGroceryRoute: AdminGroceryRoute,
   AdminInventoryRoute: AdminInventoryRoute,
   AdminLiquorRoute: AdminLiquorRoute,
   AdminMarketingRoute: AdminMarketingRoute,
@@ -1048,7 +1048,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutRoute: CheckoutRouteWithChildren,
   DrinksRoute: DrinksRoute,
   FavoritesRoute: FavoritesRoute,
-  GroceryRoute: GroceryRoute,
+  FoodRoute: FoodRoute,
   LoginRoute: LoginRoute,
   OrdersRoute: OrdersRoute,
   SignupRoute: SignupRoute,

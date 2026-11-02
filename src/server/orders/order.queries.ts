@@ -137,7 +137,7 @@ function mapOrderRecord(
 
       return {
         id: i.id,
-        catalogType: i.catalogType as 'liquor' | 'grocery',
+        catalogType: i.catalogType as 'liquor' | 'food',
         productId: i.productId,
         variantId: i.variantId,
         name: i.name,

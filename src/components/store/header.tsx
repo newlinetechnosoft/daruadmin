@@ -103,7 +103,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
               Drinks
             </Link>
             <Link
-              to="/grocery"
+              to="/food"
               className="hover:text-foreground transition-colors"
               activeProps={{ className: 'text-foreground font-semibold' }}
             >
@@ -362,7 +362,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                     Drinks
                   </Link>
                   <Link
-                    to="/grocery"
+                    to="/food"
                     onClick={() => setMobileMenuOpen(false)}
                     className="text-foreground hover:text-primary transition-colors py-2"
                   >

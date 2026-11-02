@@ -18,13 +18,13 @@ import {
 
 export const Route = createFileRoute('/')({
   loader: async ({ context }) => {
-    const [groceryCategories, liquorCategories] = await Promise.all([
+    const [foodCategories, liquorCategories] = await Promise.all([
       context.queryClient.ensureQueryData(
-        storefrontQueries.groceryCategories(),
+        storefrontQueries.foodCategories(),
       ),
       context.queryClient.ensureQueryData(storefrontQueries.liquorCategories()),
     ])
-    return { groceryCategories, liquorCategories }
+    return { foodCategories, liquorCategories }
   },
   component: HomePage,
 })
@@ -74,7 +74,7 @@ function getCategoryFallbackImage(slug?: string, name?: string): string {
   return 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1000&q=80'
 }
 
-type GroceryCategoryItem = {
+type FoodCategoryItem = {
   id: string
   name: string
   slug: string
@@ -90,7 +90,7 @@ function FoodCategoryCard({
   totalCount = 1,
   className = '',
 }: {
-  category: GroceryCategoryItem
+  category: FoodCategoryItem
   index: number
   isFeatured?: boolean
   totalCount?: number
@@ -104,7 +104,7 @@ function FoodCategoryCard({
   if (isFeatured) {
     return (
       <Link
-        to="/grocery"
+        to="/food"
         search={{ category: category.slug }}
         className="group relative isolate block overflow-hidden rounded-2xl sm:rounded-3xl border border-border/80 bg-card/60 shadow-xl transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 animate-in fade-in-0 slide-in-from-bottom-6 duration-700 fill-mode-both"
       >
@@ -169,7 +169,7 @@ function FoodCategoryCard({
 
   return (
     <Link
-      to="/grocery"
+      to="/food"
       search={{ category: category.slug }}
       style={{ animationDelay: `${index * 120}ms` }}
       className={`group relative isolate flex flex-col justify-end overflow-hidden rounded-2xl sm:rounded-3xl border border-border/80 bg-card/60 p-3.5 sm:p-6 md:p-7 ${cardHeightClass} shadow-lg transition-all duration-500 hover:-translate-y-2 hover:border-primary/60 hover:shadow-2xl hover:shadow-primary/15 animate-in fade-in-0 slide-in-from-bottom-6 duration-700 fill-mode-both ${className}`}
@@ -444,15 +444,15 @@ function SearchIcon({ className = 'h-5 w-5' }: { className?: string }) {
 function HomePage() {
   const navigate = useNavigate()
   const loaderData = Route.useLoaderData()
-  const { data: allGroceryCategories = loaderData?.groceryCategories ?? [] } =
+  const { data: allFoodCategories = loaderData?.foodCategories ?? [] } =
     useQuery({
-      ...storefrontQueries.groceryCategories(),
-      initialData: loaderData?.groceryCategories,
+      ...storefrontQueries.foodCategories(),
+      initialData: loaderData?.foodCategories,
     })
 
   // Smart landing page category visibility:
   // Show categories that have the "Visible on landing page" check button enabled
-  const groceryCategories = allGroceryCategories.filter(
+  const foodCategories = allFoodCategories.filter(
     (cat: any) => Boolean(cat.showOnLandingPage) && cat.isActive !== false,
   )
 
@@ -549,15 +549,15 @@ function HomePage() {
           {/* TOP CORNER DUMMY LOGOS (Replaces the white circles) */}
           <div className="absolute inset-x-0 top-0 z-20 flex justify-between p-6 sm:p-10 lg:p-12 pointer-events-none">
             {/* Left Logo */}
-            <Link to="/grocery" className="pointer-events-auto">
+            <Link to="/food" className="pointer-events-auto">
               <img
-                src="/images/logos/grocery-transparent.png"
+                src="/images/logos/food-transparent.png"
                 alt="Left Logo Placeholder"
                 className="h-15 w-auto sm:h-20 lg:h-30 object-contain drop-shadow-md"
               />
             </Link>
             {/* Right Logo */}
-            <Link to="/grocery" className="pointer-events-auto">
+            <Link to="/food" className="pointer-events-auto">
               <img
                 src="/images/logos/ddc-transparent.png"
                 alt="DDC Logo"
@@ -785,7 +785,7 @@ function HomePage() {
                         key={cat.id}
                         to={
                           cat.slug === 'party-essentials'
-                            ? '/grocery'
+                            ? '/food'
                             : '/drinks'
                         }
                         search={{ category: cat.slug }}
@@ -830,7 +830,7 @@ function HomePage() {
           </div>
         </section>
 
-        {/* SHOP BY FOOD & GROCERY */}
+        {/* SHOP BY FOOD */}
         <section
           className="relative isolate scroll-mt-24 overflow-hidden border-t border-border bg-gradient-to-b from-background via-card/25 to-background py-16 sm:py-24"
           id="food"
@@ -857,44 +857,44 @@ function HomePage() {
               </div>
 
               <Link
-                to="/grocery"
+                to="/food"
                 className="group inline-flex items-center gap-2 border-b border-foreground pb-1 text-sm font-semibold text-foreground transition-all hover:opacity-75"
               >
-                <span>View all food &amp; groceries</span>
+                <span>View all food &amp; snacks</span>
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </div>
 
             {/* Flexible & Animated Category Grid based on count */}
-            {groceryCategories.length === 0 ? (
+            {foodCategories.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-border bg-card/40 p-12 text-center animate-in fade-in-0 duration-500">
                 <Utensils className="mx-auto h-12 w-12 text-muted-foreground/60" />
                 <h3 className="mt-4 text-lg font-bold text-foreground">
                   Delicious Food Menu Coming Up
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Browse our full food, beverage and grocery catalog.
+                  Browse our full food and snacks catalog.
                 </p>
                 <Link
-                  to="/grocery"
+                  to="/food"
                   className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition-all"
                 >
-                  Browse Groceries
+                  Browse Food
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
-            ) : groceryCategories.length === 1 ? (
+            ) : foodCategories.length === 1 ? (
               <div className="mx-auto max-w-4xl">
                 <FoodCategoryCard
-                  category={groceryCategories[0]}
+                  category={foodCategories[0]}
                   index={0}
                   isFeatured={true}
                   totalCount={1}
                 />
               </div>
-            ) : groceryCategories.length === 2 ? (
+            ) : foodCategories.length === 2 ? (
               <div className="grid grid-cols-2 gap-3 sm:gap-6 md:gap-8">
-                {groceryCategories.map((cat, i) => (
+                {foodCategories.map((cat, i) => (
                   <FoodCategoryCard
                     key={cat.id}
                     category={cat}
@@ -903,9 +903,9 @@ function HomePage() {
                   />
                 ))}
               </div>
-            ) : groceryCategories.length === 3 ? (
+            ) : foodCategories.length === 3 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 md:gap-8">
-                {groceryCategories.map((cat, i) => (
+                {foodCategories.map((cat, i) => (
                   <FoodCategoryCard
                     key={cat.id}
                     category={cat}
@@ -915,9 +915,9 @@ function HomePage() {
                   />
                 ))}
               </div>
-            ) : groceryCategories.length === 4 ? (
+            ) : foodCategories.length === 4 ? (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-                {groceryCategories.map((cat, i) => (
+                {foodCategories.map((cat, i) => (
                   <FoodCategoryCard
                     key={cat.id}
                     category={cat}
@@ -928,12 +928,12 @@ function HomePage() {
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-                {groceryCategories.map((cat, i) => (
+                {foodCategories.map((cat, i) => (
                   <FoodCategoryCard
                     key={cat.id}
                     category={cat}
                     index={i}
-                    totalCount={groceryCategories.length}
+                    totalCount={foodCategories.length}
                   />
                 ))}
               </div>

@@ -35,11 +35,11 @@ export function InventoryPanel() {
   const { data, isFetching, refetch } = useSuspenseQuery(
     adminQueries.inventory(),
   )
-  const { liquor, grocery } = data
+  const { liquor, food } = data
 
   const [searchQuery, setSearchQuery] = useState('')
   const [catalogFilter, setCatalogFilter] = useState<
-    'all' | 'liquor' | 'grocery'
+    'all' | 'liquor' | 'food'
   >('all')
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
 
@@ -47,7 +47,7 @@ export function InventoryPanel() {
   const inventoryItems = useMemo(() => {
     const list: {
       id: string
-      type: 'liquor' | 'grocery'
+      type: 'liquor' | 'food'
       name: string
       brand: string
       category: string
@@ -77,15 +77,15 @@ export function InventoryPanel() {
       }
     }
 
-    for (const g of grocery) {
+    for (const g of food) {
       if (g.variants && g.variants.length > 0) {
         for (const v of g.variants) {
           list.push({
             id: `${g.id}-${v.id}`,
-            type: 'grocery',
+            type: 'food',
             name: g.name,
             brand: 'Local Merchant',
-            category: g.categoryName || 'Grocery',
+            category: g.categoryName || 'Food',
             sku: v.sku,
             variantName: v.name || `${v.quantity} ${v.unit}`,
             stock: v.stock ?? 30,
@@ -97,7 +97,7 @@ export function InventoryPanel() {
     }
 
     return list
-  }, [liquor, grocery])
+  }, [liquor, food])
 
   const filteredItems = useMemo(() => {
     return inventoryItems.filter((item) => {
@@ -152,7 +152,7 @@ export function InventoryPanel() {
       <PageHeader
         kicker="Commerce"
         title="Inventory and stock tracking"
-        description="Unified warehouse stock management across Liquor and Grocery catalogs with automated COGS ledger sync."
+        description="Unified warehouse stock management across Liquor and Food catalogs with automated COGS ledger sync."
         actions={
           <div className="flex items-center gap-2">
             <DataRefreshButton
@@ -228,8 +228,8 @@ export function InventoryPanel() {
               <NativeSelectOption value="liquor">
                 Liquor only
               </NativeSelectOption>
-              <NativeSelectOption value="grocery">
-                Grocery only
+              <NativeSelectOption value="food">
+                Food only
               </NativeSelectOption>
             </NativeSelect>
 

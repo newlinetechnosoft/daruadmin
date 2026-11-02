@@ -400,7 +400,7 @@ export function CustomerOrdersPanel() {
                       size="sm"
                       className="text-xs"
                     >
-                      <Link to="/grocery">Browse Food &amp; Snacks</Link>
+                      <Link to="/food">Browse Food &amp; Snacks</Link>
                     </Button>
                   </div>
                 </Card>

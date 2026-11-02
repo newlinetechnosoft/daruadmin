@@ -483,7 +483,7 @@ export async function getAllBannersQuery(): Promise<Banner[]> {
     title: b.title,
     imageUrl: b.imageUrl,
     href: b.href,
-    placement: b.placement as 'home' | 'drinks' | 'grocery',
+    placement: b.placement as 'home' | 'drinks' | 'food',
     active: b.active,
   }))
 }

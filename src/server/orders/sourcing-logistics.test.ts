@@ -45,7 +45,7 @@ describe('Order Sourcing, Margin & Logistics Intelligence', () => {
       },
       {
         id: 'oi_2',
-        catalogType: 'grocery',
+        catalogType: 'food',
         productId: 'p_chips',
         variantId: 'v_chips_100',
         name: 'Lays Magic Masala',

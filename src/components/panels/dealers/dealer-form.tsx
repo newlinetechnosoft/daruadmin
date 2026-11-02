@@ -75,7 +75,7 @@ import type { CatalogItemSummary } from '#/server/inventory/inventory.queries'
 export interface SourcingItemRow extends Record<string, unknown> {
   productId: string
   productName: string
-  catalogType: 'liquor' | 'grocery'
+  catalogType: 'liquor' | 'food'
   categoryName?: string | null
   brandName?: string | null
   costPriceNpr: number
@@ -109,7 +109,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
   const [isAddItemOpen, setIsAddItemOpen] = useState(false)
   const [itemSearchQuery, setItemSearchQuery] = useState('')
   const [itemCatalogFilter, setItemCatalogFilter] = useState<
-    'all' | 'liquor' | 'grocery'
+    'all' | 'liquor' | 'food'
   >('all')
 
   // Delete Confirm State
@@ -977,8 +977,8 @@ export function DealerForm({ dealerId }: DealerFormProps) {
                   <SelectItem value="liquor" className="text-xs">
                     Liquor
                   </SelectItem>
-                  <SelectItem value="grocery" className="text-xs">
-                    Grocery
+                  <SelectItem value="food" className="text-xs">
+                    Food
                   </SelectItem>
                 </SelectContent>
               </Select>

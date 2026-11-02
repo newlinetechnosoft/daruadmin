@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const assignedItemSchema = z.object({
-  catalogType: z.enum(['liquor', 'grocery']),
+  catalogType: z.enum(['liquor', 'food']),
   productId: z.string().uuid(),
   costPrice: z.number().int().nonnegative().optional(),
   isAvailable: z.boolean().optional(),
@@ -43,7 +43,7 @@ export const assignDealerItemsSchema = z.object({
 export type AssignDealerItemsInput = z.infer<typeof assignDealerItemsSchema>
 
 export const assignItemDealersSchema = z.object({
-  catalogType: z.enum(['liquor', 'grocery']),
+  catalogType: z.enum(['liquor', 'food']),
   productId: z.string().uuid(),
   dealerIds: z.array(z.string()),
 })

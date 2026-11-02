@@ -35,13 +35,13 @@ import {
 } from '#/components/ui/sheet'
 import { EmptyState } from '#/components/shared/empty-state'
 
-const grocerySearchSchema = z.object({
+const foodSearchSchema = z.object({
   category: z.string().optional(),
   query: z.string().optional(),
 })
 
-export const Route = createFileRoute('/grocery')({
-  validateSearch: (search) => grocerySearchSchema.parse(search),
+export const Route = createFileRoute('/food')({
+  validateSearch: (search) => foodSearchSchema.parse(search),
   loaderDeps: ({ search }) => ({
     category: search.category,
     query: search.query,
@@ -49,10 +49,10 @@ export const Route = createFileRoute('/grocery')({
   loader: async ({ deps, context }) => {
     const [categories, products] = await Promise.all([
       context.queryClient.ensureQueryData(
-        storefrontQueries.groceryCategories(),
+        storefrontQueries.foodCategories(),
       ),
       context.queryClient.ensureQueryData(
-        storefrontQueries.groceryProducts({
+        storefrontQueries.foodProducts({
           categorySlug: deps.category,
           query: deps.query,
           limit: 50,
@@ -66,7 +66,7 @@ export const Route = createFileRoute('/grocery')({
       products,
     }
   },
-  component: GroceryPage,
+  component: FoodPage,
 })
 
 const PRICE_OPTIONS = [
@@ -110,7 +110,7 @@ function CheckRow({
   )
 }
 
-function GroceryPage() {
+function FoodPage() {
   const { categories, products } = Route.useLoaderData()
   const search = Route.useSearch()
   const navigate = useNavigate()
@@ -125,7 +125,7 @@ function GroceryPage() {
 
   const handleCategorySelect = (slug: string) => {
     navigate({
-      to: '/grocery',
+      to: '/food',
       search: {
         ...search,
         category: slug === 'all' ? undefined : slug,
@@ -137,7 +137,7 @@ function GroceryPage() {
   const handleResetFilters = () => {
     setSelectedPriceRange(null)
     navigate({
-      to: '/grocery',
+      to: '/food',
       search: {},
     })
     setMobileFilterOpen(false)
@@ -198,7 +198,7 @@ function GroceryPage() {
             {
               key: 'all',
               slug: 'all',
-              name: 'All Grocery & Food',
+              name: 'All Food & Snacks',
               count: products.length,
             },
             ...categories.map((cat) => ({
@@ -271,10 +271,10 @@ function GroceryPage() {
                 <BreadcrumbItem>
                   {activeCategoryObj ? (
                     <BreadcrumbLink asChild>
-                      <Link to="/grocery">Food &amp; Grocery</Link>
+                      <Link to="/food">Food &amp; Snacks</Link>
                     </BreadcrumbLink>
                   ) : (
-                    <BreadcrumbPage>Food &amp; Grocery</BreadcrumbPage>
+                    <BreadcrumbPage>Food &amp; Snacks</BreadcrumbPage>
                   )}
                 </BreadcrumbItem>
                 {activeCategoryObj && (
@@ -289,7 +289,7 @@ function GroceryPage() {
             </Breadcrumb>
 
             <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              {activeCategoryObj ? activeCategoryObj.name : 'Food & Grocery'}
+              {activeCategoryObj ? activeCategoryObj.name : 'Food & Snacks'}
             </h1>
 
             <p className="mt-2 max-w-lg text-xs leading-relaxed text-muted-foreground">
@@ -374,7 +374,7 @@ function GroceryPage() {
                 ) : (
                   <EmptyState
                     icon={ShoppingBag}
-                    title="No groceries match your filters"
+                    title="No food items match your filters"
                     description="Try clearing some filters or searching for another item."
                     action={
                       <Button
@@ -447,7 +447,7 @@ function GroceryPage() {
         >
           <SheetHeader className="text-left border-b border-border pb-4">
             <SheetTitle className="text-sm font-semibold">
-              Filter groceries
+              Filter food
             </SheetTitle>
           </SheetHeader>
 

@@ -28,7 +28,7 @@ import {
   can,
 } from '#/server/auth/permissions'
 import {
-  getAdminGroceryProductsQuery,
+  getAdminFoodProductsQuery,
   getAdminLiquorProductsQuery,
   getAdminStatsQuery,
   getAdminUsersQuery,
@@ -288,22 +288,22 @@ export const globalSearchFn = createServerFn({ method: 'GET' })
     const canCustomers = can(grants, 'customers', 'view')
     const canRiders = can(grants, 'riders', 'view')
 
-    const [liquor, grocery, users, orderList, riderList] = await Promise.all([
+    const [liquor, food, users, orderList, riderList] = await Promise.all([
       canProducts ? getAdminLiquorProductsQuery() : Promise.resolve([]),
-      canProducts ? getAdminGroceryProductsQuery() : Promise.resolve([]),
+      canProducts ? getAdminFoodProductsQuery() : Promise.resolve([]),
       canCustomers ? getAdminUsersQuery() : Promise.resolve([]),
       canOrders ? getAllOrdersQuery() : Promise.resolve([]),
       canRiders ? getAllRidersQuery() : Promise.resolve([]),
     ])
 
     const products = canProducts
-      ? [...liquor, ...grocery]
+      ? [...liquor, ...food]
           .filter((p) => p.name.toLowerCase().includes(q))
           .slice(0, 6)
           .map((p) => ({
             id: p.id,
             name: p.name,
-            href: 'categoryName' in p ? '/admin/liquor' : '/admin/grocery',
+            href: p.catalogType === 'liquor' ? '/admin/liquor' : '/admin/food',
           }))
       : []
 
@@ -469,13 +469,13 @@ export const getDashboardFn = createServerFn({ method: 'GET' })
 export const getOrdersFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('orders', 'view')
-    const [orderList, riderList, users, liquor, grocery, settings, dealerList] =
+    const [orderList, riderList, users, liquor, food, settings, dealerList] =
       await Promise.all([
         getAllOrdersQuery(),
         getAllRidersQuery(),
         getAdminUsersQuery(),
         getAdminLiquorProductsQuery(),
-        getAdminGroceryProductsQuery(),
+        getAdminFoodProductsQuery(),
         getStoreSettingsQuery(),
         getAllDealersQuery(),
       ])
@@ -491,7 +491,7 @@ export const getOrdersFn = createServerFn({ method: 'GET' }).handler(
       dealers: dealerList,
       users,
       liquor,
-      grocery,
+      food,
       settings,
     }
   },
@@ -704,7 +704,7 @@ export const getSettingsFn = createServerFn({ method: 'GET' }).handler(
       },
       settings,
       liquor: [] as any[],
-      grocery: [] as any[],
+      food: [] as any[],
     }
   },
 )
@@ -732,9 +732,9 @@ export const getCustomersOpsFn = createServerFn({ method: 'GET' }).handler(
 export const getInventoryOpsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('inventory', 'view')
-    const [liquor, grocery, orderList, settings] = await Promise.all([
+    const [liquor, food, orderList, settings] = await Promise.all([
       getAdminLiquorProductsQuery(),
-      getAdminGroceryProductsQuery(),
+      getAdminFoodProductsQuery(),
       getAllOrdersQuery(),
       getStoreSettingsQuery(),
     ])
@@ -744,7 +744,7 @@ export const getInventoryOpsFn = createServerFn({ method: 'GET' }).handler(
         settings,
       },
       liquor,
-      grocery,
+      food,
     }
   },
 )
@@ -801,7 +801,7 @@ export const getReportsOpsFn = createServerFn({ method: 'GET' }).handler(
       ledger: ledgerList,
       payments: paymentsList,
       liquor: [] as any[],
-      grocery: [] as any[],
+      food: [] as any[],
       stats,
       sourcingIntelligence,
     }
@@ -844,7 +844,7 @@ export const getOpsBundleFn = createServerFn({ method: 'GET' }).handler(
       settings,
       users,
       liquor,
-      grocery,
+      food,
     ] = await Promise.all([
       getAllOrdersQuery(),
       getAllRidersQuery(),
@@ -863,7 +863,7 @@ export const getOpsBundleFn = createServerFn({ method: 'GET' }).handler(
       getStoreSettingsQuery(),
       getAdminUsersQuery(),
       getAdminLiquorProductsQuery(),
-      getAdminGroceryProductsQuery(),
+      getAdminFoodProductsQuery(),
     ])
 
     const ops: OpsState = {
@@ -884,7 +884,7 @@ export const getOpsBundleFn = createServerFn({ method: 'GET' }).handler(
       settings,
     }
 
-    return { ops, users, liquor, grocery }
+    return { ops, users, liquor, food }
   },
 )
 
@@ -1495,7 +1495,7 @@ export const editOrderItemsBeforeDispatchFn = createServerFn({ method: 'POST' })
         items: z
           .array(
             z.object({
-              catalogType: z.enum(['liquor', 'grocery']),
+              catalogType: z.enum(['liquor', 'food']),
               productId: z.string(),
               variantId: z.string(),
               name: z.string(),
@@ -1650,7 +1650,7 @@ export const createOrderFn = createServerFn({ method: 'POST' })
         items: z
           .array(
             z.object({
-              catalogType: z.enum(['liquor', 'grocery']),
+              catalogType: z.enum(['liquor', 'food']),
               productId: z.string(),
               variantId: z.string(),
               name: z.string(),
@@ -2276,7 +2276,7 @@ export const savePermissionsFn = createServerFn({ method: 'POST' })
     permissionsToSave.products = Array.from(
       new Set([
         ...(data.permissions.liquor || []),
-        ...(data.permissions.grocery || []),
+        ...(data.permissions.food || []),
         ...(data.permissions.categories || []),
         ...(data.permissions.inventory || []),
         ...(data.permissions.dealers || []),
@@ -2790,7 +2790,7 @@ export const upsertBannerFn = createServerFn({ method: 'POST' })
         title: z.string().min(2),
         imageUrl: z.string().min(5),
         href: z.string().default('/drinks'),
-        placement: z.enum(['home', 'drinks', 'grocery']).default('home'),
+        placement: z.enum(['home', 'drinks', 'food']).default('home'),
         active: z.boolean().default(true),
       })
       .parse(d),

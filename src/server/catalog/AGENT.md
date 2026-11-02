@@ -1,12 +1,12 @@
 # src/server/catalog — products, categories, variants, images
 
-**Read when:** anything about liquor/grocery products, categories, brands, variants, availability, images.
+**Read when:** anything about liquor/food products, categories, brands, variants, availability, images.
 **Conventions:** `src/server/AGENT.md` · **Tables:** `src/db/AGENT.md` · **Helpers:** `src/lib/AGENT.md` (storage, money).
 
 ## Model
 
-- **Two separate catalogs** (`liquor_*` and `grocery_*` tables), same shape of API via a `catalogType: 'liquor' | 'grocery'` parameter.
-- A **product** has **variants** (liquor: `volumeMl`; grocery: `unit` + `quantity`). Price/stock/SKU live on the **variant**. Prices are integer paisa, VAT-inclusive.
+- **Two separate catalogs** (`liquor_*` and `food_*` tables), same shape of API via a `catalogType: 'liquor' | 'food'` parameter.
+- A **product** has **variants** (liquor: `volumeMl`; food: `unit` + `quantity`). Price/stock/SKU live on the **variant**. Prices are integer paisa, VAT-inclusive.
 - Liquor has **brands**; both catalogs have categories (optionally nested).
 - Slugs are unique per catalog, generated from the name, immutable once published (or redirect).
 - Archive instead of delete (`archivedAt`/`isActive`); never delete variants referenced by orders/stock.
@@ -14,7 +14,7 @@
 
 ## Transaction Safety (INFRA-1)
 
-- Multi-statement catalog writes (`upsertLiquorProductQuery`, `upsertGroceryProductQuery`, `deleteItemQuery`) execute inside `dbTx.transaction()` with atomic rollbacks.
+- Multi-statement catalog writes (`upsertLiquorProductQuery`, `upsertFoodProductQuery`, `deleteItemQuery`) execute inside `dbTx.transaction()` with atomic rollbacks.
 - Each function accepts optional `externalTx?: DbTx` allowing callers to participate in parent transactions.
 - Automated rollback tests in `src/server/db-transactions.test.ts`.
 
@@ -27,7 +27,7 @@
 | Function                                                                  | Roles          | Purpose                                                       | Status |
 | ------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------- | ------ |
 | `getLiquorProductsFn`, `getLiquorCategoriesFn`, `getLiquorBrandsFn`       | public         | Filters, pagination, brand/category filters, variants, images | ✅     |
-| `getGroceryProductsFn`, `getGroceryCategoriesFn`                          | public         | Grocery filters, variants, images                             | ✅     |
+| `getFoodProductsFn`, `getFoodCategoriesFn`                                | public         | Food filters, variants, images                                | ✅     |
 | `getFrontpageDataFn`                                                      | public         | Consolidated high-speed query for landing page                | ✅     |
 | `upsertProduct`, `upsertVariant`, `archiveProduct`                        | admin          | CRUD (both catalogs)                                          | ⬜     |
 | `upsertCategory`, `upsertBrand`                                           | admin          | Taxonomy CRUD                                                 | ⬜     |

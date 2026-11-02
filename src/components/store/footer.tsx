@@ -84,8 +84,8 @@ export function Footer() {
             <Link to="/drinks" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
               Drinks
             </Link>
-            <Link to="/grocery" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
-              Grocery
+            <Link to="/food" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
+              Food
             </Link>
             <a href="/#reviews" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
               Reviews

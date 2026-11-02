@@ -3,7 +3,7 @@ import type { DealerDto } from '#/server/inventory/inventory.queries'
 export const MODULES = [
   'dashboard',
   'liquor',
-  'grocery',
+  'food',
   'categories',
   'brands',
   'products', // legacy/umbrella
@@ -74,23 +74,23 @@ export const PERMISSION_SECTIONS: PermissionSection[] = [
         section: 'Catalog',
       },
       {
-        key: 'grocery',
-        label: 'Grocery',
+        key: 'food',
+        label: 'Food',
         description:
-          'Manage grocery items, pack sizes, inventory variants, and pricing',
+          'Manage food items, pack sizes, inventory variants, and pricing',
         section: 'Catalog',
       },
       {
         key: 'categories',
         label: 'Categories',
-        description: 'Create and configure liquor and grocery item categories',
+        description: 'Create and configure liquor and food item categories',
         section: 'Catalog',
       },
       {
         key: 'brands',
         label: 'Brands',
         description:
-          'Manage liquor distilleries, grocery brands, logos and manufacturer profiles',
+          'Manage liquor distilleries, food brands, logos and manufacturer profiles',
         section: 'Catalog',
       },
     ],
@@ -255,7 +255,7 @@ export interface OrderItemDealerInfo {
 
 export interface OrderItem {
   id: string
-  catalogType: 'liquor' | 'grocery'
+  catalogType: 'liquor' | 'food'
   productId: string
   variantId: string
   name: string
@@ -457,7 +457,7 @@ export interface Banner {
   title: string
   imageUrl: string
   href: string
-  placement: 'home' | 'drinks' | 'grocery'
+  placement: 'home' | 'drinks' | 'food'
   active: boolean
 }
 

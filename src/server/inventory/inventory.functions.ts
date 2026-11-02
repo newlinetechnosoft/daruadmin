@@ -124,7 +124,7 @@ export const getDealersByItemFn = createServerFn({ method: 'GET' })
   .validator((d: unknown) =>
     z
       .object({
-        catalogType: z.enum(['liquor', 'grocery']),
+        catalogType: z.enum(['liquor', 'food']),
         productId: z.string().uuid(),
       })
       .parse(d),

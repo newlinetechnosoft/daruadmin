@@ -54,7 +54,7 @@
 | Event                           | Voucher      | Debit Account                                     | Credit Account                                                                                             |
 | ------------------------------- | ------------ | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | **Order Delivered (COD)**       | `SV`         | `RIDER_COD_CASH` (`1031`) · `DISCOUNTS` (`5112`)  | `SALES` (`4010`, net of VAT) · `VAT_OUTPUT` (`2021`, 13%) · `DELIVERY_INCOME` (`4020`)                     |
-| **Order Dealer Cost Accrual**   | `SV` (lines) | `COGS_LIQUOR` (`5011`) or `COGS_GROCERY` (`5012`) | `DEALER_PAYABLE` (`2011`, with dealer party)                                                               |
+| **Order Dealer Cost Accrual**   | `SV` (lines) | `COGS_LIQUOR` (`5011`) or `COGS_FOOD` (`5012`)    | `DEALER_PAYABLE` (`2011`, with dealer party)                                                               |
 | **Rider Delivery Comp Accrual** | `SV` (lines) | `RIDER_EXPENSE` (`5111`)                          | `RIDER_PAYABLE` (`2031`, with rider party)                                                                 |
 | **Rider Cash Handover**         | `RV`         | `CASH_IN_HAND` (`1011`)                           | `RIDER_COD_CASH` (`1031`, with rider party)                                                                |
 | **Dealer Settlement Paid**      | `PV`         | `DEALER_PAYABLE` (`2011`, gross)                  | `BANK_MAIN` (`1012`)/`CASH_IN_HAND` (`1011`, net) · `TDS_PAYABLE` (`2023`, TDS)                            |

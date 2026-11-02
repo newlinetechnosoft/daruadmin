@@ -32,7 +32,7 @@
 | ----------------------------------------------------------- | :---: | :-------------: | :---: | :------: |
 | Manage manager/rider accounts (create, activate/deactivate) |  ✅   |  👁 view riders  |   –   |    –     |
 | Manage customers (activate/deactivate)                      |  ✅   |     👁 view      |   –   |    –     |
-| Catalog create/edit/archive (liquor & grocery)              |  ✅   |        –        |   –   |    –     |
+| Catalog create/edit/archive (liquor & food)                 |  ✅   |        –        |   –   |    –     |
 | Toggle availability, adjust stock                           |  ✅   |       ✅        |   –   |    –     |
 | Dealers create/edit                                         |  ✅   | 👁 view + settle |   –   |    –     |
 | Orders (all) view/confirm/assign/cancel                     |  ✅   |       ✅        |   –   |    –     |

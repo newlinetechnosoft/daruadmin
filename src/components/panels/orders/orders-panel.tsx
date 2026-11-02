@@ -104,7 +104,7 @@ export function OrdersPanel() {
     isFetching,
     refetch,
   } = useSuspenseQuery(adminQueries.orders())
-  const { ops, liquor, grocery, dealers } = ordersData
+  const { ops, liquor, food, dealers } = ordersData
   const dealersList = dealers
 
   const invalidateOrders = async () => {
@@ -143,7 +143,7 @@ export function OrdersPanel() {
     paymentMethod: 'cod' as PaymentMethod,
     notes: '',
     items: [] as {
-      catalogType: 'liquor' | 'grocery'
+      catalogType: 'liquor' | 'food'
       productId: string
       variantId: string
       name: string
@@ -160,7 +160,7 @@ export function OrdersPanel() {
   const allCatalogProducts = useMemo(() => {
     const list: {
       id: string
-      type: 'liquor' | 'grocery'
+      type: 'liquor' | 'food'
       name: string
       sku: string
       price: number
@@ -183,12 +183,12 @@ export function OrdersPanel() {
         }
       }
     }
-    for (const g of grocery) {
+    for (const g of food) {
       if (g.variants.length > 0) {
         for (const v of g.variants) {
           list.push({
             id: g.id,
-            type: 'grocery',
+            type: 'food',
             name: g.name,
             sku: v.sku,
             price: v.price,
@@ -199,7 +199,7 @@ export function OrdersPanel() {
       }
     }
     return list
-  }, [liquor, grocery])
+  }, [liquor, food])
 
   // Date-filtered orders (defaults to today's orders)
   const dateFilteredOrders = useMemo(() => {
@@ -2055,7 +2055,7 @@ export function OrdersPanel() {
                     {/* Store Header */}
                     <div className="text-center space-y-0.5 pb-2 border-b border-dashed border-border">
                       <div className="font-bold text-sm tracking-tight">
-                        {ops.settings.legalName || 'MEZMANI LIQUOR & GROCERY'}
+                        {ops.settings.legalName || 'MEZMANI LIQUOR & FOOD'}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {ops.settings.address || 'Traffic Chowk, Butwal, Nepal'}
@@ -2294,7 +2294,7 @@ export function OrdersPanel() {
                     <div>
                       <h2 className="text-base font-bold text-foreground uppercase tracking-tight">
                         {ops.settings.legalName ||
-                          'MEZMANI LIQUOR & GROCERY PVT. LTD.'}
+                          'MEZMANI LIQUOR & FOOD PVT. LTD.'}
                       </h2>
                       <p className="text-muted-foreground">
                         {ops.settings.address || 'Traffic Chowk, Butwal, Nepal'}
@@ -2566,7 +2566,7 @@ export function OrdersPanel() {
                     className="flex-1"
                   >
                     <option value="">
-                      Select Liquor or Grocery Product...
+                      Select Liquor or Food Product...
                     </option>
                     {allCatalogProducts.map((p) => (
                       <option

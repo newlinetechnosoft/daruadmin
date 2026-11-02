@@ -42,7 +42,7 @@ export const ACCOUNT_KEYS = {
 
   // Cost of Goods Sold
   COGS_LIQUOR: 'acc_5011',
-  COGS_GROCERY: 'acc_5012',
+  COGS_FOOD: 'acc_5012',
 
   // Operating Expenses
   RIDER_EXPENSE: 'acc_5111',
@@ -218,11 +218,11 @@ export const ACCOUNT_KEY_METADATA: Record<AccountKey, AccountKeyMetadata> = {
     rootType: 'expense',
     defaultAccountId: 'acc_5011',
   },
-  COGS_GROCERY: {
-    key: 'COGS_GROCERY',
-    label: 'COGS - Grocery Purchases',
+  COGS_FOOD: {
+    key: 'COGS_FOOD',
+    label: 'COGS - Food Purchases',
     description:
-      'Direct cost of sourcing grocery and snack items from dealers for delivered orders',
+      'Direct cost of sourcing food and snack items from dealers for delivered orders',
     rootType: 'expense',
     defaultAccountId: 'acc_5012',
   },

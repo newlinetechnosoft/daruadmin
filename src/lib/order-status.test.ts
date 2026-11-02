@@ -20,7 +20,7 @@ type MockOrder = Pick<
   items: Array<{
     id: string
     dealerId: string | null
-    catalogType: 'liquor' | 'grocery'
+    catalogType: 'liquor' | 'food'
   }>
 }
 
@@ -36,7 +36,7 @@ function createOrder(overrides: Partial<MockOrder> = {}): MockOrder {
     deliveryOtp: '4821',
     items: [
       { id: 'item_1', dealerId: 'dlr_01', catalogType: 'liquor' },
-      { id: 'item_2', dealerId: 'dlr_02', catalogType: 'grocery' },
+      { id: 'item_2', dealerId: 'dlr_02', catalogType: 'food' },
     ],
     ...overrides,
   }
@@ -283,7 +283,7 @@ describe('Order State Machine (Module 1)', () => {
         status: 'confirmed',
         items: [
           { id: 'i1', dealerId: 'dlr_1', catalogType: 'liquor' },
-          { id: 'i2', dealerId: null, catalogType: 'grocery' },
+          { id: 'i2', dealerId: null, catalogType: 'food' },
         ],
       })
       expect(() =>

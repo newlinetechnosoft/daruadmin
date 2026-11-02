@@ -8,7 +8,7 @@ import * as schema from '#/db/schema'
 import type { DbTx } from '#/db'
 import {
   upsertLiquorProductQuery,
-  upsertGroceryProductQuery,
+  upsertFoodProductQuery,
   deleteItemQuery,
 } from '#/server/catalog/catalog.queries'
 import {
@@ -57,7 +57,7 @@ describe('Transaction Safety for Multi-Step Writes (INFRA-1)', () => {
       slug: 'test-whisky',
     })
 
-    await db.insert(schema.groceryCategories).values({
+    await db.insert(schema.foodCategories).values({
       id: catSnacksId,
       name: 'Test Snacks',
       slug: 'test-snacks',
@@ -239,14 +239,14 @@ describe('Transaction Safety for Multi-Step Writes (INFRA-1)', () => {
     })
   })
 
-  describe('2. upsertGroceryProductQuery transaction safety', () => {
-    it('rolls back grocery product, variants, and images completely when aborted', async () => {
+  describe('2. upsertFoodProductQuery transaction safety', () => {
+    it('rolls back food product, variants, and images completely when aborted', async () => {
       let createdProdId: string | undefined
       let errorThrown = false
 
       try {
         await db.transaction(async (tx) => {
-          const res = await upsertGroceryProductQuery(
+          const res = await upsertFoodProductQuery(
             {
               name: 'Rollback Chips',
               slug: 'rollback-chips',
@@ -258,7 +258,7 @@ describe('Transaction Safety for Multi-Step Writes (INFRA-1)', () => {
                   name: 'Large Pack',
                   quantity: '1',
                   unit: 'pack',
-                  sku: 'SKU-GROC-RB-1',
+                  sku: 'SKU-FOOD-RB-1',
                   price: 15000,
                   stock: 50,
                   isActive: true,
@@ -276,10 +276,10 @@ describe('Transaction Safety for Multi-Step Writes (INFRA-1)', () => {
           )
           createdProdId = res.productId
 
-          throw new Error('Simulated failure during grocery product upsert')
+          throw new Error('Simulated failure during food product upsert')
         })
       } catch (err: any) {
-        if (err.message === 'Simulated failure during grocery product upsert') {
+        if (err.message === 'Simulated failure during food product upsert') {
           errorThrown = true
         }
       }
@@ -289,14 +289,14 @@ describe('Transaction Safety for Multi-Step Writes (INFRA-1)', () => {
 
       const prodRows = await db
         .select()
-        .from(schema.groceryProducts)
-        .where(eq(schema.groceryProducts.id, createdProdId!))
+        .from(schema.foodProducts)
+        .where(eq(schema.foodProducts.id, createdProdId!))
       expect(prodRows.length).toBe(0)
 
       const variantRows = await db
         .select()
-        .from(schema.groceryVariants)
-        .where(eq(schema.groceryVariants.productId, createdProdId!))
+        .from(schema.foodVariants)
+        .where(eq(schema.foodVariants.productId, createdProdId!))
       expect(variantRows.length).toBe(0)
     })
   })
@@ -415,7 +415,7 @@ describe('Transaction Safety for Multi-Step Writes (INFRA-1)', () => {
               dealerId,
               items: [
                 {
-                  catalogType: 'grocery',
+                  catalogType: 'food',
                   productId: prodId2,
                 },
               ],
