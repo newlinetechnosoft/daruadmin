@@ -4,6 +4,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { storefrontQueries } from '#/queries/storefront'
 import { Header } from '#/components/store/header'
+import { Footer } from '#/components/store/footer'
 import { toast } from 'sonner'
 import {
   ArrowRight,
@@ -535,9 +536,8 @@ function HomePage() {
                   loading={idx === 0 ? 'eager' : 'lazy'}
                   decoding="async"
                   fetchPriority={idx === 0 ? 'high' : 'auto'}
-                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${
-                    idx === currentSlide ? 'scale-110' : 'scale-100'
-                  }`}
+                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${idx === currentSlide ? 'scale-110' : 'scale-100'
+                    }`}
                 />
               </div>
             ))}
@@ -612,11 +612,10 @@ function HomePage() {
                   key={idx}
                   type="button"
                   onClick={() => setCurrentSlide(idx)}
-                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                    idx === currentSlide
-                      ? 'w-8 bg-primary shadow-md shadow-primary/50'
-                      : 'w-2.5 bg-white/70 hover:bg-white'
-                  }`}
+                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${idx === currentSlide
+                    ? 'w-8 bg-primary shadow-md shadow-primary/50'
+                    : 'w-2.5 bg-white/70 hover:bg-white'
+                    }`}
                   aria-label={`Go to slide ${idx + 1}`}
                 />
               ))}
@@ -971,67 +970,59 @@ function HomePage() {
         </section>
 
         {/* FEATURES */}
-        <section className="py-14 sm:py-20">
-          <div className={`${wrap} grid gap-10 sm:grid-cols-3 sm:gap-8`}>
-            {FEATURES.map((f, i) => (
-              <div key={f.title} className="border-t-2 border-border pt-5">
-                <span className="text-xs font-medium tabular-nums text-muted-foreground">
+        <section className="border-y border-border bg-secondary/30 py-14 sm:py-16">
+          <div className={`${wrap} grid gap-8 sm:grid-cols-3 sm:gap-10`}>
+            {FEATURES.map((feature, i) => (
+              <div key={feature.title} className="flex gap-4">
+                <span className="text-sm font-black tabular-nums text-primary">
                   {String(i + 1).padStart(2, '0')}
                 </span>
-                <h3 className="mt-3 text-xl font-bold tracking-tight text-foreground">
-                  {f.title}
-                </h3>
-                <p className="mt-2 text-sm text-muted-foreground">{f.body}</p>
+                <div>
+                  <h3 className="text-base font-extrabold">{feature.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{feature.body}</p>
+                </div>
               </div>
             ))}
           </div>
         </section>
 
         {/* REVIEWS */}
-        <section
-          className="scroll-mt-24 border-t border-border bg-secondary/30 py-16 sm:py-24"
-          id="reviews"
-        >
+        <section className="scroll-mt-24 bg-background py-16 sm:py-24" id="reviews">
           <div className={wrap}>
-            <div className="mb-10 max-w-2xl sm:mb-14">
-              <p className={eyebrow}>Customer love</p>
-              <h2 className="mt-3 text-4xl font-black uppercase leading-none tracking-tighter sm:text-6xl text-foreground">
-                What customers say
-              </h2>
-              <p className="mt-4 text-muted-foreground">
-                Here&apos;s what our satisfied customers have to say.
+            <div className="mb-9 flex flex-col justify-between gap-4 sm:mb-12 sm:flex-row sm:items-end">
+              <div>
+                <p className={eyebrow}>Kind words from our customers</p>
+                <h2 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
+                  The good word<span className="text-primary">.</span>
+                </h2>
+              </div>
+              <p className="max-w-sm text-sm leading-6 text-muted-foreground">
+                We’re glad to be part of your everyday moments. Here’s what
+                local customers have shared.
               </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
-              {REVIEWS.map((r) => (
+              {REVIEWS.map((review) => (
                 <article
-                  key={r.name}
-                  className="flex flex-col justify-between bg-card border border-border p-7 sm:p-8 rounded-xl shadow-xs text-card-foreground"
+                  key={review.name}
+                  className="flex min-h-[250px] flex-col justify-between rounded-2xl border border-border bg-card p-6 transition hover:-translate-y-1 hover:shadow-lg sm:p-7"
                 >
                   <div>
-                    <div
-                      className="text-sm tracking-[0.2em] text-warning font-bold"
-                      aria-label="5 out of 5 stars"
-                    >
+                    <div className="text-sm tracking-[0.18em] text-primary" aria-label="5 out of 5 stars">
                       ★★★★★
                     </div>
-                    <blockquote className="mt-6 text-xl font-semibold leading-snug tracking-tight text-foreground">
-                      “{r.quote}”
+                    <blockquote className="mt-6 text-lg font-semibold leading-7 tracking-tight text-foreground">
+                      “{review.quote}”
                     </blockquote>
                   </div>
-
-                  <div className="mt-10 flex items-center gap-3">
-                    <div className="grid h-10 w-10 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-                      {r.name.charAt(0)}
+                  <div className="mt-8 flex items-center gap-3 border-t border-border pt-5">
+                    <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/15 text-sm font-black text-primary">
+                      {review.name.charAt(0)}
                     </div>
-                    <div className="leading-tight">
-                      <strong className="block text-sm text-foreground">
-                        {r.name}
-                      </strong>
-                      <small className="text-xs text-muted-foreground">
-                        Verified customer
-                      </small>
+                    <div>
+                      <strong className="block text-sm font-bold">{review.name}</strong>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">Mezmani customer</span>
                     </div>
                   </div>
                 </article>
@@ -1042,138 +1033,7 @@ function HomePage() {
       </main>
 
       {/* FOOTER */}
-      <footer
-        className="scroll-mt-24 bg-sidebar text-sidebar-foreground border-t border-sidebar-border"
-        id="about"
-      >
-        <div className={`${wrap} py-16 sm:py-20`}>
-          <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
-            <div>
-              <Link
-                to="/"
-                className="text-3xl font-black uppercase tracking-tighter text-sidebar-foreground"
-              >
-                <img
-                  src="/mezmani_logo_bg.svg"
-                  width="180"
-                  height="180"
-                  loading="lazy"
-                />
-              </Link>
-              <p className="mt-4 max-w-xs text-sm leading-relaxed text-sidebar-foreground/70">
-                Food &amp; drinks delivery.
-                <br />
-                Let the good times roll.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-3 text-sm">
-              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/50">
-                Extras
-              </h4>
-              <Link
-                to="/drinks"
-                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
-              >
-                Cocktail Recipes
-              </Link>
-              <Link
-                to="/drinks"
-                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
-              >
-                Give a Gift
-              </Link>
-              <a
-                href="#reviews"
-                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
-              >
-                Reviews
-              </a>
-              <Link
-                to="/drinks"
-                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
-              >
-                Share &amp; Save 20%
-              </Link>
-            </div>
-
-            <div className="flex flex-col gap-3 text-sm">
-              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/50">
-                About
-              </h4>
-              <a
-                href="#about"
-                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
-              >
-                About Us
-              </a>
-              <a
-                href="#about"
-                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
-              >
-                Find Us
-              </a>
-              <a
-                href="tel:+9779802088800"
-                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
-              >
-                Contact (+977-9802088800)
-              </a>
-              <a
-                href="#about"
-                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
-              >
-                Help &amp; Support
-              </a>
-            </div>
-
-            <div className="flex flex-col gap-3 text-sm">
-              <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-sidebar-foreground/50">
-                Connect
-              </h4>
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
-              >
-                Facebook
-              </a>
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
-              >
-                Instagram
-              </a>
-              <a
-                href="https://tiktok.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sidebar-foreground/80 hover:text-sidebar-foreground transition-colors"
-              >
-                TikTok
-              </a>
-            </div>
-          </div>
-
-          <div className="mt-16 flex flex-col gap-5 border-t border-sidebar-border pt-6 text-xs text-sidebar-foreground/60 sm:flex-row sm:items-center sm:justify-between">
-            <p>© 2026 Mezmani Pvt. Ltd. All Rights Reserved.</p>
-
-            <div className="flex flex-wrap gap-x-5 gap-y-2 font-medium text-sidebar-foreground/80">
-              <span>eSewa</span>
-              <span>Khalti</span>
-              <span>fonepay</span>
-              <span>IME Pay</span>
-            </div>
-          </div>
-
-          <p className="mt-6 text-xs text-sidebar-foreground/60">
-            Please drink responsibly. 18+ only.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

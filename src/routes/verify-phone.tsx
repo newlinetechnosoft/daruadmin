@@ -132,7 +132,7 @@ function VerifyPhonePage() {
           // If session is not active, attempt auto sign-in with pending credentials
           try {
             const access = await queryClient.fetchQuery(adminQueries.access())
-            if (!access.authenticated && pending?.email && pending?.password) {
+            if (!access.authenticated && pending?.email && pending.password) {
               const signInRes = await authClient.signIn.email({
                 email: pending.email,
                 password: pending.password,
@@ -260,27 +260,27 @@ function VerifyPhonePage() {
         <div className="w-full max-w-[960px] mx-auto relative z-10">
           {/* Decorative ambient background glows aligned to system theme */}
           <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
-            <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-blue-500/15 dark:bg-blue-600/10 blur-3xl" />
-            <div className="absolute -bottom-16 -right-16 w-80 h-80 rounded-full bg-amber-500/15 dark:bg-amber-600/10 blur-3xl" />
+            <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-primary/10 dark:bg-primary/5 blur-3xl" />
+            <div className="absolute -bottom-16 -right-16 w-80 h-80 rounded-full bg-primary/10 dark:bg-primary/5 blur-3xl" />
           </div>
 
           {/* Main Card Container with Split Design Format */}
-          <div className="relative w-full rounded-[28px] sm:rounded-[36px] bg-card dark:bg-[#1c2023] shadow-[0_20px_50px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-border dark:border-[#2a2f34] overflow-hidden flex flex-col md:flex-row transition-all duration-300">
-            {/* ==================== LEFT PANEL (Vibrant Blue Curve) ==================== */}
-            <div className="relative w-full md:w-[56%] bg-gradient-to-br from-[#0062E0] via-[#0052D4] to-[#00389E] dark:from-[#004bb5] dark:via-[#003c9c] dark:to-[#002773] text-white p-7 sm:p-10 md:p-12 flex flex-col justify-center overflow-hidden z-10 transition-colors duration-300">
-              {/* Decorative Organic Shapes matching UI Mockup */}
-              {/* Top-Right Dark Blue Circle */}
-              <div className="w-52 h-52 rounded-full bg-[#00348D]/70 absolute -top-16 -right-12 pointer-events-none" />
+          <div className="relative w-full rounded-3xl bg-card text-card-foreground shadow-xl border border-border overflow-hidden flex flex-col md:flex-row transition-all duration-300">
+            {/* ==================== LEFT PANEL (Mezmani Midnight Brand Panel) ==================== */}
+            <div className="relative w-full md:w-[56%] bg-sidebar text-sidebar-foreground p-7 sm:p-10 md:p-12 flex flex-col justify-center overflow-hidden z-10 transition-colors duration-300">
+              {/* Decorative Organic Shapes matching UI theme */}
+              {/* Top-Right Midnight Accent Shape */}
+              <div className="w-52 h-52 rounded-full bg-sidebar-accent/50 absolute -top-16 -right-12 pointer-events-none" />
 
-              {/* Bottom-Right Dark Blue Shape */}
-              <div className="w-64 h-64 rounded-full bg-[#002777]/80 absolute -bottom-24 -right-16 pointer-events-none" />
+              {/* Bottom-Right Midnight Accent Shape */}
+              <div className="w-64 h-64 rounded-full bg-sidebar-accent/30 absolute -bottom-24 -right-16 pointer-events-none" />
 
-              {/* Bottom-Left Luminous Blue Glow */}
-              <div className="w-56 h-56 rounded-full bg-[#388BFF]/35 blur-2xl absolute -bottom-16 -left-16 pointer-events-none" />
+              {/* Bottom-Left Luminous Amber Glow */}
+              <div className="w-56 h-56 rounded-full bg-primary/10 blur-2xl absolute -bottom-16 -left-16 pointer-events-none" />
 
               {/* Organic Wave Divider on Desktop Edge */}
               <svg
-                className="absolute -right-16 lg:-right-20 top-0 h-full w-16 lg:w-20 pointer-events-none hidden md:block text-[#0052D4] dark:text-[#003c9c] fill-current z-10 transition-colors duration-300"
+                className="absolute -right-16 lg:-right-20 top-0 h-full w-16 lg:w-20 pointer-events-none hidden md:block text-sidebar fill-current z-10 transition-colors duration-300"
                 viewBox="0 0 100 600"
                 preserveAspectRatio="none"
               >
@@ -291,12 +291,12 @@ function VerifyPhonePage() {
               <div className="relative z-20 w-full max-w-[370px] mx-auto">
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="text-center mb-5">
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight drop-shadow-sm">
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                       Verify Your Mobile
                     </h1>
-                    <p className="text-xs sm:text-sm text-blue-100/90 mt-1.5 font-normal leading-relaxed">
+                    <p className="text-xs sm:text-sm text-sidebar-foreground/75 mt-1.5 font-normal leading-relaxed">
                       Enter the 6-digit verification code sent to{' '}
-                      <span className="font-mono font-bold text-amber-300 inline-block">
+                      <span className="font-mono font-bold text-primary inline-block">
                         +977 {maskPhone(normalizedPhone)}
                       </span>
                     </p>
@@ -304,7 +304,7 @@ function VerifyPhonePage() {
                       <Link
                         to="/signup"
                         search={{ redirect: search.redirect }}
-                        className="text-[12px] text-blue-200 hover:text-white underline underline-offset-2 transition-colors inline-block"
+                        className="text-[12px] text-primary hover:underline underline-offset-2 transition-colors inline-block font-medium"
                       >
                         Wrong number? Change it here
                       </Link>
@@ -313,13 +313,13 @@ function VerifyPhonePage() {
 
                   {/* Inline Error Alert */}
                   {errorMessage && (
-                    <div className="rounded-xl bg-rose-500/20 border border-rose-300/40 p-3 text-white text-xs flex items-start gap-2.5 shadow-sm animate-in fade-in duration-200">
-                      <XCircle className="h-4 w-4 text-rose-300 shrink-0 mt-0.5" />
+                    <div className="rounded-xl bg-destructive/15 border border-destructive/30 p-3 text-destructive-foreground text-xs flex items-start gap-2.5 shadow-sm animate-in fade-in duration-200">
+                      <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
                       <span className="leading-snug">{errorMessage}</span>
                     </div>
                   )}
 
-                  {/* 6-Slot OTP Input with High-Contrast White Pill Slots */}
+                  {/* 6-Slot OTP Input with Theme Card Slots */}
                   <div
                     ref={otpContainerRef}
                     className="flex flex-col items-center justify-center space-y-2 py-1"
@@ -336,49 +336,49 @@ function VerifyPhonePage() {
                       <InputOTPGroup className="gap-2">
                         <InputOTPSlot
                           index={0}
-                          className="h-12 w-10 sm:h-14 sm:w-12 bg-white text-gray-900 font-mono font-bold text-xl sm:text-2xl rounded-xl shadow-md shadow-blue-950/15 border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-amber-400"
+                          className="h-12 w-10 sm:h-14 sm:w-12 bg-card text-card-foreground font-mono font-bold text-xl sm:text-2xl rounded-xl shadow-xs border border-border focus:ring-2 focus:ring-primary"
                         />
                         <InputOTPSlot
                           index={1}
-                          className="h-12 w-10 sm:h-14 sm:w-12 bg-white text-gray-900 font-mono font-bold text-xl sm:text-2xl rounded-xl shadow-md shadow-blue-950/15 border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-amber-400"
+                          className="h-12 w-10 sm:h-14 sm:w-12 bg-card text-card-foreground font-mono font-bold text-xl sm:text-2xl rounded-xl shadow-xs border border-border focus:ring-2 focus:ring-primary"
                         />
                         <InputOTPSlot
                           index={2}
-                          className="h-12 w-10 sm:h-14 sm:w-12 bg-white text-gray-900 font-mono font-bold text-xl sm:text-2xl rounded-xl shadow-md shadow-blue-950/15 border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-amber-400"
+                          className="h-12 w-10 sm:h-14 sm:w-12 bg-card text-card-foreground font-mono font-bold text-xl sm:text-2xl rounded-xl shadow-xs border border-border focus:ring-2 focus:ring-primary"
                         />
                       </InputOTPGroup>
-                      <InputOTPSeparator className="text-white/60 font-bold" />
+                      <InputOTPSeparator className="text-sidebar-foreground/50 font-bold" />
                       <InputOTPGroup className="gap-2">
                         <InputOTPSlot
                           index={3}
-                          className="h-12 w-10 sm:h-14 sm:w-12 bg-white text-gray-900 font-mono font-bold text-xl sm:text-2xl rounded-xl shadow-md shadow-blue-950/15 border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-amber-400"
+                          className="h-12 w-10 sm:h-14 sm:w-12 bg-card text-card-foreground font-mono font-bold text-xl sm:text-2xl rounded-xl shadow-xs border border-border focus:ring-2 focus:ring-primary"
                         />
                         <InputOTPSlot
                           index={4}
-                          className="h-12 w-10 sm:h-14 sm:w-12 bg-white text-gray-900 font-mono font-bold text-xl sm:text-2xl rounded-xl shadow-md shadow-blue-950/15 border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-amber-400"
+                          className="h-12 w-10 sm:h-14 sm:w-12 bg-card text-card-foreground font-mono font-bold text-xl sm:text-2xl rounded-xl shadow-xs border border-border focus:ring-2 focus:ring-primary"
                         />
                         <InputOTPSlot
                           index={5}
-                          className="h-12 w-10 sm:h-14 sm:w-12 bg-white text-gray-900 font-mono font-bold text-xl sm:text-2xl rounded-xl shadow-md shadow-blue-950/15 border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-amber-400"
+                          className="h-12 w-10 sm:h-14 sm:w-12 bg-card text-card-foreground font-mono font-bold text-xl sm:text-2xl rounded-xl shadow-xs border border-border focus:ring-2 focus:ring-primary"
                         />
                       </InputOTPGroup>
                     </InputOTP>
 
-                    <p className="text-[12px] text-blue-100/90 pt-1 flex items-center gap-1.5 font-medium">
-                      <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+                    <p className="text-[12px] text-sidebar-foreground/75 pt-1 flex items-center gap-1.5 font-medium">
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
                       Code expires in 5 minutes
                     </p>
                   </div>
 
-                  {/* Amber CTA Button matching Mezmani Primary Theme */}
+                  {/* Primary CTA Button matching Mezmani Primary Theme */}
                   <button
                     type="submit"
                     disabled={otp.length !== 6 || isVerifying}
-                    className="w-full mt-2 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl bg-[#F59E0B] hover:bg-[#D97706] active:scale-[0.99] text-slate-950 font-bold text-[16px] shadow-[0_10px_25px_-5px_rgba(245,158,11,0.45)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+                    className="w-full mt-2 py-3.5 sm:py-4 rounded-xl bg-primary hover:bg-primary/90 active:scale-[0.99] text-primary-foreground font-bold text-[16px] shadow-md shadow-primary/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {isVerifying ? (
                       <span className="flex items-center gap-2">
-                        <span className="h-4 w-4 rounded-full border-2 border-slate-950 border-t-transparent animate-spin" />
+                        <span className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
                         Verifying code...
                       </span>
                     ) : (
@@ -391,13 +391,13 @@ function VerifyPhonePage() {
 
                   {/* Resend Code Options */}
                   <div className="flex flex-col items-center justify-center space-y-2 pt-1 text-center">
-                    <div className="flex items-center justify-center gap-1.5 text-xs text-blue-100">
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-sidebar-foreground/75">
                       <span>Didn&apos;t receive the code?</span>
                       <button
                         type="button"
                         onClick={handleResend}
                         disabled={countdown > 0 || isResending}
-                        className="font-bold text-amber-300 hover:text-amber-200 underline disabled:text-blue-200/60 disabled:no-underline cursor-pointer transition-colors"
+                        className="font-bold text-primary hover:underline disabled:text-sidebar-foreground/40 disabled:no-underline cursor-pointer transition-colors"
                       >
                         {isResending ? (
                           <span className="flex items-center gap-1">
@@ -417,7 +417,7 @@ function VerifyPhonePage() {
 
               {/* Smooth Mobile Bottom Wave Divider */}
               <svg
-                className="w-full h-6 text-card dark:text-[#1c2023] fill-current block md:hidden absolute bottom-0 left-0 -mb-[1px] pointer-events-none transition-colors duration-300"
+                className="w-full h-6 text-card fill-current block md:hidden absolute bottom-0 left-0 -mb-[1px] pointer-events-none transition-colors duration-300"
                 viewBox="0 0 400 30"
                 preserveAspectRatio="none"
               >
@@ -425,10 +425,10 @@ function VerifyPhonePage() {
               </svg>
             </div>
 
-            {/* ==================== RIGHT PANEL (System Card Surface with Blue Accent) ==================== */}
-            <div className="relative w-full md:w-[44%] bg-card dark:bg-[#1c2023] flex flex-col items-center justify-center px-6 sm:px-10 py-10 sm:py-14 text-center overflow-hidden transition-colors duration-300">
-              {/* Decorative Bottom-Right Blue Accent Shape */}
-              <div className="w-44 sm:w-52 h-44 sm:h-52 rounded-full bg-[#0062E0] dark:bg-[#004bb5] absolute -bottom-16 -right-16 pointer-events-none opacity-95 shadow-lg transition-colors duration-300" />
+            {/* ==================== RIGHT PANEL (Clean Card Surface with Amber Gold Accent) ==================== */}
+            <div className="relative w-full md:w-[44%] bg-card text-card-foreground flex flex-col items-center justify-center px-6 sm:px-10 py-10 sm:py-14 text-center overflow-hidden transition-colors duration-300">
+              {/* Decorative Warm Ambient Circle */}
+              <div className="w-44 sm:w-52 h-44 sm:h-52 rounded-full bg-primary/10 absolute -bottom-16 -right-16 pointer-events-none blur-xl transition-colors duration-300" />
 
               {/* Content Container */}
               <div className="relative z-10 max-w-[300px] sm:max-w-xs flex flex-col items-center">
@@ -445,7 +445,7 @@ function VerifyPhonePage() {
                 <div className="space-y-3 w-full">
                   <a
                     href="tel:+9779802088800"
-                    className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#0066FF] to-[#0052D4] hover:brightness-105 active:scale-[0.99] text-white font-bold text-[14px] sm:text-[15px] px-6 py-3 rounded-xl sm:rounded-2xl shadow-[0_10px_25px_-5px_rgba(0,85,212,0.35)] transition-all w-full cursor-pointer"
+                    className="inline-flex items-center justify-center gap-2 border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground active:scale-[0.99] font-bold text-[14px] sm:text-[15px] px-6 py-3 rounded-xl shadow-xs transition-all w-full cursor-pointer"
                   >
                     <PhoneCall className="h-4 w-4" />
                     Help Hotline: 9802088800
@@ -467,12 +467,12 @@ function VerifyPhonePage() {
           {/* Compliance & Trust Badges aligned to theme */}
           <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground mt-6">
             <div className="flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <ShieldCheck className="h-4 w-4 text-success" />
               <span>18+ Verified Platform</span>
             </div>
             <span>•</span>
             <div className="flex items-center gap-1.5">
-              <Zap className="h-4 w-4 text-amber-500" />
+              <Zap className="h-4 w-4 text-warning" />
               <span>30-Minute Valley Delivery</span>
             </div>
           </div>

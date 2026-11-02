@@ -358,27 +358,27 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
     <div className="w-full max-w-[960px] mx-auto relative z-10">
       {/* Decorative ambient background glows aligned to system theme */}
       <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
-        <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-blue-500/15 dark:bg-blue-600/10 blur-3xl" />
-        <div className="absolute -bottom-16 -right-16 w-80 h-80 rounded-full bg-amber-500/15 dark:bg-amber-600/10 blur-3xl" />
+        <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-primary/10 dark:bg-primary/5 blur-3xl" />
+        <div className="absolute -bottom-16 -right-16 w-80 h-80 rounded-full bg-primary/10 dark:bg-primary/5 blur-3xl" />
       </div>
 
       {/* Main Auth Card Container */}
-      <div className="relative w-full rounded-[28px] sm:rounded-[36px] bg-card dark:bg-[#1c2023] shadow-[0_20px_50px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-border dark:border-[#2a2f34] overflow-hidden flex flex-col md:flex-row transition-all duration-300">
-        {/* ==================== LEFT PANEL (Vibrant Blue Curve) ==================== */}
-        <div className="relative w-full md:w-[56%] bg-gradient-to-br from-[#0062E0] via-[#0052D4] to-[#00389E] dark:from-[#004bb5] dark:via-[#003c9c] dark:to-[#002773] text-white p-6 sm:p-9 md:p-11 flex flex-col justify-center overflow-hidden z-10 transition-colors duration-300">
-          {/* Decorative Organic Shapes matching UI Mockup */}
-          {/* Top-Right Dark Blue Circle */}
-          <div className="w-52 h-52 rounded-full bg-[#00348D]/70 absolute -top-16 -right-12 pointer-events-none" />
+      <div className="relative w-full rounded-3xl bg-card text-card-foreground shadow-xl border border-border overflow-hidden flex flex-col md:flex-row transition-all duration-300">
+        {/* ==================== LEFT PANEL (Mezmani Midnight Brand Panel) ==================== */}
+        <div className="relative w-full md:w-[56%] bg-sidebar text-sidebar-foreground p-6 sm:p-9 md:p-11 flex flex-col justify-center overflow-hidden z-10 transition-colors duration-300">
+          {/* Decorative Organic Shapes matching UI theme */}
+          {/* Top-Right Midnight Accent Shape */}
+          <div className="w-52 h-52 rounded-full bg-sidebar-accent/50 absolute -top-16 -right-12 pointer-events-none" />
 
-          {/* Bottom-Right Dark Blue Shape */}
-          <div className="w-64 h-64 rounded-full bg-[#002777]/80 absolute -bottom-24 -right-16 pointer-events-none" />
+          {/* Bottom-Right Midnight Accent Shape */}
+          <div className="w-64 h-64 rounded-full bg-sidebar-accent/30 absolute -bottom-24 -right-16 pointer-events-none" />
 
-          {/* Bottom-Left Luminous Blue Glow */}
-          <div className="w-56 h-56 rounded-full bg-[#388BFF]/35 blur-2xl absolute -bottom-16 -left-16 pointer-events-none" />
+          {/* Bottom-Left Luminous Amber Glow */}
+          <div className="w-56 h-56 rounded-full bg-primary/10 blur-2xl absolute -bottom-16 -left-16 pointer-events-none" />
 
           {/* Organic Wave Divider on Desktop Edge */}
           <svg
-            className="absolute -right-16 lg:-right-20 top-0 h-full w-16 lg:w-20 pointer-events-none hidden md:block text-[#0052D4] dark:text-[#003c9c] fill-current z-10 transition-colors duration-300"
+            className="absolute -right-16 lg:-right-20 top-0 h-full w-16 lg:w-20 pointer-events-none hidden md:block text-sidebar fill-current z-10 transition-colors duration-300"
             viewBox="0 0 100 600"
             preserveAspectRatio="none"
           >
@@ -397,25 +397,25 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
               /* ==================== LOGIN FORM ==================== */
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="text-center mb-6">
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight drop-shadow-sm">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                     Welcome Back
                   </h1>
-                  <p className="text-xs sm:text-sm text-blue-100/90 mt-1.5 font-normal leading-relaxed">
+                  <p className="text-xs sm:text-sm text-sidebar-foreground/75 mt-1.5 font-normal leading-relaxed">
                     Sign in to access your orders, cart, and express delivery
                   </p>
                 </div>
 
-                {/* User Name / Mobile or Email Field - Font size 16px */}
-                <div className="relative flex items-center bg-white rounded-xl sm:rounded-2xl px-4 py-3 sm:py-3.5 shadow-md shadow-blue-950/10 ring-1 ring-black/5 focus-within:ring-2 focus-within:ring-amber-400 transition-all">
-                  <User className="h-5 w-5 text-gray-700 shrink-0 mr-3" />
+                {/* User Name / Mobile or Email Field */}
+                <div className="relative flex items-center bg-card text-card-foreground rounded-xl px-4 py-3 sm:py-3.5 border border-border shadow-xs focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all">
+                  <User className="h-5 w-5 text-muted-foreground shrink-0 mr-3" />
                   <input
                     type="text"
                     required
                     autoComplete="username"
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
-                    placeholder="User Name"
-                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-gray-900 placeholder:text-gray-400 font-medium"
+                    placeholder="Mobile number or email"
+                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-card-foreground placeholder:text-muted-foreground font-medium"
                   />
                   {/* Email validation icon if user types an email */}
                   {isLoginEmailCheck !== null && (
@@ -428,17 +428,17 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                       }
                     >
                       {isLoginEmailCheck ? (
-                        <CheckCircle2 className="h-5 w-5 text-emerald-500 animate-in fade-in zoom-in-75 duration-200" />
+                        <CheckCircle2 className="h-5 w-5 text-success animate-in fade-in zoom-in-75 duration-200" />
                       ) : (
-                        <XCircle className="h-5 w-5 text-rose-500 animate-in fade-in zoom-in-75 duration-200" />
+                        <XCircle className="h-5 w-5 text-destructive animate-in fade-in zoom-in-75 duration-200" />
                       )}
                     </div>
                   )}
                 </div>
 
-                {/* Password Field with Eye Icon Toggle - Font size 16px */}
-                <div className="relative flex items-center bg-white rounded-xl sm:rounded-2xl px-4 py-3 sm:py-3.5 shadow-md shadow-blue-950/10 ring-1 ring-black/5 focus-within:ring-2 focus-within:ring-amber-400 transition-all">
-                  <Lock className="h-5 w-5 text-gray-700 shrink-0 mr-3" />
+                {/* Password Field with Eye Icon Toggle */}
+                <div className="relative flex items-center bg-card text-card-foreground rounded-xl px-4 py-3 sm:py-3.5 border border-border shadow-xs focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all">
+                  <Lock className="h-5 w-5 text-muted-foreground shrink-0 mr-3" />
                   <input
                     type={showLoginPassword ? 'text' : 'password'}
                     required
@@ -446,13 +446,13 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="Password"
-                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-gray-900 placeholder:text-gray-400 font-medium pr-2"
+                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-card-foreground placeholder:text-muted-foreground font-medium pr-2"
                   />
                   {/* Eye Toggle Icon */}
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="p-1.5 text-gray-500 hover:text-gray-800 transition-colors shrink-0 cursor-pointer rounded-lg hover:bg-gray-100"
+                    className="p-1.5 text-muted-foreground hover:text-card-foreground transition-colors shrink-0 cursor-pointer rounded-md hover:bg-muted"
                     aria-label={
                       showLoginPassword ? 'Hide password' : 'Show password'
                     }
@@ -461,22 +461,22 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     }
                   >
                     {showLoginPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-700" />
+                      <EyeOff className="h-5 w-5" />
                     ) : (
-                      <Eye className="h-5 w-5 text-gray-700" />
+                      <Eye className="h-5 w-5" />
                     )}
                   </button>
                 </div>
 
-                {/* Orange Login Button matching Mezmani Primary Theme */}
+                {/* Primary Button matching Mezmani Primary Theme */}
                 <button
                   type="submit"
                   disabled={isLoginLoading}
-                  className="w-full mt-2 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl bg-[#F59E0B] hover:bg-[#D97706] active:scale-[0.99] text-slate-950 font-bold text-[16px] shadow-[0_10px_25px_-5px_rgba(245,158,11,0.45)] transition-all flex items-center justify-center cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+                  className="w-full mt-2 py-3.5 sm:py-4 rounded-xl bg-primary hover:bg-primary/90 active:scale-[0.99] text-primary-foreground font-bold text-[16px] shadow-md shadow-primary/25 transition-all flex items-center justify-center cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isLoginLoading ? (
                     <span className="flex items-center gap-2">
-                      <span className="h-4 w-4 rounded-full border-2 border-slate-950 border-t-transparent animate-spin" />
+                      <span className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
                       Signing in...
                     </span>
                   ) : (
@@ -489,7 +489,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                   <button
                     type="button"
                     onClick={handleForgotPassword}
-                    className="text-xs sm:text-sm text-white/90 hover:text-white hover:underline cursor-pointer transition-colors"
+                    className="text-xs sm:text-sm text-sidebar-foreground/75 hover:text-sidebar-foreground hover:underline cursor-pointer transition-colors"
                   >
                     Forgot Password?
                   </button>
@@ -499,19 +499,19 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
               /* ==================== SIGNUP FORM ==================== */
               <form onSubmit={handleSignUp} className="space-y-3.5">
                 <div className="text-center mb-3">
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight drop-shadow-sm">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                     Create Account
                   </h1>
-                  <p className="text-xs sm:text-sm text-blue-100/90 mt-1 font-normal leading-relaxed">
+                  <p className="text-xs sm:text-sm text-sidebar-foreground/75 mt-1 font-normal leading-relaxed">
                     Join Mezmani for genuine liquor and 30-min express delivery
                   </p>
                 </div>
 
-                {/* 1. SELECT GENDER (BEFORE Full Name section as requested) */}
+                {/* 1. SELECT GENDER */}
                 <div className="space-y-1.5 pb-1">
-                  <div className="flex items-center justify-between text-xs font-semibold text-white/95 px-1">
+                  <div className="flex items-center justify-between text-xs font-semibold text-sidebar-foreground px-1">
                     <span>Select Gender</span>
-                    <span className="text-[11px] text-amber-200 capitalize font-medium">
+                    <span className="text-[11px] text-primary capitalize font-semibold">
                       Selected: {signupGender}
                     </span>
                   </div>
@@ -523,11 +523,11 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                       onClick={() => setSignupGender('male')}
                       className={`relative flex flex-col items-center justify-center p-2 rounded-xl transition-all cursor-pointer ${
                         signupGender === 'male'
-                          ? 'bg-white text-gray-900 shadow-md ring-2 ring-amber-400 scale-[1.02]'
-                          : 'bg-white/90 hover:bg-white text-gray-700 hover:scale-[1.01]'
+                          ? 'bg-card text-card-foreground shadow-md ring-2 ring-primary scale-[1.02]'
+                          : 'bg-card/75 hover:bg-card text-card-foreground/75 hover:text-card-foreground border border-border/50 hover:scale-[1.01]'
                       }`}
                     >
-                      <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-blue-50 mb-1 border border-blue-200/60 shadow-inner">
+                      <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-muted mb-1 border border-border/60 shadow-inner">
                         <img
                           src="/images/gender/male.png"
                           alt="Male"
@@ -536,7 +536,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                       </div>
                       <span className="text-[12px] font-bold">Male</span>
                       {signupGender === 'male' && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-sm">
+                        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
                           <Check className="w-2.5 h-2.5 stroke-[3]" />
                         </div>
                       )}
@@ -548,11 +548,11 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                       onClick={() => setSignupGender('female')}
                       className={`relative flex flex-col items-center justify-center p-2 rounded-xl transition-all cursor-pointer ${
                         signupGender === 'female'
-                          ? 'bg-white text-gray-900 shadow-md ring-2 ring-amber-400 scale-[1.02]'
-                          : 'bg-white/90 hover:bg-white text-gray-700 hover:scale-[1.01]'
+                          ? 'bg-card text-card-foreground shadow-md ring-2 ring-primary scale-[1.02]'
+                          : 'bg-card/75 hover:bg-card text-card-foreground/75 hover:text-card-foreground border border-border/50 hover:scale-[1.01]'
                       }`}
                     >
-                      <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-rose-50 mb-1 border border-rose-200/60 shadow-inner">
+                      <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-muted mb-1 border border-border/60 shadow-inner">
                         <img
                           src="/images/gender/female.png"
                           alt="Female"
@@ -561,7 +561,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                       </div>
                       <span className="text-[12px] font-bold">Female</span>
                       {signupGender === 'female' && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-sm">
+                        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
                           <Check className="w-2.5 h-2.5 stroke-[3]" />
                         </div>
                       )}
@@ -573,11 +573,11 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                       onClick={() => setSignupGender('other')}
                       className={`relative flex flex-col items-center justify-center p-2 rounded-xl transition-all cursor-pointer ${
                         signupGender === 'other'
-                          ? 'bg-white text-gray-900 shadow-md ring-2 ring-amber-400 scale-[1.02]'
-                          : 'bg-white/90 hover:bg-white text-gray-700 hover:scale-[1.01]'
+                          ? 'bg-card text-card-foreground shadow-md ring-2 ring-primary scale-[1.02]'
+                          : 'bg-card/75 hover:bg-card text-card-foreground/75 hover:text-card-foreground border border-border/50 hover:scale-[1.01]'
                       }`}
                     >
-                      <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-purple-50 mb-1 border border-purple-200/60 shadow-inner">
+                      <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-muted mb-1 border border-border/60 shadow-inner">
                         <img
                           src="/images/gender/other.png"
                           alt="Other"
@@ -586,7 +586,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                       </div>
                       <span className="text-[12px] font-bold">Other</span>
                       {signupGender === 'other' && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-sm">
+                        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
                           <Check className="w-2.5 h-2.5 stroke-[3]" />
                         </div>
                       )}
@@ -594,9 +594,9 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                   </div>
                 </div>
 
-                {/* 2. Full Name - Font size 16px */}
-                <div className="relative flex items-center bg-white rounded-xl sm:rounded-2xl px-4 py-2.5 sm:py-3 shadow-md shadow-blue-950/10 ring-1 ring-black/5 focus-within:ring-2 focus-within:ring-amber-400 transition-all">
-                  <User className="h-5 w-5 text-gray-700 shrink-0 mr-3" />
+                {/* 2. Full Name */}
+                <div className="relative flex items-center bg-card text-card-foreground rounded-xl px-4 py-2.5 sm:py-3 border border-border shadow-xs focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all">
+                  <User className="h-5 w-5 text-muted-foreground shrink-0 mr-3" />
                   <input
                     type="text"
                     required
@@ -604,13 +604,13 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     value={signupName}
                     onChange={(e) => setSignupName(e.target.value)}
                     placeholder="Full Name"
-                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-gray-900 placeholder:text-gray-400 font-medium"
+                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-card-foreground placeholder:text-muted-foreground font-medium"
                   />
                 </div>
 
-                {/* 3. Mobile Number - Font size 16px */}
-                <div className="relative flex items-center bg-white rounded-xl sm:rounded-2xl px-4 py-2.5 sm:py-3 shadow-md shadow-blue-950/10 ring-1 ring-black/5 focus-within:ring-2 focus-within:ring-amber-400 transition-all">
-                  <Phone className="h-5 w-5 text-gray-700 shrink-0 mr-3" />
+                {/* 3. Mobile Number */}
+                <div className="relative flex items-center bg-card text-card-foreground rounded-xl px-4 py-2.5 sm:py-3 border border-border shadow-xs focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all">
+                  <Phone className="h-5 w-5 text-muted-foreground shrink-0 mr-3" />
                   <input
                     type="tel"
                     inputMode="numeric"
@@ -619,20 +619,20 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     value={signupPhone}
                     onChange={(e) => setSignupPhone(e.target.value)}
                     placeholder="Mobile (98XXXXXXXX)"
-                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-gray-900 placeholder:text-gray-400 font-medium font-mono"
+                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-card-foreground placeholder:text-muted-foreground font-medium font-mono"
                   />
                 </div>
 
-                {/* 4. Email Address with Live Green Tick / Red Cross Validation - Font size 16px */}
-                <div className="relative flex items-center bg-white rounded-xl sm:rounded-2xl px-4 py-2.5 sm:py-3 shadow-md shadow-blue-950/10 ring-1 ring-black/5 focus-within:ring-2 focus-within:ring-amber-400 transition-all">
-                  <Mail className="h-5 w-5 text-gray-700 shrink-0 mr-3" />
+                {/* 4. Email Address with Live Validation */}
+                <div className="relative flex items-center bg-card text-card-foreground rounded-xl px-4 py-2.5 sm:py-3 border border-border shadow-xs focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all">
+                  <Mail className="h-5 w-5 text-muted-foreground shrink-0 mr-3" />
                   <input
                     type="email"
                     autoComplete="email"
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
                     placeholder="Email Address"
-                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-gray-900 placeholder:text-gray-400 font-medium"
+                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-card-foreground placeholder:text-muted-foreground font-medium"
                   />
                   {/* Validation Indicator: Green Tick or Red Cross */}
                   {isSignupEmailValid !== null && (
@@ -645,17 +645,17 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                       }
                     >
                       {isSignupEmailValid ? (
-                        <CheckCircle2 className="h-5 w-5 text-emerald-500 animate-in fade-in zoom-in-75 duration-200" />
+                        <CheckCircle2 className="h-5 w-5 text-success animate-in fade-in zoom-in-75 duration-200" />
                       ) : (
-                        <XCircle className="h-5 w-5 text-rose-500 animate-in fade-in zoom-in-75 duration-200" />
+                        <XCircle className="h-5 w-5 text-destructive animate-in fade-in zoom-in-75 duration-200" />
                       )}
                     </div>
                   )}
                 </div>
 
-                {/* 5. Password with Eye Icon Toggle - Font size 16px */}
-                <div className="relative flex items-center bg-white rounded-xl sm:rounded-2xl px-4 py-2.5 sm:py-3 shadow-md shadow-blue-950/10 ring-1 ring-black/5 focus-within:ring-2 focus-within:ring-amber-400 transition-all">
-                  <Lock className="h-5 w-5 text-gray-700 shrink-0 mr-3" />
+                {/* 5. Password with Eye Icon Toggle */}
+                <div className="relative flex items-center bg-card text-card-foreground rounded-xl px-4 py-2.5 sm:py-3 border border-border shadow-xs focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all">
+                  <Lock className="h-5 w-5 text-muted-foreground shrink-0 mr-3" />
                   <input
                     type={showSignupPassword ? 'text' : 'password'}
                     required
@@ -663,12 +663,12 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
                     placeholder="Password (min 8 chars)"
-                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-gray-900 placeholder:text-gray-400 font-medium pr-2"
+                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-card-foreground placeholder:text-muted-foreground font-medium pr-2"
                   />
                   <button
                     type="button"
                     onClick={() => setShowSignupPassword(!showSignupPassword)}
-                    className="p-1.5 text-gray-500 hover:text-gray-800 transition-colors shrink-0 cursor-pointer rounded-lg hover:bg-gray-100"
+                    className="p-1.5 text-muted-foreground hover:text-card-foreground transition-colors shrink-0 cursor-pointer rounded-md hover:bg-muted"
                     aria-label={
                       showSignupPassword ? 'Hide password' : 'Show password'
                     }
@@ -677,16 +677,16 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     }
                   >
                     {showSignupPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-700" />
+                      <EyeOff className="h-5 w-5" />
                     ) : (
-                      <Eye className="h-5 w-5 text-gray-700" />
+                      <Eye className="h-5 w-5" />
                     )}
                   </button>
                 </div>
 
                 {/* 6. CONFIRM PASSWORD with Eye Icon Toggle and Match Validation */}
-                <div className="relative flex items-center bg-white rounded-xl sm:rounded-2xl px-4 py-2.5 sm:py-3 shadow-md shadow-blue-950/10 ring-1 ring-black/5 focus-within:ring-2 focus-within:ring-amber-400 transition-all">
-                  <Lock className="h-5 w-5 text-gray-700 shrink-0 mr-3" />
+                <div className="relative flex items-center bg-card text-card-foreground rounded-xl px-4 py-2.5 sm:py-3 border border-border shadow-xs focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all">
+                  <Lock className="h-5 w-5 text-muted-foreground shrink-0 mr-3" />
                   <input
                     type={showSignupConfirmPassword ? 'text' : 'password'}
                     required
@@ -694,7 +694,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     value={signupConfirmPassword}
                     onChange={(e) => setSignupConfirmPassword(e.target.value)}
                     placeholder="Confirm Password"
-                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-gray-900 placeholder:text-gray-400 font-medium pr-2"
+                    className="bg-transparent border-0 outline-none w-full flex-1 min-w-0 text-[16px] text-card-foreground placeholder:text-muted-foreground font-medium pr-2"
                   />
                   {/* Match Indicator */}
                   {passwordsMatch !== null && (
@@ -707,9 +707,9 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                       }
                     >
                       {passwordsMatch ? (
-                        <CheckCircle2 className="h-5 w-5 text-emerald-500 animate-in fade-in zoom-in-75 duration-200" />
+                        <CheckCircle2 className="h-5 w-5 text-success animate-in fade-in zoom-in-75 duration-200" />
                       ) : (
-                        <XCircle className="h-5 w-5 text-rose-500 animate-in fade-in zoom-in-75 duration-200" />
+                        <XCircle className="h-5 w-5 text-destructive animate-in fade-in zoom-in-75 duration-200" />
                       )}
                     </div>
                   )}
@@ -719,7 +719,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     onClick={() =>
                       setShowSignupConfirmPassword(!showSignupConfirmPassword)
                     }
-                    className="p-1.5 text-gray-500 hover:text-gray-800 transition-colors shrink-0 cursor-pointer rounded-lg hover:bg-gray-100"
+                    className="p-1.5 text-muted-foreground hover:text-card-foreground transition-colors shrink-0 cursor-pointer rounded-md hover:bg-muted"
                     aria-label={
                       showSignupConfirmPassword
                         ? 'Hide confirm password'
@@ -732,9 +732,9 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                     }
                   >
                     {showSignupConfirmPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-700" />
+                      <EyeOff className="h-5 w-5" />
                     ) : (
-                      <Eye className="h-5 w-5 text-gray-700" />
+                      <Eye className="h-5 w-5" />
                     )}
                   </button>
                 </div>
@@ -742,22 +742,22 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                 {/* 7. HIGHLY VISIBLE 18+ LEGAL AGE CERTIFICATION CHECKBOX */}
                 <div
                   onClick={() => setIsAgeConfirmed(!isAgeConfirmed)}
-                  className={`rounded-2xl p-3 sm:p-3.5 border-2 transition-all cursor-pointer flex items-start gap-3 select-none ${
+                  className={`rounded-xl p-3 sm:p-3.5 border transition-all cursor-pointer flex items-start gap-3 select-none ${
                     isAgeConfirmed
-                      ? 'bg-amber-400/20 border-amber-300 shadow-md shadow-amber-500/20'
-                      : 'bg-white/15 hover:bg-white/25 border-white/60'
+                      ? 'bg-primary/15 border-primary/50 shadow-xs'
+                      : 'bg-card/30 hover:bg-card/50 border-border/60'
                   }`}
                 >
-                  {/* Distinct Big 24px Checkbox */}
+                  {/* Distinct Checkbox */}
                   <div
-                    className={`mt-0.5 h-6 w-6 rounded-lg shrink-0 flex items-center justify-center transition-all ${
+                    className={`mt-0.5 h-5 w-5 rounded-md shrink-0 flex items-center justify-center transition-all ${
                       isAgeConfirmed
-                        ? 'bg-[#F59E0B] border-2 border-amber-200 shadow-md text-slate-950 scale-105'
-                        : 'bg-white border-2 border-white/90 shadow-sm'
+                        ? 'bg-primary border border-primary text-primary-foreground scale-105'
+                        : 'bg-card border border-border shadow-xs'
                     }`}
                   >
                     {isAgeConfirmed && (
-                      <Check className="h-4 w-4 stroke-[3.5] text-slate-950" />
+                      <Check className="h-3.5 w-3.5 stroke-[3] text-primary-foreground" />
                     )}
                   </div>
 
@@ -766,25 +766,25 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                       <span className="text-[13px] sm:text-sm font-bold text-white leading-tight">
                         I certify that I am 18 years of age or older
                       </span>
-                      <span className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 font-black text-[10px] tracking-wider uppercase">
+                      <span className="px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-bold text-[10px] tracking-wider uppercase">
                         18+
                       </span>
                     </div>
-                    <p className="text-[11px] sm:text-xs text-blue-100/90 mt-0.5 leading-snug">
+                    <p className="text-[11px] sm:text-xs text-sidebar-foreground/75 mt-0.5 leading-snug">
                       Mandatory in accordance with Nepal Liquor Regulations.
                     </p>
                   </div>
                 </div>
 
-                {/* 8. Orange Sign Up Button matching Mezmani Primary Theme */}
+                {/* 8. Verify & Create Account Button */}
                 <button
                   type="submit"
                   disabled={isSignupLoading}
-                  className="w-full mt-2 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl bg-[#F59E0B] hover:bg-[#D97706] active:scale-[0.99] text-slate-950 font-bold text-[16px] shadow-[0_10px_25px_-5px_rgba(245,158,11,0.45)] transition-all flex items-center justify-center cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+                  className="w-full mt-2 py-3.5 sm:py-4 rounded-xl bg-primary hover:bg-primary/90 active:scale-[0.99] text-primary-foreground font-bold text-[16px] shadow-md shadow-primary/25 transition-all flex items-center justify-center cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isSignupLoading ? (
                     <span className="flex items-center gap-2">
-                      <span className="h-4 w-4 rounded-full border-2 border-slate-950 border-t-transparent animate-spin" />
+                      <span className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
                       Verifying details...
                     </span>
                   ) : (
@@ -797,7 +797,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
 
           {/* Smooth Mobile Bottom Wave Divider */}
           <svg
-            className="w-full h-6 text-card dark:text-[#1c2023] fill-current block md:hidden absolute bottom-0 left-0 -mb-[1px] pointer-events-none transition-colors duration-300"
+            className="w-full h-6 text-card fill-current block md:hidden absolute bottom-0 left-0 -mb-[1px] pointer-events-none transition-colors duration-300"
             viewBox="0 0 400 30"
             preserveAspectRatio="none"
           >
@@ -805,10 +805,10 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
           </svg>
         </div>
 
-        {/* ==================== RIGHT PANEL (System Theme Card Surface with Bottom Blue Accent) ==================== */}
-        <div className="relative w-full md:w-[44%] bg-card dark:bg-[#1c2023] flex flex-col items-center justify-center px-6 sm:px-10 py-10 sm:py-14 text-center overflow-hidden transition-colors duration-300">
-          {/* Decorative Bottom-Right Blue Accent Shape */}
-          <div className="w-44 sm:w-52 h-44 sm:h-52 rounded-full bg-[#0062E0] dark:bg-[#004bb5] absolute -bottom-16 -right-16 pointer-events-none opacity-95 shadow-lg transition-colors duration-300" />
+        {/* ==================== RIGHT PANEL (Clean Card Surface with Amber Gold Accent) ==================== */}
+        <div className="relative w-full md:w-[44%] bg-card text-card-foreground flex flex-col items-center justify-center px-6 sm:px-10 py-10 sm:py-14 text-center overflow-hidden transition-colors duration-300">
+          {/* Decorative Warm Ambient Circle */}
+          <div className="w-44 sm:w-52 h-44 sm:h-52 rounded-full bg-primary/10 absolute -bottom-16 -right-16 pointer-events-none blur-xl transition-colors duration-300" />
 
           {/* Content Container with Smooth Transition */}
           <div
@@ -824,13 +824,13 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                   New Here?
                 </h2>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-3 mb-8 leading-relaxed font-normal">
-                  Get exclusive access to cool features and unlimited benefits.
-                  Sign up now and start exploring our new world
+                  Get exclusive access to genuine spirits, cold beer, and
+                  30-minute express delivery.
                 </p>
                 <button
                   type="button"
                   onClick={() => handleModeSwitch('signup')}
-                  className="bg-gradient-to-r from-[#0066FF] to-[#0052D4] hover:brightness-105 active:scale-[0.99] text-white font-bold text-[15px] sm:text-[16px] px-10 sm:px-12 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl shadow-[0_10px_25px_-5px_rgba(0,85,212,0.35)] transition-all min-w-[170px] cursor-pointer"
+                  className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold text-[15px] sm:text-[16px] px-10 sm:px-12 py-3 sm:py-3.5 rounded-xl shadow-xs transition-all min-w-[170px] cursor-pointer active:scale-[0.99]"
                 >
                   Sign Up
                 </button>
@@ -847,7 +847,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                 <button
                   type="button"
                   onClick={() => handleModeSwitch('login')}
-                  className="bg-gradient-to-r from-[#0066FF] to-[#0052D4] hover:brightness-105 active:scale-[0.99] text-white font-bold text-[15px] sm:text-[16px] px-10 sm:px-12 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl shadow-[0_10px_25px_-5px_rgba(0,85,212,0.35)] transition-all min-w-[170px] cursor-pointer"
+                  className="border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold text-[15px] sm:text-[16px] px-10 sm:px-12 py-3 sm:py-3.5 rounded-xl shadow-xs transition-all min-w-[170px] cursor-pointer active:scale-[0.99]"
                 >
                   Sign In
                 </button>
@@ -860,12 +860,12 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
       {/* Compliance & Trust Badges aligned to theme */}
       <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground mt-6">
         <div className="flex items-center gap-1.5">
-          <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          <ShieldCheck className="h-4 w-4 text-success" />
           <span>18+ Verified Platform</span>
         </div>
         <span>•</span>
         <div className="flex items-center gap-1.5">
-          <Zap className="h-4 w-4 text-amber-500" />
+          <Zap className="h-4 w-4 text-warning" />
           <span>30-Minute Valley Delivery</span>
         </div>
       </div>

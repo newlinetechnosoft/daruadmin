@@ -1,182 +1,152 @@
 import { Link } from '@tanstack/react-router'
-import { Zap, ShieldCheck, Headphones } from 'lucide-react'
+import { Facebook, Instagram } from 'lucide-react'
+
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M19.6 7.2a5.8 5.8 0 0 1-3.9-1.5v8.1a6.2 6.2 0 1 1-5.3-6.1v3.4a2.8 2.8 0 1 0 1.9 2.7V2.5h3.4c.2 2.2 1.8 4 3.9 4.3v.4Z" />
+    </svg>
+  )
+}
 
 export function Footer() {
   return (
-    <div>
-      {/* Services Strip */}
-      <section className="border-t border-b border-border py-10 bg-muted/30">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 shrink-0 grid place-items-center rounded-lg border border-border bg-background text-foreground">
-              <Zap className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-xs font-semibold text-foreground">
-                On-demand 30-minute delivery
-              </h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Rapid doorstep service across Butwal & Tilottama.
-              </p>
-            </div>
-          </div>
+    <footer
+      id="about"
+      className="scroll-mt-24 border-t border-sidebar-border bg-sidebar text-sidebar-foreground"
+    >
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
 
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 shrink-0 grid place-items-center rounded-lg border border-border bg-background text-foreground">
-              <ShieldCheck className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-xs font-semibold text-foreground">
-                Secure cashless payments
-              </h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Fonepay, eSewa, Khalti, ConnectIPS and Cash on Delivery.
-              </p>
-            </div>
-          </div>
+        <div className="grid grid-cols-2 gap-10 pb-10 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
 
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 shrink-0 grid place-items-center rounded-lg border border-border bg-background text-foreground">
-              <Headphones className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-xs font-semibold text-foreground">
-                Customer support
-              </h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Direct phone and WhatsApp helpline for deliveries.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+          {/* Brand */}
+          <div className="col-span-2 space-y-3 lg:col-span-1">
+            <Link to="/" className="inline-block">
+              <img
+                src="/mezmani_logo_bg.svg"
+                alt="Mezmani"
+                width="150"
+                height="60"
+                loading="lazy"
+                className="h-auto w-36"
+              />
+            </Link>
 
-      {/* Main Footer */}
-      <footer className="pt-14 pb-8 bg-background border-t border-border text-foreground">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-10 pb-12">
-            {/* Brand */}
-            <div className="space-y-3">
-              <Link
-                to="/"
-                className="text-base font-bold tracking-tight text-foreground inline-block"
-              >
-                MEZMANI
-              </Link>
-              <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">
-                Licensed food and beverage delivery platform. Genuine spirits,
-                cold beer, wine, and groceries delivered straight to your door
-                across Butwal & Tilottama.
-              </p>
-            </div>
+            <p className="max-w-xs text-sm leading-relaxed text-sidebar-foreground/70">
+              Good food, great drinks, delivered to your doorstep.
+              Serving Butwal and Tilottama.
+            </p>
 
-            {/* Catalog */}
-            <div className="flex flex-col gap-2.5 text-xs">
-              <h4 className="font-semibold text-foreground mb-1">Catalog</h4>
-              <Link
-                to="/drinks"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Liquor &amp; Spirits
-              </Link>
-              <Link
-                to="/drinks"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Craft Beer &amp; Wine
-              </Link>
-              <Link
-                to="/grocery"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Snacks &amp; Munchies
-              </Link>
-              <a
-                href="/#reviews"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Customer Reviews
-              </a>
-            </div>
-
-            {/* About */}
-            <div className="flex flex-col gap-2.5 text-xs">
-              <h4 className="font-semibold text-foreground mb-1">Company</h4>
-              <a
-                href="/#about"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                About Mezmani
-              </a>
-              <a
-                href="/#about"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Delivery Areas
-              </a>
-              <a
-                href="tel:+9779802088800"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Help (+977-9802088800)
-              </a>
-            </div>
-
-            {/* Connect */}
-            <div className="flex flex-col gap-2.5 text-xs">
-              <h4 className="font-semibold text-foreground mb-1">Connect</h4>
+            <div className="flex items-center gap-4 pt-2">
               <a
                 href="https://facebook.com"
                 target="_blank"
-                rel="noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                rel="noopener noreferrer"
+                aria-label="Facebook"
+                className="text-sidebar-foreground/60 transition-colors hover:text-[#1877F2]"
               >
-                Facebook
+                <Facebook className="h-5 w-5" />
               </a>
+
               <a
                 href="https://instagram.com"
                 target="_blank"
-                rel="noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="text-sidebar-foreground/60 transition-colors hover:text-[#E4405F]"
               >
-                Instagram
+                <Instagram className="h-5 w-5" />
               </a>
+
               <a
                 href="https://tiktok.com"
                 target="_blank"
-                rel="noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                rel="noopener noreferrer"
+                aria-label="TikTok"
+                className="text-sidebar-foreground/60 transition-colors hover:text-white"
               >
-                TikTok
+                <TikTokIcon className="h-5 w-5" />
               </a>
             </div>
           </div>
 
-          {/* Bottom Bar */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4 border-t border-border text-[11px] text-muted-foreground">
-            <span>© 2026 Mezmani Retail Pvt. Ltd. All rights reserved.</span>
+          {/* Explore */}
+          <div className="flex flex-col gap-3 text-sm">
+            <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+              Explore
+            </h4>
 
-            <div className="flex gap-2">
-              <span className="px-2 py-0.5 rounded border border-border text-[10px] font-mono">
-                eSewa
-              </span>
-              <span className="px-2 py-0.5 rounded border border-border text-[10px] font-mono">
-                Khalti
-              </span>
-              <span className="px-2 py-0.5 rounded border border-border text-[10px] font-mono">
-                Fonepay
-              </span>
-              <span className="px-2 py-0.5 rounded border border-border text-[10px] font-mono">
-                COD
-              </span>
-            </div>
+            <Link to="/drinks" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
+              Drinks
+            </Link>
+            <Link to="/grocery" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
+              Grocery
+            </Link>
+            <a href="/#reviews" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
+              Reviews
+            </a>
           </div>
 
-          <p className="pt-2 text-[10px] text-muted-foreground/80">
-            Please drink responsibly. 18+ verification enforced upon delivery.
-          </p>
+          {/* Company */}
+          <div className="flex flex-col gap-3 text-sm">
+            <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+              Company
+            </h4>
+
+            <a href="/#about" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
+              About us
+            </a>
+            <a href="/#about" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
+              Delivery areas
+            </a>
+            <a href="tel:+9779802088800" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
+              Contact us
+            </a>
+          </div>
+
+          {/* Support */}
+          <div className="flex flex-col gap-3 text-sm">
+            <h4 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+              Support
+            </h4>
+
+            <p className="max-w-xs text-sidebar-foreground/65">
+              Need help with an order? We're happy to help.
+            </p>
+            <a
+              href="tel:+9779802088800"
+              className="font-medium text-sidebar-primary transition-opacity hover:opacity-80"
+            >
+              +977 9802088800
+            </a>
+          </div>
         </div>
-      </footer>
-    </div>
+
+        {/* Bottom */}
+        <div className="flex flex-col gap-5 border-t border-sidebar-border pt-6 text-xs text-sidebar-foreground/60 sm:flex-row sm:items-center sm:justify-between">
+
+          <p>
+            © 2026 Mezmani Retail Pvt. Ltd. All rights reserved.
+          </p>
+
+          {/* Payment methods */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-semibold text-sidebar-foreground/80">
+            <span>eSewa</span>
+            <span>Khalti</span>
+            <span>fonepay</span>
+            <span>IME Pay</span>
+          </div>
+        </div>
+
+        <p className="mt-5 text-xs text-sidebar-foreground/50">
+          Please drink responsibly. 18+ verification required.
+        </p>
+      </div>
+    </footer>
   )
 }
