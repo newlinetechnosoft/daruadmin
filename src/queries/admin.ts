@@ -21,6 +21,8 @@ import {
 } from '#/server/operations/operations.functions'
 import {
   getAdminFoodProductsFn,
+  getAdminGroceryProductsFn,
+  getAdminDdcProductsFn,
   getAdminLiquorProductsFn,
   getAdminUsersFn,
   getAllTaxonomyFn,
@@ -166,6 +168,20 @@ export const adminQueries = {
     queryOptions({
       queryKey: ['admin', 'food'],
       queryFn: () => getAdminFoodProductsFn(),
+      staleTime: 1000 * 60 * 2,
+    }),
+
+  groceryProducts: () =>
+    queryOptions({
+      queryKey: ['admin', 'grocery'],
+      queryFn: () => getAdminGroceryProductsFn(),
+      staleTime: 1000 * 60 * 2,
+    }),
+
+  ddcProducts: () =>
+    queryOptions({
+      queryKey: ['admin', 'ddc'],
+      queryFn: () => getAdminDdcProductsFn(),
       staleTime: 1000 * 60 * 2,
     }),
 

@@ -11,6 +11,16 @@ import {
   foodImages,
   foodCategories,
   foodBrands,
+  groceryProducts,
+  groceryVariants,
+  groceryImages,
+  groceryCategories,
+  groceryBrands,
+  ddcProducts,
+  ddcVariants,
+  ddcImages,
+  ddcCategories,
+  ddcBrands,
   dealers,
   dealerItems,
   coupons,
@@ -24,10 +34,16 @@ export interface MoveToRecycleBinParams {
   entityType:
     | 'liquor_product'
     | 'food_product'
+    | 'grocery_product'
+    | 'ddc_product'
     | 'liquor_category'
     | 'food_category'
+    | 'grocery_category'
+    | 'ddc_category'
     | 'liquor_brand'
     | 'food_brand'
+    | 'grocery_brand'
+    | 'ddc_brand'
     | 'dealer'
     | 'coupon'
     | 'banner'
@@ -406,6 +422,228 @@ export async function restoreRecycleBinItemQuery(
         break
       }
 
+      case 'grocery_product': {
+        const { product, variants, images, dealerItems: dItems } = data
+        if (!product) throw new Error('Invalid product data in Recycle Bin')
+
+        let targetCategoryId = product.categoryId
+        const catExists = await tx
+          .select({ id: groceryCategories.id })
+          .from(groceryCategories)
+          .where(eq(groceryCategories.id, targetCategoryId))
+          .limit(1)
+
+        if (catExists.length === 0) {
+          const fallbackCat = await tx
+            .select({ id: groceryCategories.id })
+            .from(groceryCategories)
+            .limit(1)
+          if (fallbackCat.length > 0) {
+            targetCategoryId = fallbackCat[0].id
+          }
+        }
+
+        let targetSlug = product.slug
+        const slugExists = await tx
+          .select({ id: groceryProducts.id })
+          .from(groceryProducts)
+          .where(eq(groceryProducts.slug, targetSlug))
+          .limit(1)
+
+        if (slugExists.length > 0) {
+          targetSlug = `${product.slug}-restored-${Date.now().toString(36)}`
+        }
+
+        await tx.insert(groceryProducts).values({
+          id: product.id,
+          name: product.name,
+          slug: targetSlug,
+          categoryId: targetCategoryId,
+          brandId: product.brandId || null,
+          description: product.description || null,
+          isFeatured: Boolean(product.isFeatured),
+          customBadge: product.customBadge || null,
+          customDiscountLabel: product.customDiscountLabel || null,
+          isActive: Boolean(product.isActive),
+          createdAt: product.createdAt
+            ? new Date(product.createdAt)
+            : new Date(),
+          updatedAt: new Date(),
+        })
+
+        if (Array.isArray(variants) && variants.length > 0) {
+          for (const v of variants) {
+            let variantSku = v.sku
+            const skuExists = await tx
+              .select({ id: groceryVariants.id })
+              .from(groceryVariants)
+              .where(eq(groceryVariants.sku, variantSku))
+              .limit(1)
+            if (skuExists.length > 0) {
+              variantSku = `${v.sku}-restored`
+            }
+
+            await tx.insert(groceryVariants).values({
+              id: v.id,
+              productId: product.id,
+              name: v.name,
+              quantity: String(v.quantity ?? 1),
+              unit: v.unit || 'pack',
+              sku: variantSku,
+              price: v.price || 0,
+              mrp: v.mrp || null,
+              compareAtPrice: v.compareAtPrice || null,
+              stock: v.stock || 0,
+              isActive: Boolean(v.isActive),
+              createdAt: v.createdAt ? new Date(v.createdAt) : new Date(),
+              updatedAt: new Date(),
+            })
+          }
+        }
+
+        if (Array.isArray(images) && images.length > 0) {
+          await tx.insert(groceryImages).values(
+            images.map((img: any) => ({
+              id: img.id,
+              productId: product.id,
+              url: img.url,
+              isPrimary: Boolean(img.isPrimary),
+              sortOrder: img.sortOrder || 0,
+              createdAt: img.createdAt ? new Date(img.createdAt) : new Date(),
+            })),
+          )
+        }
+
+        if (Array.isArray(dItems) && dItems.length > 0) {
+          for (const di of dItems) {
+            try {
+              await tx.insert(dealerItems).values({
+                id: di.id || crypto.randomUUID(),
+                dealerId: di.dealerId,
+                catalogType: 'grocery',
+                productId: product.id,
+                costPrice: di.costPrice || 0,
+                isAvailable: di.isAvailable !== false,
+              })
+            } catch {
+              // ignore if dealer no longer exists
+            }
+          }
+        }
+        break
+      }
+
+      case 'ddc_product': {
+        const { product, variants, images, dealerItems: dItems } = data
+        if (!product) throw new Error('Invalid product data in Recycle Bin')
+
+        let targetCategoryId = product.categoryId
+        const catExists = await tx
+          .select({ id: ddcCategories.id })
+          .from(ddcCategories)
+          .where(eq(ddcCategories.id, targetCategoryId))
+          .limit(1)
+
+        if (catExists.length === 0) {
+          const fallbackCat = await tx
+            .select({ id: ddcCategories.id })
+            .from(ddcCategories)
+            .limit(1)
+          if (fallbackCat.length > 0) {
+            targetCategoryId = fallbackCat[0].id
+          }
+        }
+
+        let targetSlug = product.slug
+        const slugExists = await tx
+          .select({ id: ddcProducts.id })
+          .from(ddcProducts)
+          .where(eq(ddcProducts.slug, targetSlug))
+          .limit(1)
+
+        if (slugExists.length > 0) {
+          targetSlug = `${product.slug}-restored-${Date.now().toString(36)}`
+        }
+
+        await tx.insert(ddcProducts).values({
+          id: product.id,
+          name: product.name,
+          slug: targetSlug,
+          categoryId: targetCategoryId,
+          brandId: product.brandId || null,
+          description: product.description || null,
+          isFeatured: Boolean(product.isFeatured),
+          customBadge: product.customBadge || null,
+          customDiscountLabel: product.customDiscountLabel || null,
+          isActive: Boolean(product.isActive),
+          createdAt: product.createdAt
+            ? new Date(product.createdAt)
+            : new Date(),
+          updatedAt: new Date(),
+        })
+
+        if (Array.isArray(variants) && variants.length > 0) {
+          for (const v of variants) {
+            let variantSku = v.sku
+            const skuExists = await tx
+              .select({ id: ddcVariants.id })
+              .from(ddcVariants)
+              .where(eq(ddcVariants.sku, variantSku))
+              .limit(1)
+            if (skuExists.length > 0) {
+              variantSku = `${v.sku}-restored`
+            }
+
+            await tx.insert(ddcVariants).values({
+              id: v.id,
+              productId: product.id,
+              name: v.name,
+              quantity: String(v.quantity ?? 1),
+              unit: v.unit || 'packet',
+              sku: variantSku,
+              price: v.price || 0,
+              mrp: v.mrp || null,
+              compareAtPrice: v.compareAtPrice || null,
+              stock: v.stock || 0,
+              isActive: Boolean(v.isActive),
+              createdAt: v.createdAt ? new Date(v.createdAt) : new Date(),
+              updatedAt: new Date(),
+            })
+          }
+        }
+
+        if (Array.isArray(images) && images.length > 0) {
+          await tx.insert(ddcImages).values(
+            images.map((img: any) => ({
+              id: img.id,
+              productId: product.id,
+              url: img.url,
+              isPrimary: Boolean(img.isPrimary),
+              sortOrder: img.sortOrder || 0,
+              createdAt: img.createdAt ? new Date(img.createdAt) : new Date(),
+            })),
+          )
+        }
+
+        if (Array.isArray(dItems) && dItems.length > 0) {
+          for (const di of dItems) {
+            try {
+              await tx.insert(dealerItems).values({
+                id: di.id || crypto.randomUUID(),
+                dealerId: di.dealerId,
+                catalogType: 'ddc',
+                productId: product.id,
+                costPrice: di.costPrice || 0,
+                isAvailable: di.isAvailable !== false,
+              })
+            } catch {
+              // ignore if dealer no longer exists
+            }
+          }
+        }
+        break
+      }
+
       case 'liquor_category': {
         const cat = data.category || data
         let targetSlug = cat.slug
@@ -462,6 +700,62 @@ export async function restoreRecycleBinItemQuery(
         break
       }
 
+      case 'grocery_category': {
+        const cat = data.category || data
+        let targetSlug = cat.slug
+        const slugExists = await tx
+          .select({ id: groceryCategories.id })
+          .from(groceryCategories)
+          .where(eq(groceryCategories.slug, targetSlug))
+          .limit(1)
+
+        if (slugExists.length > 0) {
+          targetSlug = `${cat.slug}-restored`
+        }
+
+        await tx.insert(groceryCategories).values({
+          id: cat.id,
+          name: cat.name,
+          slug: targetSlug,
+          description: cat.description || null,
+          imageUrl: cat.imageUrl || null,
+          sortOrder: cat.sortOrder ?? 0,
+          isActive: Boolean(cat.isActive),
+          showOnLandingPage: Boolean(cat.showOnLandingPage),
+          createdAt: cat.createdAt ? new Date(cat.createdAt) : new Date(),
+          updatedAt: new Date(),
+        })
+        break
+      }
+
+      case 'ddc_category': {
+        const cat = data.category || data
+        let targetSlug = cat.slug
+        const slugExists = await tx
+          .select({ id: ddcCategories.id })
+          .from(ddcCategories)
+          .where(eq(ddcCategories.slug, targetSlug))
+          .limit(1)
+
+        if (slugExists.length > 0) {
+          targetSlug = `${cat.slug}-restored`
+        }
+
+        await tx.insert(ddcCategories).values({
+          id: cat.id,
+          name: cat.name,
+          slug: targetSlug,
+          description: cat.description || null,
+          imageUrl: cat.imageUrl || null,
+          sortOrder: cat.sortOrder ?? 0,
+          isActive: Boolean(cat.isActive),
+          showOnLandingPage: Boolean(cat.showOnLandingPage),
+          createdAt: cat.createdAt ? new Date(cat.createdAt) : new Date(),
+          updatedAt: new Date(),
+        })
+        break
+      }
+
       case 'liquor_brand': {
         const brand = data.brand || data
         let targetSlug = brand.slug
@@ -503,6 +797,60 @@ export async function restoreRecycleBinItemQuery(
         }
 
         await tx.insert(foodBrands).values({
+          id: brand.id,
+          name: brand.name,
+          slug: targetSlug,
+          origin: brand.origin || null,
+          description: brand.description || null,
+          logoUrl: brand.logoUrl || null,
+          isActive: Boolean(brand.isActive),
+          createdAt: brand.createdAt ? new Date(brand.createdAt) : new Date(),
+          updatedAt: new Date(),
+        })
+        break
+      }
+
+      case 'grocery_brand': {
+        const brand = data.brand || data
+        let targetSlug = brand.slug
+        const slugExists = await tx
+          .select({ id: groceryBrands.id })
+          .from(groceryBrands)
+          .where(eq(groceryBrands.slug, targetSlug))
+          .limit(1)
+
+        if (slugExists.length > 0) {
+          targetSlug = `${brand.slug}-restored`
+        }
+
+        await tx.insert(groceryBrands).values({
+          id: brand.id,
+          name: brand.name,
+          slug: targetSlug,
+          origin: brand.origin || null,
+          description: brand.description || null,
+          logoUrl: brand.logoUrl || null,
+          isActive: Boolean(brand.isActive),
+          createdAt: brand.createdAt ? new Date(brand.createdAt) : new Date(),
+          updatedAt: new Date(),
+        })
+        break
+      }
+
+      case 'ddc_brand': {
+        const brand = data.brand || data
+        let targetSlug = brand.slug
+        const slugExists = await tx
+          .select({ id: ddcBrands.id })
+          .from(ddcBrands)
+          .where(eq(ddcBrands.slug, targetSlug))
+          .limit(1)
+
+        if (slugExists.length > 0) {
+          targetSlug = `${brand.slug}-restored`
+        }
+
+        await tx.insert(ddcBrands).values({
           id: brand.id,
           name: brand.name,
           slug: targetSlug,

@@ -12,9 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as DdcRouteImport } from './routes/ddc'
 import { Route as DrinksRouteImport } from './routes/drinks'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as FoodRouteImport } from './routes/food'
+import { Route as GroceryRouteImport } from './routes/grocery'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as RiderRouteRouteImport } from './routes/rider/route'
@@ -24,9 +26,11 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAccountsRouteImport } from './routes/admin/accounts'
 import { Route as AdminBrandsRouteImport } from './routes/admin/brands'
 import { Route as AdminCustomersRouteImport } from './routes/admin/customers'
+import { Route as AdminDdcRouteImport } from './routes/admin/ddc'
 import { Route as AdminDealersRouteImport } from './routes/admin/dealers'
 import { Route as AdminFoodRouteImport } from './routes/admin/food'
 import { Route as AdminForbiddenRouteImport } from './routes/admin/forbidden'
+import { Route as AdminGroceryRouteImport } from './routes/admin/grocery'
 import { Route as AdminInventoryRouteImport } from './routes/admin/inventory'
 import { Route as AdminLiquorRouteImport } from './routes/admin/liquor'
 import { Route as AdminMarketingRouteImport } from './routes/admin/marketing'
@@ -54,6 +58,8 @@ import { Route as AdminDealersIndexRouteImport } from './routes/admin/dealers/in
 import { Route as AdminDealersIdRouteImport } from './routes/admin/dealers/$id'
 import { Route as AdminDealersNewRouteImport } from './routes/admin/dealers/new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiWebhooksNepalotpRouteImport } from './routes/api/webhooks/nepalotp'
+import { Route as ApiWebhooksOtpRouteImport } from './routes/api/webhooks/otp'
 import { Route as CheckoutPaymentEsewaFailureRouteImport } from './routes/checkout.payment.esewa.failure'
 import { Route as CheckoutPaymentEsewaSuccessRouteImport } from './routes/checkout.payment.esewa.success'
 
@@ -72,6 +78,11 @@ const CheckoutRoute = CheckoutRouteImport.update({
   path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DdcRoute = DdcRouteImport.update({
+  id: '/ddc',
+  path: '/ddc',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DrinksRoute = DrinksRouteImport.update({
   id: '/drinks',
   path: '/drinks',
@@ -85,6 +96,11 @@ const FavoritesRoute = FavoritesRouteImport.update({
 const FoodRoute = FoodRouteImport.update({
   id: '/food',
   path: '/food',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GroceryRoute = GroceryRouteImport.update({
+  id: '/grocery',
+  path: '/grocery',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -132,6 +148,11 @@ const AdminCustomersRoute = AdminCustomersRouteImport.update({
   path: '/customers',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminDdcRoute = AdminDdcRouteImport.update({
+  id: '/ddc',
+  path: '/ddc',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminDealersRoute = AdminDealersRouteImport.update({
   id: '/dealers',
   path: '/dealers',
@@ -145,6 +166,11 @@ const AdminFoodRoute = AdminFoodRouteImport.update({
 const AdminForbiddenRoute = AdminForbiddenRouteImport.update({
   id: '/forbidden',
   path: '/forbidden',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminGroceryRoute = AdminGroceryRouteImport.update({
+  id: '/grocery',
+  path: '/grocery',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminInventoryRoute = AdminInventoryRouteImport.update({
@@ -283,6 +309,16 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWebhooksNepalotpRoute = ApiWebhooksNepalotpRouteImport.update({
+  id: '/api/webhooks/nepalotp',
+  path: '/api/webhooks/nepalotp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWebhooksOtpRoute = ApiWebhooksOtpRouteImport.update({
+  id: '/api/webhooks/otp',
+  path: '/api/webhooks/otp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckoutPaymentEsewaFailureRoute =
   CheckoutPaymentEsewaFailureRouteImport.update({
     id: '/payment/esewa/failure',
@@ -301,9 +337,11 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
   '/rider': typeof RiderRouteRouteWithChildren
   '/checkout': typeof CheckoutRouteWithChildren
+  '/ddc': typeof DdcRoute
   '/drinks': typeof DrinksRoute
   '/favorites': typeof FavoritesRoute
   '/food': typeof FoodRoute
+  '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/signup': typeof SignupRoute
@@ -311,9 +349,11 @@ export interface FileRoutesByFullPath {
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/ddc': typeof AdminDdcRoute
   '/admin/dealers': typeof AdminDealersRouteWithChildren
   '/admin/food': typeof AdminFoodRoute
   '/admin/forbidden': typeof AdminForbiddenRoute
+  '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/liquor': typeof AdminLiquorRoute
   '/admin/marketing': typeof AdminMarketingRoute
@@ -341,6 +381,8 @@ export interface FileRoutesByFullPath {
   '/admin/dealers/$id': typeof AdminDealersIdRoute
   '/admin/dealers/new': typeof AdminDealersNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/webhooks/nepalotp': typeof ApiWebhooksNepalotpRoute
+  '/api/webhooks/otp': typeof ApiWebhooksOtpRoute
   '/admin/dealers/': typeof AdminDealersIndexRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
@@ -348,9 +390,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/checkout': typeof CheckoutRouteWithChildren
+  '/ddc': typeof DdcRoute
   '/drinks': typeof DrinksRoute
   '/favorites': typeof FavoritesRoute
   '/food': typeof FoodRoute
+  '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/signup': typeof SignupRoute
@@ -358,8 +402,10 @@ export interface FileRoutesByTo {
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/ddc': typeof AdminDdcRoute
   '/admin/food': typeof AdminFoodRoute
   '/admin/forbidden': typeof AdminForbiddenRoute
+  '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/liquor': typeof AdminLiquorRoute
   '/admin/marketing': typeof AdminMarketingRoute
@@ -387,6 +433,8 @@ export interface FileRoutesByTo {
   '/admin/dealers/$id': typeof AdminDealersIdRoute
   '/admin/dealers/new': typeof AdminDealersNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/webhooks/nepalotp': typeof ApiWebhooksNepalotpRoute
+  '/api/webhooks/otp': typeof ApiWebhooksOtpRoute
   '/admin/dealers': typeof AdminDealersIndexRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
@@ -397,9 +445,11 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteRouteWithChildren
   '/rider': typeof RiderRouteRouteWithChildren
   '/checkout': typeof CheckoutRouteWithChildren
+  '/ddc': typeof DdcRoute
   '/drinks': typeof DrinksRoute
   '/favorites': typeof FavoritesRoute
   '/food': typeof FoodRoute
+  '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/signup': typeof SignupRoute
@@ -407,9 +457,11 @@ export interface FileRoutesById {
   '/admin/accounts': typeof AdminAccountsRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
+  '/admin/ddc': typeof AdminDdcRoute
   '/admin/dealers': typeof AdminDealersRouteWithChildren
   '/admin/food': typeof AdminFoodRoute
   '/admin/forbidden': typeof AdminForbiddenRoute
+  '/admin/grocery': typeof AdminGroceryRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/liquor': typeof AdminLiquorRoute
   '/admin/marketing': typeof AdminMarketingRoute
@@ -437,6 +489,8 @@ export interface FileRoutesById {
   '/admin/dealers/$id': typeof AdminDealersIdRoute
   '/admin/dealers/new': typeof AdminDealersNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/webhooks/nepalotp': typeof ApiWebhooksNepalotpRoute
+  '/api/webhooks/otp': typeof ApiWebhooksOtpRoute
   '/admin/dealers/': typeof AdminDealersIndexRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
@@ -448,9 +502,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/rider'
     | '/checkout'
+    | '/ddc'
     | '/drinks'
     | '/favorites'
     | '/food'
+    | '/grocery'
     | '/login'
     | '/orders'
     | '/signup'
@@ -458,9 +514,11 @@ export interface FileRouteTypes {
     | '/admin/accounts'
     | '/admin/brands'
     | '/admin/customers'
+    | '/admin/ddc'
     | '/admin/dealers'
     | '/admin/food'
     | '/admin/forbidden'
+    | '/admin/grocery'
     | '/admin/inventory'
     | '/admin/liquor'
     | '/admin/marketing'
@@ -488,6 +546,8 @@ export interface FileRouteTypes {
     | '/admin/dealers/$id'
     | '/admin/dealers/new'
     | '/api/auth/$'
+    | '/api/webhooks/nepalotp'
+    | '/api/webhooks/otp'
     | '/admin/dealers/'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
@@ -495,9 +555,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/checkout'
+    | '/ddc'
     | '/drinks'
     | '/favorites'
     | '/food'
+    | '/grocery'
     | '/login'
     | '/orders'
     | '/signup'
@@ -505,8 +567,10 @@ export interface FileRouteTypes {
     | '/admin/accounts'
     | '/admin/brands'
     | '/admin/customers'
+    | '/admin/ddc'
     | '/admin/food'
     | '/admin/forbidden'
+    | '/admin/grocery'
     | '/admin/inventory'
     | '/admin/liquor'
     | '/admin/marketing'
@@ -534,6 +598,8 @@ export interface FileRouteTypes {
     | '/admin/dealers/$id'
     | '/admin/dealers/new'
     | '/api/auth/$'
+    | '/api/webhooks/nepalotp'
+    | '/api/webhooks/otp'
     | '/admin/dealers'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
@@ -543,9 +609,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/rider'
     | '/checkout'
+    | '/ddc'
     | '/drinks'
     | '/favorites'
     | '/food'
+    | '/grocery'
     | '/login'
     | '/orders'
     | '/signup'
@@ -553,9 +621,11 @@ export interface FileRouteTypes {
     | '/admin/accounts'
     | '/admin/brands'
     | '/admin/customers'
+    | '/admin/ddc'
     | '/admin/dealers'
     | '/admin/food'
     | '/admin/forbidden'
+    | '/admin/grocery'
     | '/admin/inventory'
     | '/admin/liquor'
     | '/admin/marketing'
@@ -583,6 +653,8 @@ export interface FileRouteTypes {
     | '/admin/dealers/$id'
     | '/admin/dealers/new'
     | '/api/auth/$'
+    | '/api/webhooks/nepalotp'
+    | '/api/webhooks/otp'
     | '/admin/dealers/'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
@@ -593,9 +665,11 @@ export interface RootRouteChildren {
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   RiderRouteRoute: typeof RiderRouteRouteWithChildren
   CheckoutRoute: typeof CheckoutRouteWithChildren
+  DdcRoute: typeof DdcRoute
   DrinksRoute: typeof DrinksRoute
   FavoritesRoute: typeof FavoritesRoute
   FoodRoute: typeof FoodRoute
+  GroceryRoute: typeof GroceryRoute
   LoginRoute: typeof LoginRoute
   OrdersRoute: typeof OrdersRoute
   SignupRoute: typeof SignupRoute
@@ -607,6 +681,8 @@ export interface RootRouteChildren {
   VoucherSlugRoute: typeof VoucherSlugRoute
   TrackIndexRoute: typeof TrackIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiWebhooksNepalotpRoute: typeof ApiWebhooksNepalotpRoute
+  ApiWebhooksOtpRoute: typeof ApiWebhooksOtpRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -632,6 +708,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ddc': {
+      id: '/ddc'
+      path: '/ddc'
+      fullPath: '/ddc'
+      preLoaderRoute: typeof DdcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/drinks': {
       id: '/drinks'
       path: '/drinks'
@@ -651,6 +734,13 @@ declare module '@tanstack/react-router' {
       path: '/food'
       fullPath: '/food'
       preLoaderRoute: typeof FoodRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/grocery': {
+      id: '/grocery'
+      path: '/grocery'
+      fullPath: '/grocery'
+      preLoaderRoute: typeof GroceryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -716,6 +806,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCustomersRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/ddc': {
+      id: '/admin/ddc'
+      path: '/ddc'
+      fullPath: '/admin/ddc'
+      preLoaderRoute: typeof AdminDdcRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/dealers': {
       id: '/admin/dealers'
       path: '/dealers'
@@ -735,6 +832,13 @@ declare module '@tanstack/react-router' {
       path: '/forbidden'
       fullPath: '/admin/forbidden'
       preLoaderRoute: typeof AdminForbiddenRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/grocery': {
+      id: '/admin/grocery'
+      path: '/grocery'
+      fullPath: '/admin/grocery'
+      preLoaderRoute: typeof AdminGroceryRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/inventory': {
@@ -926,6 +1030,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhooks/nepalotp': {
+      id: '/api/webhooks/nepalotp'
+      path: '/api/webhooks/nepalotp'
+      fullPath: '/api/webhooks/nepalotp'
+      preLoaderRoute: typeof ApiWebhooksNepalotpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/webhooks/otp': {
+      id: '/api/webhooks/otp'
+      path: '/api/webhooks/otp'
+      fullPath: '/api/webhooks/otp'
+      preLoaderRoute: typeof ApiWebhooksOtpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checkout/payment/esewa/failure': {
       id: '/checkout/payment/esewa/failure'
       path: '/payment/esewa/failure'
@@ -963,9 +1081,11 @@ interface AdminRouteRouteChildren {
   AdminAccountsRoute: typeof AdminAccountsRoute
   AdminBrandsRoute: typeof AdminBrandsRoute
   AdminCustomersRoute: typeof AdminCustomersRoute
+  AdminDdcRoute: typeof AdminDdcRoute
   AdminDealersRoute: typeof AdminDealersRouteWithChildren
   AdminFoodRoute: typeof AdminFoodRoute
   AdminForbiddenRoute: typeof AdminForbiddenRoute
+  AdminGroceryRoute: typeof AdminGroceryRoute
   AdminInventoryRoute: typeof AdminInventoryRoute
   AdminLiquorRoute: typeof AdminLiquorRoute
   AdminMarketingRoute: typeof AdminMarketingRoute
@@ -986,9 +1106,11 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAccountsRoute: AdminAccountsRoute,
   AdminBrandsRoute: AdminBrandsRoute,
   AdminCustomersRoute: AdminCustomersRoute,
+  AdminDdcRoute: AdminDdcRoute,
   AdminDealersRoute: AdminDealersRouteWithChildren,
   AdminFoodRoute: AdminFoodRoute,
   AdminForbiddenRoute: AdminForbiddenRoute,
+  AdminGroceryRoute: AdminGroceryRoute,
   AdminInventoryRoute: AdminInventoryRoute,
   AdminLiquorRoute: AdminLiquorRoute,
   AdminMarketingRoute: AdminMarketingRoute,
@@ -1046,9 +1168,11 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRouteRoute: AdminRouteRouteWithChildren,
   RiderRouteRoute: RiderRouteRouteWithChildren,
   CheckoutRoute: CheckoutRouteWithChildren,
+  DdcRoute: DdcRoute,
   DrinksRoute: DrinksRoute,
   FavoritesRoute: FavoritesRoute,
   FoodRoute: FoodRoute,
+  GroceryRoute: GroceryRoute,
   LoginRoute: LoginRoute,
   OrdersRoute: OrdersRoute,
   SignupRoute: SignupRoute,
@@ -1060,6 +1184,8 @@ const rootRouteChildren: RootRouteChildren = {
   VoucherSlugRoute: VoucherSlugRoute,
   TrackIndexRoute: TrackIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiWebhooksNepalotpRoute: ApiWebhooksNepalotpRoute,
+  ApiWebhooksOtpRoute: ApiWebhooksOtpRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

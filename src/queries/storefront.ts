@@ -3,6 +3,10 @@ import {
   getFrontpageDataFn,
   getFoodCategoriesFn,
   getFoodProductsFn,
+  getGroceryCategoriesFn,
+  getGroceryProductsFn,
+  getDdcCategoriesFn,
+  getDdcProductsFn,
   getLiquorBrandsFn,
   getLiquorCategoriesFn,
   getLiquorProductsFn,
@@ -48,6 +52,34 @@ export const storefrontQueries = {
     queryOptions({
       queryKey: ['catalog', 'food', 'products', filters],
       queryFn: () => getFoodProductsFn({ data: filters }),
+      staleTime: 1000 * 60 * 3,
+    }),
+
+  groceryCategories: () =>
+    queryOptions({
+      queryKey: ['catalog', 'grocery', 'categories'],
+      queryFn: () => getGroceryCategoriesFn(),
+      staleTime: 1000 * 60 * 10,
+    }),
+
+  groceryProducts: (filters: Record<string, any> = {}) =>
+    queryOptions({
+      queryKey: ['catalog', 'grocery', 'products', filters],
+      queryFn: () => getGroceryProductsFn({ data: filters }),
+      staleTime: 1000 * 60 * 3,
+    }),
+
+  ddcCategories: () =>
+    queryOptions({
+      queryKey: ['catalog', 'ddc', 'categories'],
+      queryFn: () => getDdcCategoriesFn(),
+      staleTime: 1000 * 60 * 10,
+    }),
+
+  ddcProducts: (filters: Record<string, any> = {}) =>
+    queryOptions({
+      queryKey: ['catalog', 'ddc', 'products', filters],
+      queryFn: () => getDdcProductsFn({ data: filters }),
       staleTime: 1000 * 60 * 3,
     }),
 }

@@ -46,7 +46,12 @@ import {
 } from '#/components/ui/dialog'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 
-type ActiveTab = 'liquor-cat' | 'food-cat' | 'brands'
+type ActiveTab =
+  | 'liquor-cat'
+  | 'food-cat'
+  | 'grocery-cat'
+  | 'ddc-cat'
+  | 'brands'
 
 interface CategoryLike {
   id: string
@@ -219,6 +224,40 @@ export function TaxonomyPanel() {
         toast.success(
           editingId ? 'Food category updated' : 'Food category created',
         )
+      } else if (activeTab === 'grocery-cat') {
+        await upsertCategoryFn({
+          data: {
+            catalogType: 'grocery',
+            id: editingId ?? undefined,
+            name: formName.trim(),
+            slug: formSlug.trim() || undefined,
+            description: formDescription.trim() || null,
+            imageUrl: formImageUrl.trim() || null,
+            sortOrder: Number(formSortOrder),
+            isActive: formIsActive,
+            showOnLandingPage: formShowOnLandingPage,
+          },
+        })
+        toast.success(
+          editingId ? 'Grocery category updated' : 'Grocery category created',
+        )
+      } else if (activeTab === 'ddc-cat') {
+        await upsertCategoryFn({
+          data: {
+            catalogType: 'ddc',
+            id: editingId ?? undefined,
+            name: formName.trim(),
+            slug: formSlug.trim() || undefined,
+            description: formDescription.trim() || null,
+            imageUrl: formImageUrl.trim() || null,
+            sortOrder: Number(formSortOrder),
+            isActive: formIsActive,
+            showOnLandingPage: formShowOnLandingPage,
+          },
+        })
+        toast.success(
+          editingId ? 'DDC category updated' : 'DDC category created',
+        )
       } else {
         await upsertBrandFn({
           data: {
@@ -239,6 +278,8 @@ export function TaxonomyPanel() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'liquor'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'food'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'ddc'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
       await queryClient.invalidateQueries({ queryKey: ['catalog'] })
       await queryClient.invalidateQueries({ queryKey: ['storefront'] })
@@ -258,7 +299,11 @@ export function TaxonomyPanel() {
           ? 'liquor-category'
           : activeTab === 'food-cat'
             ? 'food-category'
-            : 'liquor-brand'
+            : activeTab === 'grocery-cat'
+              ? 'grocery-category'
+              : activeTab === 'ddc-cat'
+                ? 'ddc-category'
+                : 'liquor-brand'
 
       await deleteItemFn({
         data: {
@@ -272,6 +317,8 @@ export function TaxonomyPanel() {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'liquor'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'food'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'grocery'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'ddc'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'inventory'] })
       await queryClient.invalidateQueries({ queryKey: ['catalog'] })
       await queryClient.invalidateQueries({ queryKey: ['storefront'] })
@@ -299,6 +346,18 @@ export function TaxonomyPanel() {
       icon: ShoppingBag,
     },
     {
+      id: 'grocery-cat',
+      label: 'Grocery categories',
+      count: ((taxonomy as any).groceryCategories ?? []).length,
+      icon: ShoppingBag,
+    },
+    {
+      id: 'ddc-cat',
+      label: 'DDC categories',
+      count: ((taxonomy as any).ddcCategories ?? []).length,
+      icon: Award,
+    },
+    {
       id: 'brands',
       label: 'Brands and distilleries',
       count: taxonomy.liquorBrands.length,
@@ -311,19 +370,34 @@ export function TaxonomyPanel() {
       ? 'New liquor category'
       : activeTab === 'food-cat'
         ? 'New food category'
-        : 'New liquor brand'
+        : activeTab === 'grocery-cat'
+          ? 'New grocery category'
+          : activeTab === 'ddc-cat'
+            ? 'New DDC category'
+            : 'New brand'
 
   const modalTitle = `${editingId ? 'Edit' : 'Create'} ${
     activeTab === 'liquor-cat'
       ? 'liquor category'
       : activeTab === 'food-cat'
         ? 'food category'
-        : 'brand'
+        : activeTab === 'grocery-cat'
+          ? 'grocery category'
+          : activeTab === 'ddc-cat'
+            ? 'DDC category'
+            : 'brand'
   }`
 
   const handleToggleLandingPage = async (cat: CategoryLike) => {
     try {
-      const catalogType = activeTab === 'liquor-cat' ? 'liquor' : 'food'
+      const catalogType =
+        activeTab === 'liquor-cat'
+          ? 'liquor'
+          : activeTab === 'food-cat'
+            ? 'food'
+            : activeTab === 'grocery-cat'
+              ? 'grocery'
+              : 'ddc'
       const nextVal = !cat.showOnLandingPage
       await toggleCategoryStatusFn({
         data: {
@@ -626,6 +700,12 @@ export function TaxonomyPanel() {
 
           {activeTab === 'food-cat' &&
             taxonomy.foodCategories.map((cat) => renderCategoryCard(cat))}
+
+          {activeTab === 'grocery-cat' &&
+            taxonomy.groceryCategories.map((cat) => renderCategoryCard(cat))}
+
+          {activeTab === 'ddc-cat' &&
+            taxonomy.ddcCategories.map((cat) => renderCategoryCard(cat))}
 
           {activeTab === 'brands' &&
             taxonomy.liquorBrands.map((brand) => renderBrandCard(brand))}

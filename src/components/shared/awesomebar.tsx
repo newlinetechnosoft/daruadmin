@@ -27,6 +27,8 @@ import {
   BarChart3,
   Clock,
   Loader2,
+  ShoppingBasket,
+  Milk,
 } from 'lucide-react'
 
 export interface AwesomebarProps {
@@ -319,6 +321,24 @@ export function Awesomebar({ open, onOpenChange }: AwesomebarProps) {
           >
             <ShoppingBag className="size-4 text-muted-foreground" />
             <span>Food Catalog</span>
+          </CommandItem>
+          <CommandItem
+            onSelect={() =>
+              handleSelect('/admin/grocery', 'Grocery Catalog', 'Navigation')
+            }
+            className="flex items-center gap-2 text-xs"
+          >
+            <ShoppingBasket className="size-4 text-muted-foreground" />
+            <span>Grocery Catalog</span>
+          </CommandItem>
+          <CommandItem
+            onSelect={() =>
+              handleSelect('/admin/ddc', 'DDC Catalog', 'Navigation')
+            }
+            className="flex items-center gap-2 text-xs"
+          >
+            <Milk className="size-4 text-muted-foreground" />
+            <span>DDC Catalog</span>
           </CommandItem>
           <CommandItem
             onSelect={() =>

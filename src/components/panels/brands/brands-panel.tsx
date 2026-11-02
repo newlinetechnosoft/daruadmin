@@ -37,7 +37,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-type CatalogTab = 'liquor' | 'food'
+type CatalogTab = 'liquor' | 'food' | 'grocery' | 'ddc'
 
 export function BrandsPanel() {
   const queryClient = useQueryClient()
@@ -68,7 +68,16 @@ export function BrandsPanel() {
 
   const liquorBrands = brandsData.liquorBrands as unknown as BrandData[]
   const foodBrands = brandsData.foodBrands as unknown as BrandData[]
-  const currentBrands = activeTab === 'liquor' ? liquorBrands : foodBrands
+  const groceryBrands = ((brandsData as any).groceryBrands ?? []) as unknown as BrandData[]
+  const ddcBrands = ((brandsData as any).ddcBrands ?? []) as unknown as BrandData[]
+  const currentBrands =
+    activeTab === 'liquor'
+      ? liquorBrands
+      : activeTab === 'food'
+        ? foodBrands
+        : activeTab === 'grocery'
+          ? groceryBrands
+          : ddcBrands
 
   // Filter fields config
   const filterableFields: FilterableField[] = [
@@ -135,7 +144,13 @@ export function BrandsPanel() {
       await deleteItemFn({
         data: {
           catalogType:
-            activeTab === 'liquor' ? 'liquor-brand' : 'food-brand',
+            activeTab === 'liquor'
+              ? 'liquor-brand'
+              : activeTab === 'food'
+                ? 'food-brand'
+                : activeTab === 'grocery'
+                  ? 'grocery-brand'
+                  : 'ddc-brand',
           id: deleteTarget.id,
         },
       })
@@ -349,6 +364,26 @@ export function BrandsPanel() {
                 <span>Food Brands</span>
                 <span className="font-mono text-xs text-muted-foreground ml-1">
                   ({foodBrands.length})
+                </span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="grocery"
+                className="h-7 text-xs gap-1.5 data-[state=active]:bg-background"
+              >
+                <ShoppingBag className="size-3.5" />
+                <span>Grocery Brands</span>
+                <span className="font-mono text-xs text-muted-foreground ml-1">
+                  ({groceryBrands.length})
+                </span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="ddc"
+                className="h-7 text-xs gap-1.5 data-[state=active]:bg-background"
+              >
+                <Award className="size-3.5" />
+                <span>DDC Brands</span>
+                <span className="font-mono text-xs text-muted-foreground ml-1">
+                  ({ddcBrands.length})
                 </span>
               </TabsTrigger>
             </TabsList>

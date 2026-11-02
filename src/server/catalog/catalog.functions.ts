@@ -3,8 +3,12 @@ import { z } from 'zod'
 import {
   listLiquorSchema,
   listFoodSchema,
+  listGrocerySchema,
+  listDdcSchema,
   upsertLiquorProductSchema,
   upsertFoodProductSchema,
+  upsertGroceryProductSchema,
+  upsertDdcProductSchema,
   toggleProductStatusSchema,
   upsertCategorySchema,
   toggleCategoryStatusSchema,
@@ -24,11 +28,25 @@ import {
   getFoodBrandsQuery,
   getAllFoodBrandsQuery,
   getFoodProductsQuery,
+  getGroceryCategoriesQuery,
+  getAllGroceryCategoriesQuery,
+  getGroceryBrandsQuery,
+  getAllGroceryBrandsQuery,
+  getGroceryProductsQuery,
+  getDdcCategoriesQuery,
+  getAllDdcCategoriesQuery,
+  getDdcBrandsQuery,
+  getAllDdcBrandsQuery,
+  getDdcProductsQuery,
   getAdminStatsQuery,
   getAdminLiquorProductsQuery,
   getAdminFoodProductsQuery,
+  getAdminGroceryProductsQuery,
+  getAdminDdcProductsQuery,
   upsertLiquorProductQuery,
   upsertFoodProductQuery,
+  upsertGroceryProductQuery,
+  upsertDdcProductQuery,
   toggleProductStatusQuery,
   upsertCategoryQuery,
   toggleCategoryStatusQuery,
@@ -82,6 +100,42 @@ export const getFoodProductsFn = createServerFn({ method: 'GET' })
   .validator((d: unknown) => listFoodSchema.parse(d ?? {}))
   .handler(async ({ data }) => {
     return getFoodProductsQuery(data)
+  })
+
+export const getGroceryCategoriesFn = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  return getGroceryCategoriesQuery()
+})
+
+export const getGroceryBrandsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    return getGroceryBrandsQuery()
+  },
+)
+
+export const getGroceryProductsFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) => listGrocerySchema.parse(d ?? {}))
+  .handler(async ({ data }) => {
+    return getGroceryProductsQuery(data)
+  })
+
+export const getDdcCategoriesFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    return getDdcCategoriesQuery()
+  },
+)
+
+export const getDdcBrandsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    return getDdcBrandsQuery()
+  },
+)
+
+export const getDdcProductsFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) => listDdcSchema.parse(d ?? {}))
+  .handler(async ({ data }) => {
+    return getDdcProductsQuery(data)
   })
 
 export const getFrontpageDataFn = createServerFn({ method: 'GET' }).handler(
@@ -138,6 +192,20 @@ export const getAdminFoodProductsFn = createServerFn({
   return getAdminFoodProductsQuery()
 })
 
+export const getAdminGroceryProductsFn = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  await requirePermission('grocery', 'view')
+  return getAdminGroceryProductsQuery()
+})
+
+export const getAdminDdcProductsFn = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  await requirePermission('ddc', 'view')
+  return getAdminDdcProductsQuery()
+})
+
 export const getAllTaxonomyFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     const user = await getSessionUser()
@@ -146,25 +214,43 @@ export const getAllTaxonomyFn = createServerFn({ method: 'GET' }).handler(
       can(grants, 'categories', 'view') ||
       can(grants, 'brands', 'view') ||
       can(grants, 'liquor', 'view') ||
-      can(grants, 'food', 'view')
+      can(grants, 'food', 'view') ||
+      can(grants, 'grocery', 'view') ||
+      can(grants, 'ddc', 'view')
 
     if (!canView) {
       throw new Error('403: Forbidden: Insufficient permissions for taxonomy')
     }
 
-    const [liquorCategories, foodCategories, liquorBrands, foodBrands] =
-      await Promise.all([
-        getAllLiquorCategoriesQuery(),
-        getAllFoodCategoriesQuery(),
-        getAllLiquorBrandsQuery(),
-        getAllFoodBrandsQuery(),
-      ])
+    const [
+      liquorCategories,
+      foodCategories,
+      groceryCategories,
+      ddcCategories,
+      liquorBrands,
+      foodBrands,
+      groceryBrands,
+      ddcBrands,
+    ] = await Promise.all([
+      getAllLiquorCategoriesQuery(),
+      getAllFoodCategoriesQuery(),
+      getAllGroceryCategoriesQuery(),
+      getAllDdcCategoriesQuery(),
+      getAllLiquorBrandsQuery(),
+      getAllFoodBrandsQuery(),
+      getAllGroceryBrandsQuery(),
+      getAllDdcBrandsQuery(),
+    ])
 
     return {
       liquorCategories,
       foodCategories,
+      groceryCategories,
+      ddcCategories,
       liquorBrands,
       foodBrands,
+      groceryBrands,
+      ddcBrands,
     }
   },
 )
@@ -172,13 +258,18 @@ export const getAllTaxonomyFn = createServerFn({ method: 'GET' }).handler(
 export const getAdminBrandsFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('brands', 'view')
-    const [liquorBrands, foodBrands] = await Promise.all([
-      getAllLiquorBrandsQuery(),
-      getAllFoodBrandsQuery(),
-    ])
+    const [liquorBrands, foodBrands, groceryBrands, ddcBrands] =
+      await Promise.all([
+        getAllLiquorBrandsQuery(),
+        getAllFoodBrandsQuery(),
+        getAllGroceryBrandsQuery(),
+        getAllDdcBrandsQuery(),
+      ])
     return {
       liquorBrands,
       foodBrands,
+      groceryBrands,
+      ddcBrands,
     }
   },
 )
@@ -213,10 +304,47 @@ export const upsertFoodProductFn = createServerFn({ method: 'POST' })
     return result
   })
 
+export const upsertGroceryProductFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => upsertGroceryProductSchema.parse(d))
+  .handler(async ({ data }) => {
+    const action = data.id ? 'edit' : 'create'
+    const { user } = await requirePermission('grocery', action)
+    const result = await upsertGroceryProductQuery(data)
+    await logAudit(
+      user.name,
+      'grocery',
+      action,
+      `${action === 'create' ? 'Created' : 'Updated'} grocery product: ${data.name}`,
+    )
+    return result
+  })
+
+export const upsertDdcProductFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => upsertDdcProductSchema.parse(d))
+  .handler(async ({ data }) => {
+    const action = data.id ? 'edit' : 'create'
+    const { user } = await requirePermission('ddc', action)
+    const result = await upsertDdcProductQuery(data)
+    await logAudit(
+      user.name,
+      'ddc',
+      action,
+      `${action === 'create' ? 'Created' : 'Updated'} DDC product: ${data.name}`,
+    )
+    return result
+  })
+
 export const toggleProductStatusFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => toggleProductStatusSchema.parse(d))
   .handler(async ({ data }) => {
-    const mod: ModuleKey = data.catalogType === 'liquor' ? 'liquor' : 'food'
+    const mod: ModuleKey =
+      data.catalogType === 'liquor'
+        ? 'liquor'
+        : data.catalogType === 'food'
+          ? 'food'
+          : data.catalogType === 'grocery'
+            ? 'grocery'
+            : 'ddc'
     const { user } = await requirePermission(mod, 'edit')
     const result = await toggleProductStatusQuery(data)
     await logAudit(
@@ -281,10 +409,16 @@ export const deleteItemFn = createServerFn({ method: 'POST' })
         ? 'liquor'
         : data.catalogType === 'food'
           ? 'food'
-          : data.catalogType === 'liquor-brand' ||
-              data.catalogType === 'food-brand'
-            ? 'brands'
-            : 'categories'
+          : data.catalogType === 'grocery'
+            ? 'grocery'
+            : data.catalogType === 'ddc'
+              ? 'ddc'
+              : data.catalogType === 'liquor-brand' ||
+                  data.catalogType === 'food-brand' ||
+                  data.catalogType === 'grocery-brand' ||
+                  data.catalogType === 'ddc-brand'
+                ? 'brands'
+                : 'categories'
     const { user } = await requirePermission(mod, action)
     const result = await deleteItemQuery(data)
     await logAudit(

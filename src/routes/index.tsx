@@ -549,15 +549,15 @@ function HomePage() {
           {/* TOP CORNER DUMMY LOGOS (Replaces the white circles) */}
           <div className="absolute inset-x-0 top-0 z-20 flex justify-between p-6 sm:p-10 lg:p-12 pointer-events-none">
             {/* Left Logo */}
-            <Link to="/food" className="pointer-events-auto">
+            <Link to="/grocery" className="pointer-events-auto">
               <img
-                src="/images/logos/food-transparent.png"
-                alt="Left Logo Placeholder"
+                src="/images/logos/grocery-transparent.png"
+                alt="Grocery Logo"
                 className="h-15 w-auto sm:h-20 lg:h-30 object-contain drop-shadow-md"
               />
             </Link>
             {/* Right Logo */}
-            <Link to="/food" className="pointer-events-auto">
+            <Link to="/ddc" className="pointer-events-auto">
               <img
                 src="/images/logos/ddc-transparent.png"
                 alt="DDC Logo"

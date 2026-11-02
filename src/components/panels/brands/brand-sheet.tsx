@@ -43,12 +43,12 @@ type BrandFormValues = z.infer<typeof upsertBrandSchema>
 export interface BrandSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  catalogType: 'liquor' | 'food'
+  catalogType: 'liquor' | 'food' | 'grocery' | 'ddc'
   brand?: BrandData | null
   onSuccess?: (savedBrand: {
     id: string
     name: string
-    catalogType: 'liquor' | 'food'
+    catalogType: 'liquor' | 'food' | 'grocery' | 'ddc'
   }) => void
 }
 

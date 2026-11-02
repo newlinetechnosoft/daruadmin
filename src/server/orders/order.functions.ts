@@ -8,6 +8,10 @@ import {
   liquorProducts,
   foodVariants,
   foodProducts,
+  groceryVariants,
+  groceryProducts,
+  ddcVariants,
+  ddcProducts,
   user,
   orders,
   orderItems,
@@ -185,7 +189,8 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
     // Re-fetch product prices & stock from Postgres DB
     const variantIds = data.items.map((i) => i.variantId)
 
-    const [liqVariants, grocVariants] = await Promise.all([
+    const [liqVariants, foodVariantsRows, grocVariants, ddcVariantsRows] =
+      await Promise.all([
       db
         .select({
           variant: liquorVariants,
@@ -220,6 +225,40 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
             inArray(foodVariants.id, variantIds),
           ),
         ),
+      db
+        .select({
+          variant: groceryVariants,
+          product: groceryProducts,
+        })
+        .from(groceryVariants)
+        .innerJoin(
+          groceryProducts,
+          eq(groceryVariants.productId, groceryProducts.id),
+        )
+        .where(
+          and(
+            eq(groceryVariants.isActive, true),
+            eq(groceryProducts.isActive, true),
+            inArray(groceryVariants.id, variantIds),
+          ),
+        ),
+      db
+        .select({
+          variant: ddcVariants,
+          product: ddcProducts,
+        })
+        .from(ddcVariants)
+        .innerJoin(
+          ddcProducts,
+          eq(ddcVariants.productId, ddcProducts.id),
+        )
+        .where(
+          and(
+            eq(ddcVariants.isActive, true),
+            eq(ddcProducts.isActive, true),
+            inArray(ddcVariants.id, variantIds),
+          ),
+        ),
     ])
 
     const variantLookup = new Map<
@@ -231,7 +270,7 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         sku: string
         price: number
         productId: string
-        catalogType: 'liquor' | 'food'
+        catalogType: 'liquor' | 'food' | 'grocery' | 'ddc'
       }
     >()
 
@@ -247,7 +286,7 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
       })
     }
 
-    for (const row of grocVariants) {
+    for (const row of foodVariantsRows) {
       variantLookup.set(row.variant.id, {
         variantId: row.variant.id,
         name: row.product.name,
@@ -259,10 +298,34 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
       })
     }
 
+    for (const row of grocVariants) {
+      variantLookup.set(row.variant.id, {
+        variantId: row.variant.id,
+        name: row.product.name,
+        variantName: row.variant.name,
+        sku: row.variant.sku,
+        price: row.variant.price,
+        productId: row.product.id,
+        catalogType: 'grocery',
+      })
+    }
+
+    for (const row of ddcVariantsRows) {
+      variantLookup.set(row.variant.id, {
+        variantId: row.variant.id,
+        name: row.product.name,
+        variantName: row.variant.name,
+        sku: row.variant.sku,
+        price: row.variant.price,
+        productId: row.product.id,
+        catalogType: 'ddc',
+      })
+    }
+
     // Verify all requested items are active
     const verifiedOrderItems: {
       id: string
-      catalogType: 'liquor' | 'food'
+      catalogType: 'liquor' | 'food' | 'grocery' | 'ddc'
       productId: string
       variantId: string
       name: string

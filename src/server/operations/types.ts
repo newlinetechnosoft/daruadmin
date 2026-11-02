@@ -4,6 +4,8 @@ export const MODULES = [
   'dashboard',
   'liquor',
   'food',
+  'grocery',
+  'ddc',
   'categories',
   'brands',
   'products', // legacy/umbrella
@@ -78,6 +80,20 @@ export const PERMISSION_SECTIONS: PermissionSection[] = [
         label: 'Food',
         description:
           'Manage food items, pack sizes, inventory variants, and pricing',
+        section: 'Catalog',
+      },
+      {
+        key: 'grocery',
+        label: 'Grocery',
+        description:
+          'Manage grocery items, pack sizes, inventory variants, and pricing',
+        section: 'Catalog',
+      },
+      {
+        key: 'ddc',
+        label: 'DDC',
+        description:
+          'Manage DDC dairy and related items, pack sizes, inventory variants, and pricing',
         section: 'Catalog',
       },
       {

@@ -20,6 +20,8 @@ export const DEFAULT_GRANTS_BY_ROLE: Record<string, UserGrants> = {
     dashboard: ['view'],
     liquor: ['view', 'create', 'edit'],
     food: ['view', 'create', 'edit'],
+    grocery: ['view', 'create', 'edit'],
+    ddc: ['view', 'create', 'edit'],
     categories: ['view', 'create', 'edit'],
     brands: ['view', 'create', 'edit'],
     products: ['view', 'create', 'edit'],
@@ -83,6 +85,8 @@ export function can(
   if (
     (module === 'liquor' ||
       module === 'food' ||
+      module === 'grocery' ||
+      module === 'ddc' ||
       module === 'categories' ||
       module === 'brands' ||
       module === 'inventory' ||

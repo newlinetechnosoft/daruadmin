@@ -41,6 +41,8 @@ import {
   Award,
   Store,
   Trash2,
+  ShoppingBasket,
+  Milk,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -202,6 +204,18 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         to: '/admin/food',
         icon: ShoppingBag,
         module: 'food',
+      },
+      {
+        label: 'Grocery',
+        to: '/admin/grocery',
+        icon: ShoppingBasket,
+        module: 'grocery',
+      },
+      {
+        label: 'DDC',
+        to: '/admin/ddc',
+        icon: Milk,
+        module: 'ddc',
       },
       {
         label: 'Categories',
