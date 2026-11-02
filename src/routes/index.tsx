@@ -546,6 +546,26 @@ function HomePage() {
           {/* DARK VIGNETTE OVERLAY FOR CRISP TEXT CONTRAST OVER PHOTOS */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/45 to-black/80 z-[1] pointer-events-none" />
 
+          {/* TOP CORNER DUMMY LOGOS (Replaces the white circles) */}
+          <div className="absolute inset-x-0 top-0 z-20 flex justify-between p-6 sm:p-10 lg:p-12 pointer-events-none">
+            {/* Left Logo */}
+            <Link to="/grocery" className="pointer-events-auto">
+              <img
+                src="/images/logos/grocery-transparent.png"
+                alt="Left Logo Placeholder"
+                className="h-15 w-auto sm:h-20 lg:h-30 object-contain drop-shadow-md"
+              />
+            </Link>
+            {/* Right Logo */}
+            <Link to="/grocery" className="pointer-events-auto">
+              <img
+                src="/images/logos/ddc-transparent.png"
+                alt="DDC Logo"
+                className="h-15 w-auto sm:h-20 lg:h-30 object-contain drop-shadow-md"
+              />
+            </Link>
+          </div>
+
           {/* HERO FOREGROUND CONTENT */}
           <div className="mx-auto max-w-5xl px-4 sm:px-8 w-full flex-1 flex flex-col items-center justify-center text-center relative z-10 py-16 sm:py-24">
             {/* TOP PILL BADGE */}
