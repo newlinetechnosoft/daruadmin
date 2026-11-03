@@ -48,7 +48,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Facebook"
-                className="text-sidebar-foreground/60 transition-colors hover:text-[#1877F2]"
+                className="text-[#1877F2] transition-colors hover:text-sidebar-foreground/60"
               >
                 <Facebook className="h-5 w-5" />
               </a>
@@ -58,7 +58,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"
-                className="text-sidebar-foreground/60 transition-colors hover:text-[#E4405F]"
+                className="text-[#E4405F] transition-colors hover:text-sidebar-foreground/60"
               >
                 <Instagram className="h-5 w-5" />
               </a>
@@ -68,7 +68,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="TikTok"
-                className="text-sidebar-foreground/60 transition-colors hover:text-white"
+                className="text-white transition-colors hover:text-sidebar-foreground/60"
               >
                 <TikTokIcon className="h-5 w-5" />
               </a>
@@ -81,13 +81,13 @@ export function Footer() {
               Explore
             </h4>
 
-            <Link to="/drinks" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
+            <Link to="/drinks" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary underline">
               Drinks
             </Link>
-            <Link to="/food" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
+            <Link to="/food" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary underline">
               Food
             </Link>
-            <a href="/#reviews" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
+            <a href="/#reviews" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary underline">
               Reviews
             </a>
           </div>
@@ -98,13 +98,13 @@ export function Footer() {
               Company
             </h4>
 
-            <a href="/#about" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
+            <a href="/#about" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary underline">
               About us
             </a>
-            <a href="/#about" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
+            <a href="/#about" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary underline">
               Delivery areas
             </a>
-            <a href="tel:+9779802088800" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary">
+            <a href="tel:+9779766653471" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary underline">
               Contact us
             </a>
           </div>
@@ -119,10 +119,16 @@ export function Footer() {
               Need help with an order? We're happy to help.
             </p>
             <a
-              href="tel:+9779802088800"
-              className="font-medium text-sidebar-primary transition-opacity hover:opacity-80"
+              href="tel:+9779766653471"
+              className="font-medium text-sidebar-primary transition-opacity hover:opacity-80 underline"
             >
-              +977 9802088800
+              +977 9766653471
+            </a>
+            <a
+              href="tel:+9779847820683"
+              className="font-medium text-sidebar-primary transition-opacity hover:opacity-80 underline"
+            >
+              +977 9847820683
             </a>
           </div>
         </div>
