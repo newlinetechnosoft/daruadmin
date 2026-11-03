@@ -1,4 +1,5 @@
 import { queryOptions } from '@tanstack/react-query'
+import { getPublicLandingNoticesFn } from '#/server/operations/operations.functions'
 import {
   getFrontpageDataFn,
   getFoodCategoriesFn,
@@ -13,6 +14,13 @@ import {
 } from '#/server/catalog/catalog.functions'
 
 export const storefrontQueries = {
+  landingPopups: () =>
+    queryOptions({
+      queryKey: ['storefront', 'landing-popups'],
+      queryFn: () => getPublicLandingNoticesFn(),
+      staleTime: 1000 * 60,
+    }),
+
   frontpage: () =>
     queryOptions({
       queryKey: ['storefront', 'frontpage'],

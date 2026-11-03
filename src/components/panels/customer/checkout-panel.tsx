@@ -59,6 +59,47 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
+function getTodayDateString(): string {
+  const d = new Date()
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function getTomorrowDateString(): string {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function getDefaultCustomTimeString(): string {
+  const now = new Date()
+  const target = new Date(now.getTime() + 45 * 60 * 1000)
+  const rem = target.getMinutes() % 5
+  if (rem !== 0) {
+    target.setMinutes(target.getMinutes() + (5 - rem))
+  }
+  const hours = String(target.getHours()).padStart(2, '0')
+  const minutes = String(target.getMinutes()).padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
+function formatTimeTo12Hour(timeStr: string): string {
+  if (!timeStr) return ''
+  const parts = timeStr.split(':')
+  if (parts.length < 2) return timeStr
+  const h = parseInt(parts[0], 10)
+  const m = parseInt(parts[1], 10)
+  if (isNaN(h) || isNaN(m)) return timeStr
+  const period = h >= 12 ? 'PM' : 'AM'
+  const displayH = h % 12 === 0 ? 12 : h % 12
+  return `${displayH}:${String(m).padStart(2, '0')} ${period}`
+}
+
 export function CheckoutPanel() {
   const { data: session } = authClient.useSession()
   const { items, totalPaisa, clearCart } = useCart()
@@ -72,7 +113,7 @@ export function CheckoutPanel() {
 
   // Profile phone check
   const rawProfilePhone =
-    (session?.user as { phone?: string | null })?.phone || ''
+    (session?.user as { phone?: string | null } | undefined)?.phone || ''
   const normalizedProfilePhone = normalizeNepaliPhone(rawProfilePhone)
   const hasProfilePhone = Boolean(normalizedProfilePhone)
 
@@ -111,6 +152,8 @@ export function CheckoutPanel() {
       phone: normalizedProfilePhone || '',
       savePhoneAsDefault: false,
       deliverySlot: 'express',
+      customDeliveryDate: getTodayDateString(),
+      customDeliveryTime: getDefaultCustomTimeString(),
       deliveryNotes: '',
       items: items.map((i) => ({
         variantId: i.variantId,
@@ -120,6 +163,9 @@ export function CheckoutPanel() {
   })
 
   const selectedPaymentMethod = watch('paymentMethod')
+  const watchedDeliverySlot = watch('deliverySlot')
+  const watchedCustomDate = watch('customDeliveryDate')
+  const watchedCustomTime = watch('customDeliveryTime')
   const selectedLocation = {
     lat: watch('lat'),
     lng: watch('lng'),
@@ -147,24 +193,22 @@ export function CheckoutPanel() {
     let isMounted = true
     void getCustomerAddressesFn()
       .then((addrs) => {
-        if (!isMounted || !addrs || addrs.length === 0) return
+        if (!isMounted || addrs.length === 0) return
         setSavedAddresses(addrs)
-        const defaultAddr = addrs.find((a) => a.isDefault) || addrs[0]
-        if (defaultAddr) {
-          setSelectedAddressId(defaultAddr.id)
-          setValue('address', defaultAddr.address, { shouldValidate: true })
-          setValue('city', defaultAddr.city || 'Butwal')
-          if (
-            defaultAddr.lat != null &&
-            defaultAddr.lng != null &&
-            isWithinButwalArea(Number(defaultAddr.lat), Number(defaultAddr.lng))
-          ) {
-            setValue('lat', Number(defaultAddr.lat), { shouldValidate: true })
-            setValue('lng', Number(defaultAddr.lng), { shouldValidate: true })
-          } else {
-            setValue('lat', DEFAULT_MAP_CENTER[0], { shouldValidate: true })
-            setValue('lng', DEFAULT_MAP_CENTER[1], { shouldValidate: true })
-          }
+        const defaultAddr = addrs.find((a) => a.isDefault) ?? addrs[0]
+        setSelectedAddressId(defaultAddr.id)
+        setValue('address', defaultAddr.address, { shouldValidate: true })
+        setValue('city', defaultAddr.city || 'Butwal')
+        if (
+          defaultAddr.lat != null &&
+          defaultAddr.lng != null &&
+          isWithinButwalArea(Number(defaultAddr.lat), Number(defaultAddr.lng))
+        ) {
+          setValue('lat', Number(defaultAddr.lat), { shouldValidate: true })
+          setValue('lng', Number(defaultAddr.lng), { shouldValidate: true })
+        } else {
+          setValue('lat', DEFAULT_MAP_CENTER[0], { shouldValidate: true })
+          setValue('lng', DEFAULT_MAP_CENTER[1], { shouldValidate: true })
         }
       })
       .catch(() => {
@@ -268,11 +312,7 @@ export function CheckoutPanel() {
         data: submissionData,
       })
 
-      if (!result.success) {
-        toast.error('Failed to create order. Please try again.')
-        setIsSubmitting(false)
-        return
-      }
+
 
       // If user opted to save this address for later, persist it
       if (saveAddressForLater && session?.user) {
@@ -736,7 +776,7 @@ export function CheckoutPanel() {
                   name="deliverySlot"
                   control={control}
                   render={({ field }) => (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       {[
                         {
                           id: 'express',
@@ -755,6 +795,12 @@ export function CheckoutPanel() {
                           title: '✨ Late Night Slot',
                           time: '8:00 PM – 10:00 PM',
                           desc: 'Prime party & weekend social gathering time',
+                        },
+                        {
+                          id: 'custom',
+                          title: '📅 Custom Schedule',
+                          time: 'Pick Date & Time',
+                          desc: 'Schedule in advance for parties or later today (min 30m)',
                         },
                       ].map((slot) => {
                         const isSelected = field.value === slot.id
@@ -791,6 +837,96 @@ export function CheckoutPanel() {
                     </div>
                   )}
                 />
+
+                {watchedDeliverySlot === 'custom' && (
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-3.5 space-y-3 animate-in fade-in-50 duration-200">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 text-primary" />
+                          Specify Preferred Date & Delivery Time
+                        </span>
+                        <p className="text-[11px] text-muted-foreground">
+                          Order must be scheduled at least 30 minutes in advance.
+                        </p>
+                      </div>
+                      {watchedCustomTime && (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary/15 text-primary font-mono">
+                          {watchedCustomDate === getTodayDateString()
+                            ? 'Today'
+                            : watchedCustomDate === getTomorrowDateString()
+                              ? 'Tomorrow'
+                              : watchedCustomDate}{' '}
+                          at {formatTimeTo12Hour(watchedCustomTime)}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {/* Date Selection */}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="custom-delivery-date" className="text-xs font-medium">
+                          Delivery Date
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setValue('customDeliveryDate', getTodayDateString())}
+                            className={cn(
+                              'text-xs px-2.5 py-1.5 rounded-md border font-medium transition-colors cursor-pointer',
+                              watchedCustomDate === getTodayDateString()
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-background hover:bg-muted text-muted-foreground border-border',
+                            )}
+                          >
+                            Today
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setValue('customDeliveryDate', getTomorrowDateString())}
+                            className={cn(
+                              'text-xs px-2.5 py-1.5 rounded-md border font-medium transition-colors cursor-pointer',
+                              watchedCustomDate === getTomorrowDateString()
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-background hover:bg-muted text-muted-foreground border-border',
+                            )}
+                          >
+                            Tomorrow
+                          </button>
+                          <Input
+                            id="custom-delivery-date"
+                            type="date"
+                            min={getTodayDateString()}
+                            {...register('customDeliveryDate')}
+                            className="h-8 text-xs flex-1"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Time Selection */}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="custom-delivery-time" className="text-xs font-medium">
+                          Delivery Time (24h or 12h)
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="custom-delivery-time"
+                            type="time"
+                            {...register('customDeliveryTime')}
+                            className="h-8 text-xs flex-1"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setValue('customDeliveryTime', getDefaultCustomTimeString())}
+                            className="text-xs px-2 py-1.5 rounded-md border border-border bg-background hover:bg-muted text-muted-foreground whitespace-nowrap cursor-pointer"
+                          >
+                            +45 Mins
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Delivery Notes / Rider Instructions */}
                 <div className="space-y-1.5 pt-1">

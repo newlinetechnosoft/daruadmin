@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { storefrontQueries } from '#/queries/storefront'
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
+import { LandingPopup } from '#/components/store/landing-popup'
 import { toast } from 'sonner'
 import {
   ArrowRight,
@@ -18,13 +19,14 @@ import {
 
 export const Route = createFileRoute('/')({
   loader: async ({ context }) => {
-    const [foodCategories, liquorCategories] = await Promise.all([
+    const [foodCategories, liquorCategories, landingPopups] = await Promise.all([
       context.queryClient.ensureQueryData(
         storefrontQueries.foodCategories(),
       ),
       context.queryClient.ensureQueryData(storefrontQueries.liquorCategories()),
+      context.queryClient.ensureQueryData(storefrontQueries.landingPopups()),
     ])
-    return { foodCategories, liquorCategories }
+    return { foodCategories, liquorCategories, landingPopups }
   },
   component: HomePage,
 })
@@ -467,6 +469,11 @@ function HomePage() {
   const drinksCategories = allLiquorCategories.filter(
     (cat: any) => Boolean(cat.showOnLandingPage) && cat.isActive !== false,
   )
+
+  const { data: landingPopups = loaderData?.landingPopups ?? [] } = useQuery({
+    ...storefrontQueries.landingPopups(),
+    initialData: loaderData?.landingPopups,
+  })
 
   const [searchQuery, setSearchQuery] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
@@ -1054,6 +1061,9 @@ function HomePage() {
 
       {/* FOOTER */}
       <Footer />
+
+      {/* LANDING POPUP BANNER NOTICES */}
+      <LandingPopup notices={landingPopups} />
     </div>
   )
 }

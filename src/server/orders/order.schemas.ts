@@ -65,7 +65,11 @@ export const checkoutFormSchema = z.object({
   savePhoneAsDefault: z.boolean(),
 
   // e) Delivery time slot & optional delivery instructions
-  deliverySlot: z.enum(['express', 'evening', 'late_night']),
+  deliverySlot: z
+    .enum(['express', 'evening', 'late_night', 'custom'])
+    .or(z.string()),
+  customDeliveryDate: z.string().optional(),
+  customDeliveryTime: z.string().optional(),
   deliveryNotes: z.string().max(300).optional(),
 
   // Customer items from cart

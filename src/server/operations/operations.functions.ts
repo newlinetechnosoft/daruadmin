@@ -72,6 +72,7 @@ import {
   markAllNotificationsReadQuery,
   getAllAuditLogsQuery,
   getStoreSettingsQuery,
+  defaultStoreSettings,
   saveStoreSettingsQuery,
   getAllUserPermissionsQuery,
   saveUserPermissionsQuery,
@@ -87,6 +88,11 @@ import {
   getAllBannersQuery,
   upsertBannerQuery,
   deleteBannerQuery,
+  getLandingNoticesQuery,
+  saveLandingNoticeQuery,
+  deleteLandingNoticeQuery,
+  toggleLandingNoticeQuery,
+  reorderLandingNoticesQuery,
   getAllCampaignsQuery,
   getAllReviewsQuery,
   updateReviewStatusQuery,
@@ -102,7 +108,14 @@ import {
   setDefaultCustomerAddressQuery,
 } from '#/server/platform/platform.queries'
 import { getProductVelocityAndSourcingIntelligenceQuery } from './sourcing-intelligence.queries'
-import type { DateRangeKey, OpsState, ModuleKey, OrderStatus } from './types'
+import type {
+  DateRangeKey,
+  OpsState,
+  ModuleKey,
+  OrderStatus,
+  LandingNotice,
+  AdminBannersPayload,
+} from './types'
 import { ACTIONS, MODULES } from './types'
 import {
   transitionOrderTx,
@@ -1409,7 +1422,12 @@ export const removeOrderItemFn = createServerFn({ method: 'POST' })
       (it) => it.id !== data.orderItemId,
     )
 
-    const settings = await getStoreSettingsQuery()
+    let settings
+  try {
+    settings = await getStoreSettingsQuery()
+  } catch {
+    settings = defaultStoreSettings()
+  }
     const totals = calculateOrderTotals({
       items: remainingItems.map((it) => ({
         catalogType: it.catalogType,
@@ -1530,7 +1548,12 @@ export const editOrderItemsBeforeDispatchFn = createServerFn({ method: 'POST' })
       )
     }
 
-    const settings = await getStoreSettingsQuery()
+    let settings
+  try {
+    settings = await getStoreSettingsQuery()
+  } catch {
+    settings = defaultStoreSettings()
+  }
     const totals = calculateOrderTotals({
       items: data.items,
       discountPaisa: order.discount,
@@ -1667,7 +1690,12 @@ export const createOrderFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const { user: actor } = await requirePermission('orders', 'create')
-    const settings = await getStoreSettingsQuery()
+    let settings
+  try {
+    settings = await getStoreSettingsQuery()
+  } catch {
+    settings = defaultStoreSettings()
+  }
     const subtotal = data.items.reduce(
       (sum, item) => sum + item.unitPrice * item.qty,
       0,
@@ -2215,13 +2243,29 @@ export const saveSettingsFn = createServerFn({ method: 'POST' })
 export const getPublicDeliverySettingsFn = createServerFn({
   method: 'GET',
 }).handler(async () => {
-  const settings = await getStoreSettingsQuery()
+  let settings
+  try {
+    settings = await getStoreSettingsQuery()
+  } catch {
+    settings = defaultStoreSettings()
+  }
   const deliveryFee = settings.deliveryFee ?? 0
   const freeDeliveryThreshold = settings.freeDeliveryThreshold ?? 0
+  const gateways = settings.gateways
   return {
     deliveryFee, // in paisa (0 = free delivery for growth stage)
     freeDeliveryThreshold, // in paisa
     isGrowthFreeDelivery: deliveryFee === 0,
+    gateways: {
+      cod: { enabled: Boolean(gateways.cod.enabled) },
+      esewa: { enabled: Boolean(gateways.esewa.enabled) },
+      khalti: { enabled: Boolean(gateways.khalti.enabled) },
+      fonepay: { enabled: Boolean(gateways.fonepay.enabled) },
+      connectips: { enabled: Boolean(gateways.connectips.enabled) },
+    },
+    enabledPaymentMethods: (['cod', 'esewa'] as const).filter((m) =>
+      Boolean(gateways[m].enabled),
+    ),
   }
 })
 
@@ -2831,6 +2875,131 @@ export const deleteBannerFn = createServerFn({ method: 'POST' })
       `Deleted banner ${data.id}`,
     )
     return true
+  })
+
+// -------------------------------------------------------------
+// LANDING POPUP BANNERS & NOTICES
+// -------------------------------------------------------------
+
+export const getAdminLandingNoticesFn = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<AdminBannersPayload> => {
+    await requirePermission('marketing', 'view')
+    const [notices, banners] = await Promise.all([
+      getLandingNoticesQuery(false),
+      getAllBannersQuery(),
+    ])
+    return { notices, banners }
+  },
+)
+
+export const getPublicLandingNoticesFn = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<LandingNotice[]> => {
+    try {
+      return await getLandingNoticesQuery(true)
+    } catch {
+      return []
+    }
+  },
+)
+
+export const upsertLandingNoticeFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.string().optional(),
+        title: z.string().min(1, 'Title is required'),
+        type: z.enum(['image', 'text', 'html']).default('image'),
+        active: z.boolean().default(true),
+        priority: z.number().int().default(1),
+
+        // Image notice
+        imageUrl: z.string().optional(),
+        imageAlt: z.string().optional(),
+        linkUrl: z.string().optional(),
+        linkTarget: z.enum(['_self', '_blank']).default('_self'),
+        imageCaption: z.string().optional(),
+        imageActionText: z.string().optional(),
+
+        // Text notice
+        textBadge: z.string().optional(),
+        textHeading: z.string().optional(),
+        textBody: z.string().optional(),
+        textActionText: z.string().optional(),
+        textActionUrl: z.string().optional(),
+        textColorTheme: z
+          .enum(['default', 'dark', 'emerald', 'wine', 'amber', 'blue'])
+          .default('default'),
+
+        // HTML & CSS notice
+        htmlContent: z.string().optional(),
+        customCss: z.string().optional(),
+
+        // Settings
+        autoDismissSeconds: z.number().optional(),
+        showOncePerSession: z.boolean().default(true),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission(
+      'marketing',
+      data.id ? 'edit' : 'create',
+    )
+
+    const updated = await saveLandingNoticeQuery(data as any)
+
+    await logAudit(
+      user.name,
+      'marketing',
+      data.id ? 'edit' : 'create',
+      `${data.id ? 'Updated' : 'Created'} landing notice popup: ${data.title} (${data.type})`,
+    )
+
+    return updated
+  })
+
+export const deleteLandingNoticeFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => z.object({ id: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('marketing', 'delete')
+    const updated = await deleteLandingNoticeQuery(data.id)
+    await logAudit(
+      user.name,
+      'marketing',
+      'delete',
+      `Deleted landing notice popup ${data.id}`,
+    )
+    return updated
+  })
+
+export const toggleLandingNoticeFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z.object({ id: z.string().min(1), active: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('marketing', 'edit')
+    const updated = await toggleLandingNoticeQuery(data.id, data.active)
+    await logAudit(
+      user.name,
+      'marketing',
+      'edit',
+      `Toggled landing notice ${data.id} to ${data.active ? 'active' : 'inactive'}`,
+    )
+    return updated
+  })
+
+export const reorderLandingNoticesFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) => z.object({ ids: z.array(z.string()) }).parse(d))
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('marketing', 'edit')
+    const updated = await reorderLandingNoticesQuery(data.ids)
+    await logAudit(
+      user.name,
+      'marketing',
+      'edit',
+      `Reordered ${data.ids.length} landing notices`,
+    )
+    return updated
   })
 
 export const resetOpsFn = createServerFn({ method: 'POST' }).handler(

@@ -26,6 +26,7 @@ import { getSessionUser, logAudit } from '#/server/auth/permissions'
 import {
   getCouponByCodeQuery,
   getStoreSettingsQuery,
+  defaultStoreSettings,
   getCustomerCouponRedemptionCountQuery,
 } from '#/server/platform/platform.queries'
 import {
@@ -401,7 +402,48 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
       }
     }
 
-    const settings = await getStoreSettingsQuery()
+    let settings
+    try {
+      settings = await getStoreSettingsQuery()
+    } catch {
+      settings = defaultStoreSettings()
+    }
+
+    // Verify payment method is enabled in store settings
+    const gateways = settings.gateways
+    const gateway = data.paymentMethod === 'cod' ? gateways.cod : gateways.esewa
+    const isMethodEnabled = Boolean(gateway.enabled)
+    if (!isMethodEnabled) {
+      throw new Error(
+        `Payment method "${data.paymentMethod === 'cod' ? 'Cash on Delivery' : 'eSewa'}" is currently disabled in store settings. Please select an active payment method.`,
+      )
+    }
+
+    // Validate custom delivery slot minimum 30 minutes
+    if (data.deliverySlot === 'custom') {
+      if (!data.customDeliveryTime) {
+        throw new Error('Please select a custom delivery time for your order.')
+      }
+
+      const todayStr = new Date().toISOString().slice(0, 10)
+      const scheduledDate = data.customDeliveryDate || todayStr
+
+      if (scheduledDate === todayStr) {
+        const parts = data.customDeliveryTime.split(':')
+        const hours = parseInt(parts[0], 10)
+        const minutes = parseInt(parts[1], 10)
+        if (!isNaN(hours) && !isNaN(minutes)) {
+          const scheduledDateTime = new Date()
+          scheduledDateTime.setHours(hours, minutes, 0, 0)
+          const minAllowed = new Date(Date.now() + 28 * 60 * 1000)
+          if (scheduledDateTime.getTime() < minAllowed.getTime()) {
+            throw new Error(
+              'Custom delivery time must be scheduled at least 30 minutes in advance.',
+            )
+          }
+        }
+      }
+    }
 
     // Pricing calculation via pricing engine
     const totals = calculateOrderTotals({
@@ -500,7 +542,9 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         deliveryOtp,
         notes: [
           data.deliverySlot && data.deliverySlot !== 'express'
-            ? `[Slot: ${data.deliverySlot === 'evening' ? 'Evening 6PM-8PM' : 'Late Night 8PM-10PM'}]`
+            ? data.deliverySlot === 'custom'
+              ? `[Slot: Scheduled for ${data.customDeliveryDate ? data.customDeliveryDate + ', ' : 'Today, '}${data.customDeliveryTime || ''}]`
+              : `[Slot: ${data.deliverySlot === 'evening' ? 'Evening 6PM-8PM' : 'Late Night 8PM-10PM'}]`
             : null,
           data.deliveryNotes?.trim() || null,
         ]

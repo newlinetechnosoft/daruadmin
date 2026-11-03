@@ -1,4 +1,5 @@
 import type { DealerDto } from '#/server/inventory/inventory.queries'
+import type { ProductSourcingIntelligenceReport } from './sourcing-intelligence.queries'
 
 export const MODULES = [
   'dashboard',
@@ -468,6 +469,49 @@ export interface CouponRedemption {
   createdAt: string
 }
 
+export type NoticeType = 'image' | 'text' | 'html'
+export type NoticeColorTheme = 'default' | 'dark' | 'emerald' | 'wine' | 'amber' | 'blue'
+
+export interface LandingNotice {
+  id: string
+  title: string
+  type: NoticeType
+  active: boolean
+  priority: number
+
+  // Image form fields
+  imageUrl?: string
+  imageAlt?: string
+  linkUrl?: string
+  linkTarget?: '_self' | '_blank'
+  imageCaption?: string
+  imageActionText?: string
+
+  // Text form fields
+  textBadge?: string
+  textHeading?: string
+  textBody?: string
+  textActionText?: string
+  textActionUrl?: string
+  textColorTheme?: NoticeColorTheme
+
+  // Custom HTML & CSS fields
+  htmlContent?: string
+  customCss?: string
+
+  // Behavioral settings
+  autoDismissSeconds?: number
+  showOncePerSession?: boolean
+
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdminBannersPayload {
+  notices: LandingNotice[]
+  banners: Banner[]
+}
+
 export interface Banner {
   id: string
   title: string
@@ -582,7 +626,7 @@ export interface OpsState {
   riderAccounts?: any[]
   offers?: Offer[]
   riderShifts?: RiderShift[]
-  sourcingIntelligence?: import('./sourcing-intelligence.queries').ProductSourcingIntelligenceReport
+  sourcingIntelligence?: ProductSourcingIntelligenceReport
 }
 
 export interface RiderShift {

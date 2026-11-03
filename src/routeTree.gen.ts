@@ -24,6 +24,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as VerifyPhoneRouteImport } from './routes/verify-phone'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAccountsRouteImport } from './routes/admin/accounts'
+import { Route as AdminBannersRouteImport } from './routes/admin/banners'
 import { Route as AdminBrandsRouteImport } from './routes/admin/brands'
 import { Route as AdminCustomersRouteImport } from './routes/admin/customers'
 import { Route as AdminDdcRouteImport } from './routes/admin/ddc'
@@ -136,6 +137,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const AdminAccountsRoute = AdminAccountsRouteImport.update({
   id: '/accounts',
   path: '/accounts',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminBannersRoute = AdminBannersRouteImport.update({
+  id: '/banners',
+  path: '/banners',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminBrandsRoute = AdminBrandsRouteImport.update({
@@ -347,6 +353,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/admin/accounts': typeof AdminAccountsRoute
+  '/admin/banners': typeof AdminBannersRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/ddc': typeof AdminDdcRoute
@@ -400,6 +407,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/admin/accounts': typeof AdminAccountsRoute
+  '/admin/banners': typeof AdminBannersRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/ddc': typeof AdminDdcRoute
@@ -455,6 +463,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/admin/accounts': typeof AdminAccountsRoute
+  '/admin/banners': typeof AdminBannersRoute
   '/admin/brands': typeof AdminBrandsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/ddc': typeof AdminDdcRoute
@@ -512,6 +521,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/verify-phone'
     | '/admin/accounts'
+    | '/admin/banners'
     | '/admin/brands'
     | '/admin/customers'
     | '/admin/ddc'
@@ -565,6 +575,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/verify-phone'
     | '/admin/accounts'
+    | '/admin/banners'
     | '/admin/brands'
     | '/admin/customers'
     | '/admin/ddc'
@@ -619,6 +630,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/verify-phone'
     | '/admin/accounts'
+    | '/admin/banners'
     | '/admin/brands'
     | '/admin/customers'
     | '/admin/ddc'
@@ -790,6 +802,13 @@ declare module '@tanstack/react-router' {
       path: '/accounts'
       fullPath: '/admin/accounts'
       preLoaderRoute: typeof AdminAccountsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/banners': {
+      id: '/admin/banners'
+      path: '/banners'
+      fullPath: '/admin/banners'
+      preLoaderRoute: typeof AdminBannersRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/brands': {
@@ -1079,6 +1098,7 @@ const AdminDealersRouteWithChildren = AdminDealersRoute._addFileChildren(
 
 interface AdminRouteRouteChildren {
   AdminAccountsRoute: typeof AdminAccountsRoute
+  AdminBannersRoute: typeof AdminBannersRoute
   AdminBrandsRoute: typeof AdminBrandsRoute
   AdminCustomersRoute: typeof AdminCustomersRoute
   AdminDdcRoute: typeof AdminDdcRoute
@@ -1104,6 +1124,7 @@ interface AdminRouteRouteChildren {
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminAccountsRoute: AdminAccountsRoute,
+  AdminBannersRoute: AdminBannersRoute,
   AdminBrandsRoute: AdminBrandsRoute,
   AdminCustomersRoute: AdminCustomersRoute,
   AdminDdcRoute: AdminDdcRoute,

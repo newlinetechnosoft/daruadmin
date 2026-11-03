@@ -8,6 +8,7 @@ import {
   getInventoryOpsFn,
   getLedgerFn,
   getMarketingFn,
+  getAdminLandingNoticesFn,
   getMyAccessFn,
   getOrdersFn,
   getPaymentsFn,
@@ -103,6 +104,13 @@ export const adminQueries = {
       queryKey: ['admin', 'marketing'],
       queryFn: () => getMarketingFn(),
       staleTime: 1000 * 60 * 2,
+    }),
+
+  banners: () =>
+    queryOptions({
+      queryKey: ['admin', 'banners'],
+      queryFn: () => getAdminLandingNoticesFn(),
+      staleTime: 1000 * 30,
     }),
 
   audit: () =>

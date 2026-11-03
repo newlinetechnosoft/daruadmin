@@ -29,6 +29,7 @@ import {
   Loader2,
   ShoppingBasket,
   Milk,
+  Megaphone,
 } from 'lucide-react'
 
 export interface AwesomebarProps {
@@ -357,6 +358,15 @@ export function Awesomebar({ open, onOpenChange }: AwesomebarProps) {
           >
             <Tags className="size-4 text-muted-foreground" />
             <span>Categories</span>
+          </CommandItem>
+          <CommandItem
+            onSelect={() =>
+              handleSelect('/admin/banners', 'Website Banners & Popups', 'Navigation')
+            }
+            className="flex items-center gap-2 text-xs"
+          >
+            <Megaphone className="size-4 text-muted-foreground" />
+            <span>Website Banners & Popups</span>
           </CommandItem>
           <CommandItem
             onSelect={() =>

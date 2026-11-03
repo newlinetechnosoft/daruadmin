@@ -232,6 +232,17 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
+    label: 'Website Management',
+    items: [
+      {
+        label: 'Banner',
+        to: '/admin/banners',
+        icon: Megaphone,
+        module: 'marketing',
+      },
+    ],
+  },
+  {
     label: 'Finance',
     items: [
       {

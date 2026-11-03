@@ -1,5 +1,6 @@
 import { moveToRecycleBin } from '#/server/recycle-bin/recycle-bin.queries'
-import { db, dbTx, type DbTx } from '#/db'
+import { db, dbTx } from '#/db'
+import type { DbTx } from '#/db'
 import {
   notifications,
   auditLogs,
@@ -20,6 +21,7 @@ import { desc, eq, count, and } from 'drizzle-orm'
 import type {
   AuditLog,
   Banner,
+  LandingNotice,
   Campaign,
   Complaint,
   Coupon,
@@ -540,6 +542,166 @@ export async function deleteBannerQuery(id: string, externalTx?: DbTx) {
     return run(externalTx)
   }
   return dbTx.transaction((tx) => run(tx))
+}
+
+// -------------------------------------------------------------
+// -------------------------------------------------------------
+// LANDING NOTICES & POPUPS
+// -------------------------------------------------------------
+
+let landingNoticesCache: { data: LandingNotice[]; expires: number } | null = null
+
+export function invalidateLandingNoticesCache() {
+  landingNoticesCache = null
+}
+
+export async function getLandingNoticesQuery(onlyActive = false): Promise<LandingNotice[]> {
+  if (landingNoticesCache && landingNoticesCache.expires > Date.now()) {
+    return onlyActive
+      ? landingNoticesCache.data.filter((n) => n.active)
+      : landingNoticesCache.data
+  }
+
+  try {
+    const rows = await db
+      .select()
+      .from(siteSettings)
+      .where(eq(siteSettings.key, 'landing_popups'))
+      .limit(1)
+
+    let list: LandingNotice[] = []
+    if (rows[0] && Array.isArray(rows[0].value)) {
+      list = rows[0].value as LandingNotice[]
+    }
+
+    list.sort((a, b) => a.priority - b.priority)
+
+    landingNoticesCache = { data: list, expires: Date.now() + 30_000 }
+    return onlyActive ? list.filter((n) => n.active) : list
+  } catch (error) {
+    console.warn('[getLandingNoticesQuery] Database query failed, returning fallback empty list:', error)
+    return []
+  }
+}
+
+export async function saveLandingNoticeQuery(
+  notice: Partial<LandingNotice> & { title: string },
+): Promise<LandingNotice[]> {
+  const current = await getLandingNoticesQuery(false)
+  const now = new Date().toISOString()
+  const id = notice.id || `notif_${crypto.randomUUID().slice(0, 8)}`
+
+  const updatedNotice: LandingNotice = {
+    id,
+    title: notice.title,
+    type: notice.type || 'image',
+    active: notice.active !== undefined ? notice.active : true,
+    priority: typeof notice.priority === 'number' ? notice.priority : current.length + 1,
+    imageUrl: notice.imageUrl || '',
+    imageAlt: notice.imageAlt || '',
+    linkUrl: notice.linkUrl || '',
+    linkTarget: notice.linkTarget || '_self',
+    imageCaption: notice.imageCaption || '',
+    imageActionText: notice.imageActionText || '',
+    textBadge: notice.textBadge || '',
+    textHeading: notice.textHeading || '',
+    textBody: notice.textBody || '',
+    textActionText: notice.textActionText || '',
+    textActionUrl: notice.textActionUrl || '',
+    textColorTheme: notice.textColorTheme || 'default',
+    htmlContent: notice.htmlContent || '',
+    customCss: notice.customCss || '',
+    autoDismissSeconds: notice.autoDismissSeconds,
+    showOncePerSession: notice.showOncePerSession ?? true,
+    createdAt: notice.createdAt || now,
+    updatedAt: now,
+  }
+
+  const index = current.findIndex((n) => n.id === id)
+  let next: LandingNotice[]
+  if (index >= 0) {
+    next = [...current]
+    next[index] = updatedNotice
+  } else {
+    next = [...current, updatedNotice]
+  }
+
+  next.sort((a, b) => a.priority - b.priority)
+
+  await db
+    .insert(siteSettings)
+    .values({ key: 'landing_popups', value: next })
+    .onConflictDoUpdate({
+      target: siteSettings.key,
+      set: { value: next, updatedAt: new Date() },
+    })
+
+  invalidateLandingNoticesCache()
+  return next
+}
+
+export async function deleteLandingNoticeQuery(id: string): Promise<LandingNotice[]> {
+  const current = await getLandingNoticesQuery(false)
+  const next = current.filter((n) => n.id !== id)
+
+  await db
+    .insert(siteSettings)
+    .values({ key: 'landing_popups', value: next })
+    .onConflictDoUpdate({
+      target: siteSettings.key,
+      set: { value: next, updatedAt: new Date() },
+    })
+
+  invalidateLandingNoticesCache()
+  return next
+}
+
+export async function toggleLandingNoticeQuery(
+  id: string,
+  active: boolean,
+): Promise<LandingNotice[]> {
+  const current = await getLandingNoticesQuery(false)
+  const next = current.map((n) => (n.id === id ? { ...n, active, updatedAt: new Date().toISOString() } : n))
+
+  await db
+    .insert(siteSettings)
+    .values({ key: 'landing_popups', value: next })
+    .onConflictDoUpdate({
+      target: siteSettings.key,
+      set: { value: next, updatedAt: new Date() },
+    })
+
+  invalidateLandingNoticesCache()
+  return next
+}
+
+export async function reorderLandingNoticesQuery(ids: string[]): Promise<LandingNotice[]> {
+  const current = await getLandingNoticesQuery(false)
+  const map = new Map(current.map((n) => [n.id, n]))
+  const next: LandingNotice[] = []
+
+  ids.forEach((id, index) => {
+    const item = map.get(id)
+    if (item) {
+      next.push({ ...item, priority: index + 1, updatedAt: new Date().toISOString() })
+      map.delete(id)
+    }
+  })
+
+  map.forEach((item) => {
+    next.push({ ...item, priority: next.length + 1, updatedAt: new Date().toISOString() })
+  })
+
+  await db
+    .insert(siteSettings)
+    .values({ key: 'landing_popups', value: next })
+    .onConflictDoUpdate({
+      target: siteSettings.key,
+      set: { value: next, updatedAt: new Date() },
+    })
+
+  invalidateLandingNoticesCache()
+  return next
 }
 
 // -------------------------------------------------------------
