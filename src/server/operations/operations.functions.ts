@@ -2085,7 +2085,7 @@ export const updateRiderLiveFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>
     z
       .object({
-        riderId: z.string(),
+        riderId: z.string().optional(),
         lat: z.number().optional(),
         lng: z.number().optional(),
         status: z.enum(['offline', 'available', 'busy']).optional(),
@@ -2094,20 +2094,29 @@ export const updateRiderLiveFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const { user: actor } = await requireRole('admin', 'manager', 'rider')
+    let targetRiderId = data.riderId
+
     if (actor.role === 'rider') {
       const rider = await getRiderByUserIdQuery(actor.id)
-      if (!rider || rider.id !== data.riderId) {
+      if (!rider) throw new Error('Rider profile not found')
+      if (data.riderId && rider.id !== data.riderId) {
         throw new Error(
           'Forbidden: You can only update your own location and status',
         )
       }
+      targetRiderId = rider.id
     }
+
+    if (!targetRiderId) {
+      throw new Error('Rider ID is required')
+    }
+
     const updates: Record<string, any> = { updatedAt: new Date() }
     if (data.lat !== undefined) updates.lat = String(data.lat)
     if (data.lng !== undefined) updates.lng = String(data.lng)
     if (data.status !== undefined) updates.status = data.status
 
-    await db.update(riders).set(updates).where(eq(riders.id, data.riderId))
+    await db.update(riders).set(updates).where(eq(riders.id, targetRiderId))
     return true
   })
 
@@ -2275,7 +2284,7 @@ export const savePermissionsFn = createServerFn({ method: 'POST' })
       .object({
         userId: z.string(),
         permissions: z.record(
-          z.enum(MODULES),
+          z.string(),
           z.array(
             z.enum(['view', 'create', 'edit', 'delete', 'export', 'approve']),
           ),
@@ -3218,6 +3227,8 @@ export const toggleRiderAvailabilityFn = createServerFn({ method: 'POST' })
     z
       .object({
         available: z.boolean(),
+        lat: z.number().optional(),
+        lng: z.number().optional(),
       })
       .parse(d),
   )
@@ -3235,14 +3246,15 @@ export const toggleRiderAvailabilityFn = createServerFn({ method: 'POST' })
 
     const now = new Date()
 
-    await db
-      .update(riders)
-      .set({
-        available: data.available,
-        status: data.available ? 'available' : 'offline',
-        updatedAt: now,
-      })
-      .where(eq(riders.id, rider.id))
+    const updates: Record<string, any> = {
+      available: data.available,
+      status: data.available ? 'available' : 'offline',
+      updatedAt: now,
+    }
+    if (data.lat !== undefined) updates.lat = String(data.lat)
+    if (data.lng !== undefined) updates.lng = String(data.lng)
+
+    await db.update(riders).set(updates).where(eq(riders.id, rider.id))
 
     // Handle shift attendance tracking
     if (data.available) {

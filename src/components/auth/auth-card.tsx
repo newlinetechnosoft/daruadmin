@@ -349,7 +349,18 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
   }
 
   const handleForgotPassword = () => {
-    toast.info('Password reset: please contact customer care via 9802088800')
+    const rawId = loginIdentifier.trim()
+    const normalized = rawId ? normalizeNepaliPhone(rawId) : null
+    const phoneToPass =
+      normalized || (rawId && !rawId.includes('@') ? rawId : undefined)
+
+    navigate({
+      to: '/forgot-password',
+      search: {
+        phone: phoneToPass,
+        redirect,
+      },
+    })
   }
 
   const isLogin = mode === 'login'

@@ -363,6 +363,7 @@ export interface Rider {
   deliveries: number
   rating: number
   createdAt: string
+  updatedAt?: string
 }
 
 export interface Complaint {

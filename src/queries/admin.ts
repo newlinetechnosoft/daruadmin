@@ -83,6 +83,7 @@ export const adminQueries = {
       queryKey: ['admin', 'riders'],
       queryFn: () => getRidersFn(),
       staleTime: 1000 * 30,
+      refetchInterval: 1000 * 60 * 2, // 2 minutes live telemetry auto-refresh
     }),
 
   payments: () =>

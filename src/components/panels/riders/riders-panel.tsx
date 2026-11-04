@@ -18,6 +18,7 @@ import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { RiderDialog } from './rider-dialog'
+import { RiderTelemetryMap } from './rider-telemetry-map'
 import { adminQueries } from '#/queries/admin'
 import { can } from '#/server/auth/permissions-shared'
 import {
@@ -328,58 +329,11 @@ export function RidersPanel() {
           </span>
         </div>
 
-        {/* Radar Map Sandbox Canvas */}
-        <div className="relative h-60 bg-muted/40 rounded-lg overflow-hidden border border-border p-4">
-          <div className="absolute inset-0 bg-[radial-gradient(var(--border)_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
-
-          {/* Sectors */}
-          <div className="absolute top-3 left-4 text-xs font-mono text-muted-foreground uppercase tracking-wider">
-            Sector A: Traffic Chowk / Golpark
-          </div>
-          <div className="absolute top-3 right-4 text-xs font-mono text-muted-foreground uppercase tracking-wider">
-            Sector B: Kalikanagar / Devinagar
-          </div>
-          <div className="absolute bottom-3 left-4 text-xs font-mono text-muted-foreground uppercase tracking-wider">
-            Sector C: Tilottama / Drivertole
-          </div>
-          <div className="absolute bottom-3 right-4 text-xs font-mono text-muted-foreground uppercase tracking-wider">
-            Sector D: Manigram / Mangalapur
-          </div>
-
-          {/* Concentric Radar Circles */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-44 h-44 rounded-full border border-foreground/10 pointer-events-none"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full border border-foreground/5 pointer-events-none"></div>
-
-          {/* Couriers on Map */}
-          {ops.riders.map((r, idx) => {
-            const topPos = 20 + ((idx * 27) % 60)
-            const leftPos = 15 + ((idx * 33) % 70)
-
-            return (
-              <div
-                key={r.id}
-                style={{ top: `${topPos}%`, left: `${leftPos}%` }}
-                className="absolute -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
-                onClick={() =>
-                  toast.info(
-                    `Courier: ${r.name} (${r.zone}) · Status: ${r.status}`,
-                  )
-                }
-              >
-                <div className="relative flex items-center justify-center">
-                  <div className="absolute w-5 h-5 rounded-full bg-primary/20 animate-ping"></div>
-                  <div className="w-3.5 h-3.5 rounded-full bg-primary border-2 border-background shadow-md flex items-center justify-center text-primary-foreground">
-                    <Bike className="w-2 h-2" />
-                  </div>
-                </div>
-
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground border border-border text-xs font-mono px-1.5 py-0.5 rounded shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                  {r.name} · {r.zone} · {r.status}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        <RiderTelemetryMap
+          riders={ops.riders}
+          onRefresh={() => void refetch()}
+          isRefreshing={isFetching}
+        />
       </Card>
 
       {/* Filter and Search Bar */}

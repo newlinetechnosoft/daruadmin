@@ -27,6 +27,7 @@ function mapRiderRecord(r: typeof riders.$inferSelect): Rider {
     deliveries: r.deliveries,
     rating: Number(r.rating),
     createdAt: r.createdAt.toISOString(),
+    updatedAt: r.updatedAt ? r.updatedAt.toISOString() : undefined,
   }
 }
 

@@ -16,6 +16,8 @@ import { Route as DdcRouteImport } from './routes/ddc'
 import { Route as DrinksRouteImport } from './routes/drinks'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as FoodRouteImport } from './routes/food'
+import { Route as ForgetPasswordRouteImport } from './routes/forget-password'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as GroceryRouteImport } from './routes/grocery'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OrdersRouteImport } from './routes/orders'
@@ -97,6 +99,16 @@ const FavoritesRoute = FavoritesRouteImport.update({
 const FoodRoute = FoodRouteImport.update({
   id: '/food',
   path: '/food',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgetPasswordRoute = ForgetPasswordRouteImport.update({
+  id: '/forget-password',
+  path: '/forget-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GroceryRoute = GroceryRouteImport.update({
@@ -347,6 +359,8 @@ export interface FileRoutesByFullPath {
   '/drinks': typeof DrinksRoute
   '/favorites': typeof FavoritesRoute
   '/food': typeof FoodRoute
+  '/forget-password': typeof ForgetPasswordRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
@@ -401,6 +415,8 @@ export interface FileRoutesByTo {
   '/drinks': typeof DrinksRoute
   '/favorites': typeof FavoritesRoute
   '/food': typeof FoodRoute
+  '/forget-password': typeof ForgetPasswordRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
@@ -457,6 +473,8 @@ export interface FileRoutesById {
   '/drinks': typeof DrinksRoute
   '/favorites': typeof FavoritesRoute
   '/food': typeof FoodRoute
+  '/forget-password': typeof ForgetPasswordRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
@@ -515,6 +533,8 @@ export interface FileRouteTypes {
     | '/drinks'
     | '/favorites'
     | '/food'
+    | '/forget-password'
+    | '/forgot-password'
     | '/grocery'
     | '/login'
     | '/orders'
@@ -569,6 +589,8 @@ export interface FileRouteTypes {
     | '/drinks'
     | '/favorites'
     | '/food'
+    | '/forget-password'
+    | '/forgot-password'
     | '/grocery'
     | '/login'
     | '/orders'
@@ -624,6 +646,8 @@ export interface FileRouteTypes {
     | '/drinks'
     | '/favorites'
     | '/food'
+    | '/forget-password'
+    | '/forgot-password'
     | '/grocery'
     | '/login'
     | '/orders'
@@ -681,6 +705,8 @@ export interface RootRouteChildren {
   DrinksRoute: typeof DrinksRoute
   FavoritesRoute: typeof FavoritesRoute
   FoodRoute: typeof FoodRoute
+  ForgetPasswordRoute: typeof ForgetPasswordRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   GroceryRoute: typeof GroceryRoute
   LoginRoute: typeof LoginRoute
   OrdersRoute: typeof OrdersRoute
@@ -746,6 +772,20 @@ declare module '@tanstack/react-router' {
       path: '/food'
       fullPath: '/food'
       preLoaderRoute: typeof FoodRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forget-password': {
+      id: '/forget-password'
+      path: '/forget-password'
+      fullPath: '/forget-password'
+      preLoaderRoute: typeof ForgetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/grocery': {
@@ -1193,6 +1233,8 @@ const rootRouteChildren: RootRouteChildren = {
   DrinksRoute: DrinksRoute,
   FavoritesRoute: FavoritesRoute,
   FoodRoute: FoodRoute,
+  ForgetPasswordRoute: ForgetPasswordRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   GroceryRoute: GroceryRoute,
   LoginRoute: LoginRoute,
   OrdersRoute: OrdersRoute,

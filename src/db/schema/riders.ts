@@ -24,7 +24,7 @@ export const riders = pgTable(
     vehicle: text('vehicle').notNull().default('bike'), // 'bike' | 'scooter' | 'car'
     licenseNo: text('license_no').notNull().default(''),
     verified: boolean('verified').notNull().default(false),
-    available: boolean('available').notNull().default(true),
+    available: boolean('available').notNull().default(false),
     status: text('status').notNull().default('offline'), // 'offline' | 'available' | 'busy'
     lat: numeric('lat', { precision: 10, scale: 7 }).default('27.7006'),
     lng: numeric('lng', { precision: 10, scale: 7 }).default('83.4484'),

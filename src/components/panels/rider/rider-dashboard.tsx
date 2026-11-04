@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import { riderQueries } from '#/queries/rider'
 import {
   updateRiderDeliveryStatusFn,
   toggleRiderAvailabilityFn,
+  updateRiderLiveFn,
 } from '#/server/operations/operations.functions'
 import type { getRiderPortalFn } from '#/server/operations/operations.functions'
 import {
@@ -38,10 +39,54 @@ import {
   Loader2,
   Wifi,
   AlertTriangle,
+  Radio,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { RiderDealerPickups } from './rider-dealer-pickups'
 import { DeliveryProofDialog } from './delivery-proof-dialog'
+
+/**
+ * Prompt browser geolocation permission and acquire rider GPS coordinates
+ */
+function getBrowserLocation(): Promise<{ lat: number; lng: number }> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      reject(
+        new Error(
+          'Geolocation is not supported by your browser or device. Please use a compatible browser.',
+        ),
+      )
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        resolve({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        })
+      },
+      (err) => {
+        let msg = 'Failed to retrieve GPS location.'
+        if (err.code === 1) {
+          msg =
+            'Location permission is required to go online. Please allow location access in your browser settings.'
+        } else if (err.code === 2) {
+          msg =
+            'Location unavailable. Please ensure your device GPS is turned on.'
+        } else if (err.code === 3) {
+          msg = 'Location request timed out. Please try again.'
+        }
+        reject(new Error(msg))
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 0,
+      },
+    )
+  })
+}
 
 type RiderPortalData = Awaited<ReturnType<typeof getRiderPortalFn>>
 
@@ -76,6 +121,9 @@ export function RiderDashboard({
   const [pendingOrderIds, setPendingOrderIds] = useState<Set<string>>(new Set())
   const [isTogglingAvail, setIsTogglingAvail] = useState(false)
   const [deliveringOrder, setDeliveringOrder] = useState<any | null>(null)
+  const [lastLocationSync, setLastLocationSync] = useState<Date | null>(null)
+  const [isSyncingLocation, setIsSyncingLocation] = useState(false)
+  const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Map pending offline outbox delivery actions by orderId
   const pendingDeliveryActionsMap = useMemo(() => {
@@ -100,6 +148,13 @@ export function RiderDashboard({
   }, [pendingActions])
 
   const { rider, orders } = portalData
+
+  // Set initial sync date from rider.updatedAt if available
+  useEffect(() => {
+    if (rider.updatedAt) {
+      setLastLocationSync(new Date(rider.updatedAt))
+    }
+  }, [rider.updatedAt])
 
   // Derive active and completed orders from the current cache
   const activeOrders = useMemo(() => {
@@ -133,7 +188,63 @@ export function RiderDashboard({
     rider.rating,
   ])
 
-  // Availability toggle with optimistic write, rollback, and honest feedback
+  // Periodic 2-minute live location sync callback
+  const syncCurrentLocation = useCallback(
+    async (silent = true) => {
+      if (!isOnline || !rider.available) return
+      try {
+        setIsSyncingLocation(true)
+        const coords = await getBrowserLocation()
+        await updateRiderLiveFn({
+          data: {
+            riderId: rider.id,
+            lat: coords.lat,
+            lng: coords.lng,
+            status: activeOrders.length > 0 ? 'busy' : 'available',
+          },
+        })
+        setLastLocationSync(new Date())
+        if (!silent) {
+          toast.success('Live GPS coordinates updated')
+        }
+      } catch (err) {
+        console.warn('Periodic GPS sync warning:', err)
+        if (!silent) {
+          toast.error(
+            err instanceof Error ? err.message : 'Failed to update GPS location',
+          )
+        }
+      } finally {
+        setIsSyncingLocation(false)
+      }
+    },
+    [isOnline, rider.available, rider.id, activeOrders.length],
+  )
+
+  // Periodic 2-minute interval to keep admin live telemetry radar updated
+  useEffect(() => {
+    if (!rider.available || !isOnline) {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current)
+        syncIntervalRef.current = null
+      }
+      return
+    }
+
+    const TWO_MINUTES_MS = 2 * 60 * 1000
+    syncIntervalRef.current = setInterval(() => {
+      void syncCurrentLocation(true)
+    }, TWO_MINUTES_MS)
+
+    return () => {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current)
+        syncIntervalRef.current = null
+      }
+    }
+  }, [rider.available, isOnline, syncCurrentLocation])
+
+  // Availability toggle with location permission check, optimistic write, rollback, and honest feedback
   const handleToggleOnline = async () => {
     if (!isOnline) {
       toast.error(
@@ -145,6 +256,26 @@ export function RiderDashboard({
     if (isTogglingAvail) return
 
     const targetAvailable = !rider.available
+
+    let locationCoords: { lat: number; lng: number } | null = null
+
+    // Going ONLINE: strict GPS permission requirement!
+    if (targetAvailable) {
+      setIsTogglingAvail(true)
+      try {
+        toast.info('Requesting GPS location to go online...')
+        locationCoords = await getBrowserLocation()
+      } catch (err: unknown) {
+        setIsTogglingAvail(false)
+        const errorMsg =
+          err instanceof Error
+            ? err.message
+            : 'Location permission is required to go online.'
+        toast.error(errorMsg)
+        return // User denied or GPS error -> Stay offline!
+      }
+    }
+
     setIsTogglingAvail(true)
 
     // Cancel in-flight queries before optimistic write
@@ -168,16 +299,39 @@ export function RiderDashboard({
             ...old.rider,
             available: targetAvailable,
             status: targetAvailable ? 'available' : 'offline',
+            lat: locationCoords ? locationCoords.lat : old.rider.lat,
+            lng: locationCoords ? locationCoords.lng : old.rider.lng,
           },
         }
       },
     )
 
     try {
-      await toggleRiderAvailabilityFn({ data: { available: targetAvailable } })
-      toast.success(
-        targetAvailable ? 'You are now ONLINE' : 'You are now OFFLINE',
-      )
+      await toggleRiderAvailabilityFn({
+        data: {
+          available: targetAvailable,
+          ...(locationCoords
+            ? { lat: locationCoords.lat, lng: locationCoords.lng }
+            : {}),
+        },
+      })
+
+      if (targetAvailable) {
+        setLastLocationSync(new Date())
+        toast.success('You are now ONLINE with live GPS telemetry active')
+      } else {
+        try {
+          await updateRiderLiveFn({
+            data: {
+              riderId: rider.id,
+              status: 'offline',
+            },
+          })
+        } catch {
+          // ignore
+        }
+        toast.success('You are now OFFLINE')
+      }
     } catch (err: unknown) {
       // Rollback to snapshot on failure
       if (previousData) {
@@ -593,6 +747,37 @@ export function RiderDashboard({
                   </span>
                 ) : null}
               </div>
+
+              {/* Live GPS Telemetry Indicator */}
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                {rider.available ? (
+                  <div className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/25">
+                    <Radio className="h-3.5 w-3.5 animate-pulse text-emerald-500 shrink-0" />
+                    <span>
+                      Live GPS Active (2-min sync)
+                      {lastLocationSync ? (
+                        <span className="font-mono ml-1 text-emerald-600 dark:text-emerald-400">
+                          • {lastLocationSync.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      ) : null}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void syncCurrentLocation(false)}
+                      disabled={isSyncingLocation}
+                      className="ml-1 text-[11px] underline font-semibold hover:text-emerald-900 dark:hover:text-emerald-100 cursor-pointer disabled:opacity-50"
+                      title="Sync current GPS coordinates to admin telemetry radar"
+                    >
+                      {isSyncingLocation ? 'Syncing...' : 'Ping Now'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/60 px-2.5 py-0.5 rounded-md border border-border">
+                    <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span>Location permission required to go online</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -608,8 +793,8 @@ export function RiderDashboard({
                 !isOnline
                   ? 'Cannot change availability while offline'
                   : rider.available
-                    ? 'Switch off dispatch orders'
-                    : 'Start receiving orders'
+                    ? 'Go offline & stop location tracking'
+                    : 'Prompt location permission & go online'
               }
               className={`w-full sm:w-auto h-10 sm:h-9 min-h-[44px] sm:min-h-0 gap-2 text-xs font-medium transition-all ${
                 !isOnline ? 'opacity-60 cursor-not-allowed' : ''
