@@ -835,8 +835,9 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
                   New Here?
                 </h2>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-3 mb-8 leading-relaxed font-normal">
-                  Get exclusive access to genuine spirits, cold beer, and
-                  30-minute express delivery.
+                   Get exclusive access to beverages items <b>
+                    (MRP)</b> , drinks and 
+                   foods. 30-40 minutes express delivery.
                 </p>
                 <button
                   type="button"

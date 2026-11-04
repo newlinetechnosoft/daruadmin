@@ -8,7 +8,7 @@ import {
   useNavigate,
   useRouter,
 } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { markNotificationsFn } from '#/server/operations/operations.functions'
 import { adminQueries } from '#/queries/admin'
 import { can } from '#/server/auth/permissions-shared'
@@ -92,6 +92,11 @@ import { Avatar, AvatarFallback } from '#/components/ui/avatar'
 import { Badge } from '#/components/ui/badge'
 import { Kbd } from '#/components/ui/kbd'
 import { ThemeToggle } from '#/components/shared/theme-toggle'
+import {
+  playOrderAlertSound,
+  unlockNotificationSound,
+} from '#/lib/order-notifications'
+import type { OrderNotification } from '#/lib/order-notifications'
 
 export const Route = createFileRoute('/admin')({
   beforeLoad: async ({ location, context }) => {
@@ -334,7 +339,13 @@ function crumbLabel(path: string) {
 
 function AdminLayout() {
   const { adminUser, grants } = Route.useRouteContext()
-  const { unread, notifications } = Route.useLoaderData()
+  const { notifications } = Route.useLoaderData()
+  const chromeQuery = useQuery({
+    ...adminQueries.chrome(),
+    refetchInterval: 15_000,
+  })
+  const liveNotifications = (chromeQuery.data?.notifications ??
+    notifications) as OrderNotification[]
   const routerState = useRouterState()
   const navigate = useNavigate()
   const router = useRouter()
@@ -343,8 +354,36 @@ function AdminLayout() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
   const [notificationsRead, setNotificationsRead] = useState(false)
+  const liveUnread =
+    chromeQuery.data?.unread ?? liveNotifications.filter((n) => !n.read).length
 
   const currentPath = routerState.location.pathname
+
+  useEffect(() => {
+    const unlock = () => unlockNotificationSound()
+    window.addEventListener('pointerdown', unlock, { once: true })
+    window.addEventListener('keydown', unlock, { once: true })
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [])
+
+  useEffect(() => {
+    const storageKey = 'admin-last-notification-id'
+    if (!liveNotifications.length) return
+
+    const newest = liveNotifications[0]
+    const previousId = localStorage.getItem(storageKey)
+    if (!previousId) {
+      localStorage.setItem(storageKey, newest.id)
+      return
+    }
+    if (newest.id !== previousId && !newest.read) {
+      playOrderAlertSound()
+      localStorage.setItem(storageKey, newest.id)
+    }
+  }, [liveNotifications])
 
   // Global keyboard shortcut for Command Palette
   useEffect(() => {
@@ -383,13 +422,17 @@ function AdminLayout() {
     try {
       await markNotificationsFn()
       setNotificationsRead(true)
+      await chromeQuery.refetch()
+      await queryClient.invalidateQueries({
+        queryKey: adminQueries.chrome().queryKey,
+      })
       toast.success('Notifications marked as read')
     } catch {
       toast.error('Failed to update notifications')
     }
   }
 
-  const unreadCount = notificationsRead ? 0 : unread
+  const unreadCount = notificationsRead ? 0 : liveUnread
 
   const visibleNavGroups = useMemo(() => {
     return NAV_GROUPS.map((group) => ({
@@ -587,12 +630,12 @@ function AdminLayout() {
                     )}
                   </div>
                   <div className="max-h-72 overflow-y-auto divide-y divide-border/60">
-                    {notifications.length === 0 ? (
+                    {liveNotifications.length === 0 ? (
                       <div className="py-8 text-center text-xs text-muted-foreground">
                         No notifications
                       </div>
                     ) : (
-                      notifications.map((n) => (
+                      liveNotifications.map((n) => (
                         <a
                           key={n.id}
                           href={n.href}

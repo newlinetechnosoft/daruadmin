@@ -17,7 +17,7 @@ import {
   customerAddresses,
   orders,
 } from '#/db/schema'
-import { desc, eq, count, and } from 'drizzle-orm'
+import { desc, eq, count, and, isNull } from 'drizzle-orm'
 import type {
   AuditLog,
   Banner,
@@ -89,8 +89,40 @@ export async function getAllNotificationsQuery(
   }))
 }
 
-export async function markAllNotificationsReadQuery() {
-  await db.update(notifications).set({ read: true })
+export async function getUserNotificationsQuery(
+  userId: string,
+  limit = 20,
+): Promise<NotificationItem[]> {
+  const rows = await db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.userId, userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit)
+
+  return rows.map((n) => ({
+    id: n.id,
+    title: n.title,
+    body: n.body,
+    type: n.type as any,
+    read: n.read,
+    href: n.href,
+    createdAt: n.createdAt.toISOString(),
+  }))
+}
+
+export async function markAllNotificationsReadQuery(userId?: string | null) {
+  if (userId) {
+    await db
+      .update(notifications)
+      .set({ read: true })
+      .where(eq(notifications.userId, userId))
+    return
+  }
+  await db
+    .update(notifications)
+    .set({ read: true })
+    .where(isNull(notifications.userId))
 }
 
 export async function insertNotificationQuery(item: {
@@ -549,13 +581,16 @@ export async function deleteBannerQuery(id: string, externalTx?: DbTx) {
 // LANDING NOTICES & POPUPS
 // -------------------------------------------------------------
 
-let landingNoticesCache: { data: LandingNotice[]; expires: number } | null = null
+let landingNoticesCache: { data: LandingNotice[]; expires: number } | null =
+  null
 
 export function invalidateLandingNoticesCache() {
   landingNoticesCache = null
 }
 
-export async function getLandingNoticesQuery(onlyActive = false): Promise<LandingNotice[]> {
+export async function getLandingNoticesQuery(
+  onlyActive = false,
+): Promise<LandingNotice[]> {
   if (landingNoticesCache && landingNoticesCache.expires > Date.now()) {
     return onlyActive
       ? landingNoticesCache.data.filter((n) => n.active)
@@ -579,7 +614,10 @@ export async function getLandingNoticesQuery(onlyActive = false): Promise<Landin
     landingNoticesCache = { data: list, expires: Date.now() + 30_000 }
     return onlyActive ? list.filter((n) => n.active) : list
   } catch (error) {
-    console.warn('[getLandingNoticesQuery] Database query failed, returning fallback empty list:', error)
+    console.warn(
+      '[getLandingNoticesQuery] Database query failed, returning fallback empty list:',
+      error,
+    )
     return []
   }
 }
@@ -596,7 +634,10 @@ export async function saveLandingNoticeQuery(
     title: notice.title,
     type: notice.type || 'image',
     active: notice.active !== undefined ? notice.active : true,
-    priority: typeof notice.priority === 'number' ? notice.priority : current.length + 1,
+    priority:
+      typeof notice.priority === 'number'
+        ? notice.priority
+        : current.length + 1,
     imageUrl: notice.imageUrl || '',
     imageAlt: notice.imageAlt || '',
     linkUrl: notice.linkUrl || '',
@@ -640,7 +681,9 @@ export async function saveLandingNoticeQuery(
   return next
 }
 
-export async function deleteLandingNoticeQuery(id: string): Promise<LandingNotice[]> {
+export async function deleteLandingNoticeQuery(
+  id: string,
+): Promise<LandingNotice[]> {
   const current = await getLandingNoticesQuery(false)
   const next = current.filter((n) => n.id !== id)
 
@@ -661,7 +704,9 @@ export async function toggleLandingNoticeQuery(
   active: boolean,
 ): Promise<LandingNotice[]> {
   const current = await getLandingNoticesQuery(false)
-  const next = current.map((n) => (n.id === id ? { ...n, active, updatedAt: new Date().toISOString() } : n))
+  const next = current.map((n) =>
+    n.id === id ? { ...n, active, updatedAt: new Date().toISOString() } : n,
+  )
 
   await db
     .insert(siteSettings)
@@ -675,7 +720,9 @@ export async function toggleLandingNoticeQuery(
   return next
 }
 
-export async function reorderLandingNoticesQuery(ids: string[]): Promise<LandingNotice[]> {
+export async function reorderLandingNoticesQuery(
+  ids: string[],
+): Promise<LandingNotice[]> {
   const current = await getLandingNoticesQuery(false)
   const map = new Map(current.map((n) => [n.id, n]))
   const next: LandingNotice[] = []
@@ -683,13 +730,21 @@ export async function reorderLandingNoticesQuery(ids: string[]): Promise<Landing
   ids.forEach((id, index) => {
     const item = map.get(id)
     if (item) {
-      next.push({ ...item, priority: index + 1, updatedAt: new Date().toISOString() })
+      next.push({
+        ...item,
+        priority: index + 1,
+        updatedAt: new Date().toISOString(),
+      })
       map.delete(id)
     }
   })
 
   map.forEach((item) => {
-    next.push({ ...item, priority: next.length + 1, updatedAt: new Date().toISOString() })
+    next.push({
+      ...item,
+      priority: next.length + 1,
+      updatedAt: new Date().toISOString(),
+    })
   })
 
   await db

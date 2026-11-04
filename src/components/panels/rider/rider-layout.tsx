@@ -2,6 +2,16 @@ import { Outlet, Link, useRouterState } from '@tanstack/react-router'
 import { ThemeToggle } from '#/components/shared/theme-toggle'
 import { Badge } from '#/components/ui/badge'
 import { useRiderOutbox } from '#/lib/idb/outbox'
+import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { riderQueries } from '#/queries/rider'
+import {
+  playOrderAlertSound,
+  showBrowserNotification,
+  unlockNotificationSound,
+} from '#/lib/order-notifications'
+import type { OrderNotification } from '#/lib/order-notifications'
+import { toast } from 'sonner'
 import {
   Bike,
   Package,
@@ -10,12 +20,74 @@ import {
   LayoutDashboard,
   CloudOff,
   RefreshCw,
+  Bell,
 } from 'lucide-react'
+import { Button } from '#/components/ui/button'
 
 export function RiderLayout() {
   const routerState = useRouterState()
   const pathname = routerState.location.pathname
   const { pendingCount, isOnline, flushOutbox } = useRiderOutbox()
+  const { data: portalData } = useQuery({
+    ...riderQueries.portal(),
+    refetchInterval: 15_000,
+  })
+  const [notificationPermission, setNotificationPermission] = useState<
+    NotificationPermission | 'unsupported'
+  >(
+    typeof window !== 'undefined' && 'Notification' in window
+      ? Notification.permission
+      : 'unsupported',
+  )
+
+  useEffect(() => {
+    const unlock = () => unlockNotificationSound()
+    window.addEventListener('pointerdown', unlock, { once: true })
+    window.addEventListener('keydown', unlock, { once: true })
+    return () => {
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [])
+
+  useEffect(() => {
+    const notifications = (portalData?.notifications ||
+      []) as OrderNotification[]
+    if (!notifications.length) return
+
+    const storageKey = 'rider-last-notification-id'
+    const previousId = localStorage.getItem(storageKey)
+    const unread = notifications.find(
+      (item) => item.id !== previousId && !item.read,
+    )
+
+    if (!previousId) {
+      localStorage.setItem(storageKey, notifications[0].id)
+      return
+    }
+
+    if (unread) {
+      playOrderAlertSound()
+      showBrowserNotification(unread.title, unread.body, unread.href)
+      localStorage.setItem(storageKey, unread.id)
+    }
+  }, [portalData?.notifications])
+
+  const requestRiderNotifications = async () => {
+    if (!('Notification' in window)) {
+      toast.error('Browser notifications are not supported on this device.')
+      return
+    }
+
+    const permission = await Notification.requestPermission()
+    setNotificationPermission(permission)
+    unlockNotificationSound()
+    if (permission === 'granted') {
+      toast.success('Delivery notifications enabled.')
+    } else {
+      toast.error('Notification permission was not enabled.')
+    }
+  }
 
   const navItems = [
     {
@@ -108,6 +180,18 @@ export function RiderLayout() {
           </nav>
 
           <div className="flex items-center gap-2">
+            {notificationPermission !== 'granted' && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 px-2.5"
+                onClick={requestRiderNotifications}
+              >
+                <Bell className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Enable alerts</span>
+              </Button>
+            )}
             <ThemeToggle />
           </div>
         </div>

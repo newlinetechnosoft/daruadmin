@@ -69,6 +69,7 @@ import {
 } from '#/server/finance/finance.queries'
 import {
   getAllNotificationsQuery,
+  getUserNotificationsQuery,
   markAllNotificationsReadQuery,
   getAllAuditLogsQuery,
   getStoreSettingsQuery,
@@ -280,8 +281,10 @@ export const getStaffSessionFn = createServerFn({ method: 'GET' }).handler(
 
 export const markNotificationsFn = createServerFn({ method: 'POST' }).handler(
   async () => {
-    await requireRole('admin', 'manager', 'rider')
-    await markAllNotificationsReadQuery()
+    const { user: sessionUser } = await requireRole('admin', 'manager', 'rider')
+    await markAllNotificationsReadQuery(
+      sessionUser.role === 'rider' ? sessionUser.id : null,
+    )
     return true
   },
 )
@@ -3073,12 +3076,14 @@ export const getRiderPortalFn = createServerFn({ method: 'GET' }).handler(
       getRiderAttendanceStatsQuery(currentRider.id),
       getSettlementsByRiderIdQuery(currentRider.id),
     ])
+    const riderNotifications = await getUserNotificationsQuery(user.id, 20)
 
     return {
       rider: currentRider,
       orders: assignedOrders,
       activeOrders,
       completedOrders,
+      notifications: riderNotifications,
       activeShift,
       attendanceStats,
       settlements: riderSettlements,
