@@ -24,7 +24,6 @@ export const DEFAULT_GRANTS_BY_ROLE: Record<string, UserGrants> = {
     ddc: ['view', 'create', 'edit'],
     categories: ['view', 'create', 'edit'],
     brands: ['view', 'create', 'edit'],
-    products: ['view', 'create', 'edit'],
     inventory: ['view', 'create', 'edit'],
     dealers: ['view', 'create', 'edit'],
     orders: ['view', 'edit', 'approve'],
@@ -57,31 +56,60 @@ export function can(
 ): boolean {
   if (!grants) return false
 
-  // 1. Direct grant check
+  // 1. Direct grant check: if module is explicitly defined in grants (even if empty []),
+  // it takes absolute precedence over any legacy fallback.
   const moduleActions = grants[module]
-  if (Array.isArray(moduleActions) && moduleActions.includes(action)) {
-    return true
+  if (Array.isArray(moduleActions)) {
+    return moduleActions.includes(action)
   }
 
-  // 2. Backward compatibility fallback: 'products' or 'categories' grant covers 'brands'
+  // 2. Backward compatibility fallback: checking legacy 'products' with granular submodules
+  if (module === 'products') {
+    return Boolean(
+      grants.liquor?.includes(action) ||
+      grants.food?.includes(action) ||
+      grants.grocery?.includes(action) ||
+      grants.ddc?.includes(action) ||
+      grants.categories?.includes(action) ||
+      grants.brands?.includes(action) ||
+      grants.inventory?.includes(action) ||
+      grants.dealers?.includes(action),
+    )
+  }
+
+  // Fallbacks below ONLY run if grants[module] is completely undefined (e.g. legacy stored records)
+
+  // 3. Backward compatibility fallback: 'categories' grant covers 'brands' if brands is undefined
   if (
     module === 'brands' &&
+    grants.brands === undefined &&
     Array.isArray(grants.categories) &&
     grants.categories.includes(action)
   ) {
     return true
   }
 
-  // 3. Backward compatibility fallback: 'inventory' grant covers 'dealers'
+  // 4. Backward compatibility fallback: 'inventory' grant covers 'dealers' if dealers is undefined
   if (
     module === 'dealers' &&
+    grants.dealers === undefined &&
     Array.isArray(grants.inventory) &&
     grants.inventory.includes(action)
   ) {
     return true
   }
 
-  // 4. Backward compatibility fallback: 'products' umbrella grant for catalog/inventory/dealers
+  // 5. Backward compatibility fallback: 'staff' grant covers 'users' if users is undefined
+  if (
+    module === 'users' &&
+    grants.users === undefined &&
+    Array.isArray(grants.staff) &&
+    grants.staff.includes(action)
+  ) {
+    return true
+  }
+
+  // 6. Backward compatibility fallback: legacy 'products' umbrella grant covers catalog modules if undefined
   if (
     (module === 'liquor' ||
       module === 'food' ||
@@ -91,31 +119,11 @@ export function can(
       module === 'brands' ||
       module === 'inventory' ||
       module === 'dealers') &&
+    grants[module] === undefined &&
     Array.isArray(grants.products) &&
     grants.products.includes(action)
   ) {
     return true
-  }
-
-  // 5. Backward compatibility fallback: 'staff' grant covers 'users'
-  if (
-    module === 'users' &&
-    Array.isArray(grants.staff) &&
-    grants.staff.includes(action)
-  ) {
-    return true
-  }
-
-  // 6. Backward compatibility fallback: checking legacy 'products' with granular submodules
-  if (module === 'products') {
-    return Boolean(
-      grants.liquor?.includes(action) ||
-      grants.food?.includes(action) ||
-      grants.categories?.includes(action) ||
-      grants.brands?.includes(action) ||
-      grants.inventory?.includes(action) ||
-      grants.dealers?.includes(action),
-    )
   }
 
   return false

@@ -8,6 +8,7 @@ import {
   deleteItemFn,
   createImageUploadFn,
 } from '#/server/catalog/catalog.functions'
+import { can } from '#/server/auth/permissions-shared'
 import { compressImage } from '#/lib/image-compression'
 import { adminQueries } from '#/queries/admin'
 import {
@@ -47,11 +48,7 @@ import {
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 
 type ActiveTab =
-  | 'liquor-cat'
-  | 'food-cat'
-  | 'grocery-cat'
-  | 'ddc-cat'
-  | 'brands'
+  'liquor-cat' | 'food-cat' | 'grocery-cat' | 'ddc-cat' | 'brands'
 
 interface CategoryLike {
   id: string
@@ -83,6 +80,15 @@ export function TaxonomyPanel() {
     isFetching,
     refetch,
   } = useSuspenseQuery(adminQueries.taxonomy())
+  const { data: access } = useSuspenseQuery(adminQueries.access())
+
+  const grants = access.authenticated ? access.grants : null
+  const canCreateCategory = can(grants, 'categories', 'create')
+  const canEditCategory = can(grants, 'categories', 'edit')
+  const canDeleteCategory = can(grants, 'categories', 'delete')
+  const canCreateBrand = can(grants, 'brands', 'create')
+  const canEditBrand = can(grants, 'brands', 'edit')
+  const canDeleteBrand = can(grants, 'brands', 'delete')
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('liquor-cat')
 
@@ -495,6 +501,7 @@ export function TaxonomyPanel() {
           <Button
             variant="ghost"
             size="sm"
+            disabled={!canEditCategory}
             onClick={() => handleToggleLandingPage(cat)}
             className={`h-7 px-2 text-xs gap-1 ${
               cat.showOnLandingPage
@@ -502,9 +509,11 @@ export function TaxonomyPanel() {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
             title={
-              cat.showOnLandingPage
-                ? 'Visible on landing page (Click to hide)'
-                : 'Hidden from landing page (Click to show)'
+              !canEditCategory
+                ? 'Edit permission required'
+                : cat.showOnLandingPage
+                  ? 'Visible on landing page (Click to hide)'
+                  : 'Hidden from landing page (Click to show)'
             }
           >
             {cat.showOnLandingPage ? (
@@ -519,30 +528,34 @@ export function TaxonomyPanel() {
               </>
             )}
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => openEditModal(cat)}
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            title="Edit category"
-          >
-            <Edit2 className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() =>
-              setDeleteTarget({
-                id: cat.id,
-                name: cat.name,
-                productCount: cat.productCount ?? 0,
-              })
-            }
-            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            title="Delete category"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          {canEditCategory && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => openEditModal(cat)}
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              title="Edit category"
+            >
+              <Edit2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {canDeleteCategory && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+                setDeleteTarget({
+                  id: cat.id,
+                  name: cat.name,
+                  productCount: cat.productCount ?? 0,
+                })
+              }
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              title="Delete category"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       </CardFooter>
     </Card>
@@ -609,30 +622,34 @@ export function TaxonomyPanel() {
           {brand.productCount === 1 ? 'product' : 'products'}
         </Badge>
         <div className="flex items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => openEditModal(brand)}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
-            title="Edit brand"
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() =>
-              setDeleteTarget({
-                id: brand.id,
-                name: brand.name,
-                productCount: brand.productCount ?? 0,
-              })
-            }
-            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
-            title="Delete brand"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {canEditBrand && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => openEditModal(brand)}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer"
+              title="Edit brand"
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+          )}
+          {canDeleteBrand && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+                setDeleteTarget({
+                  id: brand.id,
+                  name: brand.name,
+                  productCount: brand.productCount ?? 0,
+                })
+              }
+              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+              title="Delete brand"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardFooter>
     </Card>
@@ -655,14 +672,16 @@ export function TaxonomyPanel() {
               isRefreshing={isFetching}
               variant="button"
             />
-            <Button
-              size="sm"
-              onClick={openAddModal}
-              className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
-            >
-              <Plus className="h-4 w-4" />
-              {addLabel}
-            </Button>
+            {(activeTab === 'brands' ? canCreateBrand : canCreateCategory) && (
+              <Button
+                size="sm"
+                onClick={openAddModal}
+                className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
+              >
+                <Plus className="h-4 w-4" />
+                {addLabel}
+              </Button>
+            )}
           </div>
         }
       />

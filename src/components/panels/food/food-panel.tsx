@@ -85,6 +85,9 @@ export function FoodPanel() {
   const { data: access } = useSuspenseQuery(adminQueries.access())
 
   const grants = access.authenticated ? access.grants : null
+  const canCreateFood = can(grants, 'food', 'create')
+  const canEditFood = can(grants, 'food', 'edit')
+  const canDeleteFood = can(grants, 'food', 'delete')
   const canCreateBrand = can(grants, 'brands', 'create')
   const canEditBrand = can(grants, 'brands', 'edit')
   const canDeleteBrand = can(grants, 'brands', 'delete')
@@ -344,9 +347,7 @@ export function FoodPanel() {
         },
       })
 
-      toast.success(
-        editingId ? 'Food item updated!' : 'Food item created!',
-      )
+      toast.success(editingId ? 'Food item updated!' : 'Food item created!')
       setModalOpen(false)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'food'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'taxonomy'] })
@@ -431,14 +432,16 @@ export function FoodPanel() {
             <Badge variant="secondary" className="font-mono text-xs">
               {products.length} SKUs
             </Badge>
-            <Button
-              size="sm"
-              onClick={openAddModal}
-              className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add food SKU
-            </Button>
+            {canCreateFood && (
+              <Button
+                size="sm"
+                onClick={openAddModal}
+                className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add food SKU
+              </Button>
+            )}
           </div>
         }
       />
@@ -655,10 +658,16 @@ export function FoodPanel() {
                       <Button
                         variant={p.isActive ? 'outline' : 'secondary'}
                         size="sm"
+                        disabled={!canEditFood}
                         onClick={() =>
                           handleToggleStatus(p.id, 'isActive', p.isActive)
                         }
                         className="h-7 gap-1 text-xs"
+                        title={
+                          canEditFood
+                            ? 'Toggle active/draft status'
+                            : 'Edit permission required'
+                        }
                       >
                         {p.isActive ? (
                           <>
@@ -676,26 +685,32 @@ export function FoodPanel() {
 
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditModal(p)}
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          aria-label={`Edit ${p.name}`}
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            setDeleteTarget({ id: p.id, name: p.name })
-                          }
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          aria-label={`Delete ${p.name}`}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {canEditFood && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditModal(p)}
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            aria-label={`Edit ${p.name}`}
+                            title="Edit product"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {canDeleteFood && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              setDeleteTarget({ id: p.id, name: p.name })
+                            }
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            aria-label={`Delete ${p.name}`}
+                            title="Delete product"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

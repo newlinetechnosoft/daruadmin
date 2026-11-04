@@ -101,7 +101,10 @@ function escapeCsvCell(val: unknown): string {
 }
 
 function areGrantsEqual(a: UserGrants, b: UserGrants): boolean {
-  for (const mod of MODULES) {
+  const allModules = PERMISSION_SECTIONS.flatMap((s) =>
+    s.modules.map((m) => m.key),
+  )
+  for (const mod of allModules) {
     const aActs = [...(a[mod] ?? [])].sort()
     const bActs = [...(b[mod] ?? [])].sort()
     if (aActs.length !== bActs.length) return false
@@ -283,9 +286,23 @@ export function StaffPanel() {
       const userDraft = prev[selectedStaff.id] ?? baselineGrants
       const existing = userDraft[mod] || []
       const has = existing.includes(action)
-      const nextActions = has
-        ? existing.filter((a) => a !== action)
-        : [...existing, action]
+
+      let nextActions: ActionKey[]
+      if (has) {
+        if (action === 'view') {
+          // Revoking 'view' clears dependent actions since viewing is required for all operations
+          nextActions = []
+        } else {
+          nextActions = existing.filter((a) => a !== action)
+        }
+      } else {
+        if (action !== 'view' && !existing.includes('view')) {
+          // Granting mutation/operational privileges automatically requires & grants 'view'
+          nextActions = [...existing, action, 'view']
+        } else {
+          nextActions = [...existing, action]
+        }
+      }
 
       return {
         ...prev,
@@ -298,6 +315,43 @@ export function StaffPanel() {
   }
 
   const [matrixSearchQuery, setMatrixSearchQuery] = useState('')
+
+  // Batch action: toggle a specific action across an entire section
+  const handleToggleSectionAction = (
+    modules: ModuleKey[],
+    action: ActionKey,
+  ) => {
+    if (!selectedStaff || selectedStaff.role === 'admin') return
+
+    setDrafts((prev) => {
+      const userDraft = { ...(prev[selectedStaff.id] ?? baselineGrants) }
+      const allHaveAction = modules.every((mod) =>
+        (userDraft[mod] || []).includes(action),
+      )
+
+      for (const mod of modules) {
+        const existing = userDraft[mod] || []
+        if (allHaveAction) {
+          if (action === 'view') {
+            userDraft[mod] = []
+          } else {
+            userDraft[mod] = existing.filter((a) => a !== action)
+          }
+        } else {
+          if (action !== 'view') {
+            userDraft[mod] = Array.from(new Set([...existing, action, 'view']))
+          } else {
+            userDraft[mod] = Array.from(new Set([...existing, 'view']))
+          }
+        }
+      }
+
+      return {
+        ...prev,
+        [selectedStaff.id]: userDraft,
+      }
+    })
+  }
 
   // Batch action: toggle all actions for a specific module
   const handleToggleModuleAll = (mod: ModuleKey) => {
@@ -334,6 +388,23 @@ export function StaffPanel() {
       }
     })
     toast.success('Granted all permissions in section')
+  }
+
+  // Batch action: full CRUD (view, create, edit, delete) for an entire section
+  const handleSectionFullCrud = (modules: ModuleKey[]) => {
+    if (!selectedStaff || selectedStaff.role === 'admin') return
+
+    setDrafts((prev) => {
+      const userDraft = { ...(prev[selectedStaff.id] ?? baselineGrants) }
+      for (const mod of modules) {
+        userDraft[mod] = ['view', 'create', 'edit', 'delete']
+      }
+      return {
+        ...prev,
+        [selectedStaff.id]: userDraft,
+      }
+    })
+    toast.success('Granted Full CRUD (view, create, edit, delete) in section')
   }
 
   // Batch action: view only for an entire section
@@ -387,6 +458,25 @@ export function StaffPanel() {
       }
     })
     toast.info('Applied Read-Only preset across all sections')
+  }
+
+  // Preset: Full CRUD across all modules
+  const handlePresetFullCrud = () => {
+    if (!selectedStaff || selectedStaff.role === 'admin') return
+    const allKeys = PERMISSION_SECTIONS.flatMap((s) =>
+      s.modules.map((m) => m.key),
+    )
+    setDrafts((prev) => {
+      const nextDraft: UserGrants = {}
+      for (const key of allKeys) {
+        nextDraft[key] = ['view', 'create', 'edit', 'delete']
+      }
+      return {
+        ...prev,
+        [selectedStaff.id]: nextDraft,
+      }
+    })
+    toast.success('Applied Full CRUD preset (View, Create, Edit, Delete)')
   }
 
   // Preset: Full Access across all modules
@@ -478,7 +568,10 @@ export function StaffPanel() {
 
     let added = 0
     let removed = 0
-    for (const mod of MODULES) {
+    const allModules = PERMISSION_SECTIONS.flatMap((s) =>
+      s.modules.map((m) => m.key),
+    )
+    for (const mod of allModules) {
       const baseActs = new Set(baselineGrants[mod] || [])
       const draftActs = new Set(draft[mod] || [])
 
@@ -1042,6 +1135,17 @@ export function StaffPanel() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={handlePresetFullCrud}
+                            disabled={isSavingMatrix || isResettingDefaults}
+                            className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                            title="Grant standard CRUD (View, Create, Edit, Delete) across all modules"
+                          >
+                            <Shield className="h-3 w-3" />
+                            Full CRUD
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={handlePresetFullAccess}
                             disabled={isSavingMatrix || isResettingDefaults}
                             className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
@@ -1143,7 +1247,7 @@ export function StaffPanel() {
 
                           {/* Section Batch Buttons */}
                           {selectedStaff.role !== 'admin' && (
-                            <div className="flex items-center gap-1 self-end sm:self-auto">
+                            <div className="flex flex-wrap items-center gap-1 self-end sm:self-auto">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1155,6 +1259,21 @@ export function StaffPanel() {
                                 title={`Grant all permissions in ${section.name}`}
                               >
                                 Grant all
+                              </Button>
+                              <span className="text-muted-foreground/30">
+                                •
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleSectionFullCrud(sectionModuleKeys)
+                                }
+                                disabled={isSavingMatrix || isResettingDefaults}
+                                className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                title={`Grant CRUD permissions (View, Create, Edit, Delete) in ${section.name}`}
+                              >
+                                Full CRUD
                               </Button>
                               <span className="text-muted-foreground/30">
                                 •
@@ -1198,28 +1317,86 @@ export function StaffPanel() {
                                 <TableHead className="text-xs w-[38%] min-w-[220px]">
                                   Module & Capabilities
                                 </TableHead>
-                                {ACTIONS.map((act) => (
-                                  <TableHead
-                                    key={act}
-                                    className="text-center text-xs capitalize w-[10%] min-w-[70px]"
-                                    title={`${act.toUpperCase()}: ${ACTION_DESCRIPTIONS[act]}`}
-                                  >
-                                    <div>{act}</div>
-                                    <div className="text-xs font-normal text-muted-foreground tracking-tight lowercase">
-                                      {act === 'view'
-                                        ? 'browse'
-                                        : act === 'create'
-                                          ? 'add'
-                                          : act === 'edit'
-                                            ? 'update'
-                                            : act === 'delete'
-                                              ? 'remove'
-                                              : act === 'export'
-                                                ? 'csv'
-                                                : 'authorize'}
-                                    </div>
-                                  </TableHead>
-                                ))}
+                                {ACTIONS.map((act) => {
+                                  const allHaveAction = sectionModuleKeys.every(
+                                    (k) =>
+                                      (currentGrants[k] || []).includes(act),
+                                  )
+                                  const someHaveAction =
+                                    !allHaveAction &&
+                                    sectionModuleKeys.some((k) =>
+                                      (currentGrants[k] || []).includes(act),
+                                    )
+
+                                  return (
+                                    <TableHead
+                                      key={act}
+                                      className="text-center text-xs capitalize w-[10%] min-w-[70px] p-1"
+                                      title={`${act.toUpperCase()}: ${ACTION_DESCRIPTIONS[act]}. Click to toggle column across ${section.name}.`}
+                                    >
+                                      {selectedStaff.role === 'admin' ? (
+                                        <div>
+                                          <div>{act}</div>
+                                          <div className="text-xs font-normal text-muted-foreground tracking-tight lowercase">
+                                            {act === 'view'
+                                              ? 'browse'
+                                              : act === 'create'
+                                                ? 'add'
+                                                : act === 'edit'
+                                                  ? 'update'
+                                                  : act === 'delete'
+                                                    ? 'remove'
+                                                    : act === 'export'
+                                                      ? 'csv'
+                                                      : 'authorize'}
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleToggleSectionAction(
+                                              sectionModuleKeys,
+                                              act,
+                                            )
+                                          }
+                                          disabled={
+                                            isSavingMatrix ||
+                                            isResettingDefaults
+                                          }
+                                          className="group inline-flex flex-col items-center justify-center w-full py-1 px-1 rounded hover:bg-muted/60 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                                          title={`Click to ${allHaveAction ? 'revoke' : 'grant'} "${act}" for all modules in ${section.name}`}
+                                        >
+                                          <div className="flex items-center gap-1 font-semibold text-foreground group-hover:text-primary">
+                                            <span>{act}</span>
+                                            <span
+                                              className={`inline-block size-1.5 rounded-full ${
+                                                allHaveAction
+                                                  ? 'bg-primary'
+                                                  : someHaveAction
+                                                    ? 'bg-amber-500'
+                                                    : 'bg-muted-foreground/30'
+                                              }`}
+                                            />
+                                          </div>
+                                          <div className="text-xs font-normal text-muted-foreground tracking-tight lowercase group-hover:text-foreground">
+                                            {act === 'view'
+                                              ? 'browse'
+                                              : act === 'create'
+                                                ? 'add'
+                                                : act === 'edit'
+                                                  ? 'update'
+                                                  : act === 'delete'
+                                                    ? 'remove'
+                                                    : act === 'export'
+                                                      ? 'csv'
+                                                      : 'authorize'}
+                                          </div>
+                                        </button>
+                                      )}
+                                    </TableHead>
+                                  )
+                                })}
                               </TableRow>
                             </TableHeader>
                             <TableBody>

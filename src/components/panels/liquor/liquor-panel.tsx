@@ -85,6 +85,9 @@ export function LiquorPanel() {
   const { data: access } = useSuspenseQuery(adminQueries.access())
 
   const grants = access.authenticated ? access.grants : null
+  const canCreateLiquor = can(grants, 'liquor', 'create')
+  const canEditLiquor = can(grants, 'liquor', 'edit')
+  const canDeleteLiquor = can(grants, 'liquor', 'delete')
   const canCreateBrand = can(grants, 'brands', 'create')
   const canEditBrand = can(grants, 'brands', 'edit')
   const canDeleteBrand = can(grants, 'brands', 'delete')
@@ -433,14 +436,16 @@ export function LiquorPanel() {
             <Badge variant="secondary" className="font-mono text-xs">
               {products.length} SKUs
             </Badge>
-            <Button
-              size="sm"
-              onClick={openAddModal}
-              className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add liquor SKU
-            </Button>
+            {canCreateLiquor && (
+              <Button
+                size="sm"
+                onClick={openAddModal}
+                className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add liquor SKU
+              </Button>
+            )}
           </div>
         }
       />
@@ -650,10 +655,16 @@ export function LiquorPanel() {
                       <Button
                         variant={p.isActive ? 'outline' : 'secondary'}
                         size="sm"
+                        disabled={!canEditLiquor}
                         onClick={() =>
                           handleToggleStatus(p.id, 'isActive', p.isActive)
                         }
                         className="h-7 gap-1 text-xs"
+                        title={
+                          canEditLiquor
+                            ? 'Toggle active/draft status'
+                            : 'Edit permission required'
+                        }
                       >
                         {p.isActive ? (
                           <>
@@ -671,26 +682,32 @@ export function LiquorPanel() {
 
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditModal(p)}
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          aria-label={`Edit ${p.name}`}
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            setDeleteTarget({ id: p.id, name: p.name })
-                          }
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          aria-label={`Delete ${p.name}`}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {canEditLiquor && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditModal(p)}
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            aria-label={`Edit ${p.name}`}
+                            title="Edit product"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {canDeleteLiquor && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              setDeleteTarget({ id: p.id, name: p.name })
+                            }
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            aria-label={`Delete ${p.name}`}
+                            title="Delete product"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

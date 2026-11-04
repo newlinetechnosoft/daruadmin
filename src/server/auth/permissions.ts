@@ -89,9 +89,17 @@ export async function getUserGrants(user: SessionUser): Promise<UserGrants> {
       .where(eq(userPermissions.userId, user.id))
 
     if (rows.length > 0) {
-      const custom: UserGrants = { ...roleDefaults }
+      const custom: UserGrants = {}
+      const dbGrants: Partial<Record<ModuleKey, ActionKey[]>> = {}
       for (const r of rows) {
-        custom[r.module as ModuleKey] = r.actions as ActionKey[]
+        dbGrants[r.module as ModuleKey] = r.actions as ActionKey[]
+      }
+      for (const mod of MODULES) {
+        if (mod in dbGrants) {
+          custom[mod] = dbGrants[mod]
+        } else if (mod in roleDefaults) {
+          custom[mod] = roleDefaults[mod]
+        }
       }
       return custom
     }

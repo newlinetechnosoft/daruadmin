@@ -85,6 +85,9 @@ export function DdcPanel() {
   const { data: access } = useSuspenseQuery(adminQueries.access())
 
   const grants = access.authenticated ? access.grants : null
+  const canCreateDdc = can(grants, 'ddc', 'create')
+  const canEditDdc = can(grants, 'ddc', 'edit')
+  const canDeleteDdc = can(grants, 'ddc', 'delete')
   const canCreateBrand = can(grants, 'brands', 'create')
   const canEditBrand = can(grants, 'brands', 'edit')
   const canDeleteBrand = can(grants, 'brands', 'delete')
@@ -428,14 +431,16 @@ export function DdcPanel() {
             <Badge variant="secondary" className="font-mono text-xs">
               {products.length} SKUs
             </Badge>
-            <Button
-              size="sm"
-              onClick={openAddModal}
-              className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add DDC SKU
-            </Button>
+            {canCreateDdc && (
+              <Button
+                size="sm"
+                onClick={openAddModal}
+                className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add DDC SKU
+              </Button>
+            )}
           </div>
         }
       />
@@ -495,10 +500,14 @@ export function DdcPanel() {
                 <TableHead className="text-xs">Product</TableHead>
                 <TableHead className="text-xs">Category & Brand</TableHead>
                 <TableHead className="text-xs">Variants & Stock</TableHead>
-                <TableHead className="text-xs text-right">Price (NPR)</TableHead>
+                <TableHead className="text-xs text-right">
+                  Price (NPR)
+                </TableHead>
                 <TableHead className="text-xs text-center">Status</TableHead>
                 <TableHead className="text-xs text-center">Featured</TableHead>
-                <TableHead className="w-20 text-xs text-right">Actions</TableHead>
+                <TableHead className="w-20 text-xs text-right">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -514,7 +523,11 @@ export function DdcPanel() {
                           : 'Get started by creating your first DDC product.'
                       }
                       action={
-                        <Button size="sm" onClick={openAddModal} className="h-8 text-xs">
+                        <Button
+                          size="sm"
+                          onClick={openAddModal}
+                          className="h-8 text-xs"
+                        >
                           <Plus className="mr-1.5 h-3.5 w-3.5" />
                           Add DDC SKU
                         </Button>
@@ -621,11 +634,20 @@ export function DdcPanel() {
                       <TableCell className="py-2.5 text-center">
                         <button
                           type="button"
+                          disabled={!canEditDdc}
                           onClick={() =>
                             handleToggleStatus(p.id, 'isActive', p.isActive)
                           }
-                          className="inline-flex items-center transition-opacity hover:opacity-80"
-                          title="Click to toggle active status"
+                          className={`inline-flex items-center transition-opacity ${
+                            canEditDdc
+                              ? 'hover:opacity-80 cursor-pointer'
+                              : 'opacity-50 cursor-not-allowed'
+                          }`}
+                          title={
+                            canEditDdc
+                              ? 'Click to toggle active status'
+                              : 'Edit permission required'
+                          }
                         >
                           {p.isActive ? (
                             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
@@ -638,11 +660,20 @@ export function DdcPanel() {
                       <TableCell className="py-2.5 text-center">
                         <button
                           type="button"
+                          disabled={!canEditDdc}
                           onClick={() =>
                             handleToggleStatus(p.id, 'isFeatured', p.isFeatured)
                           }
-                          className="inline-flex items-center transition-opacity hover:opacity-80"
-                          title="Click to toggle featured status"
+                          className={`inline-flex items-center transition-opacity ${
+                            canEditDdc
+                              ? 'hover:opacity-80 cursor-pointer'
+                              : 'opacity-50 cursor-not-allowed'
+                          }`}
+                          title={
+                            canEditDdc
+                              ? 'Click to toggle featured status'
+                              : 'Edit permission required'
+                          }
                         >
                           <Sparkles
                             className={`h-4 w-4 ${
@@ -656,24 +687,30 @@ export function DdcPanel() {
 
                       <TableCell className="py-2.5 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditModal(p)}
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              setDeleteTarget({ id: p.id, name: p.name })
-                            }
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {canEditDdc && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditModal(p)}
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              title="Edit item"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {canDeleteDdc && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                setDeleteTarget({ id: p.id, name: p.name })
+                              }
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              title="Delete item"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -976,7 +1013,8 @@ export function DdcPanel() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 border-t border-border/60 pt-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="ddc-badge" className="text-xs">
-                    Custom Badge (e.g. &apos;Fresh Dairy&apos;, &apos;Pure&apos;)
+                    Custom Badge (e.g. &apos;Fresh Dairy&apos;,
+                    &apos;Pure&apos;)
                   </Label>
                   <Input
                     id="ddc-badge"

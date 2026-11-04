@@ -1423,11 +1423,11 @@ export const removeOrderItemFn = createServerFn({ method: 'POST' })
     )
 
     let settings
-  try {
-    settings = await getStoreSettingsQuery()
-  } catch {
-    settings = defaultStoreSettings()
-  }
+    try {
+      settings = await getStoreSettingsQuery()
+    } catch {
+      settings = defaultStoreSettings()
+    }
     const totals = calculateOrderTotals({
       items: remainingItems.map((it) => ({
         catalogType: it.catalogType,
@@ -1549,11 +1549,11 @@ export const editOrderItemsBeforeDispatchFn = createServerFn({ method: 'POST' })
     }
 
     let settings
-  try {
-    settings = await getStoreSettingsQuery()
-  } catch {
-    settings = defaultStoreSettings()
-  }
+    try {
+      settings = await getStoreSettingsQuery()
+    } catch {
+      settings = defaultStoreSettings()
+    }
     const totals = calculateOrderTotals({
       items: data.items,
       discountPaisa: order.discount,
@@ -1691,11 +1691,11 @@ export const createOrderFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { user: actor } = await requirePermission('orders', 'create')
     let settings
-  try {
-    settings = await getStoreSettingsQuery()
-  } catch {
-    settings = defaultStoreSettings()
-  }
+    try {
+      settings = await getStoreSettingsQuery()
+    } catch {
+      settings = defaultStoreSettings()
+    }
     const subtotal = data.items.reduce(
       (sum, item) => sum + item.unitPrice * item.qty,
       0,
@@ -2321,7 +2321,10 @@ export const savePermissionsFn = createServerFn({ method: 'POST' })
       new Set([
         ...(data.permissions.liquor || []),
         ...(data.permissions.food || []),
+        ...(data.permissions.grocery || []),
+        ...(data.permissions.ddc || []),
         ...(data.permissions.categories || []),
+        ...(data.permissions.brands || []),
         ...(data.permissions.inventory || []),
         ...(data.permissions.dealers || []),
       ]),
@@ -2881,26 +2884,26 @@ export const deleteBannerFn = createServerFn({ method: 'POST' })
 // LANDING POPUP BANNERS & NOTICES
 // -------------------------------------------------------------
 
-export const getAdminLandingNoticesFn = createServerFn({ method: 'GET' }).handler(
-  async (): Promise<AdminBannersPayload> => {
-    await requirePermission('marketing', 'view')
-    const [notices, banners] = await Promise.all([
-      getLandingNoticesQuery(false),
-      getAllBannersQuery(),
-    ])
-    return { notices, banners }
-  },
-)
+export const getAdminLandingNoticesFn = createServerFn({
+  method: 'GET',
+}).handler(async (): Promise<AdminBannersPayload> => {
+  await requirePermission('marketing', 'view')
+  const [notices, banners] = await Promise.all([
+    getLandingNoticesQuery(false),
+    getAllBannersQuery(),
+  ])
+  return { notices, banners }
+})
 
-export const getPublicLandingNoticesFn = createServerFn({ method: 'GET' }).handler(
-  async (): Promise<LandingNotice[]> => {
-    try {
-      return await getLandingNoticesQuery(true)
-    } catch {
-      return []
-    }
-  },
-)
+export const getPublicLandingNoticesFn = createServerFn({
+  method: 'GET',
+}).handler(async (): Promise<LandingNotice[]> => {
+  try {
+    return await getLandingNoticesQuery(true)
+  } catch {
+    return []
+  }
+})
 
 export const upsertLandingNoticeFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>

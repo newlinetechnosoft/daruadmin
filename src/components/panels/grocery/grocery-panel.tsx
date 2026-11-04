@@ -85,6 +85,9 @@ export function GroceryPanel() {
   const { data: access } = useSuspenseQuery(adminQueries.access())
 
   const grants = access.authenticated ? access.grants : null
+  const canCreateGrocery = can(grants, 'grocery', 'create')
+  const canEditGrocery = can(grants, 'grocery', 'edit')
+  const canDeleteGrocery = can(grants, 'grocery', 'delete')
   const canCreateBrand = can(grants, 'brands', 'create')
   const canEditBrand = can(grants, 'brands', 'edit')
   const canDeleteBrand = can(grants, 'brands', 'delete')
@@ -430,14 +433,16 @@ export function GroceryPanel() {
             <Badge variant="secondary" className="font-mono text-xs">
               {products.length} SKUs
             </Badge>
-            <Button
-              size="sm"
-              onClick={openAddModal}
-              className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add grocery SKU
-            </Button>
+            {canCreateGrocery && (
+              <Button
+                size="sm"
+                onClick={openAddModal}
+                className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add grocery SKU
+              </Button>
+            )}
           </div>
         }
       />
@@ -497,10 +502,14 @@ export function GroceryPanel() {
                 <TableHead className="text-xs">Product</TableHead>
                 <TableHead className="text-xs">Category & Brand</TableHead>
                 <TableHead className="text-xs">Variants & Stock</TableHead>
-                <TableHead className="text-xs text-right">Price (NPR)</TableHead>
+                <TableHead className="text-xs text-right">
+                  Price (NPR)
+                </TableHead>
                 <TableHead className="text-xs text-center">Status</TableHead>
                 <TableHead className="text-xs text-center">Featured</TableHead>
-                <TableHead className="w-20 text-xs text-right">Actions</TableHead>
+                <TableHead className="w-20 text-xs text-right">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -516,7 +525,11 @@ export function GroceryPanel() {
                           : 'Get started by creating your first grocery product.'
                       }
                       action={
-                        <Button size="sm" onClick={openAddModal} className="h-8 text-xs">
+                        <Button
+                          size="sm"
+                          onClick={openAddModal}
+                          className="h-8 text-xs"
+                        >
                           <Plus className="mr-1.5 h-3.5 w-3.5" />
                           Add grocery SKU
                         </Button>
@@ -623,11 +636,20 @@ export function GroceryPanel() {
                       <TableCell className="py-2.5 text-center">
                         <button
                           type="button"
+                          disabled={!canEditGrocery}
                           onClick={() =>
                             handleToggleStatus(p.id, 'isActive', p.isActive)
                           }
-                          className="inline-flex items-center transition-opacity hover:opacity-80"
-                          title="Click to toggle active status"
+                          className={`inline-flex items-center transition-opacity ${
+                            canEditGrocery
+                              ? 'hover:opacity-80 cursor-pointer'
+                              : 'opacity-50 cursor-not-allowed'
+                          }`}
+                          title={
+                            canEditGrocery
+                              ? 'Click to toggle active status'
+                              : 'Edit permission required'
+                          }
                         >
                           {p.isActive ? (
                             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
@@ -640,11 +662,20 @@ export function GroceryPanel() {
                       <TableCell className="py-2.5 text-center">
                         <button
                           type="button"
+                          disabled={!canEditGrocery}
                           onClick={() =>
                             handleToggleStatus(p.id, 'isFeatured', p.isFeatured)
                           }
-                          className="inline-flex items-center transition-opacity hover:opacity-80"
-                          title="Click to toggle featured status"
+                          className={`inline-flex items-center transition-opacity ${
+                            canEditGrocery
+                              ? 'hover:opacity-80 cursor-pointer'
+                              : 'opacity-50 cursor-not-allowed'
+                          }`}
+                          title={
+                            canEditGrocery
+                              ? 'Click to toggle featured status'
+                              : 'Edit permission required'
+                          }
                         >
                           <Sparkles
                             className={`h-4 w-4 ${
@@ -658,24 +689,30 @@ export function GroceryPanel() {
 
                       <TableCell className="py-2.5 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditModal(p)}
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              setDeleteTarget({ id: p.id, name: p.name })
-                            }
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {canEditGrocery && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditModal(p)}
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              title="Edit item"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {canDeleteGrocery && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                setDeleteTarget({ id: p.id, name: p.name })
+                              }
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              title="Delete item"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
