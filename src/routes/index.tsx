@@ -963,7 +963,7 @@ function HomePage() {
             </div>
 
             <div>
-              <p className={eyebrow}>Mezmani app</p>
+             
               <h2 className="mt-3 text-4xl font-black uppercase leading-[0.92] tracking-tighter sm:text-6xl">
                 Your drinks.
                 <br />

@@ -36,6 +36,7 @@ import {
   MessageCircle,
   ShieldCheck,
   Camera,
+  CheckCircle2,
 } from 'lucide-react'
 
 export interface PublicOrderData {
@@ -213,9 +214,10 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
         return (
           <Badge
             variant="outline"
-            className="border-emerald-500 text-emerald-500 bg-emerald-500/10 text-xs px-2.5 py-0.5 uppercase tracking-wide font-semibold"
+            className="border-success/30 text-success bg-success/10 text-xs px-2.5 py-0.5 font-semibold gap-1.5"
           >
-            ✓ Delivered
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Delivered
           </Badge>
         )
       case 'delivery_failed':
@@ -339,10 +341,10 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
             <p className="text-xs text-muted-foreground mt-3">
               Need assistance? Call our support team at{' '}
               <a
-                href="tel:+9779802088800"
+                href="tel:+9779847820683"
                 className="font-medium text-foreground underline hover:text-primary"
               >
-                +977-9802088800
+                +977-9847820683
               </a>
             </p>
           </Card>
@@ -380,7 +382,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
               </h4>
               <p className="text-xs text-muted-foreground mt-1">
                 Questions about your delivery? Reach us directly at
-                +977-9802088800 anytime.
+                +977-9847820683 anytime.
               </p>
             </Card>
           </div>
@@ -457,21 +459,25 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
 
                 {/* Status Notice Banner */}
                 <div
-                  className={`p-3.5 rounded-lg border text-xs flex items-start gap-3 ${
+                  className={`flex items-start gap-3 rounded-lg border p-3.5 text-xs ${
                     order.status === 'delivered'
-                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+                      ? 'border-success/20 bg-success/10 text-success'
                       : order.status === 'cancelled' ||
                           order.status === 'delivery_failed'
-                        ? 'bg-destructive/10 border-destructive/20 text-destructive'
-                        : 'bg-primary/5 border-primary/20 text-foreground'
+                        ? 'border-destructive/20 bg-destructive/10 text-destructive'
+                        : 'border-primary/20 bg-primary/5 text-foreground'
                   }`}
                 >
-                  <Package className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
+                  {order.status === 'delivered' ? (
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                  ) : (
+                    <Package className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  )}
                   <div>
-                    <strong className="font-semibold block">
+                    <strong className="block font-semibold">
                       Status Update:
                     </strong>
-                    <span className="text-muted-foreground mt-0.5 block">
+                    <span className="mt-0.5 block text-muted-foreground">
                       {getStatusDescription(order.status)}
                     </span>
                   </div>
@@ -651,7 +657,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
                             : 'Dedicated rider dispatch in progress.'}
                         </p>
                         <p className="text-xs text-muted-foreground mt-2">
-                          Support line: +977-9802088800
+                          Support line: +977-9847820683
                         </p>
                       </div>
                     )}

@@ -30,8 +30,8 @@ export function Footer() {
               <img
                 src="/mezmani_logo_bg.svg"
                 alt="Mezmani"
-                width="150"
-                height="60"
+                width="190"
+                height="80"
                 loading="lazy"
                 className="h-auto w-36"
               />

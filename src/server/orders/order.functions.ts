@@ -1,5 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { createHmac } from 'node:crypto'
 import { and, eq, inArray, count } from 'drizzle-orm'
 import { z } from 'zod'
 import { db, dbTx } from '#/db'
@@ -82,16 +81,32 @@ export function getEsewaConfig(): EsewaConfig {
   }
 }
 
-export function generateEsewaSignature(
+export async function generateEsewaSignature(
   totalAmount: string,
   transactionUuid: string,
   productCode: string,
   secretKey: string,
-): string {
+): Promise<string> {
   const message = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${productCode}`
-  const hmac = createHmac('sha256', secretKey)
-  hmac.update(message)
-  return hmac.digest('base64')
+  const encoder = new TextEncoder()
+  const key = await globalThis.crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secretKey),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  const signature = await globalThis.crypto.subtle.sign(
+    'HMAC',
+    key,
+    encoder.encode(message),
+  )
+  const bytes = new Uint8Array(signature)
+  let binary = ''
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte)
+  }
+  return btoa(binary)
 }
 
 function nid(prefix = 'id') {
@@ -192,75 +207,69 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
 
     const [liqVariants, foodVariantsRows, grocVariants, ddcVariantsRows] =
       await Promise.all([
-      db
-        .select({
-          variant: liquorVariants,
-          product: liquorProducts,
-        })
-        .from(liquorVariants)
-        .innerJoin(
-          liquorProducts,
-          eq(liquorVariants.productId, liquorProducts.id),
-        )
-        .where(
-          and(
-            eq(liquorVariants.isActive, true),
-            eq(liquorProducts.isActive, true),
-            inArray(liquorVariants.id, variantIds),
+        db
+          .select({
+            variant: liquorVariants,
+            product: liquorProducts,
+          })
+          .from(liquorVariants)
+          .innerJoin(
+            liquorProducts,
+            eq(liquorVariants.productId, liquorProducts.id),
+          )
+          .where(
+            and(
+              eq(liquorVariants.isActive, true),
+              eq(liquorProducts.isActive, true),
+              inArray(liquorVariants.id, variantIds),
+            ),
           ),
-        ),
-      db
-        .select({
-          variant: foodVariants,
-          product: foodProducts,
-        })
-        .from(foodVariants)
-        .innerJoin(
-          foodProducts,
-          eq(foodVariants.productId, foodProducts.id),
-        )
-        .where(
-          and(
-            eq(foodVariants.isActive, true),
-            eq(foodProducts.isActive, true),
-            inArray(foodVariants.id, variantIds),
+        db
+          .select({
+            variant: foodVariants,
+            product: foodProducts,
+          })
+          .from(foodVariants)
+          .innerJoin(foodProducts, eq(foodVariants.productId, foodProducts.id))
+          .where(
+            and(
+              eq(foodVariants.isActive, true),
+              eq(foodProducts.isActive, true),
+              inArray(foodVariants.id, variantIds),
+            ),
           ),
-        ),
-      db
-        .select({
-          variant: groceryVariants,
-          product: groceryProducts,
-        })
-        .from(groceryVariants)
-        .innerJoin(
-          groceryProducts,
-          eq(groceryVariants.productId, groceryProducts.id),
-        )
-        .where(
-          and(
-            eq(groceryVariants.isActive, true),
-            eq(groceryProducts.isActive, true),
-            inArray(groceryVariants.id, variantIds),
+        db
+          .select({
+            variant: groceryVariants,
+            product: groceryProducts,
+          })
+          .from(groceryVariants)
+          .innerJoin(
+            groceryProducts,
+            eq(groceryVariants.productId, groceryProducts.id),
+          )
+          .where(
+            and(
+              eq(groceryVariants.isActive, true),
+              eq(groceryProducts.isActive, true),
+              inArray(groceryVariants.id, variantIds),
+            ),
           ),
-        ),
-      db
-        .select({
-          variant: ddcVariants,
-          product: ddcProducts,
-        })
-        .from(ddcVariants)
-        .innerJoin(
-          ddcProducts,
-          eq(ddcVariants.productId, ddcProducts.id),
-        )
-        .where(
-          and(
-            eq(ddcVariants.isActive, true),
-            eq(ddcProducts.isActive, true),
-            inArray(ddcVariants.id, variantIds),
+        db
+          .select({
+            variant: ddcVariants,
+            product: ddcProducts,
+          })
+          .from(ddcVariants)
+          .innerJoin(ddcProducts, eq(ddcVariants.productId, ddcProducts.id))
+          .where(
+            and(
+              eq(ddcVariants.isActive, true),
+              eq(ddcProducts.isActive, true),
+              inArray(ddcVariants.id, variantIds),
+            ),
           ),
-        ),
-    ])
+      ])
 
     const variantLookup = new Map<
       string,
@@ -614,7 +623,7 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
       const subtotalNpr = fromPaisa(totals.discountedSubtotalPaisa).toFixed(2)
       const deliveryChargeNpr = fromPaisa(totals.deliveryChargePaisa).toFixed(2)
       const transactionUuid = `${orderId}`
-      const signature = generateEsewaSignature(
+      const signature = await generateEsewaSignature(
         totalAmountNpr,
         transactionUuid,
         esewaConfig.productCode,
@@ -704,9 +713,11 @@ export const verifyEsewaPaymentFn = createServerFn({ method: 'POST' })
     let esewaData: Record<string, unknown> = {}
     if (data.encodedResponse) {
       try {
-        const decoded = Buffer.from(data.encodedResponse, 'base64').toString(
-          'utf8',
+        const decodedBytes = Uint8Array.from(
+          atob(data.encodedResponse),
+          (char) => char.charCodeAt(0),
         )
+        const decoded = new TextDecoder().decode(decodedBytes)
         esewaData = JSON.parse(decoded)
       } catch (err) {
         console.warn('[eSewa] Failed to decode response:', err)

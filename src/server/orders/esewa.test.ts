@@ -105,8 +105,8 @@ describe('eSewa Production Guard & Configuration', () => {
   })
 
   describe('generateEsewaSignature', () => {
-    it('generates valid HMAC-SHA256 signature', () => {
-      const sig = generateEsewaSignature(
+    it('generates valid HMAC-SHA256 signature', async () => {
+      const sig = await generateEsewaSignature(
         '100.00',
         'uuid-1234',
         'EPAYTEST',
@@ -115,7 +115,7 @@ describe('eSewa Production Guard & Configuration', () => {
       expect(sig).toBeTruthy()
       expect(typeof sig).toBe('string')
       // Same inputs must produce deterministic output
-      const sig2 = generateEsewaSignature(
+      const sig2 = await generateEsewaSignature(
         '100.00',
         'uuid-1234',
         'EPAYTEST',

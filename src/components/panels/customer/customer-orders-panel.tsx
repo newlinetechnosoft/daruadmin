@@ -697,7 +697,7 @@ export function CustomerOrdersPanel() {
                   Express Sourcing &amp; Delivery &bull; Butwal, Rupandehi
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  VAT Reg: 609823145 &bull; Ph: +977-9802088800
+                  VAT Reg: 609823145 &bull; Ph: +977-9847820683
                 </p>
               </DialogHeader>
 
