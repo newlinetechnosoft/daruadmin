@@ -341,10 +341,10 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
             <p className="text-xs text-muted-foreground mt-3">
               Need assistance? Call our support team at{' '}
               <a
-                href="tel:+9779802088800"
+                href="tel:+9779847820683"
                 className="font-medium text-foreground underline hover:text-primary"
               >
-                +977-9802088800
+                +977-9847820683
               </a>
             </p>
           </Card>
@@ -382,7 +382,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
               </h4>
               <p className="text-xs text-muted-foreground mt-1">
                 Questions about your delivery? Reach us directly at
-                +977-9802088800 anytime.
+                +977-9847820683 anytime.
               </p>
             </Card>
           </div>
@@ -657,7 +657,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
                             : 'Dedicated rider dispatch in progress.'}
                         </p>
                         <p className="text-xs text-muted-foreground mt-2">
-                          Support line: +977-9802088800
+                          Support line: +977-9847820683
                         </p>
                       </div>
                     )}

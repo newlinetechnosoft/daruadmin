@@ -480,11 +480,11 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
 
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <a
-                    href="tel:+9779802088800"
+                    href="tel:+9779847820683"
                     className="flex items-center gap-1.5 hover:text-foreground"
                   >
                     <PhoneCall className="h-3.5 w-3.5" />
-                    <span>Call us: +977-9802088800</span>
+                    <span>Call us: +977-9847820683</span>
                   </a>
                 </div>
                 <p className="text-xs text-muted-foreground">

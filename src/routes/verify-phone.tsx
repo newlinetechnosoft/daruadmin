@@ -444,11 +444,11 @@ function VerifyPhonePage() {
                 {/* Need Help Support Pill */}
                 <div className="space-y-3 w-full">
                   <a
-                    href="tel:+9779802088800"
+                    href="tel:+9779847820683"
                     className="inline-flex items-center justify-center gap-2 border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground active:scale-[0.99] font-bold text-[14px] sm:text-[15px] px-6 py-3 rounded-xl shadow-xs transition-all w-full cursor-pointer"
                   >
                     <PhoneCall className="h-4 w-4" />
-                    Help Hotline: 9802088800
+                    Help Hotline: 9847820683
                   </a>
 
                   <Link

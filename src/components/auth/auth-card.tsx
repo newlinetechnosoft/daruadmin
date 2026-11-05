@@ -147,7 +147,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
           return
         } else {
           toast.error(
-            'Your account phone number is not verified. Please contact customer care via 9802088800.',
+            'Your account phone number is not verified. Please contact customer care via 9847820683.',
           )
           setIsLoginLoading(false)
           return

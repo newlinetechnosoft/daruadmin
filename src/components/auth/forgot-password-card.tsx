@@ -869,11 +869,11 @@ export function ForgotPasswordCard({
             {/* Need Help Support Pill */}
             <div className="mt-6 w-full">
               <a
-                href="tel:+9779802088800"
+                href="tel:+9779847820683"
                 className="inline-flex items-center justify-center gap-2 border border-border/70 hover:border-primary/50 text-muted-foreground hover:text-foreground text-xs py-2.5 px-4 rounded-xl transition-colors w-full"
               >
                 <PhoneCall className="h-3.5 w-3.5 text-primary" />
-                <span>Need help? Call 9802088800</span>
+                <span>Need help? Call 9847820683</span>
               </a>
             </div>
           </div>
