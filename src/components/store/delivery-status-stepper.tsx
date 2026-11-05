@@ -50,6 +50,29 @@ export function DeliveryStatusStepper({
   status,
   cancellationReason,
 }: DeliveryStatusStepperProps) {
+  if (status === 'delivered') {
+    return (
+      <div className="flex min-h-32 items-center justify-center rounded-xl border border-success/30 bg-success/10 px-4 py-6 text-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-success text-success-foreground animate-in fade-in zoom-in-75 duration-700 motion-reduce:animate-none">
+            <CheckCircle2
+              className="h-9 w-9 stroke-[2.5] animate-pulse motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-success">
+              Delivered Successfully
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Order successfully delivered. Enjoy your drinks and refreshments!
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (status === 'cancelled') {
     return (
       <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 sm:p-5 text-center space-y-2">
