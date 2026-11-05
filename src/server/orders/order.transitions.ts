@@ -59,10 +59,22 @@ export async function transitionOrderTx(
   }
 
   // 1. Pure validation against the state machine
+  // order.riderId is a riders.id, but the session carries users.id.
+  // If this user owns the assigned rider record, validate under that
+  // rider id so the ownership checks in order-status.ts match.
+  const validationUser: UserContext =
+    user.role === 'rider' &&
+    assignedRiderRecord &&
+    existingOrder.riderId &&
+    assignedRiderRecord.id === existingOrder.riderId &&
+    assignedRiderRecord.userId === user.id
+      ? { ...user, id: existingOrder.riderId }
+      : user
+
   const validation = validateOrderTransition(
     existingOrder,
     toStatus,
-    user,
+    validationUser,
     mergedOptions,
   )
 

@@ -194,39 +194,39 @@ export const getAdminChromeFn = createServerFn({ method: 'GET' }).handler(
     ] = await Promise.all([
       canOrders
         ? db
-            .select({ count: count() })
-            .from(orders)
-            .where(eq(orders.status, 'pending'))
+          .select({ count: count() })
+          .from(orders)
+          .where(eq(orders.status, 'pending'))
         : Promise.resolve([{ count: 0 }]),
       canCustomers
         ? db
-            .select({ count: count() })
-            .from(complaints)
-            .where(eq(complaints.status, 'open'))
+          .select({ count: count() })
+          .from(complaints)
+          .where(eq(complaints.status, 'open'))
         : Promise.resolve([{ count: 0 }]),
       canRiders
         ? db
-            .select({ count: count() })
-            .from(riders)
-            .leftJoin(user, eq(riders.userId, user.id))
-            .where(
-              and(
-                or(isNull(riders.userId), eq(user.role, 'rider')),
-                or(eq(riders.status, 'available'), eq(riders.status, 'busy')),
-              ),
-            )
+          .select({ count: count() })
+          .from(riders)
+          .leftJoin(user, eq(riders.userId, user.id))
+          .where(
+            and(
+              or(isNull(riders.userId), eq(user.role, 'rider')),
+              or(eq(riders.status, 'available'), eq(riders.status, 'busy')),
+            ),
+          )
         : Promise.resolve([{ count: 0 }]),
       canAccounts
         ? db
-            .select({ count: count() })
-            .from(settlements)
-            .where(eq(settlements.status, 'draft'))
+          .select({ count: count() })
+          .from(settlements)
+          .where(eq(settlements.status, 'draft'))
         : Promise.resolve([{ count: 0 }]),
       canMarketing
         ? db
-            .select({ count: count() })
-            .from(reviews)
-            .where(eq(reviews.status, 'pending'))
+          .select({ count: count() })
+          .from(reviews)
+          .where(eq(reviews.status, 'pending'))
         : Promise.resolve([{ count: 0 }]),
       getAllNotificationsQuery(20),
     ])
@@ -314,52 +314,52 @@ export const globalSearchFn = createServerFn({ method: 'GET' })
 
     const products = canProducts
       ? [...liquor, ...food]
-          .filter((p) => p.name.toLowerCase().includes(q))
-          .slice(0, 6)
-          .map((p) => ({
-            id: p.id,
-            name: p.name,
-            href: p.catalogType === 'liquor' ? '/admin/liquor' : '/admin/food',
-          }))
+        .filter((p) => p.name.toLowerCase().includes(q))
+        .slice(0, 6)
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          href: p.catalogType === 'liquor' ? '/admin/liquor' : '/admin/food',
+        }))
       : []
 
     const matchingOrders = canOrders
       ? orderList
-          .filter(
-            (o) =>
-              o.number.toLowerCase().includes(q) ||
-              o.customerName.toLowerCase().includes(q),
-          )
-          .slice(0, 6)
-          .map((o) => ({
-            id: o.id,
-            name: `${o.number} · ${o.customerName}`,
-            href: `/admin/orders`,
-          }))
+        .filter(
+          (o) =>
+            o.number.toLowerCase().includes(q) ||
+            o.customerName.toLowerCase().includes(q),
+        )
+        .slice(0, 6)
+        .map((o) => ({
+          id: o.id,
+          name: `${o.number} · ${o.customerName}`,
+          href: `/admin/orders`,
+        }))
       : []
 
     const matchingCustomers = canCustomers
       ? users
-          .filter(
-            (u) =>
-              u.name.toLowerCase().includes(q) ||
-              u.email.toLowerCase().includes(q),
-          )
-          .slice(0, 6)
-          .map((u) => ({
-            id: u.id,
-            name: u.name,
-            href: '/admin/customers',
-          }))
+        .filter(
+          (u) =>
+            u.name.toLowerCase().includes(q) ||
+            u.email.toLowerCase().includes(q),
+        )
+        .slice(0, 6)
+        .map((u) => ({
+          id: u.id,
+          name: u.name,
+          href: '/admin/customers',
+        }))
       : []
 
     const matchingRiders = canRiders
       ? riderList
-          .filter(
-            (r) => r.name.toLowerCase().includes(q) || r.phone.includes(q),
-          )
-          .slice(0, 4)
-          .map((r) => ({ id: r.id, name: r.name, href: '/admin/riders' }))
+        .filter(
+          (r) => r.name.toLowerCase().includes(q) || r.phone.includes(q),
+        )
+        .slice(0, 4)
+        .map((r) => ({ id: r.id, name: r.name, href: '/admin/riders' }))
       : []
 
     return {
@@ -936,8 +936,143 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
     const order = await getOrderByIdQuery(data.id)
     if (!order) throw new Error('Order not found')
 
+    const FINISHED = ['delivered', 'returned', 'cancelled']
+    const NORMAL_BEFORE_ASSIGN = [
+      'pending',
+      'confirmed',
+      'dealer_assigned',
+      'rider_assigned',
+    ]
+    const IN_TRANSIT = ['picked_up', 'out_for_delivery']
+    const AFTER_ASSIGN = [...IN_TRANSIT, 'delivery_failed']
+
+    const noExplicitStatus = !data.status
+
+    const isRiderAssignment =
+      !!data.riderId &&
+      (data.riderId !== order.riderId || order.status !== 'rider_assigned') &&
+      (noExplicitStatus || data.status === 'rider_assigned')
+
+    const isRiderUnassign =
+      data.riderId === null && !!order.riderId && noExplicitStatus
+
+    let warning: string | null = null
+    let newRider: { id: string; name: string; userId: string | null } | null =
+      null
+    let oldRider: { id: string; name: string; userId: string | null } | null =
+      null
+
+    if (isRiderAssignment || isRiderUnassign) {
+      if (FINISHED.includes(order.status)) {
+        throw new Error(
+          `Order ${order.number} is already ${order.status}; the rider cannot be changed.`,
+        )
+      }
+    }
+
+    // Early-return: same rider already assigned, nothing to do
+    if (
+      isRiderAssignment &&
+      data.riderId === order.riderId &&
+      order.status === 'rider_assigned'
+    ) {
+      return { success: true, warning: null, action: 'assigned' as const }
+    }
+
+    if (order.riderId && (isRiderAssignment || isRiderUnassign)) {
+      const rows = await db
+        .select({ id: riders.id, name: riders.name, userId: riders.userId })
+        .from(riders)
+        .where(eq(riders.id, order.riderId))
+        .limit(1)
+      oldRider = rows[0] ?? null
+    }
+
+    if (isRiderAssignment) {
+      const rows = await db
+        .select({ id: riders.id, name: riders.name, userId: riders.userId })
+        .from(riders)
+        .where(eq(riders.id, data.riderId!))
+        .limit(1)
+      if (!rows[0]) throw new Error('Rider not found')
+      newRider = rows[0]
+
+      const warnings: string[] = []
+
+      if (AFTER_ASSIGN.includes(order.status) && order.status !== 'delivery_failed') {
+        warnings.push(
+          `Order is already "${order.status}". Rider changed to ${newRider.name}; status left unchanged.`,
+        )
+      } else if (!NORMAL_BEFORE_ASSIGN.includes(order.status) && order.status !== 'delivery_failed') {
+        warnings.push(`Order was "${order.status}". Rider ${newRider.name} assigned anyway.`)
+      } else if (order.status === 'pending') {
+        warnings.push(
+          `Order is still "pending" (not confirmed). Rider ${newRider.name} assigned anyway.`,
+        )
+      }
+
+      // Fetch full rider details for extra warning checks
+      const fullRiderRows = await db
+        .select()
+        .from(riders)
+        .where(eq(riders.id, data.riderId!))
+        .limit(1)
+      const fullRider = fullRiderRows[0]
+      if (fullRider) {
+        if (!fullRider.verified) warnings.push(`Rider ${newRider.name} is not verified.`)
+        if (!fullRider.userId) warnings.push(`Rider ${newRider.name} has no linked user account; cannot receive push alerts.`)
+        if (fullRider.status === 'offline') warnings.push(`Rider ${newRider.name} is currently offline.`)
+      }
+
+      // COD limit check (default 2,000,000 paisa = Rs. 20,000)
+      if (order.paymentMethod === 'cod' && fullRider) {
+        const settingsRows = await getStoreSettingsQuery()
+        const codLimit = (settingsRows as any)?.riderCodLimit ?? 2_000_000
+        if ((fullRider.cashOnHand ?? 0) >= codLimit) {
+          warnings.push(
+            `Rider ${newRider.name} has Rs. ${((fullRider.cashOnHand ?? 0) / 100).toFixed(2)} cash on hand which meets or exceeds the COD limit (Rs. ${(codLimit / 100).toFixed(2)}). Please settle before assigning.`,
+          )
+        }
+      }
+
+      // Unpaid eSewa warning
+      if (order.paymentMethod === 'esewa' && order.paymentStatus !== 'paid') {
+        warnings.push(`Order has unpaid eSewa payment. Verify payment before dispatch.`)
+      }
+
+      // Items with no dealer
+      const unassignedItems = order.items.filter((it) => !it.dealerId)
+      if (unassignedItems.length > 0) {
+        warnings.push(`${unassignedItems.length} item(s) have no dealer assigned.`)
+      }
+
+      if (warnings.length > 0) warning = warnings.join('; ')
+    }
+
+    // Where the order goes back to when the rider is removed
+    const allItemsHaveDealers =
+      order.items.length > 0 &&
+      order.items.every((it) => it.dealerId && it.sourcingStatus === 'assigned')
+    const revertStatus: OrderStatus = allItemsHaveDealers
+      ? 'dealer_assigned'
+      : 'confirmed'
+
+    if (isRiderUnassign) {
+      const shouldRevert =
+        order.status === 'rider_assigned' ||
+        order.status === 'delivery_failed' ||
+        IN_TRANSIT.includes(order.status)
+      const newStatus = shouldRevert ? revertStatus : order.status
+
+      if (shouldRevert) {
+        warning = `Rider ${oldRider?.name ?? ''} removed from order in "${order.status}". Order reverted to "${newStatus}".`
+      }
+    }
+
+    if (warning) console.warn(`[updateOrderFn] ${order.number}: ${warning}`)
+
     await dbTx.transaction(async (tx) => {
-      // 1. If item dealers were updated, save them first
+      // 1. Item dealers
       if (data.itemDealers && data.itemDealers.length > 0) {
         for (const itemD of data.itemDealers) {
           let snapshottedCost: number | null = null
@@ -986,38 +1121,117 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
         }
       }
 
-      // 2. Determine target status transition
-      let targetStatus: OrderStatus | undefined = data.status as
-        OrderStatus | undefined
-      if (!targetStatus && data.riderId !== undefined) {
-        if (data.riderId && data.riderId !== order.riderId) {
-          if (
-            ['pending', 'confirmed', 'dealer_assigned'].includes(order.status)
-          ) {
-            targetStatus = 'rider_assigned'
-          }
-        } else if (data.riderId === null && order.riderId) {
-          if (order.status === 'rider_assigned') {
-            targetStatus = 'confirmed'
-          }
+      let handledRiderDirectly = false
+      const now = new Date()
+
+      // 2a. Assign / reassign rider (direct write, no state machine)
+      if (isRiderAssignment && newRider) {
+        const newStatus =
+          order.status === 'delivery_failed'
+            ? 'rider_assigned'
+            : AFTER_ASSIGN.includes(order.status)
+              ? order.status
+              : 'rider_assigned'
+
+        await tx
+          .update(orders)
+          .set({ riderId: newRider.id, status: newStatus, updatedAt: now })
+          .where(eq(orders.id, data.id))
+
+        await tx.insert(orderStatusHistory).values({
+          id: nid('ev'),
+          orderId: data.id,
+          fromStatus: order.status,
+          toStatus: newStatus,
+          status: newStatus,
+          note: `${oldRider ? `Rider changed from ${oldRider.name} to ${newRider.name}` : `Rider ${newRider.name} assigned`} by ${user.name}${warning ? ` (${warning})` : ''}`,
+          actor: user.name,
+          actorId: user.id,
+          actorRole: user.role,
+          createdAt: now,
+        })
+
+        if (newRider.userId) {
+          await tx.insert(notifications).values({
+            id: nid('notif'),
+            userId: newRider.userId,
+            type: 'rider',
+            title: `New Delivery: Order #${order.number}`,
+            body: `You have been assigned to order ${order.number}.`,
+            href: '/rider',
+            read: false,
+            createdAt: now,
+          })
         }
+        if (oldRider?.userId && oldRider.id !== newRider.id) {
+          await tx.insert(notifications).values({
+            id: nid('notif'),
+            userId: oldRider.userId,
+            type: 'rider',
+            title: `Order #${order.number} reassigned`,
+            body: `Order ${order.number} was reassigned to another rider.`,
+            href: '/rider',
+            read: false,
+            createdAt: now,
+          })
+        }
+        handledRiderDirectly = true
       }
 
-      // 3. If there is a status transition, execute through the validated state machine
+      // 2b. Unassign rider (direct write, no state machine)
+      if (isRiderUnassign) {
+        const shouldRevert =
+          order.status === 'rider_assigned' ||
+          order.status === 'delivery_failed' ||
+          IN_TRANSIT.includes(order.status)
+        const newStatus = shouldRevert ? revertStatus : order.status
+
+        await tx
+          .update(orders)
+          .set({ riderId: null, status: newStatus, updatedAt: now })
+          .where(eq(orders.id, data.id))
+
+        await tx.insert(orderStatusHistory).values({
+          id: nid('ev'),
+          orderId: data.id,
+          fromStatus: order.status,
+          toStatus: newStatus,
+          status: newStatus,
+          note: `Rider ${oldRider?.name ?? ''} unassigned by ${user.name}${warning ? ` (${warning})` : ''}${data.notes ? `. ${data.notes}` : ''}`,
+          actor: user.name,
+          actorId: user.id,
+          actorRole: user.role,
+          createdAt: now,
+        })
+
+        if (oldRider?.userId) {
+          await tx.insert(notifications).values({
+            id: nid('notif'),
+            userId: oldRider.userId,
+            type: 'rider',
+            title: `Order #${order.number} unassigned`,
+            body: `You were removed from order ${order.number}.`,
+            href: '/rider',
+            read: false,
+            createdAt: now,
+          })
+        }
+        handledRiderDirectly = true
+      }
+
+      // 3. Other status changes still use the validated state machine
+      const targetStatus: OrderStatus | undefined = handledRiderDirectly
+        ? undefined
+        : (data.status as OrderStatus | undefined)
+
       if (targetStatus && targetStatus !== order.status) {
         await transitionOrderTx(tx, {
           orderId: data.id,
           toStatus: targetStatus,
-          user: {
-            id: user.id,
-            name: user.name,
-            role: user.role as any,
-          },
+          user: { id: user.id, name: user.name, role: user.role as any },
           options: {
             riderId:
-              data.riderId !== undefined
-                ? data.riderId || undefined
-                : undefined,
+              data.riderId !== undefined ? data.riderId || undefined : undefined,
             cancellationReason: data.cancellationReason,
             deliveryFailureReason: data.deliveryFailureReason,
             ageVerifiedAtDelivery: data.ageVerifiedAtDelivery,
@@ -1026,17 +1240,17 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
         })
       }
 
-      // 4. Update non-status order fields if provided
+      // 4. Non-status fields
       const directUpdates: Record<string, any> = {}
       if (data.paymentStatus) directUpdates.paymentStatus = data.paymentStatus
       if (data.notes !== undefined) directUpdates.notes = data.notes
       if (
+        !handledRiderDirectly &&
         data.riderId !== undefined &&
         (!targetStatus || targetStatus === order.status)
       ) {
         directUpdates.riderId = data.riderId
       }
-
       if (Object.keys(directUpdates).length > 0) {
         directUpdates.updatedAt = new Date()
         await tx.update(orders).set(directUpdates).where(eq(orders.id, data.id))
@@ -1047,10 +1261,55 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
       user.name,
       'orders',
       'edit',
-      `Updated order ${order.number}: ${JSON.stringify(data)}`,
+      `Updated order ${order.number}: ${JSON.stringify(data)}${warning ? ` [warning: ${warning}]` : ''}`,
     )
 
-    return true
+    // Recompute rider.status for both old and new rider after any assign/unassign
+    const riderIdsToRecompute = [
+      ...(newRider ? [newRider.id] : []),
+      ...(oldRider && oldRider.id !== newRider?.id ? [oldRider.id] : []),
+    ]
+    for (const riderId of riderIdsToRecompute) {
+      const activeOrderRows = await db
+        .select({ id: orders.id })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.riderId, riderId),
+            or(
+              eq(orders.status, 'rider_assigned'),
+              eq(orders.status, 'picked_up'),
+              eq(orders.status, 'out_for_delivery'),
+            ),
+          ),
+        )
+        .limit(1)
+      const riderRow = await db
+        .select({ available: riders.available })
+        .from(riders)
+        .where(eq(riders.id, riderId))
+        .limit(1)
+      const computedStatus =
+        activeOrderRows.length > 0
+          ? 'busy'
+          : riderRow[0]?.available
+            ? 'available'
+            : 'offline'
+      await db
+        .update(riders)
+        .set({ status: computedStatus })
+        .where(eq(riders.id, riderId))
+    }
+
+    return {
+      success: true,
+      warning,
+      action: isRiderAssignment
+        ? ('assigned' as const)
+        : isRiderUnassign
+          ? ('unassigned' as const)
+          : ('updated' as const),
+    }
   })
 
 export const assignOrderItemDealerFn = createServerFn({ method: 'POST' })
@@ -1096,7 +1355,12 @@ export const markOrderItemUnavailableFn = createServerFn({ method: 'POST' })
     if (!order) throw new Error('Order not found')
 
     const isAssignedRider =
-      session.role === 'rider' && order.riderId === session.id
+      session.role === 'rider' &&
+      (order.riderId === session.id ||
+        (await (async () => {
+          const r = await getRiderByUserIdQuery(session.id)
+          return r?.id === order.riderId
+        })()))
     const isStaff = session.role === 'admin' || session.role === 'manager'
     if (!isAssignedRider && !isStaff) {
       throw new Error(
@@ -1155,7 +1419,12 @@ export const recordRiderDealerPickupBillFn = createServerFn({ method: 'POST' })
     if (!order) throw new Error('Order not found')
 
     const isAssignedRider =
-      session.role === 'rider' && order.riderId === session.id
+      session.role === 'rider' &&
+      (order.riderId === session.id ||
+        (await (async () => {
+          const r = await getRiderByUserIdQuery(session.id)
+          return r?.id === order.riderId
+        })()))
     const isStaff = session.role === 'admin' || session.role === 'manager'
     if (!isAssignedRider && !isStaff) {
       throw new Error(
@@ -3063,9 +3332,7 @@ export const getRiderPortalFn = createServerFn({ method: 'GET' }).handler(
     )
 
     const activeOrders = assignedOrders.filter((o) =>
-      ['assigned', 'rider_assigned', 'picked_up', 'out_for_delivery'].includes(
-        o.status,
-      ),
+      ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status),
     )
     const completedOrders = assignedOrders.filter(
       (o) => o.status === 'delivered',

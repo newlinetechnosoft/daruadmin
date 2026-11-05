@@ -55,10 +55,8 @@ export function playOrderAlertSound() {
 
   try {
     if (!alertAudio) {
-      alertAudio = new Audio(
-        'https://pixabay.com/sound-effects/city-new-notification-050-494248/',
-      )
-      alertAudio.volume = 0.8
+      // No real audio file available; skip HTML audio fallback silently.
+      return
     }
     alertAudio.currentTime = 0
     void alertAudio.play().catch(() => {})
@@ -67,10 +65,26 @@ export function playOrderAlertSound() {
   }
 }
 
-export function showBrowserNotification(
+async function getNotificationRegistration() {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    return null
+  }
+  try {
+    const existing = await navigator.serviceWorker.getRegistration()
+    if (existing) return existing
+    // No service worker yet: register the minimal one in public/sw.js
+    await navigator.serviceWorker.register('/sw.js')
+    return await navigator.serviceWorker.ready
+  } catch {
+    return null
+  }
+}
+
+export async function showBrowserNotification(
   title: string,
   body: string,
-  href = '/rider/deliveries',
+  /** Pass the notification's id as the tag so OS deduplicates correctly */
+  tag = 'rider-notification',
 ) {
   if (
     typeof window === 'undefined' ||
@@ -80,13 +94,32 @@ export function showBrowserNotification(
     return
   }
 
-  const notification = new Notification(title, {
+  const options: NotificationOptions = {
     body,
     icon: '/mezmani_logo.webp',
-    tag: href,
-  })
-  notification.onclick = () => {
-    window.focus()
-    window.location.href = href
+    badge: '/mezmani_logo.webp',
+    tag,
+    data: { tag },
+  }
+
+  // Preferred path: required on mobile browsers and installed PWAs
+  const registration = await getNotificationRegistration()
+  if (registration) {
+    try {
+      await registration.showNotification(title, options)
+      return
+    } catch (err) {
+      console.warn('[notifications] showNotification failed:', err)
+    }
+  }
+
+  // Last resort for desktop browsers without a service worker
+  try {
+    const notification = new Notification(title, options)
+    notification.onclick = () => {
+      window.focus()
+    }
+  } catch (err) {
+    console.warn('[notifications] Notification constructor not allowed:', err)
   }
 }

@@ -44,6 +44,10 @@ export function RiderLayout() {
     const unlock = () => unlockNotificationSound()
     window.addEventListener('pointerdown', unlock, { once: true })
     window.addEventListener('keydown', unlock, { once: true })
+    // Register service worker on mount so push notifications work immediately
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
+    }
     return () => {
       window.removeEventListener('pointerdown', unlock)
       window.removeEventListener('keydown', unlock)
@@ -57,19 +61,23 @@ export function RiderLayout() {
 
     const storageKey = 'rider-last-notification-id'
     const previousId = localStorage.getItem(storageKey)
-    const unread = notifications.find(
-      (item) => item.id !== previousId && !item.read,
+
+    // Alert every unread notification newer than the last stored id.
+    // When there is no stored id yet (first visit), alert normally — do NOT skip.
+    const unreadNew = notifications.filter(
+      (item) =>
+        !item.read &&
+        (previousId === null || item.id > previousId),
     )
 
-    if (!previousId) {
-      localStorage.setItem(storageKey, notifications[0].id)
-      return
-    }
-
-    if (unread) {
+    if (unreadNew.length > 0) {
+      const latest = unreadNew[0]
       playOrderAlertSound()
-      showBrowserNotification(unread.title, unread.body, unread.href)
-      localStorage.setItem(storageKey, unread.id)
+      showBrowserNotification(latest.title, latest.body, latest.id)
+      localStorage.setItem(storageKey, latest.id)
+    } else if (previousId === null && notifications.length > 0) {
+      // First load — just store the latest id without alerting
+      localStorage.setItem(storageKey, notifications[0].id)
     }
   }, [portalData?.notifications])
 
@@ -180,17 +188,23 @@ export function RiderLayout() {
           </nav>
 
           <div className="flex items-center gap-2">
-            {notificationPermission !== 'granted' && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 px-2.5"
-                onClick={requestRiderNotifications}
-              >
-                <Bell className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Enable alerts</span>
-              </Button>
+            {notificationPermission !== 'granted' &&
+              notificationPermission !== 'denied' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 px-2.5"
+                  onClick={requestRiderNotifications}
+                >
+                  <Bell className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Enable alerts</span>
+                </Button>
+              )}
+            {notificationPermission === 'denied' && (
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                Alerts blocked — enable in browser settings
+              </span>
             )}
             <ThemeToggle />
           </div>

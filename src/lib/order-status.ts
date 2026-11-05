@@ -57,6 +57,22 @@ export class OrderTransitionError extends Error {
   }
 }
 
+export async function resolveRiderId(
+  order: Pick<Order, 'riderId'>,
+  ctx: { session: UserContext },
+): Promise<string | null> {
+  if (!order.riderId) return null
+  // Rider IDs start with "rid_" in this codebase.
+  if (order.riderId.startsWith('rid_')) {
+    const { getRiderByIdQuery } = await import('#/server/riders/rider.queries')
+    const rider = await getRiderByIdQuery(order.riderId)
+    return rider?.userId ?? null
+  }
+  // Already a user‑id (legacy case)
+  return order.riderId
+}
+
+
 /**
  * Validates whether an order can transition from its current status to `toStatus`.
  * Throws OrderTransitionError if invalid, or returns `{ ok: true, noop: boolean }`.

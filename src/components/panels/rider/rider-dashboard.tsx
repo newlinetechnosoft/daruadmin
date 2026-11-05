@@ -58,7 +58,6 @@ function getBrowserLocation(): Promise<{ lat: number; lng: number }> {
       )
       return
     }
-
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         resolve({
@@ -113,7 +112,6 @@ export function RiderDashboard({
 }: RiderDashboardProps = {}) {
   const queryClient = useQueryClient()
   const { data: portalData } = useSuspenseQuery(riderQueries.portal())
-
   const { isOnline, isReconnecting } = useOnlineStatus()
   const { pendingActions } = useRiderOutbox()
 
@@ -130,7 +128,7 @@ export function RiderDashboard({
     const map = new Map<
       string,
       {
-        targetStatus: 'out_for_delivery' | 'delivered'
+        targetStatus: 'picked_up' | 'out_for_delivery' | 'delivered'
         actionStatus: 'pending' | 'syncing' | 'failed'
         retries: number
       }
@@ -156,18 +154,17 @@ export function RiderDashboard({
     }
   }, [rider.updatedAt])
 
-  // Derive active and completed orders from the current cache
+  // Derive active and completed orders STRICTLY for the current logged-in rider
   const activeOrders = useMemo(() => {
     return orders.filter((o) =>
-      ['assigned', 'rider_assigned', 'picked_up', 'out_for_delivery'].includes(
-        o.status,
-      ),
+      o.riderId === rider.id &&
+      ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status),
     )
-  }, [orders])
+  }, [orders, rider.id])
 
   const completedOrders = useMemo(() => {
-    return orders.filter((o) => o.status === 'delivered')
-  }, [orders])
+    return orders.filter((o) => o.riderId === rider.id && o.status === 'delivered')
+  }, [orders, rider.id])
 
   // Derive stats directly from cache data so numbers never drift from the order list
   const derivedStats = useMemo(() => {
@@ -230,12 +227,10 @@ export function RiderDashboard({
       }
       return
     }
-
     const TWO_MINUTES_MS = 2 * 60 * 1000
     syncIntervalRef.current = setInterval(() => {
       void syncCurrentLocation(true)
     }, TWO_MINUTES_MS)
-
     return () => {
       if (syncIntervalRef.current) {
         clearInterval(syncIntervalRef.current)
@@ -252,11 +247,9 @@ export function RiderDashboard({
       )
       return
     }
-
     if (isTogglingAvail) return
 
     const targetAvailable = !rider.available
-
     let locationCoords: { lat: number; lng: number } | null = null
 
     // Going ONLINE: strict GPS permission requirement!
@@ -315,7 +308,6 @@ export function RiderDashboard({
             : {}),
         },
       })
-
       if (targetAvailable) {
         setLastLocationSync(new Date())
         toast.success('You are now ONLINE with live GPS telemetry active')
@@ -359,11 +351,10 @@ export function RiderDashboard({
   // Delivery status transitions: Start Delivery and Mark Delivered
   const handleUpdateStatus = async (
     orderId: string,
-    targetStatus: 'out_for_delivery' | 'delivered',
+    targetStatus: 'picked_up' | 'out_for_delivery' | 'delivered',
   ) => {
     // Double-tap and duplicate action guards
     if (pendingOrderIds.has(orderId)) return
-
     if (pendingDeliveryActionsMap.has(orderId)) {
       toast.info(
         'This delivery action is already saved on this device and waiting to sync.',
@@ -376,8 +367,13 @@ export function RiderDashboard({
 
     // Guard against duplicate or invalid transitions
     if (
+      targetStatus === 'picked_up' &&
+      currentOrder.status !== 'rider_assigned'
+    ) {
+      return
+    }
+    if (
       targetStatus === 'out_for_delivery' &&
-      currentOrder.status !== 'rider_assigned' &&
       currentOrder.status !== 'picked_up'
     ) {
       return
@@ -401,10 +397,10 @@ export function RiderDashboard({
 
     // Online branch: optimistic update, server dispatch, rollback on error
     setPendingOrderIds((prev) => new Set(prev).add(orderId))
-
     await queryClient.cancelQueries({
       queryKey: riderQueries.portal().queryKey,
     })
+
     const previousData = queryClient.getQueryData<RiderPortalData>(
       riderQueries.portal().queryKey,
     )
@@ -417,7 +413,28 @@ export function RiderDashboard({
         const orderToUpdate = old.orders.find((o) => o.id === orderId)
         if (!orderToUpdate) return old
 
-        if (targetStatus === 'out_for_delivery') {
+        if (targetStatus === 'picked_up') {
+          const updatedOrders = old.orders.map((o) =>
+            o.id === orderId
+              ? {
+                  ...o,
+                  status: 'picked_up' as const,
+                  updatedAt: new Date().toISOString(),
+                }
+              : o,
+          )
+          return {
+            ...old,
+            orders: updatedOrders,
+            activeOrders: updatedOrders.filter((o) =>
+              ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status),
+            ),
+            rider: {
+              ...old.rider,
+              status: 'busy',
+            },
+          }
+        } else if (targetStatus === 'out_for_delivery') {
           const updatedOrders = old.orders.map((o) =>
             o.id === orderId
               ? {
@@ -431,7 +448,7 @@ export function RiderDashboard({
             ...old,
             orders: updatedOrders,
             activeOrders: updatedOrders.filter((o) =>
-              ['assigned', 'out_for_delivery'].includes(o.status),
+              ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status),
             ),
             rider: {
               ...old.rider,
@@ -462,9 +479,8 @@ export function RiderDashboard({
                 }
               : o,
           )
-
           const newActive = updatedOrders.filter((o) =>
-            ['assigned', 'out_for_delivery'].includes(o.status),
+            ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status),
           )
           const newCompleted = updatedOrders.filter(
             (o) => o.status === 'delivered',
@@ -505,15 +521,17 @@ export function RiderDashboard({
         data: {
           orderId,
           status: targetStatus,
+          riderId: rider.id, // Explicitly pass riderId to satisfy backend assignment checks
         },
       })
-
       if (targetStatus === 'delivered') {
         toast.success(
           'Delivery completed. COD collected and earnings credited.',
         )
-      } else {
+      } else if (targetStatus === 'out_for_delivery') {
         toast.success('Delivery started. Order is now out for delivery.')
+      } else if (targetStatus === 'picked_up') {
+        toast.success('Order picked up from dealer!')
       }
     } catch (err: unknown) {
       if (isNetworkError(err)) {
@@ -570,7 +588,6 @@ export function RiderDashboard({
   }) => {
     try {
       setPendingOrderIds((prev) => new Set(prev).add(orderId))
-
       if (!isOnline) {
         await queueOutboxAction('delivery_status', {
           orderId,
@@ -579,11 +596,11 @@ export function RiderDashboard({
         toast.info("Saved on this device. Will sync when you're online.")
         return
       }
-
       await updateRiderDeliveryStatusFn({
         data: {
           orderId,
           status: 'delivered',
+          riderId: rider.id, // Explicitly pass riderId to satisfy backend assignment checks
           ageVerifiedAtDelivery,
           deliveryOtp,
           proofPhotoUrl,
@@ -662,13 +679,11 @@ export function RiderDashboard({
             >
               <Bike className="h-6 w-6" />
             </div>
-
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base font-semibold text-foreground">
                   {rider.name}
                 </h2>
-
                 {/* Availability Badge: Always Dot + Text */}
                 <span
                   className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${
@@ -692,7 +707,6 @@ export function RiderDashboard({
                       : 'Offline'}
                   </span>
                 </span>
-
                 {/* Connectivity Badge: Distinct from Availability */}
                 {!isOnline ? (
                   <Badge
@@ -712,19 +726,17 @@ export function RiderDashboard({
                   </Badge>
                 )}
               </div>
-
-              <p className="text-xs text-muted-foreground mt-1">
-                Zone:{' '}
-                <span className="text-foreground font-medium">
-                  {rider.zone}
-                </span>{' '}
-                • Vehicle:{' '}
-                <span className="text-foreground font-medium capitalize">
-                  {rider.vehicle}
-                </span>{' '}
-                ({rider.licenseNo})
-              </p>
-
+              {/* <p className="text-xs text-muted-foreground mt-1"> */}
+                {/* Zone:{' '} */}
+                {/* <span className="text-foreground font-medium"> */}
+                  {/* {rider.zone} */}
+                {/* </span>{' '} */}
+                {/* • Vehicle:{' '} */}
+                {/* <span className="text-foreground font-medium capitalize"> */}
+                  {/* {rider.vehicle} */}
+                {/* </span>{' '} */}
+                {/* ({rider.licenseNo}) */}
+              {/* </p> */}
               <div className="flex flex-wrap items-center gap-2 mt-1.5">
                 {portalData.activeShift ? (
                   <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
@@ -740,21 +752,20 @@ export function RiderDashboard({
                     </span>
                   </span>
                 ) : null}
-                {portalData.attendanceStats ? (
-                  <span className="text-xs text-muted-foreground font-mono">
-                    {portalData.attendanceStats.totalHours}h logged (
-                    {portalData.attendanceStats.totalShifts} shifts)
-                  </span>
-                ) : null}
+                {/* {portalData.attendanceStats ? ( */}
+                {/*   <span className="text-xs text-muted-foreground font-mono"> */}
+                {/*     {portalData.attendanceStats.totalHours}h logged ( */}
+                {/*     {portalData.attendanceStats.totalShifts} shifts) */}
+                {/*   </span> */}
+                {/* ) : null} */}
               </div>
-
               {/* Live GPS Telemetry Indicator */}
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 {rider.available ? (
                   <div className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/25">
                     <Radio className="h-3.5 w-3.5 animate-pulse text-emerald-500 shrink-0" />
                     <span>
-                      Live GPS Active (2-min sync)
+                      Live GPS
                       {lastLocationSync ? (
                         <span className="font-mono ml-1 text-emerald-600 dark:text-emerald-400">
                           • {lastLocationSync.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -780,7 +791,6 @@ export function RiderDashboard({
               </div>
             </div>
           </div>
-
           <div className="w-full sm:w-auto flex flex-col items-end gap-1">
             <Button
               variant={rider.available ? 'outline' : 'default'}
@@ -811,7 +821,6 @@ export function RiderDashboard({
                   ? 'Go Offline'
                   : 'Go Online'}
             </Button>
-
             {!isOnline && (
               <span className="text-xs text-muted-foreground">
                 Reconnect to change availability
@@ -842,7 +851,6 @@ export function RiderDashboard({
             </p>
           </CardContent>
         </Card>
-
         {/* Card 2: Completed Deliveries */}
         <Card className="border-border bg-card transition-colors hover:border-success/30">
           <CardContent className="p-4">
@@ -862,7 +870,6 @@ export function RiderDashboard({
             </p>
           </CardContent>
         </Card>
-
         {/* Card 3: Cash in Hand (COD) */}
         <Card className="border-border bg-card transition-colors hover:border-warning/30">
           <CardContent className="p-4">
@@ -882,7 +889,6 @@ export function RiderDashboard({
             </p>
           </CardContent>
         </Card>
-
         {/* Card 4: Earned Commission */}
         <Card className="border-border bg-card transition-colors hover:border-success/30">
           <CardContent className="p-4">
@@ -922,7 +928,6 @@ export function RiderDashboard({
             View all deliveries <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
-
         {activeOrders.length === 0 ? (
           <Card className="border-border border-dashed bg-card/50">
             <CardContent className="p-8 text-center space-y-2.5">
@@ -968,7 +973,6 @@ export function RiderDashboard({
             {activeOrders.map((order) => {
               const pendingSync = pendingDeliveryActionsMap.get(order.id)
               const isUpdating = pendingOrderIds.has(order.id)
-
               return (
                 <OrderDeliveryCard
                   key={order.id}
@@ -1004,14 +1008,14 @@ export function RiderDashboard({
 interface OrderDeliveryCardProps {
   order: Order
   pendingSync?: {
-    targetStatus: 'out_for_delivery' | 'delivered'
+    targetStatus: 'picked_up' | 'out_for_delivery' | 'delivered'
     actionStatus: 'pending' | 'syncing' | 'failed'
     retries: number
   }
   isUpdating: boolean
   onUpdateStatus: (
     orderId: string,
-    targetStatus: 'out_for_delivery' | 'delivered',
+    targetStatus: 'picked_up' | 'out_for_delivery' | 'delivered',
   ) => Promise<void>
   onOpenDeliveryProof?: (order: Order) => void
 }
@@ -1024,8 +1028,8 @@ function OrderDeliveryCard({
   onOpenDeliveryProof,
 }: OrderDeliveryCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-
   const isOut = order.status === 'out_for_delivery'
+  const isPickedUp = order.status === 'picked_up'
   const isCOD = order.paymentMethod === 'cod'
   const totalItemCount = order.items.reduce((sum, it) => sum + it.qty, 0)
 
@@ -1051,20 +1055,26 @@ function OrderDeliveryCard({
               <span className="font-mono text-xs font-bold text-foreground tracking-tight">
                 {order.number}
               </span>
-
               {/* Status Badge */}
               <Badge
-                variant={isOut ? 'default' : 'secondary'}
+                variant={isOut ? 'default' : isPickedUp ? 'default' : 'secondary'}
                 className={`text-xs uppercase tracking-wider font-semibold ${
                   isOut
                     ? 'bg-info hover:bg-info/90 text-info-foreground'
-                    : 'bg-muted text-muted-foreground'
+                    : isPickedUp
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                      : 'bg-muted text-muted-foreground'
                 }`}
               >
                 {isOut ? (
                   <span className="flex items-center gap-1">
                     <Truck className="h-3 w-3" />
                     Out for delivery
+                  </span>
+                ) : isPickedUp ? (
+                  <span className="flex items-center gap-1">
+                    <Package className="h-3 w-3" />
+                    Picked Up
                   </span>
                 ) : (
                   <span className="flex items-center gap-1">
@@ -1073,7 +1083,6 @@ function OrderDeliveryCard({
                   </span>
                 )}
               </Badge>
-
               {/* Distinct Offline Queued Tag */}
               {pendingSync && (
                 <span
@@ -1102,13 +1111,11 @@ function OrderDeliveryCard({
                 </span>
               )}
             </div>
-
             {/* Customer Name */}
             <p className="text-sm font-semibold text-foreground mt-1.5">
               {order.customerName}
             </p>
           </div>
-
           {/* Amount & COD vs Prepaid Treatment */}
           <div className="text-right shrink-0">
             <span className="font-mono text-sm font-bold text-foreground tabular-nums block">
@@ -1130,11 +1137,9 @@ function OrderDeliveryCard({
           </div>
         </div>
       </CardHeader>
-
       <CardContent className="p-4 pt-2 space-y-3.5">
         {/* Dealer Pickup Stations */}
         <RiderDealerPickups order={order} />
-
         {/* Customer Drop-off Destination */}
         <div className="space-y-1">
           <div className="text-xs text-muted-foreground font-semibold flex items-center gap-1">
@@ -1160,7 +1165,6 @@ function OrderDeliveryCard({
             </div>
           </div>
         </div>
-
         {/* Collapsible Items List */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs text-muted-foreground font-medium">
@@ -1182,7 +1186,6 @@ function OrderDeliveryCard({
               </button>
             )}
           </div>
-
           <ul className="text-xs text-foreground space-y-1 pl-2.5 border-l-2 border-border/70">
             {displayedItems.map((item) => (
               <li
@@ -1202,7 +1205,6 @@ function OrderDeliveryCard({
             ))}
           </ul>
         </div>
-
         {/* Action Buttons: Responsive Layout with >= 44px Touch Targets */}
         <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           {/* Secondary Actions: Map and Call (>= 44px touch targets) */}
@@ -1223,7 +1225,6 @@ function OrderDeliveryCard({
                 <span className="sm:hidden md:inline">Map</span>
               </a>
             </Button>
-
             <Button
               variant="outline"
               size="sm"
@@ -1239,7 +1240,6 @@ function OrderDeliveryCard({
               </a>
             </Button>
           </div>
-
           {/* Primary Action Button (Visually Dominant & Full-Width on Mobile) */}
           <div className="flex-1">
             {pendingSync ? (
@@ -1266,6 +1266,27 @@ function OrderDeliveryCard({
                   <>
                     <Clock className="h-3.5 w-3.5 mr-1 animate-spin" />
                     Waiting to sync
+                  </>
+                )}
+              </Button>
+            ) : order.status === 'rider_assigned' ? (
+              <Button
+                size="sm"
+                onClick={() => {
+                  void onUpdateStatus(order.id, 'picked_up')
+                }}
+                disabled={isUpdating}
+                className="w-full h-11 min-h-[44px] text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition-all"
+              >
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                    Picking up...
+                  </>
+                ) : (
+                  <>
+                    <Package className="h-4 w-4 mr-1.5" />
+                    Pick Up from Dealer
                   </>
                 )}
               </Button>

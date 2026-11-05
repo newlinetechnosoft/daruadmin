@@ -265,34 +265,36 @@ export function OrdersPanel() {
   const handleAssignRider = async (orderId: string, riderId: string) => {
     try {
       setIsUpdating(true)
-      const targetStatus = riderId
-        ? ['pending', 'confirmed', 'dealer_assigned'].includes(
-            selectedOrder?.status || '',
-          )
-          ? 'rider_assigned'
-          : undefined
-        : selectedOrder?.status === 'rider_assigned'
-          ? 'confirmed'
-          : undefined
-
-      await updateOrderFn({
+      const res = await updateOrderFn({
         data: {
           id: orderId,
           riderId: riderId || null,
-          ...(targetStatus ? { status: targetStatus } : {}),
         },
       })
-      const riderName = ops.riders.find((r) => r.id === riderId)?.name || 'None'
-      toast.success(
-        riderId ? `Assigned to rider: ${riderName}` : 'Courier unassigned',
-      )
+      if (res.warning) {
+        toast.warning(res.warning)
+      } else {
+        const riderName =
+          ops.riders.find((r) => r.id === riderId)?.name || 'None'
+        toast.success(
+          riderId ? `Assigned to rider: ${riderName}` : 'Courier unassigned',
+        )
+      }
       await invalidateOrders()
+      // Re-read the order from the refreshed list to get the real status
       if (selectedOrder && selectedOrder.id === orderId) {
-        setSelectedOrder({
-          ...selectedOrder,
-          riderId: riderId || null,
-          ...(targetStatus ? { status: targetStatus as OrderStatus } : {}),
-        })
+        const refreshed = queryClient
+          .getQueryData<Awaited<ReturnType<typeof adminQueries.orders>>['data']>(
+            adminQueries.orders().queryKey,
+          )
+        const updatedOrder = (refreshed as any)?.ops?.orders?.find(
+          (o: any) => o.id === orderId,
+        )
+        if (updatedOrder) {
+          setSelectedOrder(updatedOrder)
+        } else {
+          setSelectedOrder({ ...selectedOrder, riderId: riderId || null })
+        }
       }
     } catch (err: any) {
       toast.error(err?.message || 'Failed to assign rider')
