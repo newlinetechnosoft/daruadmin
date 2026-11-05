@@ -1,8 +1,21 @@
 import { moveToRecycleBin } from '#/server/recycle-bin/recycle-bin.queries'
-import { db, dbTx, type DbTx } from '#/db'
-import { orders, riders, riderShifts, settlements, user } from '#/db/schema'
+import { db, dbTx } from '#/db'
+import type { DbTx } from '#/db'
+import {
+  orders,
+  riders,
+  riderCashHandovers,
+  riderShifts,
+  settlements,
+  user,
+} from '#/db/schema'
 import { and, desc, eq, gte, isNull, lte, or } from 'drizzle-orm'
-import type { Rider, RiderShift, Settlement } from '#/server/operations/types'
+import type {
+  Rider,
+  RiderCashHandover,
+  RiderShift,
+  Settlement,
+} from '#/server/operations/types'
 
 function mapRiderRecord(r: typeof riders.$inferSelect): Rider {
   return {
@@ -27,7 +40,7 @@ function mapRiderRecord(r: typeof riders.$inferSelect): Rider {
     deliveries: r.deliveries,
     rating: Number(r.rating),
     createdAt: r.createdAt.toISOString(),
-    updatedAt: r.updatedAt ? r.updatedAt.toISOString() : undefined,
+    updatedAt: r.updatedAt.toISOString(),
   }
 }
 
@@ -120,6 +133,59 @@ export async function getSettlementsByRiderIdQuery(
     .where(eq(settlements.riderId, riderId))
     .orderBy(desc(settlements.createdAt))
   return rows.map(mapSettlementRecord)
+}
+
+function mapRiderCashHandoverRecord(
+  h: typeof riderCashHandovers.$inferSelect,
+  riderName?: string,
+): RiderCashHandover {
+  return {
+    id: h.id,
+    riderId: h.riderId,
+    riderName,
+    amount: h.amount,
+    status: h.status as RiderCashHandover['status'],
+    paymentMethod: h.paymentMethod as RiderCashHandover['paymentMethod'],
+    paymentReference: h.paymentReference,
+    notes: h.notes,
+    receivedBy: h.receivedBy,
+    reviewedAt: h.reviewedAt ? h.reviewedAt.toISOString() : null,
+    rejectionReason: h.rejectionReason,
+    journalEntryId: h.journalEntryId,
+    createdAt: h.createdAt.toISOString(),
+  }
+}
+
+export async function getAllRiderCashHandoversQuery(
+  limit = 100,
+): Promise<RiderCashHandover[]> {
+  const rows = await db
+    .select({
+      handover: riderCashHandovers,
+      riderName: riders.name,
+    })
+    .from(riderCashHandovers)
+    .leftJoin(riders, eq(riderCashHandovers.riderId, riders.id))
+    .orderBy(desc(riderCashHandovers.createdAt))
+    .limit(limit)
+
+  return rows.map((r) =>
+    mapRiderCashHandoverRecord(r.handover, r.riderName || undefined),
+  )
+}
+
+export async function getRiderCashHandoversByRiderIdQuery(
+  riderId: string,
+  limit = 50,
+): Promise<RiderCashHandover[]> {
+  const rows = await db
+    .select()
+    .from(riderCashHandovers)
+    .where(eq(riderCashHandovers.riderId, riderId))
+    .orderBy(desc(riderCashHandovers.createdAt))
+    .limit(limit)
+
+  return rows.map((h) => mapRiderCashHandoverRecord(h))
 }
 
 function mapShiftRecord(

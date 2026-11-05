@@ -82,6 +82,7 @@ export interface PostCashHandoverParams {
   riderId: string
   riderName: string
   amount: number // paisa
+  paymentMethod?: 'cash' | 'bank_transfer' | 'cheque'
   actor: FinanceActor
 }
 

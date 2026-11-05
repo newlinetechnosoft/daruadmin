@@ -82,6 +82,7 @@ import { Progress } from '#/components/ui/progress'
 import { BatchDealerSettlementDialog } from './batch-dealer-settlement-dialog'
 import { RiderPayrollRunDialog } from './rider-payroll-run-dialog'
 import { RiderSettlementApprovalDialog } from './rider-settlement-approval-dialog'
+import { RiderSettlementRequests } from './rider-settlement-requests'
 import { VoucherDetailsDialog } from './voucher-details-dialog'
 import { FinancialReportsTab } from './financial-reports-tab'
 import { AccountDefaultsTab } from './account-defaults-tab'
@@ -245,6 +246,7 @@ export function AccountsPanel() {
   const rawFiscalYears = ops.fiscalYears
   const rawDealerPayables = ops.dealerPayables
   const rawRiderAccounts = ops.riderAccounts
+  const rawRiderCashHandovers = ops.riderCashHandovers || []
 
   // Date-filtered collections (defaults to today's data)
   const dateFilteredLedger = useMemo(() => {
@@ -2957,6 +2959,9 @@ export function AccountsPanel() {
                 </div>
               </div>
             )}
+
+            {/* Rider-submitted settlement requests awaiting approval */}
+            <RiderSettlementRequests requests={rawRiderCashHandovers} />
 
             {/* Rider Settlements Table */}
             <div className="space-y-3">

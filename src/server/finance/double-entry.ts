@@ -577,35 +577,50 @@ export async function postOrderDeliveredTx(
 }
 
 /**
- * Standard Posting 2: Rider Cash Handover.
- * Dr. Cash in Hand (ACCOUNT_KEYS.CASH_IN_HAND)
+ * Standard Posting 2: Rider Cash Handover / Settlement.
+ * Dr. Cash in Hand (ACCOUNT_KEYS.CASH_IN_HAND) or Bank (ACCOUNT_KEYS.BANK_MAIN)
  * Cr. Rider Undeposited COD Cash (ACCOUNT_KEYS.RIDER_COD_CASH) with rider party
  */
 export async function postCashHandoverTx(
   tx: DbTx,
   params: PostCashHandoverParams,
 ): Promise<PostJournalResult> {
-  const { handoverId, riderId, riderName, amount, actor } = params
+  const {
+    handoverId,
+    riderId,
+    riderName,
+    amount,
+    paymentMethod = 'cash',
+    actor,
+  } = params
   if (amount <= 0) {
     throw new Error('Cash handover amount must be greater than zero.')
   }
   const accounts = await resolveAllAccounts(tx)
+  const receivedIntoAccount =
+    paymentMethod === 'cash' ? accounts.CASH_IN_HAND : accounts.BANK_MAIN
+  const methodLabel =
+    paymentMethod === 'cash'
+      ? 'Cash'
+      : paymentMethod === 'bank_transfer'
+        ? 'Bank transfer'
+        : 'Cheque'
 
   return postJournalTx(tx, {
     voucherType: 'RV', // Receipt Voucher
     postingDate: new Date(),
-    narration: `Rider cash handover received from ${riderName}`,
+    narration: `Rider ${methodLabel.toLowerCase()} settlement received from ${riderName}`,
     refType: 'rider_cash_handover',
     refId: handoverId,
     event: 'cash_handover',
     createdBy: actor.name,
-    metadata: { riderId, riderName, amount },
+    metadata: { riderId, riderName, amount, paymentMethod },
     lines: [
       {
-        accountId: accounts.CASH_IN_HAND,
+        accountId: receivedIntoAccount,
         debit: amount,
         costCenter: 'general',
-        narration: `Cash deposited by rider ${riderName}`,
+        narration: `${methodLabel} settlement received from rider ${riderName}`,
       },
       {
         accountId: accounts.RIDER_COD_CASH,

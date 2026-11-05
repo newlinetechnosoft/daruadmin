@@ -54,7 +54,14 @@ import {
   getActiveRiderShiftQuery,
   getAllRiderShiftsQuery,
   getRiderAttendanceStatsQuery,
+  getAllRiderCashHandoversQuery,
+  getRiderCashHandoversByRiderIdQuery,
 } from '#/server/riders/rider.queries'
+import {
+  RIDER_SETTLEMENT_METHOD_LABELS,
+  RIDER_SETTLEMENT_PAYMENT_METHODS,
+  validateRiderSettlementRequest,
+} from '#/server/riders/rider-settlements'
 import {
   getAllLedgerEntriesQuery,
   getAllPaymentsQuery,
@@ -123,7 +130,6 @@ import {
   transitionOrder,
 } from '#/server/orders/order.transitions'
 import {
-  postCashHandoverTx,
   postRiderPayoutTx,
   postRiderSalaryAccrualTx,
 } from '#/server/finance/double-entry'
@@ -194,39 +200,39 @@ export const getAdminChromeFn = createServerFn({ method: 'GET' }).handler(
     ] = await Promise.all([
       canOrders
         ? db
-          .select({ count: count() })
-          .from(orders)
-          .where(eq(orders.status, 'pending'))
+            .select({ count: count() })
+            .from(orders)
+            .where(eq(orders.status, 'pending'))
         : Promise.resolve([{ count: 0 }]),
       canCustomers
         ? db
-          .select({ count: count() })
-          .from(complaints)
-          .where(eq(complaints.status, 'open'))
+            .select({ count: count() })
+            .from(complaints)
+            .where(eq(complaints.status, 'open'))
         : Promise.resolve([{ count: 0 }]),
       canRiders
         ? db
-          .select({ count: count() })
-          .from(riders)
-          .leftJoin(user, eq(riders.userId, user.id))
-          .where(
-            and(
-              or(isNull(riders.userId), eq(user.role, 'rider')),
-              or(eq(riders.status, 'available'), eq(riders.status, 'busy')),
-            ),
-          )
+            .select({ count: count() })
+            .from(riders)
+            .leftJoin(user, eq(riders.userId, user.id))
+            .where(
+              and(
+                or(isNull(riders.userId), eq(user.role, 'rider')),
+                or(eq(riders.status, 'available'), eq(riders.status, 'busy')),
+              ),
+            )
         : Promise.resolve([{ count: 0 }]),
       canAccounts
         ? db
-          .select({ count: count() })
-          .from(settlements)
-          .where(eq(settlements.status, 'draft'))
+            .select({ count: count() })
+            .from(settlements)
+            .where(eq(settlements.status, 'draft'))
         : Promise.resolve([{ count: 0 }]),
       canMarketing
         ? db
-          .select({ count: count() })
-          .from(reviews)
-          .where(eq(reviews.status, 'pending'))
+            .select({ count: count() })
+            .from(reviews)
+            .where(eq(reviews.status, 'pending'))
         : Promise.resolve([{ count: 0 }]),
       getAllNotificationsQuery(20),
     ])
@@ -314,52 +320,52 @@ export const globalSearchFn = createServerFn({ method: 'GET' })
 
     const products = canProducts
       ? [...liquor, ...food]
-        .filter((p) => p.name.toLowerCase().includes(q))
-        .slice(0, 6)
-        .map((p) => ({
-          id: p.id,
-          name: p.name,
-          href: p.catalogType === 'liquor' ? '/admin/liquor' : '/admin/food',
-        }))
+          .filter((p) => p.name.toLowerCase().includes(q))
+          .slice(0, 6)
+          .map((p) => ({
+            id: p.id,
+            name: p.name,
+            href: p.catalogType === 'liquor' ? '/admin/liquor' : '/admin/food',
+          }))
       : []
 
     const matchingOrders = canOrders
       ? orderList
-        .filter(
-          (o) =>
-            o.number.toLowerCase().includes(q) ||
-            o.customerName.toLowerCase().includes(q),
-        )
-        .slice(0, 6)
-        .map((o) => ({
-          id: o.id,
-          name: `${o.number} · ${o.customerName}`,
-          href: `/admin/orders`,
-        }))
+          .filter(
+            (o) =>
+              o.number.toLowerCase().includes(q) ||
+              o.customerName.toLowerCase().includes(q),
+          )
+          .slice(0, 6)
+          .map((o) => ({
+            id: o.id,
+            name: `${o.number} · ${o.customerName}`,
+            href: `/admin/orders`,
+          }))
       : []
 
     const matchingCustomers = canCustomers
       ? users
-        .filter(
-          (u) =>
-            u.name.toLowerCase().includes(q) ||
-            u.email.toLowerCase().includes(q),
-        )
-        .slice(0, 6)
-        .map((u) => ({
-          id: u.id,
-          name: u.name,
-          href: '/admin/customers',
-        }))
+          .filter(
+            (u) =>
+              u.name.toLowerCase().includes(q) ||
+              u.email.toLowerCase().includes(q),
+          )
+          .slice(0, 6)
+          .map((u) => ({
+            id: u.id,
+            name: u.name,
+            href: '/admin/customers',
+          }))
       : []
 
     const matchingRiders = canRiders
       ? riderList
-        .filter(
-          (r) => r.name.toLowerCase().includes(q) || r.phone.includes(q),
-        )
-        .slice(0, 4)
-        .map((r) => ({ id: r.id, name: r.name, href: '/admin/riders' }))
+          .filter(
+            (r) => r.name.toLowerCase().includes(q) || r.phone.includes(q),
+          )
+          .slice(0, 4)
+          .map((r) => ({ id: r.id, name: r.name, href: '/admin/riders' }))
       : []
 
     return {
@@ -534,6 +540,7 @@ export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
       dealerSettlementsList,
       offersList,
       riderShiftsList,
+      riderCashHandoversList,
     ] = await Promise.all([
       getAllLedgerEntriesQuery(),
       getAllSettlementsQuery(),
@@ -552,11 +559,13 @@ export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
       getAllDealerSettlementsQuery(),
       getAllOffersQuery(),
       getAllRiderShiftsQuery(undefined, 50),
+      getAllRiderCashHandoversQuery(),
     ])
     return {
       ops: {
         ledger,
         settlements: settlementsList,
+        riderCashHandovers: riderCashHandoversList,
         riders: riderList,
         settings,
         payments: paymentsList,
@@ -587,6 +596,7 @@ export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
       dealerPayables: dealerPayablesList,
       dealerSettlements: dealerSettlementsList,
       riderAccounts: riderAccountsList,
+      riderCashHandovers: riderCashHandoversList,
       offers: offersList,
       riderShifts: riderShiftsList,
     }
@@ -999,12 +1009,20 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
 
       const warnings: string[] = []
 
-      if (AFTER_ASSIGN.includes(order.status) && order.status !== 'delivery_failed') {
+      if (
+        AFTER_ASSIGN.includes(order.status) &&
+        order.status !== 'delivery_failed'
+      ) {
         warnings.push(
           `Order is already "${order.status}". Rider changed to ${newRider.name}; status left unchanged.`,
         )
-      } else if (!NORMAL_BEFORE_ASSIGN.includes(order.status) && order.status !== 'delivery_failed') {
-        warnings.push(`Order was "${order.status}". Rider ${newRider.name} assigned anyway.`)
+      } else if (
+        !NORMAL_BEFORE_ASSIGN.includes(order.status) &&
+        order.status !== 'delivery_failed'
+      ) {
+        warnings.push(
+          `Order was "${order.status}". Rider ${newRider.name} assigned anyway.`,
+        )
       } else if (order.status === 'pending') {
         warnings.push(
           `Order is still "pending" (not confirmed). Rider ${newRider.name} assigned anyway.`,
@@ -1019,9 +1037,14 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
         .limit(1)
       const fullRider = fullRiderRows[0]
       if (fullRider) {
-        if (!fullRider.verified) warnings.push(`Rider ${newRider.name} is not verified.`)
-        if (!fullRider.userId) warnings.push(`Rider ${newRider.name} has no linked user account; cannot receive push alerts.`)
-        if (fullRider.status === 'offline') warnings.push(`Rider ${newRider.name} is currently offline.`)
+        if (!fullRider.verified)
+          warnings.push(`Rider ${newRider.name} is not verified.`)
+        if (!fullRider.userId)
+          warnings.push(
+            `Rider ${newRider.name} has no linked user account; cannot receive push alerts.`,
+          )
+        if (fullRider.status === 'offline')
+          warnings.push(`Rider ${newRider.name} is currently offline.`)
       }
 
       // COD limit check (default 2,000,000 paisa = Rs. 20,000)
@@ -1037,13 +1060,17 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
 
       // Unpaid eSewa warning
       if (order.paymentMethod === 'esewa' && order.paymentStatus !== 'paid') {
-        warnings.push(`Order has unpaid eSewa payment. Verify payment before dispatch.`)
+        warnings.push(
+          `Order has unpaid eSewa payment. Verify payment before dispatch.`,
+        )
       }
 
       // Items with no dealer
       const unassignedItems = order.items.filter((it) => !it.dealerId)
       if (unassignedItems.length > 0) {
-        warnings.push(`${unassignedItems.length} item(s) have no dealer assigned.`)
+        warnings.push(
+          `${unassignedItems.length} item(s) have no dealer assigned.`,
+        )
       }
 
       if (warnings.length > 0) warning = warnings.join('; ')
@@ -1231,7 +1258,9 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
           user: { id: user.id, name: user.name, role: user.role as any },
           options: {
             riderId:
-              data.riderId !== undefined ? data.riderId || undefined : undefined,
+              data.riderId !== undefined
+                ? data.riderId || undefined
+                : undefined,
             cancellationReason: data.cancellationReason,
             deliveryFailureReason: data.deliveryFailureReason,
             ageVerifiedAtDelivery: data.ageVerifiedAtDelivery,
@@ -3338,12 +3367,17 @@ export const getRiderPortalFn = createServerFn({ method: 'GET' }).handler(
       (o) => o.status === 'delivered',
     )
 
-    const [activeShift, attendanceStats, riderSettlements] = await Promise.all([
-      getActiveRiderShiftQuery(currentRider.id),
-      getRiderAttendanceStatsQuery(currentRider.id),
-      getSettlementsByRiderIdQuery(currentRider.id),
-    ])
+    const [activeShift, attendanceStats, riderSettlements, cashHandovers] =
+      await Promise.all([
+        getActiveRiderShiftQuery(currentRider.id),
+        getRiderAttendanceStatsQuery(currentRider.id),
+        getSettlementsByRiderIdQuery(currentRider.id),
+        getRiderCashHandoversByRiderIdQuery(currentRider.id),
+      ])
     const riderNotifications = await getUserNotificationsQuery(user.id, 20)
+    const pendingSettlementAmount = cashHandovers
+      .filter((h) => h.status === 'pending')
+      .reduce((total, h) => total + h.amount, 0)
 
     return {
       rider: currentRider,
@@ -3354,6 +3388,8 @@ export const getRiderPortalFn = createServerFn({ method: 'GET' }).handler(
       activeShift,
       attendanceStats,
       settlements: riderSettlements,
+      cashHandovers,
+      pendingSettlementAmount,
       stats: {
         totalAssigned: assignedOrders.length,
         activeCount: activeOrders.length,
@@ -3569,8 +3605,10 @@ export const depositRiderCashFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>
     z
       .object({
-        amount: z.number().positive(),
-        note: z.string().optional(),
+        amount: z.number().int().positive(),
+        note: z.string().max(500).optional(),
+        paymentMethod: z.enum(RIDER_SETTLEMENT_PAYMENT_METHODS).default('cash'),
+        paymentReference: z.string().max(120).optional(),
       })
       .parse(d),
   )
@@ -3585,36 +3623,65 @@ export const depositRiderCashFn = createServerFn({ method: 'POST' })
 
     const rider = await getRiderByUserIdQuery(user.id)
     if (!rider) throw new Error('Rider profile not found')
-    if (rider.cashOnHand < data.amount) {
-      throw new Error('Deposit amount exceeds cash on hand')
-    }
 
     const now = new Date()
-
     const handoverId = nid('rch')
+
     await dbTx.transaction(async (tx) => {
-      await tx
-        .update(riders)
-        .set({
-          cashOnHand: rider.cashOnHand - data.amount,
-          updatedAt: now,
-        })
+      // Lock the rider row so concurrent pending requests cannot overdraw the
+      // rider's physical COD cash float.
+      const lockedRiderRows = await tx
+        .select()
+        .from(riders)
         .where(eq(riders.id, rider.id))
+        .limit(1)
+        .for('update')
+      if (lockedRiderRows.length === 0) {
+        throw new Error('Rider profile not found')
+      }
+      const lockedRider = lockedRiderRows[0]
+
+      const pendingRows = await tx
+        .select({ amount: riderCashHandovers.amount })
+        .from(riderCashHandovers)
+        .where(
+          and(
+            eq(riderCashHandovers.riderId, rider.id),
+            eq(riderCashHandovers.status, 'pending'),
+          ),
+        )
+      const pendingAmount = pendingRows.reduce(
+        (total, row) => total + row.amount,
+        0,
+      )
+
+      const { paymentReference } = validateRiderSettlementRequest({
+        amount: data.amount,
+        cashOnHand: lockedRider.cashOnHand,
+        pendingAmount,
+        paymentMethod: data.paymentMethod,
+        paymentReference: data.paymentReference,
+      })
 
       await tx.insert(riderCashHandovers).values({
         id: handoverId,
         riderId: rider.id,
         amount: data.amount,
-        status: 'verified',
-        notes: data.note || 'Cash deposit to operations counter',
+        status: 'pending',
+        paymentMethod: data.paymentMethod,
+        paymentReference,
+        notes: data.note || 'Settlement request submitted by rider',
+        createdAt: now,
       })
 
-      await postCashHandoverTx(tx, {
-        handoverId,
-        riderId: rider.id,
-        riderName: rider.name,
-        amount: data.amount,
-        actor: user,
+      await tx.insert(notifications).values({
+        id: nid('notif'),
+        type: 'finance',
+        title: 'Rider settlement request pending',
+        body: `${lockedRider.name} requested settlement of Rs. ${(data.amount / 100).toFixed(2)} via ${RIDER_SETTLEMENT_METHOD_LABELS[data.paymentMethod]}.`,
+        href: '/admin/accounts?tab=salary-account',
+        read: false,
+        createdAt: now,
       })
     })
 
@@ -3622,10 +3689,10 @@ export const depositRiderCashFn = createServerFn({ method: 'POST' })
       rider.name,
       'finance',
       'create',
-      `Rider ${rider.name} submitted cash handover Rs. ${(data.amount / 100).toFixed(2)}`,
+      `Rider ${rider.name} submitted settlement request Rs. ${(data.amount / 100).toFixed(2)} via ${RIDER_SETTLEMENT_METHOD_LABELS[data.paymentMethod]} (pending approval)`,
     )
 
-    return true
+    return { id: handoverId, status: 'pending' as const }
   })
 
 // -------------------------------------------------------------

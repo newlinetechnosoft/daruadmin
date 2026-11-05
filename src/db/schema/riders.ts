@@ -62,8 +62,13 @@ export const riderCashHandovers = pgTable(
       .references(() => riders.id, { onDelete: 'cascade' }),
     amount: integer('amount').notNull(), // paisa
     status: text('status').notNull().default('pending'), // 'pending' | 'verified' | 'rejected'
+    paymentMethod: text('payment_method').notNull().default('cash'), // 'cash' | 'bank_transfer' | 'cheque'
+    paymentReference: text('payment_reference'),
     notes: text('notes'),
     receivedBy: text('received_by'),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    rejectionReason: text('rejection_reason'),
+    journalEntryId: text('journal_entry_id'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),

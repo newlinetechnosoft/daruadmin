@@ -12,5 +12,12 @@ export const Route = createFileRoute('/rider/earnings')({
 
 function RiderEarningsPage() {
   const { data } = useSuspenseQuery(riderQueries.portal())
-  return <RiderEarnings rider={data.rider} orders={data.orders} />
+  return (
+    <RiderEarnings
+      rider={data.rider}
+      orders={data.orders}
+      cashHandovers={data.cashHandovers}
+      pendingSettlementAmount={data.pendingSettlementAmount}
+    />
+  )
 }

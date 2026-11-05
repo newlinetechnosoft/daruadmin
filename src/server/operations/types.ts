@@ -432,6 +432,26 @@ export interface Settlement {
   createdAt: string
 }
 
+export type RiderSettlementPaymentMethod = 'cash' | 'bank_transfer' | 'cheque'
+
+export type RiderCashHandoverStatus = 'pending' | 'verified' | 'rejected'
+
+export interface RiderCashHandover {
+  id: string
+  riderId: string
+  riderName?: string
+  amount: number
+  status: RiderCashHandoverStatus
+  paymentMethod: RiderSettlementPaymentMethod
+  paymentReference?: string | null
+  notes?: string | null
+  receivedBy?: string | null
+  reviewedAt?: string | null
+  rejectionReason?: string | null
+  journalEntryId?: string | null
+  createdAt: string
+}
+
 export interface PaymentTxn {
   id: string
   orderId: string
@@ -471,7 +491,8 @@ export interface CouponRedemption {
 }
 
 export type NoticeType = 'image' | 'text' | 'html'
-export type NoticeColorTheme = 'default' | 'dark' | 'emerald' | 'wine' | 'amber' | 'blue'
+export type NoticeColorTheme =
+  'default' | 'dark' | 'emerald' | 'wine' | 'amber' | 'blue'
 
 export interface LandingNotice {
   id: string
@@ -607,6 +628,7 @@ export interface OpsState {
   complaints: Complaint[]
   ledger: LedgerEntry[]
   settlements: Settlement[]
+  riderCashHandovers?: RiderCashHandover[]
   payments: PaymentTxn[]
   coupons: Coupon[]
   couponRedemptions?: CouponRedemption[]

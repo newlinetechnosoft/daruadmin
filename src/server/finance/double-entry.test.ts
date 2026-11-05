@@ -581,6 +581,31 @@ describe('Double-Entry Accounting Core (Module 3)', () => {
     expect(riderCredit?.partyId).toBe('rider_01')
   })
 
+  it('posts bank transfer and cheque rider settlements to the bank account', async () => {
+    for (const paymentMethod of ['bank_transfer', 'cheque'] as const) {
+      const tx = createMockTx()
+
+      await postCashHandoverTx(tx, {
+        handoverId: `rch_test_${paymentMethod}`,
+        riderId: 'rider_01',
+        riderName: 'Ramesh Thapa',
+        amount: 500000,
+        paymentMethod,
+        actor: { id: 'usr_mgr', name: 'Manager Kiran', role: 'manager' },
+      })
+
+      const bankDebit = tx.insertedLines.find((l) => l.accountId === 'acc_1012')
+      const cashDebit = tx.insertedLines.find((l) => l.accountId === 'acc_1011')
+      const riderCredit = tx.insertedLines.find(
+        (l) => l.accountId === 'acc_1031',
+      )
+
+      expect(bankDebit?.debit).toBe(500000)
+      expect(cashDebit).toBeUndefined()
+      expect(riderCredit?.credit).toBe(500000)
+    }
+  })
+
   it('correctly posts and balances Dealer Settlement Payment with TDS withholding', async () => {
     const tx = createMockTx()
 

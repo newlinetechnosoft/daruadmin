@@ -2,11 +2,17 @@ import { dbTx } from '#/db'
 import {
   dealers,
   dealerSettlements,
+  notifications,
   orderItems,
   riderCashHandovers,
   riders,
 } from '#/db/schema'
-import { requirePermission, logAudit } from '#/server/auth/permissions'
+import {
+  requirePermission,
+  requireRole,
+  logAudit,
+} from '#/server/auth/permissions'
+import { RIDER_SETTLEMENT_METHOD_LABELS } from '#/server/riders/rider-settlements'
 import {
   getAccountDefaultsQuery,
   getChartOfAccountsWithBalancesQuery,
@@ -465,6 +471,218 @@ export const recordManagerCashHandoverFn = createServerFn({ method: 'POST' })
       'accounts',
       'create',
       `Received rider cash handover ${result.voucherNo}: Rs. ${data.amountInRs} from ${riderRow[0].name}`,
+    )
+
+    return result
+  })
+
+/**
+ * Accepts a rider-submitted settlement request.
+ *
+ * Only managers and admins may accept a rider settlement. Until then the
+ * request remains pending, the rider's cash-on-hand balance is untouched, and
+ * no ledger entry is posted. Acceptance is the point where the amount is
+ * considered settled.
+ */
+export const approveRiderCashSettlementFn = createServerFn({
+  method: 'POST',
+})
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.string().min(1),
+        notes: z.string().max(500).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requireRole('admin', 'manager')
+    const now = new Date()
+
+    const result = await dbTx.transaction(async (tx) => {
+      const handoverRows = await tx
+        .select()
+        .from(riderCashHandovers)
+        .where(eq(riderCashHandovers.id, data.id))
+        .limit(1)
+        .for('update')
+      if (handoverRows.length === 0) {
+        throw new Error('Rider settlement request not found')
+      }
+      const handover = handoverRows[0]
+
+      if (handover.status === 'verified') {
+        throw new Error(
+          'This rider settlement request has already been accepted.',
+        )
+      }
+      if (handover.status === 'rejected') {
+        throw new Error(
+          'This rider settlement request was rejected and cannot be accepted.',
+        )
+      }
+      if (
+        handover.paymentMethod !== 'cash' &&
+        !handover.paymentReference?.trim()
+      ) {
+        throw new Error(
+          'Payment reference is required for bank transfer and cheque settlements.',
+        )
+      }
+
+      const riderRows = await tx
+        .select()
+        .from(riders)
+        .where(eq(riders.id, handover.riderId))
+        .limit(1)
+        .for('update')
+      if (riderRows.length === 0) throw new Error('Rider profile not found')
+      const rider = riderRows[0]
+
+      if (rider.cashOnHand < handover.amount) {
+        throw new Error(
+          `Cannot accept settlement: rider only has Rs. ${(rider.cashOnHand / 100).toFixed(2)} cash on hand, but the request is for Rs. ${(handover.amount / 100).toFixed(2)}.`,
+        )
+      }
+
+      await tx
+        .update(riders)
+        .set({
+          cashOnHand: rider.cashOnHand - handover.amount,
+          updatedAt: now,
+        })
+        .where(eq(riders.id, rider.id))
+
+      const posting = await postCashHandoverTx(tx, {
+        handoverId: handover.id,
+        riderId: rider.id,
+        riderName: rider.name,
+        amount: handover.amount,
+        paymentMethod: handover.paymentMethod as
+          'cash' | 'bank_transfer' | 'cheque',
+        actor: user,
+      })
+
+      const combinedNotes = data.notes
+        ? handover.notes
+          ? `${handover.notes} · ${data.notes}`
+          : data.notes
+        : handover.notes
+
+      await tx
+        .update(riderCashHandovers)
+        .set({
+          status: 'verified',
+          receivedBy: user.id,
+          reviewedAt: now,
+          journalEntryId: posting.journalEntryId,
+          notes: combinedNotes,
+        })
+        .where(eq(riderCashHandovers.id, handover.id))
+
+      if (rider.userId) {
+        await tx.insert(notifications).values({
+          id: nid('notif'),
+          userId: rider.userId,
+          type: 'finance',
+          title: 'Settlement request accepted',
+          body: `Your ${RIDER_SETTLEMENT_METHOD_LABELS[handover.paymentMethod as 'cash' | 'bank_transfer' | 'cheque'].toLowerCase()} settlement of Rs. ${(handover.amount / 100).toFixed(2)} was accepted. Voucher: ${posting.voucherNo}.`,
+          href: '/rider/earnings',
+          read: false,
+          createdAt: now,
+        })
+      }
+
+      return {
+        ...posting,
+        amount: handover.amount,
+        riderName: rider.name,
+      }
+    })
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'approve',
+      `Accepted rider settlement ${result.voucherNo} for ${result.riderName}: Rs. ${(result.amount / 100).toFixed(2)}`,
+    )
+
+    return result
+  })
+
+/**
+ * Rejects a rider-submitted settlement request without touching the rider's
+ * cash-on-hand balance or posting any ledger entry.
+ */
+export const rejectRiderCashSettlementFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.string().min(1),
+        reason: z.string().min(3).max(500),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requireRole('admin', 'manager')
+    const now = new Date()
+
+    const result = await dbTx.transaction(async (tx) => {
+      const handoverRows = await tx
+        .select()
+        .from(riderCashHandovers)
+        .where(eq(riderCashHandovers.id, data.id))
+        .limit(1)
+        .for('update')
+      if (handoverRows.length === 0) {
+        throw new Error('Rider settlement request not found')
+      }
+      const handover = handoverRows[0]
+
+      if (handover.status !== 'pending') {
+        throw new Error(
+          `This settlement request is already ${handover.status} and cannot be rejected.`,
+        )
+      }
+
+      const riderRows = await tx
+        .select()
+        .from(riders)
+        .where(eq(riders.id, handover.riderId))
+        .limit(1)
+      const rider = riderRows[0]
+
+      await tx
+        .update(riderCashHandovers)
+        .set({
+          status: 'rejected',
+          receivedBy: user.id,
+          reviewedAt: now,
+          rejectionReason: data.reason,
+        })
+        .where(eq(riderCashHandovers.id, handover.id))
+
+      if (riderRows.length > 0 && rider.userId) {
+        await tx.insert(notifications).values({
+          id: nid('notif'),
+          userId: rider.userId,
+          type: 'finance',
+          title: 'Settlement request rejected',
+          body: `Your settlement request of Rs. ${(handover.amount / 100).toFixed(2)} was rejected. Reason: ${data.reason}`,
+          href: '/rider/earnings',
+          read: false,
+          createdAt: now,
+        })
+      }
+
+      return { id: handover.id, status: 'rejected' as const }
+    })
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'edit',
+      `Rejected rider settlement request ${data.id}: ${data.reason}`,
     )
 
     return result
