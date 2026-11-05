@@ -606,21 +606,30 @@ export const getLedgerFn = createServerFn({ method: 'GET' }).handler(
 export const getRidersFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     await requirePermission('riders', 'view')
-    const [riderList, complaintsList, zonesList, users] = await Promise.all([
+    const [
+      riderList,
+      complaintsList,
+      zonesList,
+      users,
+      riderCashHandoversList,
+    ] = await Promise.all([
       getAllRidersQuery(),
       getAllComplaintsQuery(),
       getAllShippingZonesQuery(),
       getAdminUsersQuery(),
+      getAllRiderCashHandoversQuery(),
     ])
     return {
       ops: {
         riders: riderList,
         complaints: complaintsList,
         zones: zonesList,
+        riderCashHandovers: riderCashHandoversList,
       },
       riders: riderList,
       complaints: complaintsList,
       zones: zonesList,
+      riderCashHandovers: riderCashHandoversList,
       users,
     }
   },

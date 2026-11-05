@@ -9,7 +9,7 @@ import {
   settlements,
   user,
 } from '#/db/schema'
-import { and, desc, eq, gte, isNull, lte, or } from 'drizzle-orm'
+import { and, desc, eq, gte, isNull, lte, or, sql } from 'drizzle-orm'
 import type {
   Rider,
   RiderCashHandover,
@@ -166,7 +166,12 @@ export async function getAllRiderCashHandoversQuery(
     })
     .from(riderCashHandovers)
     .leftJoin(riders, eq(riderCashHandovers.riderId, riders.id))
-    .orderBy(desc(riderCashHandovers.createdAt))
+    // Pending requests must always surface in the admin review queues, even
+    // when there is a long history of completed settlements.
+    .orderBy(
+      sql`case when ${riderCashHandovers.status} = 'pending' then 0 else 1 end`,
+      desc(riderCashHandovers.createdAt),
+    )
     .limit(limit)
 
   return rows.map((r) =>

@@ -11,13 +11,13 @@ import {
   upsertRiderFn,
   deleteRiderFn,
 } from '#/server/operations/operations.functions'
-import { recordManagerCashHandoverFn } from '#/server/finance/finance.functions'
 import type { Rider } from '#/server/operations/types'
 import { formatNPR, fromPaisa } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { RiderDialog } from './rider-dialog'
+import { RiderSettlementDialog } from './rider-settlement-dialog'
 import { RiderTelemetryMap } from './rider-telemetry-map'
 import { adminQueries } from '#/queries/admin'
 import { can } from '#/server/auth/permissions-shared'
@@ -79,6 +79,16 @@ export function RidersPanel() {
     await router.invalidate()
   }
 
+  const refreshAfterSettlement = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: adminQueries.riders().queryKey,
+    })
+    await queryClient.invalidateQueries({
+      queryKey: adminQueries.ledger().queryKey,
+    })
+    await router.invalidate()
+  }
+
   const { data: access } = useQuery(adminQueries.access())
   const grants = access?.authenticated ? access.grants : null
   const canCreate = access ? can(grants, 'riders', 'create') : true
@@ -99,6 +109,24 @@ export function RidersPanel() {
   const [deleteTarget, setDeleteTarget] = useState<Rider | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Rider settlement request review dialog
+  const [settleTarget, setSettleTarget] = useState<Rider | null>(null)
+  const riderCashHandovers = ridersData.ops.riderCashHandovers
+  const canReviewSettlements =
+    access?.user?.role === 'admin' || access?.user?.role === 'manager'
+  const pendingSettlementsByRider = useMemo(() => {
+    const pending = new Map<string, { amount: number; count: number }>()
+    for (const handover of riderCashHandovers) {
+      if (handover.status !== 'pending') continue
+      const current = pending.get(handover.riderId) ?? { amount: 0, count: 0 }
+      pending.set(handover.riderId, {
+        amount: current.amount + handover.amount,
+        count: current.count + 1,
+      })
+    }
+    return pending
+  }, [riderCashHandovers])
 
   const filteredRiders = useMemo(() => {
     return ops.riders.filter((r) => {
@@ -202,30 +230,8 @@ export function RidersPanel() {
     }
   }
 
-  const handleSettleRiderCash = async (rider: Rider) => {
-    if (rider.cashOnHand <= 0) return
-
-    try {
-      setIsSubmitting(true)
-      const amount = rider.cashOnHand
-
-      await recordManagerCashHandoverFn({
-        data: {
-          riderId: rider.id,
-          amountInRs: amount / 100,
-          notes: `Rider COD Remittance Reconciled: ${rider.name} (${rider.phone})`,
-        },
-      })
-
-      toast.success(
-        `Settled ${formatNPR(amount)} from ${rider.name}! Receipt voucher posted.`,
-      )
-      await invalidateRiders()
-    } catch {
-      toast.error('Failed to settle courier cash')
-    } finally {
-      setIsSubmitting(false)
-    }
+  const handleReviewRiderSettlement = (rider: Rider) => {
+    setSettleTarget(rider)
   }
 
   const handleExportCSV = () => {
@@ -542,36 +548,57 @@ export function RidersPanel() {
                       >
                         {formatNPR(rider.cashOnHand)}
                       </span>
-                      {rider.cashOnHand >= 2000000 ? (
-                        <span className="text-xs text-destructive font-medium block">
-                          ⚠️ Limit exceeded (&gt;20k)
+                      {(pendingSettlementsByRider.get(rider.id)?.amount ?? 0) >
+                      0 ? (
+                        <span className="text-xs text-info font-medium block">
+                          Requested:{' '}
+                          {formatNPR(
+                            pendingSettlementsByRider.get(rider.id)?.amount ??
+                              0,
+                          )}
                         </span>
                       ) : rider.cashOnHand > 0 ? (
                         <span className="text-xs text-muted-foreground">
-                          Pending handover
+                          No settlement request yet
+                        </span>
+                      ) : null}
+                      {rider.cashOnHand >= 2000000 ? (
+                        <span className="text-xs text-destructive font-medium block">
+                          ⚠️ Limit exceeded (&gt;20k)
                         </span>
                       ) : null}
                     </TableCell>
 
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {rider.cashOnHand > 0 && (
-                          <Button
-                            variant={
-                              rider.cashOnHand >= 2000000
-                                ? 'destructive'
-                                : 'default'
-                            }
-                            size="sm"
-                            disabled={isSubmitting}
-                            onClick={() => handleSettleRiderCash(rider)}
-                            className="h-7 gap-1 px-2 text-xs"
-                            title="Settle COD Cash Handover"
-                          >
-                            <Coins className="h-3 w-3" />
-                            <span className="hidden sm:inline">Settle</span>
-                          </Button>
-                        )}
+                        {(rider.cashOnHand > 0 ||
+                          (pendingSettlementsByRider.get(rider.id)?.count ??
+                            0) > 0) &&
+                          canReviewSettlements && (
+                            <Button
+                              variant={
+                                rider.cashOnHand >= 2000000
+                                  ? 'destructive'
+                                  : (pendingSettlementsByRider.get(rider.id)
+                                        ?.count ?? 0) > 0
+                                    ? 'default'
+                                    : 'outline'
+                              }
+                              size="sm"
+                              disabled={isSubmitting}
+                              onClick={() => handleReviewRiderSettlement(rider)}
+                              className="h-7 gap-1 px-2 text-xs"
+                              title="Review rider settlement requests"
+                            >
+                              <Coins className="h-3 w-3" />
+                              <span className="hidden sm:inline">
+                                {(pendingSettlementsByRider.get(rider.id)
+                                  ?.count ?? 0) > 0
+                                  ? `Review (${pendingSettlementsByRider.get(rider.id)?.count})`
+                                  : 'Settle'}
+                              </span>
+                            </Button>
+                          )}
 
                         {canEdit && (
                           <Button
@@ -645,15 +672,25 @@ export function RidersPanel() {
                               </span>
                             </DropdownMenuItem>
 
-                            {rider.cashOnHand > 0 && (
-                              <DropdownMenuItem
-                                onSelect={() => handleSettleRiderCash(rider)}
-                                className="text-xs gap-2 cursor-pointer text-amber-600 focus:text-amber-600"
-                              >
-                                <Coins className="size-3.5" />
-                                <span>Settle COD float</span>
-                              </DropdownMenuItem>
-                            )}
+                            {(rider.cashOnHand > 0 ||
+                              (pendingSettlementsByRider.get(rider.id)?.count ??
+                                0) > 0) &&
+                              canReviewSettlements && (
+                                <DropdownMenuItem
+                                  onSelect={() =>
+                                    handleReviewRiderSettlement(rider)
+                                  }
+                                  className="text-xs gap-2 cursor-pointer text-amber-600 focus:text-amber-600"
+                                >
+                                  <Coins className="size-3.5" />
+                                  <span>
+                                    {(pendingSettlementsByRider.get(rider.id)
+                                      ?.count ?? 0) > 0
+                                      ? 'Review settlement requests'
+                                      : 'View settlement status'}
+                                  </span>
+                                </DropdownMenuItem>
+                              )}
 
                             {canDelete && (
                               <>
@@ -704,6 +741,17 @@ export function RidersPanel() {
           deleteTarget?.cashOnHand && deleteTarget.cashOnHand > 0,
         )}
         onConfirm={handleDeleteRider}
+      />
+
+      <RiderSettlementDialog
+        open={Boolean(settleTarget)}
+        onOpenChange={(open) => {
+          if (!open) setSettleTarget(null)
+        }}
+        rider={settleTarget}
+        requests={riderCashHandovers}
+        canReview={canReviewSettlements}
+        onUpdated={refreshAfterSettlement}
       />
     </div>
   )
