@@ -283,10 +283,9 @@ export function OrdersPanel() {
       await invalidateOrders()
       // Re-read the order from the refreshed list to get the real status
       if (selectedOrder && selectedOrder.id === orderId) {
-        const refreshed = queryClient
-          .getQueryData<Awaited<ReturnType<typeof adminQueries.orders>>['data']>(
-            adminQueries.orders().queryKey,
-          )
+        const refreshed = queryClient.getQueryData(
+          adminQueries.orders().queryKey,
+        )
         const updatedOrder = (refreshed as any)?.ops?.orders?.find(
           (o: any) => o.id === orderId,
         )

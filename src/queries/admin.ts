@@ -33,7 +33,16 @@ import {
   getAdminDealersFn,
   getDealerByIdFn,
 } from '#/server/inventory/inventory.functions'
-import { getAccountDefaultsFn } from '#/server/finance/finance.functions'
+import {
+  getAccountDefaultsFn,
+  getCostCentersFn,
+  getDealerPayablesSummaryFn,
+  getGeneralLedgerFn,
+  getJournalEntryByIdFn,
+  getJournalTransactionsFn,
+  getPartyStatementFn,
+  getRiderAccountsSummaryFn,
+} from '#/server/finance/finance.functions'
 
 export const adminQueries = {
   access: () =>
@@ -75,6 +84,99 @@ export const adminQueries = {
     queryOptions({
       queryKey: ['admin', 'account-defaults'],
       queryFn: () => getAccountDefaultsFn(),
+      staleTime: 1000 * 60,
+    }),
+
+  generalLedger: (
+    data: {
+      accountId?: string
+      accountCode?: string
+      accountRootType?: string
+      accountType?: string
+      partyType?: string
+      partyId?: string
+      voucherType?: string
+      refType?: string
+      refId?: string
+      costCenterId?: string
+      fromDate?: string
+      toDate?: string
+      search?: string
+      limit?: number
+      offset?: number
+    } = {},
+  ) =>
+    queryOptions({
+      queryKey: ['admin', 'general-ledger', data],
+      queryFn: () => getGeneralLedgerFn({ data }),
+      staleTime: 1000 * 30,
+    }),
+
+  partyStatement: (data: {
+    partyType: 'dealer' | 'rider' | 'customer' | 'supplier'
+    partyId: string
+    fromDate?: string
+    toDate?: string
+    accountId?: string
+    limit?: number
+  }) =>
+    queryOptions({
+      queryKey: [
+        'admin',
+        'party-statement',
+        data.partyType,
+        data.partyId,
+        data,
+      ],
+      queryFn: () => getPartyStatementFn({ data }),
+      staleTime: 1000 * 30,
+    }),
+
+  journalEntryById: (id: string) =>
+    queryOptions({
+      queryKey: ['admin', 'journal-entry', id],
+      queryFn: () => getJournalEntryByIdFn({ data: { id } }),
+      staleTime: 1000 * 60,
+      enabled: !!id,
+    }),
+
+  costCenters: () =>
+    queryOptions({
+      queryKey: ['admin', 'cost-centers'],
+      queryFn: () => getCostCentersFn(),
+      staleTime: 1000 * 60 * 5,
+    }),
+
+  journalTransactions: (
+    data: {
+      voucherType?: string
+      refType?: string
+      partyType?: string
+      partyId?: string
+      fromDate?: string
+      toDate?: string
+      search?: string
+      limit?: number
+      offset?: number
+    } = {},
+  ) =>
+    queryOptions({
+      queryKey: ['admin', 'journal-transactions', data],
+      queryFn: () => getJournalTransactionsFn({ data }),
+      staleTime: 1000 * 30,
+    }),
+
+  dealerPayablesSummary: () =>
+    queryOptions({
+      queryKey: ['admin', 'dealer-payables-summary'],
+      queryFn: () => getDealerPayablesSummaryFn(),
+      staleTime: 1000 * 60,
+    }),
+
+  riderAccountsSummary: () =>
+    queryOptions({
+      queryKey: ['admin', 'rider-accounts-summary'],
+      queryFn: () => getRiderAccountsSummaryFn(),
       staleTime: 1000 * 60,
     }),
 

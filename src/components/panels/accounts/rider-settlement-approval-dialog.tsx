@@ -121,8 +121,8 @@ export function RiderSettlementApprovalDialog({
               <div className="flex items-center justify-between border-b border-border/50 pb-1.5">
                 <span className="text-muted-foreground">Period:</span>
                 <span className="font-mono text-xs text-foreground">
-                  {settlement.periodStart?.slice(0, 10)} →{' '}
-                  {settlement.periodEnd?.slice(0, 10)}
+                  {settlement.periodStart.slice(0, 10)} →{' '}
+                  {settlement.periodEnd.slice(0, 10)}
                 </span>
               </div>
 

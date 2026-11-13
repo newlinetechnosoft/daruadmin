@@ -7,9 +7,11 @@ import { adminQueries } from '#/queries/admin'
 const accountsSearchSchema = z.object({
   tab: z
     .enum([
+      'overview',
       'ledger',
       'transactions',
       'dealer-ledger',
+      'rider-ledger',
       'sales-account',
       'salary-account',
       'chart-of-accounts',

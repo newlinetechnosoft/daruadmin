@@ -100,9 +100,8 @@ function CheckRow({
       <Checkbox id={id} checked={checked} onCheckedChange={onChange} />
       <Label
         htmlFor={id}
-        className={`text-xs cursor-pointer ${
-          checked ? 'font-medium text-foreground' : 'text-muted-foreground'
-        }`}
+        className={`text-xs cursor-pointer ${checked ? 'font-medium text-foreground' : 'text-muted-foreground'
+          }`}
       >
         {label}
       </Label>
@@ -216,11 +215,10 @@ function FoodPage() {
                 variant={active ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => handleCategorySelect(cat.slug)}
-                className={`w-full justify-between h-8 px-2.5 text-xs font-normal ${
-                  active
-                    ? 'font-medium text-foreground'
-                    : 'text-muted-foreground'
-                }`}
+                className={`w-full justify-between h-8 px-2.5 text-xs font-normal ${active
+                  ? 'font-medium text-foreground'
+                  : 'text-muted-foreground'
+                  }`}
               >
                 <span>{cat.name}</span>
                 <span className="text-[11px] font-mono text-muted-foreground">
@@ -253,12 +251,12 @@ function FoodPage() {
   )
 
   return (
-    <div className="storefront flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
+    <div className="storefront isolate flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
       <Header />
 
       <main className="flex-1">
         {/* Page Hero */}
-        <section className="border-b border-border bg-muted/20 py-8 sm:py-12">
+        <section className="border-b border-border bg-muted/20 py-8 sm:py-5">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <Breadcrumb className="mb-4">
               <BreadcrumbList className="text-xs">
@@ -300,7 +298,7 @@ function FoodPage() {
         </section>
 
         {/* Shop Area */}
-        <section className="py-8 sm:py-10">
+        <section className="relative py-8 sm:py-5">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             {/* Toolbar */}
             <div className="flex items-center justify-between gap-4 border-b border-border pb-4">
@@ -435,6 +433,22 @@ function FoodPage() {
                 )}
               </section>
             </div>
+          </div>
+
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10">
+            <img
+              src="/images/butwal_skyline_navy.webp"
+              srcSet="/images/butwal_skyline_navy-1024.webp 1024w, /images/butwal_skyline_navy.webp 1963w"
+              sizes="100vw"
+              width={1963}
+              height={247}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              className="block h-auto w-full opacity-[0.15] dark:invert dark:opacity-10"
+            />
+            {/* Fade the top so it blends into the section instead of cutting off */}
+            <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-transparent" />
           </div>
         </section>
       </main>

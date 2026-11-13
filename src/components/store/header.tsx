@@ -2,29 +2,29 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useRouter } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
+import {
+  Bike,
+  Heart,
+  LogOut,
+  Menu,
+  Search,
+  Shield,
+  ShoppingBag,
+  ShoppingCart,
+  Truck,
+  UserRound,
+} from 'lucide-react'
+import { toast } from 'sonner'
+
 import { useCart } from '#/lib/cart-context'
 import { authClient } from '#/lib/auth-client'
 import { clearAllLocalData } from '#/lib/idb'
-import { toast } from 'sonner'
-import {
-  Menu,
-  PhoneCall,
-  User,
-  LogOut,
-  Search,
-  ShoppingCart,
-  Shield,
-  Bike,
-  Heart,
-  Truck,
-  ShoppingBag,
-} from 'lucide-react'
 import { ThemeToggle } from '#/components/shared/theme-toggle'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
-import { Button } from '#/components/ui/button'
-import { Input } from '#/components/ui/input'
 import { Avatar, AvatarFallback } from '#/components/ui/avatar'
 import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,25 +46,28 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   const [searchVal, setSearchVal] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
+
   const navigate = useNavigate()
   const router = useRouter()
   const queryClient = useQueryClient()
 
-  const firstName = session?.user?.name?.trim().split(' ')[0]
-  const isStaff =
-    session?.user?.role === 'admin' || session?.user?.role === 'manager'
-  const isRider = session?.user?.role === 'rider'
+  const user = session?.user
+  const firstName = user?.name?.trim().split(' ')[0]
+  const isStaff = user?.role === 'admin' || user?.role === 'manager'
+  const isRider = user?.role === 'rider'
 
-  const handleSearchSubmit = (e: FormEvent) => {
-    e.preventDefault()
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const query = searchVal.trim()
+    if (!query) return
+
     if (onSearch) {
-      onSearch(searchVal)
-    } else if (searchVal.trim()) {
-      navigate({
-        to: '/drinks',
-        search: { query: searchVal.trim() },
-      })
+      onSearch(query)
+    } else {
+      navigate({ to: '/drinks', search: { query } })
     }
+
+    setMobileMenuOpen(false)
   }
 
   const handleSignOut = async () => {
@@ -81,184 +84,162 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
     }
   }
 
+  const navLinkClass =
+    'relative py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground [&.active]:text-foreground'
+
   return (
-    <header className="sticky top-0 z-50 h-16 border-b border-border bg-background/95 backdrop-blur-sm">
-      <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo & Brand */}
-        <div className="flex items-center gap-8">
+    <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur-xl">
+      <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        {/* Brand */}
+        <div className="flex gap-4">
           <Link
             to="/"
-            className="text-lg font-semibold tracking-tight text-foreground"
+            aria-label="Mezmani home"
+            className="flex shrink-0 items-center"
           >
-            MEZMANI
+            <img
+              src="/mezmani_logo.webp"
+              alt="Mezmani"
+              width="156"
+              height="48"
+              className="h-9 w-auto object-contain sm:h-10"
+            />
           </Link>
 
-          {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
-            <Link
-              to="/drinks"
-              className="hover:text-foreground transition-colors"
-              activeProps={{ className: 'text-foreground font-semibold' }}
-            >
+          {/* Primary navigation */}
+          <nav
+            aria-label="Main navigation"
+            className="hidden items-center gap-7 lg:flex"
+          >
+            <Link to="/drinks" className={navLinkClass}>
               Drinks
             </Link>
-            <Link
-              to="/food"
-              className="hover:text-foreground transition-colors"
-              activeProps={{ className: 'text-foreground font-semibold' }}
-            >
+            <Link to="/food" className={navLinkClass}>
               Food
             </Link>
-            <Link
-              to="/track"
-              className="hover:text-foreground transition-colors flex items-center gap-1.5"
-              activeProps={{ className: 'text-foreground font-semibold' }}
-            >
-              <Truck className="h-4 w-4 text-primary" />
-              Track my order
+            <Link to="/track" className={navLinkClass}>
+              Track order
             </Link>
-            <a
-              href="/#reviews"
-              className="hover:text-foreground transition-colors"
-            >
-              Reviews
-            </a>
-            <a
-              href="/#about"
-              className="hover:text-foreground transition-colors"
-            >
-              About
-            </a>
-            {isStaff && (
-              <Link
-                to="/admin"
-                className="hover:text-foreground transition-colors text-primary font-semibold"
-                activeProps={{ className: 'text-foreground font-semibold' }}
-              >
-                Admin
-              </Link>
-            )}
-            {isRider && (
-              <Link
-                to="/rider"
-                className="hover:text-foreground transition-colors text-primary font-semibold flex items-center gap-1.5"
-                activeProps={{ className: 'text-foreground font-semibold' }}
-              >
-                <Bike className="h-4 w-4" />
-                Deliveries
-              </Link>
-            )}
           </nav>
         </div>
 
-        {/* Right Actions */}
-        <div className="flex items-center gap-2.5">
-          {/* Search bar */}
+        {/* Search and desktop actions */}
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
           <form
             onSubmit={handleSearchSubmit}
             role="search"
-            className="hidden sm:flex relative w-48 md:w-64"
+            className="relative hidden w-48 xl:block"
           >
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            />
             <Input
               type="search"
               value={searchVal}
-              onChange={(e) => {
-                setSearchVal(e.target.value)
-                onSearch?.(e.target.value)
+              onChange={(event) => {
+                setSearchVal(event.target.value)
+                onSearch?.(event.target.value)
               }}
-              placeholder="What are you craving?"
+              placeholder="Search Mezmani"
               aria-label="Search drinks and food"
-              className="h-9 pl-9 pr-3 text-sm"
+              className="h-10 rounded-full border-border/70 bg-muted/50 pl-9 text-sm placeholder:text-muted-foreground/80 focus-visible:bg-background"
             />
           </form>
 
-          {/* Theme Toggle */}
-          <ThemeToggle />
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
 
-          {/* User Profile / Auth */}
-          {session?.user ? (
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className="hidden h-10 w-10 rounded-full text-muted-foreground hover:text-foreground sm:inline-flex"
+            aria-label="Your favorites"
+          >
+            <Link to="/favorites">
+              <Heart className="h-[18px] w-[18px]" />
+            </Link>
+          </Button>
+
+          {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="gap-2 h-9 px-2 text-sm font-medium"
+                  className="h-10 gap-2 rounded-full px-2.5"
+                  aria-label="Open account menu"
                 >
-                  <Avatar className="h-6 w-6">
-                    <AvatarFallback className="text-xs">
-                      {session.user.name?.charAt(0).toUpperCase()}
+                  <Avatar className="h-7 w-7">
+                    <AvatarFallback className="bg-primary/15 text-xs font-semibold text-foreground">
+                      {user.name?.charAt(0).toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden md:inline max-w-[120px] truncate">
-                    Hi, {firstName}
+                  <span className="hidden max-w-24 truncate text-sm font-medium md:inline">
+                    {firstName}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 text-sm">
-                <div className="px-2 py-2">
-                  <p className="font-medium text-foreground truncate">
-                    {session.user.name}
+              <DropdownMenuContent align="end" className="w-60">
+                <div className="px-3 py-2.5">
+                  <p className="truncate text-sm font-semibold">{user.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {user.email}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {session.user.email}
-                  </p>
-                  {session.user.role && session.user.role !== 'customer' && (
-                    <Badge
-                      variant="secondary"
-                      className="mt-1.5 text-[11px] capitalize"
-                    >
-                      {session.user.role}
+                  {user.role && user.role !== 'customer' && (
+                    <Badge variant="secondary" className="mt-2 text-[10px] capitalize">
+                      {user.role}
                     </Badge>
                   )}
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/orders" className="cursor-pointer">
-                    <ShoppingBag className="h-4 w-4 mr-2" />
+                  <Link to="/orders">
+                    <ShoppingBag className="mr-2 h-4 w-4" />
                     My orders
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/track" className="cursor-pointer">
-                    <Truck className="h-4 w-4 mr-2" />
-                    Where's my order?
+                  <Link to="/track">
+                    <Truck className="mr-2 h-4 w-4" />
+                    Track my order
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/favorites" className="cursor-pointer">
-                    <Heart className="h-4 w-4 mr-2" />
+                  <Link to="/favorites">
+                    <Heart className="mr-2 h-4 w-4" />
                     My favorites
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 {isStaff && (
                   <>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link to="/admin" className="cursor-pointer">
-                        <Shield className="h-4 w-4 mr-2" />
+                      <Link to="/admin">
+                        <Shield className="mr-2 h-4 w-4" />
                         Admin dashboard
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
                   </>
                 )}
                 {isRider && (
                   <>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link to="/rider" className="cursor-pointer">
-                        <Bike className="h-4 w-4 mr-2" />
+                      <Link to="/rider">
+                        <Bike className="mr-2 h-4 w-4" />
                         My deliveries
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
                   </>
                 )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={() => setShowSignOutConfirm(true)}
-                  className="text-destructive focus:text-destructive cursor-pointer"
+                  className="text-destructive focus:text-destructive"
                 >
-                  <LogOut className="h-4 w-4 mr-2" />
+                  <LogOut className="mr-2 h-4 w-4" />
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -267,179 +248,165 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
             <Button
               asChild
               variant="ghost"
-              size="sm"
-              className="h-9 gap-1.5 text-sm"
+              className="hidden h-10 rounded-full px-3 text-sm sm:inline-flex"
             >
               <Link to="/login">
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline">Sign in</span>
+                <UserRound className="mr-1.5 h-4 w-4" />
+                Sign in
               </Link>
             </Button>
           )}
 
-          {/* Favorites Link */}
+          {/* Cart is the primary action */}
           <Button
-            asChild
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 text-muted-foreground hover:text-foreground"
-            aria-label="Your favorites"
-          >
-            <Link to="/favorites">
-              <Heart className="h-[18px] w-[18px]" />
-            </Link>
-          </Button>
-
-          {/* Cart Button */}
-          <Button
-            variant="outline"
-            size="sm"
             onClick={() => setIsOpen(true)}
+            className="relative h-10 gap-2 rounded-full px-3.5 font-semibold shadow-sm"
             aria-label={
               itemCount > 0
                 ? `Open your cart, ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`
                 : 'Open your cart'
             }
-            className="h-9 gap-1.5 px-3 text-sm"
           >
-            <ShoppingCart className="h-4 w-4" />
+            <ShoppingCart className="h-[17px] w-[17px]" />
             <span className="hidden sm:inline">Cart</span>
             {itemCount > 0 && (
-              <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-background px-1 text-[10px] font-bold leading-none text-foreground">
                 {itemCount}
               </span>
             )}
           </Button>
 
-          {/* Mobile Sheet Nav */}
+          {/* Mobile navigation */}
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="icon"
-                className="h-9 w-9 md:hidden text-muted-foreground"
+                className="h-10 w-10 rounded-full lg:hidden"
                 aria-label="Open menu"
               >
-                <Menu className="h-5 w-5" />
+                <Menu className="h-[18px] w-[18px]" />
               </Button>
             </SheetTrigger>
-            <SheetContent
-              side="right"
-              className="w-80 p-6 flex flex-col justify-between"
-            >
-              <div className="space-y-6">
+            <SheetContent side="right" className="flex w-[min(22rem,90vw)] flex-col p-0">
+              <div className="border-b border-border px-6 py-5">
                 <SheetHeader className="text-left">
-                  <SheetTitle className="text-base font-semibold">
-                    {firstName ? `Hi, ${firstName}` : 'Welcome to MEZMANI'}
+                  <SheetTitle className="text-lg">
+                    {firstName ? `Hey, ${firstName}` : 'Welcome to Mezmani'}
                   </SheetTitle>
                   <p className="text-sm text-muted-foreground">
-                    Drinks and snacks, delivered to your door.
+                    Good food. Great drinks. Delivered.
                   </p>
                 </SheetHeader>
+              </div>
 
-                <form
-                  onSubmit={handleSearchSubmit}
-                  role="search"
-                  className="relative w-full"
-                >
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
+                <form onSubmit={handleSearchSubmit} role="search" className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     type="search"
                     value={searchVal}
-                    onChange={(e) => setSearchVal(e.target.value)}
+                    onChange={(event) => setSearchVal(event.target.value)}
                     placeholder="What are you craving?"
                     aria-label="Search drinks and food"
-                    className="h-10 pl-9 text-sm"
+                    className="h-11 rounded-xl bg-muted/50 pl-9"
                   />
                 </form>
 
-                <nav className="flex flex-col space-y-1 text-sm font-medium">
+                <nav aria-label="Mobile navigation" className="space-y-1">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Explore
+                  </p>
                   <Link
                     to="/drinks"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-foreground hover:text-primary transition-colors py-2"
+                    className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-medium transition-colors hover:bg-muted"
                   >
-                    Drinks
+                    Drinks <span className="text-muted-foreground">→</span>
                   </Link>
                   <Link
                     to="/food"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-foreground hover:text-primary transition-colors py-2"
+                    className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-medium transition-colors hover:bg-muted"
                   >
-                    Food &amp; snacks
+                    Food & snacks <span className="text-muted-foreground">→</span>
                   </Link>
                   <Link
                     to="/track"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-foreground hover:text-primary transition-colors py-2 flex items-center gap-2"
+                    className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-medium transition-colors hover:bg-muted"
                   >
-                    <Truck className="h-4 w-4 text-primary" />
-                    Track my order
+                    Track an order <span className="text-muted-foreground">→</span>
                   </Link>
-                  {session?.user && (
-                    <Link
-                      to="/orders"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="text-foreground hover:text-primary transition-colors py-2 flex items-center gap-2"
-                    >
-                      <ShoppingBag className="h-4 w-4 text-primary" />
-                      My orders
-                    </Link>
-                  )}
-                  <Link
-                    to="/favorites"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-foreground hover:text-primary transition-colors py-2 flex items-center gap-2"
-                  >
-                    <Heart className="h-4 w-4 text-primary" />
-                    My favorites
-                  </Link>
-                  <a
-                    href="/#reviews"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-muted-foreground hover:text-foreground transition-colors py-2"
-                  >
-                    Reviews
-                  </a>
-                  <a
-                    href="/#about"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-muted-foreground hover:text-foreground transition-colors py-2"
-                  >
-                    About us
-                  </a>
-                  {isStaff && (
-                    <Link
-                      to="/admin"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="text-primary font-semibold transition-colors py-2 flex items-center gap-2"
-                    >
-                      <Shield className="h-4 w-4" />
-                      Admin dashboard
-                    </Link>
-                  )}
-                  {isRider && (
-                    <Link
-                      to="/rider"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="text-primary font-semibold transition-colors py-2 flex items-center gap-2"
-                    >
-                      <Bike className="h-4 w-4" />
-                      My deliveries
-                    </Link>
-                  )}
                 </nav>
+
+                <div className="space-y-1 border-t border-border pt-5">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Your account
+                  </p>
+                  {user ? (
+                    <>
+                      <Link
+                        to="/orders"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm hover:bg-muted"
+                      >
+                        <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                        My orders
+                      </Link>
+                      <Link
+                        to="/favorites"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm hover:bg-muted"
+                      >
+                        <Heart className="h-4 w-4 text-muted-foreground" />
+                        My favorites
+                      </Link>
+                      {isStaff && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-primary hover:bg-muted"
+                        >
+                          <Shield className="h-4 w-4" />
+                          Admin dashboard
+                        </Link>
+                      )}
+                      {isRider && (
+                        <Link
+                          to="/rider"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-primary hover:bg-muted"
+                        >
+                          <Bike className="h-4 w-4" />
+                          My deliveries
+                        </Link>
+                      )}
+                    </>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <Button asChild variant="outline" className="rounded-xl">
+                        <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                          Sign in
+                        </Link>
+                      </Button>
+                      <Button asChild className="rounded-xl">
+                        <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
+                          Create account
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="pt-6 border-t border-border space-y-4">
-                {session?.user ? (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground truncate max-w-[160px]">
-                      Signed in as{' '}
-                      <span className="font-medium text-foreground">
-                        {firstName}
-                      </span>
-                    </span>
+              <div className="space-y-3 border-t border-border px-6 py-5">
+                {user && (
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">Signed in as</p>
+                      <p className="truncate text-sm font-semibold">{user.name}</p>
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -447,49 +414,19 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                         setMobileMenuOpen(false)
                         setShowSignOutConfirm(true)
                       }}
-                      className="h-8 text-sm text-destructive hover:text-destructive"
+                      className="shrink-0 text-destructive hover:text-destructive"
                     >
+                      <LogOut className="mr-1.5 h-4 w-4" />
                       Sign out
                     </Button>
                   </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-sm"
-                    >
-                      <Link
-                        to="/login"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Sign in
-                      </Link>
-                    </Button>
-                    <Button asChild size="sm" className="w-full text-sm">
-                      <Link
-                        to="/signup"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        Create account
-                      </Link>
-                    </Button>
-                  </div>
                 )}
-
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <a
-                    href="tel:+9779847820683"
-                    className="flex items-center gap-1.5 hover:text-foreground"
-                  >
-                    <PhoneCall className="h-3.5 w-3.5" />
-                    <span>Call us: +977-9847820683</span>
+                <div className="flex items-center justify-between gap-3">
+                  <a href="tel:+9779847820683" className="text-xs text-muted-foreground hover:text-foreground">
+                    Need help? +977-9847820683
                   </a>
+                  <ThemeToggle />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Most orders arrive in about 40 minutes.
-                </p>
               </div>
             </SheetContent>
           </Sheet>

@@ -272,6 +272,11 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
             search: { tab: 'dealer-ledger' },
           },
           {
+            label: 'Rider Ledger',
+            to: '/admin/accounts',
+            search: { tab: 'rider-ledger' },
+          },
+          {
             label: 'Sales Account',
             to: '/admin/accounts',
             search: { tab: 'sales-account' },

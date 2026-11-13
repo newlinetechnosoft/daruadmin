@@ -73,6 +73,8 @@ The directory `drizzle/meta/` only contains snapshots for `0000_snapshot.json` a
 - `0007_double_entry_accounting.sql`: **Safe.** Uses `IF NOT EXISTS` for all tables/indexes and `ON CONFLICT DO NOTHING` for all chart of accounts and voucher sequence seeds.
 - `0008_pricing_promotions_and_settlements.sql`: **DANGEROUS on populated data.** Contains `ON CONFLICT (id) DO UPDATE SET delivery_charge = EXCLUDED.delivery_charge, active = EXCLUDED.active;` which overwrites custom shipping zone rates and active flags.
 - `0009_rider_shifts_offers_customer_addresses.sql` through `0017_db_level_integrity.sql`: **Safe.** Fully guarded, idempotent DDL using `IF NOT EXISTS`, constraint existence checks, and idempotent trigger functions. `0016` hardens reversal columns and FKs; `0017` introduces DB-level deferred constraint triggers and mutation prevention triggers for accounting immutability.
+- `0018_account_defaults.sql` through `0021_rider_settlement_requests.sql`: **Safe/additive.** Account default mappings and later feature tables/columns.
+- `0022_accounting_section_refactor.sql`: **Safe/additive.** Adds `ledger_accounts.account_type` / `balance_must_be` / `is_frozen` / `sort_order` / `description`, creates `cost_centers`, adds `journal_lines.cost_center_id`, report indexes, seeds four cost centers, and backfills account classification only where NULL. No column/table is dropped or renamed.
 
 Because of `0006` and `0008`, migrations must never be blindly re-run across existing branches. Tracking alignment via `tracking-sql.ts` is required.
 
@@ -95,17 +97,17 @@ When Neon's `drizzle.__drizzle_migrations` table contains corrupted rows or has 
 
 ## Planned tables
 
-| Domain (file)  | Tables                                                                                                                                                                | Status    |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| `auth.ts`      | `user`, `session`, `account`, `verification` + `role`, `phone`, `isActive`, `banned`                                                                                  | ✅        |
-| `liquor.ts`    | `liquor_categories`, `liquor_brands`, `liquor_products`, `liquor_variants` (`volumeMl`, `sku`, `price`, `mrp`, `abv`, `stock`, `isActive`), `liquor_images`           | ✅        |
-| `food.ts`      | `food_categories`, `food_brands`, `food_products`, `food_variants` (`unit`, `quantity`, `sku`, `price`, `mrp`, `stock`, `isActive`), `food_images`                    | ✅        |
-| `orders.ts`    | `orders` (totals, address + lat/lng, `riderId`, `dealerId`, `paymentMethod/Status`, `ageVerifiedAtDelivery`, `idempotencyKey`), `order_items`, `order_status_history` | ✅        |
-| `riders.ts`    | `riders` (profile linked to `user.id`), `rider_cash_handovers`, `settlements`                                                                                         | ✅        |
-| `inventory.ts` | `dealers`, `dealer_stock`, `stock_movements` (append-only)                                                                                                            | ✅        |
+| Domain (file)  | Tables                                                                                                                                                                    | Status    |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `auth.ts`      | `user`, `session`, `account`, `verification` + `role`, `phone`, `isActive`, `banned`                                                                                      | ✅        |
+| `liquor.ts`    | `liquor_categories`, `liquor_brands`, `liquor_products`, `liquor_variants` (`volumeMl`, `sku`, `price`, `mrp`, `abv`, `stock`, `isActive`), `liquor_images`               | ✅        |
+| `food.ts`      | `food_categories`, `food_brands`, `food_products`, `food_variants` (`unit`, `quantity`, `sku`, `price`, `mrp`, `stock`, `isActive`), `food_images`                        | ✅        |
+| `orders.ts`    | `orders` (totals, address + lat/lng, `riderId`, `dealerId`, `paymentMethod/Status`, `ageVerifiedAtDelivery`, `idempotencyKey`), `order_items`, `order_status_history`     | ✅        |
+| `riders.ts`    | `riders` (profile linked to `user.id`), `rider_cash_handovers`, `settlements`                                                                                             | ✅        |
+| `inventory.ts` | `dealers`, `dealer_stock`, `stock_movements` (append-only)                                                                                                                | ✅        |
 | `finance.ts`   | `fiscal_years`, `voucher_sequences`, `ledger_accounts`, `account_defaults`, `journal_entries`, `journal_lines`, `dealer_settlements`, `payments`, `legacy_ledger_archive` | ✅        |
-| `platform.ts`  | `notifications`, `audit_logs`, `site_settings`, `user_permissions`, `coupons`, `complaints`, `banners`, `campaigns`, `reviews`, `shipping_zones`                      | ✅        |
-| `commerce.ts`  | `ops_kv` legacy single-JSON blob                                                                                                                                      | 🗑 Dropped |
+| `platform.ts`  | `notifications`, `audit_logs`, `site_settings`, `user_permissions`, `coupons`, `complaints`, `banners`, `campaigns`, `reviews`, `shipping_zones`                          | ✅        |
+| `commerce.ts`  | `ops_kv` legacy single-JSON blob                                                                                                                                          | 🗑 Dropped |
 
 ## Seeds
 

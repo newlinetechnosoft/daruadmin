@@ -48,7 +48,6 @@ function makeOrder(overrides: Partial<MockOrder> = {}): MockOrder {
 }
 
 const manager = { id: 'mgr_1', role: 'manager' as const, name: 'Mgr' }
-const admin = { id: 'adm_1', role: 'admin' as const, name: 'Admin' }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // T1: State machine accepts rider transition regardless of rider.id vs user.id

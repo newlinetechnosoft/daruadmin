@@ -16,6 +16,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -23,7 +24,7 @@ import {
 import { Input } from '#/components/ui/input'
 import { Pagination } from '#/components/shared/pagination'
 import { Skeleton } from '#/components/ui/skeleton'
-import { Search } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Search } from 'lucide-react'
 import { cn } from '#/lib/utils'
 
 interface DataTableProps<TData, TValue> {
@@ -35,12 +36,18 @@ interface DataTableProps<TData, TValue> {
   onSearchChange?: (value: string) => void
   filterSlot?: React.ReactNode
   actionSlot?: React.ReactNode
+  footerSlot?: React.ReactNode
   page?: number
   pages?: number
   onPage?: (page: number) => void
   isLoading?: boolean
   emptyMessage?: string
   className?: string
+  dense?: boolean
+  stickyHeader?: boolean
+  initialSorting?: SortingState
+  onRowClick?: (row: TData) => void
+  rowClassName?: (row: TData) => string | undefined
 }
 
 export function DataTable<TData, TValue>({
@@ -52,14 +59,20 @@ export function DataTable<TData, TValue>({
   onSearchChange,
   filterSlot,
   actionSlot,
+  footerSlot,
   page,
   pages,
   onPage,
   isLoading = false,
   emptyMessage = 'No results found.',
   className,
+  dense = false,
+  stickyHeader = false,
+  initialSorting = [],
+  onRowClick,
+  rowClassName,
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [sorting, setSorting] = React.useState<SortingState>(initialSorting)
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [],
   )
@@ -95,9 +108,8 @@ export function DataTable<TData, TValue>({
                   value={
                     onSearchChange
                       ? (searchValue ?? '')
-                      : ((table
-                          .getColumn(searchKey ?? '')
-                          ?.getFilterValue() as string) ?? '')
+                      : ((table.getColumn(searchKey ?? '')?.getFilterValue() as
+                          string | undefined) ?? '')
                   }
                   onChange={(event) => {
                     if (onSearchChange) {
@@ -122,24 +134,46 @@ export function DataTable<TData, TValue>({
 
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <Table>
-          <TableHeader className="bg-muted/40 border-b border-border">
+          <TableHeader
+            className={cn(
+              'bg-muted/40 border-b border-border',
+              stickyHeader && 'sticky top-0 z-10',
+            )}
+          >
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
                 key={headerGroup.id}
                 className="hover:bg-transparent border-border"
               >
                 {headerGroup.headers.map((header) => {
+                  const canSort = header.column.getCanSort()
+                  const sortDirection = header.column.getIsSorted()
                   return (
                     <TableHead
                       key={header.id}
-                      className="h-10 px-4 text-xs font-medium text-muted-foreground"
+                      className={cn(
+                        'text-xs font-medium text-muted-foreground',
+                        dense ? 'h-9 px-3' : 'h-10 px-4',
+                        canSort && 'cursor-pointer select-none',
+                      )}
+                      onClick={header.column.getToggleSortingHandler()}
                     >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
+                      {header.isPlaceholder ? null : (
+                        <span className="inline-flex items-center gap-1">
+                          {flexRender(
                             header.column.columnDef.header,
                             header.getContext(),
                           )}
+                          {canSort &&
+                            (sortDirection === 'asc' ? (
+                              <ArrowUp className="h-3 w-3 text-foreground" />
+                            ) : sortDirection === 'desc' ? (
+                              <ArrowDown className="h-3 w-3 text-foreground" />
+                            ) : (
+                              <ArrowUpDown className="h-3 w-3 text-muted-foreground/50" />
+                            ))}
+                        </span>
+                      )}
                     </TableHead>
                   )
                 })}
@@ -150,22 +184,35 @@ export function DataTable<TData, TValue>({
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i} className="border-border">
-                  {columns.map((_, colIdx) => (
-                    <TableCell key={colIdx} className="px-4 py-3">
+                  {columns.map((_column, colIdx) => (
+                    <TableCell
+                      key={colIdx}
+                      className={dense ? 'px-3 py-2' : 'px-4 py-3'}
+                    >
                       <Skeleton className="h-4 w-full max-w-[120px]" />
                     </TableCell>
                   ))}
                 </TableRow>
               ))
-            ) : table.getRowModel().rows?.length ? (
+            ) : table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className="border-border hover:bg-muted/50 transition-colors"
+                  className={cn(
+                    'border-border hover:bg-muted/50 transition-colors',
+                    onRowClick && 'cursor-pointer',
+                    rowClassName?.(row.original),
+                  )}
+                  onClick={() => onRowClick?.(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-4 py-3 text-sm">
+                    <TableCell
+                      key={cell.id}
+                      className={cn(
+                        dense ? 'px-3 py-2 text-xs' : 'px-4 py-3 text-sm',
+                      )}
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext(),
@@ -185,6 +232,7 @@ export function DataTable<TData, TValue>({
               </TableRow>
             )}
           </TableBody>
+          {footerSlot && <TableFooter>{footerSlot}</TableFooter>}
         </Table>
 
         {page !== undefined && pages !== undefined && onPage && (

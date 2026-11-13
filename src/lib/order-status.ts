@@ -59,7 +59,6 @@ export class OrderTransitionError extends Error {
 
 export async function resolveRiderId(
   order: Pick<Order, 'riderId'>,
-  ctx: { session: UserContext },
 ): Promise<string | null> {
   if (!order.riderId) return null
   // Rider IDs start with "rid_" in this codebase.

@@ -81,6 +81,11 @@ export const ledgerAccounts = pgTable(
     ownerId: text('owner_id'), // party id
     currency: text('currency').notNull().default('NPR'),
     isActive: boolean('is_active').notNull().default(true),
+    accountType: text('account_type'), // 'cash' | 'bank' | 'receivable' | 'payable' | 'tax' | ...
+    balanceMustBe: text('balance_must_be'), // 'debit' | 'credit' | null
+    isFrozen: boolean('is_frozen').notNull().default(false),
+    sortOrder: integer('sort_order').notNull().default(0),
+    description: text('description'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -94,9 +99,18 @@ export const ledgerAccounts = pgTable(
     index('ledger_accounts_parent_idx').on(table.parentId),
     index('ledger_accounts_owner_idx').on(table.ownerType, table.ownerId),
     index('ledger_accounts_is_active_idx').on(table.isActive),
+    index('ledger_accounts_account_type_idx').on(table.accountType),
     check(
       'ledger_accounts_root_type_check',
       sql`root_type IN ('asset', 'liability', 'equity', 'income', 'expense')`,
+    ),
+    check(
+      'ledger_accounts_account_type_check',
+      sql`account_type IN ('cash', 'bank', 'receivable', 'payable', 'tax', 'stock_adjustment', 'round_off', 'income', 'expense', 'cogs', 'equity', 'fixed_asset', 'other')`,
+    ),
+    check(
+      'ledger_accounts_balance_must_be_check',
+      sql`balance_must_be IN ('debit', 'credit')`,
     ),
   ],
 )
@@ -124,6 +138,33 @@ export const accountDefaults = pgTable(
   (table) => [
     index('account_defaults_account_id_idx').on(table.accountId),
     index('account_defaults_key_idx').on(table.key),
+  ],
+)
+
+/**
+ * Cost center tree (ERPNext-style).
+ * Liquor / Food / Delivery / General by default, with optional sub-centers.
+ */
+export const costCenters = pgTable(
+  'cost_centers',
+  {
+    id: text('id').primaryKey(),
+    code: text('code').notNull().unique(),
+    name: text('name').notNull(),
+    parentId: text('parent_id'),
+    isGroup: boolean('is_group').notNull().default(false),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('cost_centers_parent_idx').on(table.parentId),
+    index('cost_centers_is_active_idx').on(table.isActive),
   ],
 )
 
@@ -198,7 +239,10 @@ export const journalLines = pgTable(
     credit: integer('credit').notNull().default(0), // integer paisa
     partyType: text('party_type'), // 'dealer', 'rider', 'customer', 'supplier'
     partyId: text('party_id'),
-    costCenter: text('cost_center'), // 'liquor', 'food', 'delivery', 'general'
+    costCenter: text('cost_center'), // legacy free-text value ('liquor', 'food', 'delivery', 'general')
+    costCenterId: text('cost_center_id').references(() => costCenters.id, {
+      onDelete: 'set null',
+    }),
     narration: text('narration'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
@@ -208,6 +252,7 @@ export const journalLines = pgTable(
     index('journal_lines_entry_idx').on(table.journalEntryId),
     index('journal_lines_account_idx').on(table.accountId),
     index('journal_lines_party_idx').on(table.partyType, table.partyId),
+    index('journal_lines_cost_center_id_idx').on(table.costCenterId),
     check(
       'journal_lines_debit_credit_check',
       sql`debit >= 0 AND credit >= 0 AND ((debit > 0 AND credit = 0) OR (debit = 0 AND credit > 0))`,
@@ -355,6 +400,19 @@ export const journalLinesRelations = relations(journalLines, ({ one }) => ({
     fields: [journalLines.accountId],
     references: [ledgerAccounts.id],
   }),
+  costCenter: one(costCenters, {
+    fields: [journalLines.costCenterId],
+    references: [costCenters.id],
+  }),
+}))
+
+export const costCentersRelations = relations(costCenters, ({ one, many }) => ({
+  parent: one(costCenters, {
+    fields: [costCenters.parentId],
+    references: [costCenters.id],
+  }),
+  children: many(costCenters),
+  lines: many(journalLines),
 }))
 
 /**

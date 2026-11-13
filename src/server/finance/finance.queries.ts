@@ -1,6 +1,7 @@
 import { db, dbTx } from '#/db'
 import {
   accountDefaults,
+  costCenters,
   dealers,
   dealerSettlements,
   fiscalYears,
@@ -24,15 +25,18 @@ import {
   gte,
   inArray,
   isNotNull,
+  lt,
   lte,
   sql,
 } from 'drizzle-orm'
+import type { SQL } from 'drizzle-orm'
 import {
   ACCOUNT_KEY_METADATA,
   invalidateAccountDefaultsCache,
   resolveAccount,
 } from './account-keys'
 import type { AccountKey, AccountKeyMetadata } from './account-keys'
+import { computePayableAging, signedMovement } from './report-math'
 import type { DbTx, JournalMetadata } from './types'
 
 // ---------------------------------------------------------
@@ -157,13 +161,22 @@ export interface DetailedJournalEntry {
 }
 
 export async function getJournalEntriesQuery(params?: {
+  id?: string
   fiscalYearId?: string
   voucherType?: string
   refType?: string
+  partyType?: string
+  partyId?: string
+  fromDate?: Date
+  toDate?: Date
+  search?: string
   limit?: number
   offset?: number
 }): Promise<DetailedJournalEntry[]> {
-  const conditions = []
+  const conditions: SQL[] = []
+  if (params?.id) {
+    conditions.push(eq(journalEntries.id, params.id))
+  }
   if (params?.fiscalYearId) {
     conditions.push(eq(journalEntries.fiscalYearId, params.fiscalYearId))
   }
@@ -173,6 +186,41 @@ export async function getJournalEntriesQuery(params?: {
   if (params?.refType) {
     conditions.push(eq(journalEntries.refType, params.refType))
   }
+  if (params?.fromDate) {
+    conditions.push(gte(journalEntries.postingDate, params.fromDate))
+  }
+  if (params?.toDate) {
+    conditions.push(lte(journalEntries.postingDate, params.toDate))
+  }
+  if (params?.search) {
+    const q = `%${params.search}%`
+    conditions.push(
+      sql`(
+        ${journalEntries.voucherNo} ILIKE ${q}
+        OR ${journalEntries.narration} ILIKE ${q}
+        OR ${journalEntries.refType} ILIKE ${q}
+        OR ${journalEntries.refId} ILIKE ${q}
+        OR ${journalEntries.event} ILIKE ${q}
+      )`,
+    )
+  }
+
+  // Party filtering is resolved through journal lines because a voucher can
+  // contain several parties and several accounts.
+  if (params?.partyType || params?.partyId) {
+    const partyConditions: SQL[] = []
+    if (params.partyType)
+      partyConditions.push(eq(journalLines.partyType, params.partyType))
+    if (params.partyId)
+      partyConditions.push(eq(journalLines.partyId, params.partyId))
+    const partyRows = await db
+      .selectDistinct({ entryId: journalLines.journalEntryId })
+      .from(journalLines)
+      .where(and(...partyConditions))
+    const partyEntryIds = partyRows.map((r) => r.entryId)
+    if (partyEntryIds.length === 0) return []
+    conditions.push(inArray(journalEntries.id, partyEntryIds))
+  }
 
   const query = db
     .select()
@@ -181,8 +229,11 @@ export async function getJournalEntriesQuery(params?: {
 
   const entries =
     conditions.length > 0
-      ? await query.where(and(...conditions)).limit(params?.limit || 100)
-      : await query.limit(params?.limit || 100)
+      ? await query
+          .where(and(...conditions))
+          .limit(params?.limit || 100)
+          .offset(params?.offset || 0)
+      : await query.limit(params?.limit || 100).offset(params?.offset || 0)
 
   if (entries.length === 0) return []
 
@@ -390,6 +441,10 @@ export interface AccountWithBalance {
   ownerId: string | null
   currency: string
   isActive: boolean
+  accountType: string | null
+  balanceMustBe: string | null
+  isFrozen: boolean
+  description: string | null
   totalDebit: number
   totalCredit: number
   netBalance: number
@@ -448,6 +503,10 @@ export async function getChartOfAccountsWithBalancesQuery(): Promise<
       ownerId: acc.ownerId,
       currency: acc.currency,
       isActive: acc.isActive,
+      accountType: acc.accountType,
+      balanceMustBe: acc.balanceMustBe,
+      isFrozen: acc.isFrozen,
+      description: acc.description,
       totalDebit: agg.totalDebit,
       totalCredit: agg.totalCredit,
       netBalance,
@@ -466,11 +525,29 @@ export interface DealerPayableSummary {
   pan: string | null
   city: string | null
   phone: string | null
+  tdsRate: number
+  paymentTermsDays: number
+  creditLimit: number
+  isActive: boolean
   totalProcured: number // credit to DEALER_PAYABLE (2011)
   totalPaid: number // debit to DEALER_PAYABLE (2011)
   outstandingPayable: number // totalProcured - totalPaid
+  current: number // open payable 0-30 days
+  days31To60: number
+  days61To90: number
+  days90Plus: number
+  oldestOpenDate: string | null
+  lastActivityDate: string | null
 }
 
+/**
+ * Dealer payables summary with FIFO aging.
+ *
+ * Aging is not a simple "createdAt age": payments are applied to the oldest
+ * procurement first (FIFO), exactly how an accounts-payable aging report is
+ * expected to behave. The remaining open procurement lines are then bucketed
+ * into 0-30 / 31-60 / 61-90 / 90+ days.
+ */
 export async function getDealerPayablesSummaryQuery(): Promise<
   DealerPayableSummary[]
 > {
@@ -479,42 +556,65 @@ export async function getDealerPayablesSummaryQuery(): Promise<
 
   const payableLines = await db
     .select({
+      lineId: journalLines.id,
       partyId: journalLines.partyId,
-      totalDebit: sql<number>`COALESCE(SUM(${journalLines.debit}), 0)`,
-      totalCredit: sql<number>`COALESCE(SUM(${journalLines.credit}), 0)`,
+      postingDate: journalEntries.postingDate,
+      debit: journalLines.debit,
+      credit: journalLines.credit,
     })
     .from(journalLines)
+    .innerJoin(
+      journalEntries,
+      eq(journalLines.journalEntryId, journalEntries.id),
+    )
     .where(
       and(
         eq(journalLines.accountId, payableAccountId),
         eq(journalLines.partyType, 'dealer'),
+        eq(journalEntries.postingStatus, 'submitted'),
       ),
     )
-    .groupBy(journalLines.partyId)
+    .orderBy(asc(journalEntries.postingDate), asc(journalLines.id))
 
-  const payMap = new Map<string, { totalDebit: number; totalCredit: number }>()
-  for (const pl of payableLines) {
-    if (pl.partyId) {
-      payMap.set(pl.partyId, {
-        totalDebit: Number(pl.totalDebit),
-        totalCredit: Number(pl.totalCredit),
-      })
-    }
+  const linesByDealer = new Map<
+    string,
+    Array<{ date: Date; debit: number; credit: number }>
+  >()
+  for (const line of payableLines) {
+    if (!line.partyId) continue
+    const list = linesByDealer.get(line.partyId) ?? []
+    list.push({
+      date: new Date(line.postingDate),
+      debit: line.debit,
+      credit: line.credit,
+    })
+    linesByDealer.set(line.partyId, list)
   }
 
+  const today = new Date()
+
   return allDealers.map((d) => {
-    const stats = payMap.get(d.id) || { totalDebit: 0, totalCredit: 0 }
-    const totalProcured = stats.totalCredit // Credit to payable increases what we owe
-    const totalPaid = stats.totalDebit // Debit to payable decreases what we owe
+    const aging = computePayableAging(linesByDealer.get(d.id) ?? [], today)
+
     return {
       dealerId: d.id,
       dealerName: d.name,
       pan: d.pan,
       city: d.city,
       phone: d.contact,
-      totalProcured,
-      totalPaid,
-      outstandingPayable: totalProcured - totalPaid,
+      tdsRate: Number(d.tdsRate),
+      paymentTermsDays: d.paymentTermsDays,
+      creditLimit: d.creditLimit,
+      isActive: d.isActive,
+      totalProcured: aging.totalProcured,
+      totalPaid: aging.totalPaid,
+      outstandingPayable: aging.outstandingPayable,
+      current: aging.current,
+      days31To60: aging.days31To60,
+      days61To90: aging.days61To90,
+      days90Plus: aging.days90Plus,
+      oldestOpenDate: aging.oldestOpenDate?.toISOString() ?? null,
+      lastActivityDate: aging.lastActivityDate?.toISOString() ?? null,
     }
   })
 }
@@ -523,9 +623,13 @@ export interface RiderAccountSummary {
   riderId: string
   riderName: string
   phone: string | null
+  zone: string
+  status: string
   cashOnHand: number // in riders table
   undepositedCodCash: number // net debit on RIDER_COD_CASH (1031)
   commissionPayable: number // net credit on RIDER_PAYABLE (2031)
+  outstandingAdvances: number // net debit on STAFF_RIDER_ADVANCES (1042)
+  lastActivityDate: string | null
 }
 
 export async function getRiderAccountsSummaryQuery(): Promise<
@@ -534,29 +638,53 @@ export async function getRiderAccountsSummaryQuery(): Promise<
   const allRiders = await db.select().from(riders).orderBy(asc(riders.name))
   const codCashAccountId = await resolveAccount(db, 'RIDER_COD_CASH')
   const payableAccountId = await resolveAccount(db, 'RIDER_PAYABLE')
+  const advancesAccountId = await resolveAccount(db, 'STAFF_RIDER_ADVANCES')
 
   const riderLines = await db
     .select({
       accountId: journalLines.accountId,
       partyId: journalLines.partyId,
+      lastPostingDate: sql<Date>`MAX(${journalEntries.postingDate})`,
       totalDebit: sql<number>`COALESCE(SUM(${journalLines.debit}), 0)`,
       totalCredit: sql<number>`COALESCE(SUM(${journalLines.credit}), 0)`,
     })
     .from(journalLines)
-    .where(eq(journalLines.partyType, 'rider'))
+    .innerJoin(
+      journalEntries,
+      eq(journalLines.journalEntryId, journalEntries.id),
+    )
+    .where(
+      and(
+        eq(journalLines.partyType, 'rider'),
+        eq(journalEntries.postingStatus, 'submitted'),
+      ),
+    )
     .groupBy(journalLines.accountId, journalLines.partyId)
 
   const codMap = new Map<string, number>()
   const commMap = new Map<string, number>()
+  const advancesMap = new Map<string, number>()
+  const lastActivityMap = new Map<string, Date>()
 
   for (const rl of riderLines) {
     if (!rl.partyId) continue
+    const lastDate = new Date(rl.lastPostingDate)
+    const previous = lastActivityMap.get(rl.partyId)
+    if (!previous || lastDate > previous) {
+      lastActivityMap.set(rl.partyId, lastDate)
+    }
+
     if (rl.accountId === codCashAccountId) {
       // Asset: Dr increases, Cr decreases
       codMap.set(rl.partyId, Number(rl.totalDebit) - Number(rl.totalCredit))
     } else if (rl.accountId === payableAccountId) {
       // Liability: Cr increases, Dr decreases
       commMap.set(rl.partyId, Number(rl.totalCredit) - Number(rl.totalDebit))
+    } else if (rl.accountId === advancesAccountId) {
+      advancesMap.set(
+        rl.partyId,
+        Number(rl.totalDebit) - Number(rl.totalCredit),
+      )
     }
   }
 
@@ -564,9 +692,13 @@ export async function getRiderAccountsSummaryQuery(): Promise<
     riderId: r.id,
     riderName: r.name,
     phone: r.phone,
+    zone: r.zone,
+    status: r.status,
     cashOnHand: r.cashOnHand,
     undepositedCodCash: codMap.get(r.id) || 0,
     commissionPayable: commMap.get(r.id) || 0,
+    outstandingAdvances: advancesMap.get(r.id) || 0,
+    lastActivityDate: lastActivityMap.get(r.id)?.toISOString() ?? null,
   }))
 }
 
@@ -892,9 +1024,7 @@ export async function getAccountDefaultsQuery(
         accountRootType: row.accountRootType || meta.rootType,
         isGroup: !!row.isGroup,
         isActive: row.isActive !== false,
-        updatedAt: row.updatedAt
-          ? row.updatedAt.toISOString()
-          : new Date().toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
         updatedBy: row.updatedBy || null,
         metadata: meta,
       })
@@ -1003,4 +1133,476 @@ export async function updateAccountDefaultsQuery(
   }
 
   return dbTx.transaction(async (tx) => runWithTx(tx))
+}
+
+// ---------------------------------------------------------
+// Accounting Section: Focused Report Queries
+// ERPNext/Frappe-style: filterable, searchable, linkable,
+// single source of truth = journal_lines + journal_entries
+// ---------------------------------------------------------
+
+export interface GLEntryRow {
+  lineId: string
+  entryId: string
+  voucherNo: string | null
+  voucherType: string
+  postingDate: string
+  bsDate: string
+  dualDate: string
+  accountId: string
+  accountCode: string
+  accountName: string
+  accountRootType: string
+  accountType: string | null
+  partyType: string | null
+  partyId: string | null
+  partyName: string | null
+  costCenterId: string | null
+  costCenterName: string | null
+  costCenterCode: string | null
+  debit: number
+  credit: number
+  runningBalance: number
+  narration: string | null
+  refType: string | null
+  refId: string | null
+  event: string | null
+  postingStatus: string
+  createdBy: string
+  createdAt: string
+}
+
+interface GLFilters {
+  accountId?: string | null
+  accountCode?: string | null
+  accountRootType?: string | null
+  accountType?: string | null
+  partyType?: string | null
+  partyId?: string | null
+  voucherType?: string | null
+  refType?: string | null
+  refId?: string | null
+  fromDate?: Date | null
+  toDate?: Date | null
+  costCenterId?: string | null
+  search?: string | null
+  limit?: number
+  offset?: number
+}
+
+function balanceKey(
+  accountId: string,
+  partyType: string | null,
+  partyId: string | null,
+): string {
+  return `${accountId}::${partyType ?? ''}::${partyId ?? ''}`
+}
+
+/**
+ * Returns flat General Ledger entries with full filtering, search, and pagination.
+ * Each row is one journal line joined to its entry, account, party, and cost center.
+ *
+ * Running balance is calculated per account + party, with an opening balance
+ * fetched from all vouchers before the selected start date. This is the same
+ * behaviour as an ERPNext General Ledger / party ledger.
+ */
+export async function getGeneralLedgerEntriesQuery(
+  filters: GLFilters = {},
+): Promise<GLEntryRow[]> {
+  const baseConditions: SQL[] = []
+  const conditions: SQL[] = [eq(journalEntries.postingStatus, 'submitted')]
+
+  const addBaseCondition = (condition: SQL) => {
+    baseConditions.push(condition)
+    conditions.push(condition)
+  }
+
+  if (filters.accountId)
+    addBaseCondition(eq(journalLines.accountId, filters.accountId))
+  if (filters.accountCode)
+    addBaseCondition(eq(ledgerAccounts.code, filters.accountCode))
+  if (filters.accountRootType)
+    addBaseCondition(eq(ledgerAccounts.rootType, filters.accountRootType))
+  if (filters.accountType)
+    addBaseCondition(eq(ledgerAccounts.accountType, filters.accountType))
+  if (filters.partyType)
+    addBaseCondition(eq(journalLines.partyType, filters.partyType))
+  if (filters.partyId)
+    addBaseCondition(eq(journalLines.partyId, filters.partyId))
+
+  if (filters.voucherType)
+    conditions.push(eq(journalEntries.voucherType, filters.voucherType))
+  if (filters.refType)
+    conditions.push(eq(journalEntries.refType, filters.refType))
+  if (filters.refId) conditions.push(eq(journalEntries.refId, filters.refId))
+  if (filters.costCenterId)
+    conditions.push(eq(journalLines.costCenterId, filters.costCenterId))
+  if (filters.fromDate)
+    conditions.push(gte(journalEntries.postingDate, filters.fromDate))
+  if (filters.toDate)
+    conditions.push(lte(journalEntries.postingDate, filters.toDate))
+
+  // Full-text search across voucher number, account code/name, narration and refs
+  if (filters.search) {
+    const q = `%${filters.search}%`
+    conditions.push(
+      sql`(
+        COALESCE(${journalEntries.voucherNo}, '') ILIKE ${q}
+        OR ${ledgerAccounts.code} ILIKE ${q}
+        OR ${ledgerAccounts.name} ILIKE ${q}
+        OR COALESCE(${journalLines.narration}, '') ILIKE ${q}
+        OR ${journalEntries.narration} ILIKE ${q}
+        OR COALESCE(${journalEntries.refId}, '') ILIKE ${q}
+      )`,
+    )
+  }
+
+  const rows = await db
+    .select({
+      lineId: journalLines.id,
+      entryId: journalEntries.id,
+      voucherNo: journalEntries.voucherNo,
+      voucherType: journalEntries.voucherType,
+      postingDate: journalEntries.postingDate,
+      accountId: journalLines.accountId,
+      accountCode: ledgerAccounts.code,
+      accountName: ledgerAccounts.name,
+      accountRootType: ledgerAccounts.rootType,
+      accountType: ledgerAccounts.accountType,
+      partyType: journalLines.partyType,
+      partyId: journalLines.partyId,
+      costCenterId: journalLines.costCenterId,
+      costCenterCode: costCenters.code,
+      costCenterName: costCenters.name,
+      debit: journalLines.debit,
+      credit: journalLines.credit,
+      narration: journalLines.narration,
+      refType: journalEntries.refType,
+      refId: journalEntries.refId,
+      event: journalEntries.event,
+      postingStatus: journalEntries.postingStatus,
+      createdBy: journalEntries.createdBy,
+      createdAt: journalEntries.createdAt,
+    })
+    .from(journalLines)
+    .innerJoin(
+      journalEntries,
+      eq(journalLines.journalEntryId, journalEntries.id),
+    )
+    .innerJoin(ledgerAccounts, eq(journalLines.accountId, ledgerAccounts.id))
+    .leftJoin(costCenters, eq(journalLines.costCenterId, costCenters.id))
+    .where(and(...conditions))
+    .orderBy(
+      asc(journalEntries.postingDate),
+      asc(journalEntries.createdAt),
+      asc(journalLines.id),
+    )
+    .limit(filters.limit || 500)
+    .offset(filters.offset || 0)
+
+  // Opening balances before the selected start date, per account + party.
+  const runningBalances = new Map<string, number>()
+  if (filters.fromDate) {
+    const openingRows = await db
+      .select({
+        accountId: journalLines.accountId,
+        accountRootType: ledgerAccounts.rootType,
+        partyType: journalLines.partyType,
+        partyId: journalLines.partyId,
+        totalDebit: sql<number>`COALESCE(SUM(${journalLines.debit}), 0)`,
+        totalCredit: sql<number>`COALESCE(SUM(${journalLines.credit}), 0)`,
+      })
+      .from(journalLines)
+      .innerJoin(
+        journalEntries,
+        eq(journalLines.journalEntryId, journalEntries.id),
+      )
+      .innerJoin(ledgerAccounts, eq(journalLines.accountId, ledgerAccounts.id))
+      .where(
+        and(
+          ...baseConditions,
+          eq(journalEntries.postingStatus, 'submitted'),
+          lt(journalEntries.postingDate, filters.fromDate),
+        ),
+      )
+      .groupBy(
+        journalLines.accountId,
+        ledgerAccounts.rootType,
+        journalLines.partyType,
+        journalLines.partyId,
+      )
+
+    for (const opening of openingRows) {
+      const movement = signedMovement(
+        opening.accountRootType,
+        Number(opening.totalDebit),
+        Number(opening.totalCredit),
+      )
+      runningBalances.set(
+        balanceKey(
+          opening.accountId,
+          opening.partyType ?? null,
+          opening.partyId ?? null,
+        ),
+        movement,
+      )
+    }
+  }
+
+  // Resolve party names in one query per party table.
+  const partyIds = [
+    ...new Set(
+      rows.map((r) => r.partyId).filter((id): id is string => id !== null),
+    ),
+  ]
+  const partyNameMap = new Map<string, string>()
+  if (partyIds.length > 0) {
+    const [riderRows, dealerRows] = await Promise.all([
+      db
+        .select({ id: riders.id, name: riders.name })
+        .from(riders)
+        .where(inArray(riders.id, partyIds)),
+      db
+        .select({ id: dealers.id, name: dealers.name })
+        .from(dealers)
+        .where(inArray(dealers.id, partyIds)),
+    ])
+    for (const r of riderRows) partyNameMap.set(r.id, r.name)
+    for (const d of dealerRows) partyNameMap.set(d.id, d.name)
+  }
+
+  return rows.map((r) => {
+    const key = balanceKey(r.accountId, r.partyType, r.partyId)
+    const nextBalance =
+      (runningBalances.get(key) ?? 0) +
+      signedMovement(r.accountRootType, r.debit, r.credit)
+    runningBalances.set(key, nextBalance)
+
+    const dateObj = new Date(r.postingDate)
+    return {
+      lineId: r.lineId,
+      entryId: r.entryId,
+      voucherNo: r.voucherNo,
+      voucherType: r.voucherType,
+      postingDate: dateObj.toISOString(),
+      bsDate: formatBS(dateObj, { format: 'long' }),
+      dualDate: formatDualDate(dateObj),
+      accountId: r.accountId,
+      accountCode: r.accountCode,
+      accountName: r.accountName,
+      accountRootType: r.accountRootType,
+      accountType: r.accountType,
+      partyType: r.partyType ?? null,
+      partyId: r.partyId ?? null,
+      partyName: r.partyId ? (partyNameMap.get(r.partyId) ?? null) : null,
+      costCenterId: r.costCenterId ?? null,
+      costCenterCode: r.costCenterCode ?? null,
+      costCenterName: r.costCenterName ?? null,
+      debit: r.debit,
+      credit: r.credit,
+      runningBalance: nextBalance,
+      narration: r.narration ?? null,
+      refType: r.refType ?? null,
+      refId: r.refId ?? null,
+      event: r.event ?? null,
+      postingStatus: r.postingStatus,
+      createdBy: r.createdBy,
+      createdAt: r.createdAt.toISOString(),
+    }
+  })
+}
+
+export interface PartyStatementRow {
+  lineId: string
+  entryId: string
+  voucherNo: string | null
+  voucherType: string
+  postingDate: string
+  bsDate: string
+  dualDate: string
+  accountId: string
+  accountCode: string
+  accountName: string
+  accountRootType: string
+  accountType: string | null
+  debit: number
+  credit: number
+  openingBalance: number
+  runningBalance: number
+  narration: string | null
+  refType: string | null
+  refId: string | null
+}
+
+interface PartyStatementFilters {
+  partyType: 'dealer' | 'rider' | 'customer' | 'supplier'
+  partyId: string
+  fromDate?: Date | null
+  toDate?: Date | null
+  accountId?: string | null
+  limit?: number
+}
+
+/**
+ * Returns a party statement (sub-ledger) with a per-account running balance.
+ * A rider statement can contain both COD cash (asset) and commission payable
+ * (liability), so balances are tracked separately per account instead of being
+ * mixed into one meaningless number.
+ */
+export async function getPartyStatementQuery(
+  filters: PartyStatementFilters,
+): Promise<PartyStatementRow[]> {
+  const baseConditions: SQL[] = [
+    eq(journalLines.partyType, filters.partyType),
+    eq(journalLines.partyId, filters.partyId),
+  ]
+  const conditions: SQL[] = [
+    eq(journalEntries.postingStatus, 'submitted'),
+    ...baseConditions,
+  ]
+
+  if (filters.accountId) {
+    const accountCondition = eq(journalLines.accountId, filters.accountId)
+    baseConditions.push(accountCondition)
+    conditions.push(accountCondition)
+  }
+  if (filters.fromDate)
+    conditions.push(gte(journalEntries.postingDate, filters.fromDate))
+  if (filters.toDate)
+    conditions.push(lte(journalEntries.postingDate, filters.toDate))
+
+  const rows = await db
+    .select({
+      lineId: journalLines.id,
+      entryId: journalEntries.id,
+      voucherNo: journalEntries.voucherNo,
+      voucherType: journalEntries.voucherType,
+      postingDate: journalEntries.postingDate,
+      accountId: journalLines.accountId,
+      accountCode: ledgerAccounts.code,
+      accountName: ledgerAccounts.name,
+      accountRootType: ledgerAccounts.rootType,
+      accountType: ledgerAccounts.accountType,
+      debit: journalLines.debit,
+      credit: journalLines.credit,
+      narration: journalLines.narration,
+      refType: journalEntries.refType,
+      refId: journalEntries.refId,
+    })
+    .from(journalLines)
+    .innerJoin(
+      journalEntries,
+      eq(journalLines.journalEntryId, journalEntries.id),
+    )
+    .innerJoin(ledgerAccounts, eq(journalLines.accountId, ledgerAccounts.id))
+    .where(and(...conditions))
+    .orderBy(
+      asc(journalEntries.postingDate),
+      asc(journalEntries.createdAt),
+      asc(journalLines.id),
+    )
+    .limit(filters.limit || 500)
+
+  const openingByAccount = new Map<string, number>()
+  if (filters.fromDate) {
+    const openingRows = await db
+      .select({
+        accountId: journalLines.accountId,
+        accountRootType: ledgerAccounts.rootType,
+        totalDebit: sql<number>`COALESCE(SUM(${journalLines.debit}), 0)`,
+        totalCredit: sql<number>`COALESCE(SUM(${journalLines.credit}), 0)`,
+      })
+      .from(journalLines)
+      .innerJoin(
+        journalEntries,
+        eq(journalLines.journalEntryId, journalEntries.id),
+      )
+      .innerJoin(ledgerAccounts, eq(journalLines.accountId, ledgerAccounts.id))
+      .where(
+        and(
+          ...baseConditions,
+          eq(journalEntries.postingStatus, 'submitted'),
+          lt(journalEntries.postingDate, filters.fromDate),
+        ),
+      )
+      .groupBy(journalLines.accountId, ledgerAccounts.rootType)
+
+    for (const opening of openingRows) {
+      openingByAccount.set(
+        opening.accountId,
+        signedMovement(
+          opening.accountRootType,
+          Number(opening.totalDebit),
+          Number(opening.totalCredit),
+        ),
+      )
+    }
+  }
+
+  const runningByAccount = new Map(openingByAccount)
+  return rows.map((r) => {
+    const openingBalance = openingByAccount.get(r.accountId) ?? 0
+    const nextBalance =
+      (runningByAccount.get(r.accountId) ?? 0) +
+      signedMovement(r.accountRootType, r.debit, r.credit)
+    runningByAccount.set(r.accountId, nextBalance)
+
+    const dateObj = new Date(r.postingDate)
+    return {
+      lineId: r.lineId,
+      entryId: r.entryId,
+      voucherNo: r.voucherNo,
+      voucherType: r.voucherType,
+      postingDate: dateObj.toISOString(),
+      bsDate: formatBS(dateObj, { format: 'long' }),
+      dualDate: formatDualDate(dateObj),
+      accountId: r.accountId,
+      accountCode: r.accountCode,
+      accountName: r.accountName,
+      accountRootType: r.accountRootType,
+      accountType: r.accountType,
+      debit: r.debit,
+      credit: r.credit,
+      openingBalance,
+      runningBalance: nextBalance,
+      narration: r.narration ?? null,
+      refType: r.refType ?? null,
+      refId: r.refId ?? null,
+    }
+  })
+}
+
+/**
+ * Loads one voucher with all lines for the voucher-details dialog.
+ */
+export async function getJournalEntryByIdQuery(
+  id: string,
+): Promise<DetailedJournalEntry | null> {
+  const entries = await getJournalEntriesQuery({ id, limit: 1 })
+  return entries[0] ?? null
+}
+
+export interface CostCenterItem {
+  id: string
+  code: string
+  name: string
+  parentId: string | null
+  isGroup: boolean
+  isActive: boolean
+}
+
+export async function getCostCentersQuery(): Promise<CostCenterItem[]> {
+  const rows = await db
+    .select({
+      id: costCenters.id,
+      code: costCenters.code,
+      name: costCenters.name,
+      parentId: costCenters.parentId,
+      isGroup: costCenters.isGroup,
+      isActive: costCenters.isActive,
+    })
+    .from(costCenters)
+    .orderBy(asc(costCenters.code))
+
+  return rows
 }

@@ -14,10 +14,7 @@ import {
   resolveAllAccounts,
 } from './account-keys'
 import type { AccountKey } from './account-keys'
-import {
-  postOrderDeliveredTx,
-  postCashHandoverTx,
-} from './double-entry'
+import { postOrderDeliveredTx, postCashHandoverTx } from './double-entry'
 import {
   getAccountDefaultsQuery,
   updateAccountDefaultsQuery,

@@ -74,7 +74,7 @@ export function AccountDefaultsTab() {
   const { data, isLoading, error } = useQuery(adminQueries.accountDefaults())
 
   const [selectedAccounts, setSelectedAccounts] = React.useState<
-    Record<string, string>
+    Record<string, string | undefined>
   >({})
   const [searchQuery, setSearchQuery] = React.useState('')
   const [rootFilter, setRootFilter] = React.useState<string>('all')
@@ -177,13 +177,12 @@ export function AccountDefaultsTab() {
 
   // Map of available leaf accounts by rootType
   const accountsByRoot = React.useMemo(() => {
-    const grouped: Record<string, LeafAccountOption[]> = {}
+    const grouped: Record<string, LeafAccountOption[] | undefined> = {}
     if (!data?.accounts) return grouped
     for (const acc of data.accounts) {
-      if (!grouped[acc.rootType]) {
-        grouped[acc.rootType] = []
-      }
-      grouped[acc.rootType].push(acc)
+      const bucket = grouped[acc.rootType] ?? []
+      bucket.push(acc)
+      grouped[acc.rootType] = bucket
     }
     return grouped
   }, [data])
@@ -355,8 +354,7 @@ export function AccountDefaultsTab() {
           const isDirty =
             selectedAccounts[item.key] &&
             selectedAccounts[item.key] !== item.accountId
-          const color =
-            ROOT_TYPE_COLORS[item.metadata.rootType] || ROOT_TYPE_COLORS.asset
+          const color = ROOT_TYPE_COLORS[item.metadata.rootType]
 
           // Get candidate accounts for dropdown (prioritize matching rootType, but allow cross-type if applicable)
           const primaryOptions =

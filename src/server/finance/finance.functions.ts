@@ -16,10 +16,14 @@ import { RIDER_SETTLEMENT_METHOD_LABELS } from '#/server/riders/rider-settlement
 import {
   getAccountDefaultsQuery,
   getChartOfAccountsWithBalancesQuery,
+  getCostCentersQuery,
   getDealerPayablesSummaryQuery,
   getFiscalYearsQuery,
+  getGeneralLedgerEntriesQuery,
   getGeneralLedgerQuery,
   getJournalEntriesQuery,
+  getJournalEntryByIdQuery,
+  getPartyStatementQuery,
   getPublicVoucherBySlugQuery,
   getRiderAccountsSummaryQuery,
   getUnsettledDealerItemsQuery,
@@ -394,6 +398,65 @@ export const getUnsettledDealerItemsFn = createServerFn({ method: 'GET' })
   })
 
 /**
+ * Journal-level transaction log for the Transactions tab.
+ * Returns journal entries with their lines, fully filterable by voucher type,
+ * ref type, date range, party, and free-text search.
+ * ERPNext-style: each row is one journal ENTRY (header), not a line.
+ */
+export const getJournalTransactionsFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        voucherType: z.string().optional(),
+        refType: z.string().optional(),
+        partyType: z.string().optional(),
+        partyId: z.string().optional(),
+        fromDate: z.string().optional(),
+        toDate: z.string().optional(),
+        search: z.string().optional(),
+        limit: z.number().optional().default(200),
+        offset: z.number().optional().default(0),
+      })
+      .optional()
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requirePermission('accounts', 'view')
+    return getJournalEntriesQuery({
+      voucherType: data?.voucherType,
+      refType: data?.refType,
+      partyType: data?.partyType,
+      partyId: data?.partyId,
+      fromDate: data?.fromDate ? new Date(data.fromDate) : undefined,
+      toDate: data?.toDate ? new Date(data.toDate) : undefined,
+      search: data?.search,
+      limit: data?.limit ?? 200,
+      offset: data?.offset ?? 0,
+    })
+  })
+
+/**
+ * Dealer payables summary (all dealers at once) for the Dealer Report tab.
+ * Includes aging breakdown computed server-side from GL posting dates.
+ */
+export const getDealerPayablesSummaryFn = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  await requirePermission('accounts', 'view')
+  return getDealerPayablesSummaryQuery()
+})
+
+/**
+ * Rider accounts summary for the Rider Report tab.
+ */
+export const getRiderAccountsSummaryFn = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  await requirePermission('accounts', 'view')
+  return getRiderAccountsSummaryQuery()
+})
+
+/**
  * Public voucher fetcher by unguessable slug (public read-only, no login required).
  */
 export const getPublicVoucherFn = createServerFn({ method: 'GET' })
@@ -405,6 +468,106 @@ export const getPublicVoucherFn = createServerFn({ method: 'GET' })
     }
     return voucher
   })
+
+/**
+ * General Ledger entries with full filtering, search, and pagination.
+ * Single source of truth for all account/party reports.
+ */
+export const getGeneralLedgerFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        accountId: z.string().optional(),
+        accountCode: z.string().optional(),
+        accountRootType: z.string().optional(),
+        accountType: z.string().optional(),
+        partyType: z.string().optional(),
+        partyId: z.string().optional(),
+        voucherType: z.string().optional(),
+        refType: z.string().optional(),
+        refId: z.string().optional(),
+        costCenterId: z.string().optional(),
+        fromDate: z.string().optional(),
+        toDate: z.string().optional(),
+        search: z.string().optional(),
+        limit: z.number().optional().default(500),
+        offset: z.number().optional().default(0),
+      })
+      .optional()
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requirePermission('accounts', 'view')
+
+    return getGeneralLedgerEntriesQuery({
+      accountId: data?.accountId,
+      accountCode: data?.accountCode,
+      accountRootType: data?.accountRootType,
+      accountType: data?.accountType,
+      partyType: data?.partyType,
+      partyId: data?.partyId,
+      voucherType: data?.voucherType,
+      refType: data?.refType,
+      refId: data?.refId,
+      costCenterId: data?.costCenterId,
+      fromDate: data?.fromDate ? new Date(data.fromDate) : null,
+      toDate: data?.toDate ? new Date(data.toDate) : null,
+      search: data?.search,
+      limit: data?.limit ?? 500,
+      offset: data?.offset ?? 0,
+    })
+  })
+
+/**
+ * Party statement (sub-ledger) with running balance for a single party.
+ * Used by Dealer Report and Rider Report tabs.
+ */
+export const getPartyStatementFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        partyType: z.enum(['dealer', 'rider', 'customer', 'supplier']),
+        partyId: z.string().min(1),
+        fromDate: z.string().optional(),
+        toDate: z.string().optional(),
+        accountId: z.string().optional(),
+        limit: z.number().optional().default(500),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    await requirePermission('accounts', 'view')
+
+    return getPartyStatementQuery({
+      partyType: data.partyType,
+      partyId: data.partyId,
+      fromDate: data.fromDate ? new Date(data.fromDate) : null,
+      toDate: data.toDate ? new Date(data.toDate) : null,
+      accountId: data.accountId ?? null,
+      limit: data.limit,
+    })
+  })
+
+/**
+ * Loads a single journal voucher (with all lines) for the details dialog.
+ * Used by the General Ledger, Party Statement and Transactions tables.
+ */
+export const getJournalEntryByIdFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) => z.object({ id: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    await requirePermission('accounts', 'view')
+    return getJournalEntryByIdQuery(data.id)
+  })
+
+/**
+ * Cost centers for filters and reporting.
+ */
+export const getCostCentersFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    await requirePermission('accounts', 'view')
+    return getCostCentersQuery()
+  },
+)
 
 /**
  * Manager receives cash handover directly from rider at counter.

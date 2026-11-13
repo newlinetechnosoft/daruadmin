@@ -6,7 +6,6 @@ import { storefrontQueries } from '#/queries/storefront'
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { LandingPopup } from '#/components/store/landing-popup'
-import { toast } from 'sonner'
 import {
   ArrowRight,
   ShieldCheck,
@@ -19,13 +18,15 @@ import {
 
 export const Route = createFileRoute('/')({
   loader: async ({ context }) => {
-    const [foodCategories, liquorCategories, landingPopups] = await Promise.all([
-      context.queryClient.ensureQueryData(
-        storefrontQueries.foodCategories(),
-      ),
-      context.queryClient.ensureQueryData(storefrontQueries.liquorCategories()),
-      context.queryClient.ensureQueryData(storefrontQueries.landingPopups()),
-    ])
+    const [foodCategories, liquorCategories, landingPopups] = await Promise.all(
+      [
+        context.queryClient.ensureQueryData(storefrontQueries.foodCategories()),
+        context.queryClient.ensureQueryData(
+          storefrontQueries.liquorCategories(),
+        ),
+        context.queryClient.ensureQueryData(storefrontQueries.landingPopups()),
+      ],
+    )
     return { foodCategories, liquorCategories, landingPopups }
   },
   component: HomePage,
@@ -446,11 +447,10 @@ function SearchIcon({ className = 'h-5 w-5' }: { className?: string }) {
 function HomePage() {
   const navigate = useNavigate()
   const loaderData = Route.useLoaderData()
-  const { data: allFoodCategories = loaderData?.foodCategories ?? [] } =
-    useQuery({
-      ...storefrontQueries.foodCategories(),
-      initialData: loaderData?.foodCategories,
-    })
+  const { data: allFoodCategories } = useQuery({
+    ...storefrontQueries.foodCategories(),
+    initialData: loaderData.foodCategories,
+  })
 
   // Smart landing page category visibility:
   // Show categories that have the "Visible on landing page" check button enabled
@@ -458,11 +458,10 @@ function HomePage() {
     (cat: any) => Boolean(cat.showOnLandingPage) && cat.isActive !== false,
   )
 
-  const { data: allLiquorCategories = loaderData?.liquorCategories ?? [] } =
-    useQuery({
-      ...storefrontQueries.liquorCategories(),
-      initialData: loaderData?.liquorCategories,
-    })
+  const { data: allLiquorCategories } = useQuery({
+    ...storefrontQueries.liquorCategories(),
+    initialData: loaderData.liquorCategories,
+  })
 
   // Smart landing page drinks category visibility:
   // Show drinks categories where showOnLandingPage is checked in the admin panel
@@ -470,13 +469,12 @@ function HomePage() {
     (cat: any) => Boolean(cat.showOnLandingPage) && cat.isActive !== false,
   )
 
-  const { data: landingPopups = loaderData?.landingPopups ?? [] } = useQuery({
+  const { data: landingPopups } = useQuery({
     ...storefrontQueries.landingPopups(),
-    initialData: loaderData?.landingPopups,
+    initialData: loaderData.landingPopups,
   })
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [phoneNumber, setPhoneNumber] = useState('')
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
 
@@ -498,16 +496,6 @@ function HomePage() {
     } else {
       navigate({ to: '/drinks' })
     }
-  }
-
-  const handleGetApp = (e: FormEvent) => {
-    e.preventDefault()
-    if (!phoneNumber.trim()) {
-      toast.error('Please enter your mobile number')
-      return
-    }
-    toast.success(`Download link sent to ${phoneNumber}! Check your SMS.`)
-    setPhoneNumber('')
   }
 
   const wrap = 'mx-auto w-full max-w-7xl px-5 sm:px-8'
@@ -543,8 +531,9 @@ function HomePage() {
                   loading={idx === 0 ? 'eager' : 'lazy'}
                   decoding="async"
                   fetchPriority={idx === 0 ? 'high' : 'auto'}
-                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${idx === currentSlide ? 'scale-110' : 'scale-100'
-                    }`}
+                  className={`h-full w-full object-cover object-center transition-transform duration-[7000ms] ease-out ${
+                    idx === currentSlide ? 'scale-110' : 'scale-100'
+                  }`}
                 />
               </div>
             ))}
@@ -626,7 +615,7 @@ function HomePage() {
                   type="submit"
                   className="flex items-center gap-2 rounded-full bg-primary hover:bg-primary/90 px-5 sm:px-7 py-2.5 sm:py-3 text-xs sm:text-sm font-black text-primary-foreground shadow-md transition-transform hover:scale-105 shrink-0 cursor-pointer"
                 >
-                  <span>SHOP</span>
+                  <span>Order Now</span>
                   <ArrowRight size={16} />
                 </button>
               </div>
@@ -639,10 +628,11 @@ function HomePage() {
                   key={idx}
                   type="button"
                   onClick={() => setCurrentSlide(idx)}
-                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${idx === currentSlide
-                    ? 'w-8 bg-primary shadow-md shadow-primary/50'
-                    : 'w-2.5 bg-white/70 hover:bg-white'
-                    }`}
+                  className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                    idx === currentSlide
+                      ? 'w-8 bg-primary shadow-md shadow-primary/50'
+                      : 'w-2.5 bg-white/70 hover:bg-white'
+                  }`}
                   aria-label={`Go to slide ${idx + 1}`}
                 />
               ))}
@@ -668,7 +658,7 @@ function HomePage() {
           </div>
         </section>
 
-        {/* SHOP BY DRINKS */}
+        {/* Order By Drinks */}
         <section
           className="h-[90%] scroll-mt-24 bg-card py-16 sm:py-24"
           id="drinks"
@@ -678,7 +668,7 @@ function HomePage() {
               <div>
                 <p className={eyebrow}>Explore</p>
                 <h2 className="mt-3 text-4xl font-black uppercase leading-none tracking-tighter sm:text-6xl">
-                  Shop by drinks
+                  Order By Drinks
                 </h2>
               </div>
               <Link
@@ -791,9 +781,7 @@ function HomePage() {
                       <Link
                         key={cat.id}
                         to={
-                          cat.slug === 'party-essentials'
-                            ? '/food'
-                            : '/drinks'
+                          cat.slug === 'party-essentials' ? '/food' : '/drinks'
                         }
                         search={{ category: cat.slug }}
                         className={`${drinkTile} ${slot.className}`}
@@ -837,7 +825,7 @@ function HomePage() {
           </div>
         </section>
 
-        {/* SHOP BY FOOD */}
+        {/* Order By Food */}
         <section
           className="relative isolate scroll-mt-24 overflow-hidden border-t border-border bg-gradient-to-b from-background via-card/25 to-background py-16 sm:py-24"
           id="food"
@@ -859,7 +847,7 @@ function HomePage() {
                   <span className={eyebrow}>Fast Delivery</span>
                 </div>
                 <h2 className="mt-3 text-4xl font-black uppercase leading-none tracking-tighter sm:text-6xl text-foreground">
-                  Shop by food
+                  Order By Food
                 </h2>
               </div>
 
@@ -949,72 +937,22 @@ function HomePage() {
         </section>
 
         {/* APP */}
-        <section className="bg-secondary/30 border-y border-border">
-          <div
-            className={`${wrap} grid items-center gap-14 py-16 sm:py-24 lg:grid-cols-2`}
-          >
-            <div className="flex items-center justify-center lg:justify-start">
-              <img
-                src="/images/rider.jpeg"
-                alt="Mezmani delivery rider"
-                loading="lazy"
-                className="w-full max-w-md rounded-2xl object-cover"
-              />
-            </div>
-
-            <div>
-             
-              <h2 className="mt-3 text-4xl font-black uppercase leading-[0.92] tracking-tighter sm:text-6xl">
-                Your drinks.
-                <br />
-                <span className="text-muted-foreground">Wherever you go.</span>
-              </h2>
-              <p className="mt-6 max-w-md text-base leading-relaxed text-muted-foreground">
-                Get your liquor, food and party supplies delivered with just a
-                few taps.
-              </p>
-
-              <form
-                onSubmit={handleGetApp}
-                className="mt-8 flex max-w-lg flex-col gap-3 sm:flex-row"
-              >
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="Enter your number (98XXXXXXXX)"
-                  className="h-14 min-w-0 flex-1 border border-input bg-card px-4 text-base text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring rounded-md"
-                />
-                <button
-                  type="submit"
-                  className="h-14 bg-primary px-8 text-sm font-semibold uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/90 cursor-pointer rounded-md"
-                >
-                  Get App
-                </button>
-              </form>
-            </div>
-          </div>
-        </section>
-
-        {/* FEATURES */}
-        <section className="border-y border-border bg-secondary/30 py-14 sm:py-16">
-          <div className={`${wrap} grid gap-8 sm:grid-cols-3 sm:gap-10`}>
-            {FEATURES.map((feature, i) => (
-              <div key={feature.title} className="flex gap-4">
-                <span className="text-sm font-black tabular-nums text-primary">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <div>
-                  <h3 className="text-base font-extrabold">{feature.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{feature.body}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* <section className="w-full flex justify-center bg-secondary/30"> */}
+        {/*   <div className="w-[clamp(18rem,76vw,90rem)]"> */}
+        {/*     <img */}
+        {/*       src="/images/rider_bg.webp" */}
+        {/*       alt="Mezmani delivery rider" */}
+        {/*       loading="lazy" */}
+        {/*       className="w-full rounded-2xl object-cover" */}
+        {/*     /> */}
+        {/*   </div> */}
+        {/* </section> */}
 
         {/* REVIEWS */}
-        <section className="scroll-mt-24 bg-background py-16 sm:py-24" id="reviews">
+        <section
+          className="scroll-mt-24 bg-background py-16 sm:py-24"
+          id="reviews"
+        >
           <div className={wrap}>
             <div className="mb-9 flex flex-col justify-between gap-4 sm:mb-12 sm:flex-row sm:items-end">
               <div>
@@ -1036,7 +974,10 @@ function HomePage() {
                   className="flex min-h-[250px] flex-col justify-between rounded-2xl border border-border bg-card p-6 transition hover:-translate-y-1 hover:shadow-lg sm:p-7"
                 >
                   <div>
-                    <div className="text-sm tracking-[0.18em] text-primary" aria-label="5 out of 5 stars">
+                    <div
+                      className="text-sm tracking-[0.18em] text-primary"
+                      aria-label="5 out of 5 stars"
+                    >
                       ★★★★★
                     </div>
                     <blockquote className="mt-6 text-lg font-semibold leading-7 tracking-tight text-foreground">
@@ -1048,8 +989,12 @@ function HomePage() {
                       {review.name.charAt(0)}
                     </div>
                     <div>
-                      <strong className="block text-sm font-bold">{review.name}</strong>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">Mezmani customer</span>
+                      <strong className="block text-sm font-bold">
+                        {review.name}
+                      </strong>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        Mezmani customer
+                      </span>
                     </div>
                   </div>
                 </article>
@@ -1058,6 +1003,44 @@ function HomePage() {
           </div>
         </section>
       </main>
+
+      {/* Features */}
+      <section className="relative isolate overflow-hidden sm:py-16 sm:min-h-50 sm:flex sm:items-center">
+        {/* Skyline pinned to the bottom, scales with the width */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10">
+          <img
+            src="/images/butwal_skyline_navy.webp"
+            srcSet="/images/butwal_skyline_navy-1024.webp 1024w, /images/butwal_skyline_navy.webp 1963w"
+            sizes="100vw"
+            width={1963}
+            height={247}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            className="block h-auto w-full opacity-15 dark:invert dark:opacity-10"
+          />
+          {/* Fade the top so it blends into the section instead of cutting off */}
+          <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-transparent" />
+        </div>
+
+        <div
+          className={`${wrap} relative grid w-full gap-8 sm:grid-cols-3 sm:gap-10`}
+        >
+          {FEATURES.map((feature, i) => (
+            <div key={feature.title} className="flex gap-4">
+              <span className="text-sm font-black tabular-nums text-primary">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <div>
+                <h3 className="text-base font-extrabold">{feature.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-foreground/80">
+                  {feature.body}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* FOOTER */}
       <Footer />
