@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
 import {
   restoreRecycleBinItemFn,
@@ -7,144 +7,175 @@ import {
   emptyRecycleBinFn,
 } from '#/server/recycle-bin/recycle-bin.functions'
 import { Button } from '#/components/ui/button'
-import { Badge } from '#/components/ui/badge'
 import { Input } from '#/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '#/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui/table'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
+import { DateText } from '#/components/shared/date-text'
+import { MetricCard } from '#/components/shared/metric-card'
+import { PageHeader, PageShell } from '#/components/shared/page-shell'
+import { cn } from '#/lib/utils'
 import { toast } from 'sonner'
 import {
-  Trash2,
-  RotateCcw,
-  Clock,
   AlertTriangle,
-  Search,
-  Wine,
-  ShoppingBag,
-  Tags,
-  Store,
-  Bike,
-  Megaphone,
   Award,
-  ShieldCheck,
-  Calendar,
-  Layers,
+  Bike,
   CheckCircle2,
+  Clock,
+  Layers,
+  Megaphone,
+  Milk,
+  Package,
+  RotateCcw,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  ShoppingBasket,
+  Store,
+  Tags,
+  Trash2,
+  Wine,
+  X,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
-function getEntityMeta(entityType: string) {
+type EntityGroup =
+  | 'products'
+  | 'categories'
+  | 'brands'
+  | 'dealers'
+  | 'marketing'
+  | 'riders'
+  | 'other'
+
+type EntityMeta = {
+  label: string
+  group: EntityGroup
+  icon: LucideIcon
+}
+
+const GROUP_OPTIONS = [
+  { id: 'all', label: 'All items' },
+  { id: 'products', label: 'Products' },
+  { id: 'categories', label: 'Categories' },
+  { id: 'brands', label: 'Brands' },
+  { id: 'dealers', label: 'Dealers' },
+  { id: 'marketing', label: 'Marketing' },
+  { id: 'riders', label: 'Riders' },
+] as const
+
+type GroupFilter = (typeof GROUP_OPTIONS)[number]['id']
+type UrgencyFilter = 'all' | 'expiring' | 'safe'
+
+const URGENCY_STYLES: Record<string, string> = {
+  expired: 'border-destructive/30 bg-destructive/10 text-destructive',
+  critical: 'border-destructive/30 bg-destructive/10 text-destructive',
+  warning: 'border-warning/30 bg-warning/10 text-warning',
+  safe: 'border-success/25 bg-success/10 text-success',
+}
+
+const CATALOG_LABELS: Record<string, string> = {
+  liquor: 'Liquor',
+  food: 'Food',
+  grocery: 'Grocery',
+  ddc: 'DDC',
+}
+
+function catalogLabel(entityType: string) {
+  return CATALOG_LABELS[entityType.split('_')[0] ?? ''] ?? 'Catalog'
+}
+
+function getEntityMeta(entityType: string): EntityMeta {
   switch (entityType) {
     case 'liquor_product':
-      return {
-        label: 'Liquor Product',
-        group: 'products',
-        icon: Wine,
-        badgeClass:
-          'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
-      }
+      return { label: 'Liquor product', group: 'products', icon: Wine }
     case 'food_product':
+      return { label: 'Food product', group: 'products', icon: ShoppingBag }
+    case 'grocery_product':
       return {
-        label: 'Food Product',
+        label: 'Grocery product',
         group: 'products',
-        icon: ShoppingBag,
-        badgeClass:
-          'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+        icon: ShoppingBasket,
       }
+    case 'ddc_product':
+      return { label: 'DDC product', group: 'products', icon: Milk }
     case 'liquor_category':
-      return {
-        label: 'Liquor Category',
-        group: 'categories',
-        icon: Tags,
-        badgeClass:
-          'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-      }
     case 'food_category':
+    case 'grocery_category':
+    case 'ddc_category':
       return {
-        label: 'Food Category',
+        label: `${catalogLabel(entityType)} category`,
         group: 'categories',
         icon: Tags,
-        badgeClass:
-          'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
       }
     case 'liquor_brand':
     case 'food_brand':
+    case 'grocery_brand':
+    case 'ddc_brand':
       return {
-        label: entityType === 'liquor_brand' ? 'Liquor Brand' : 'Food Brand',
+        label: `${catalogLabel(entityType)} brand`,
         group: 'brands',
         icon: Award,
-        badgeClass:
-          'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
       }
     case 'dealer':
-      return {
-        label: 'Dealer',
-        group: 'dealers',
-        icon: Store,
-        badgeClass:
-          'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
-      }
+      return { label: 'Dealer', group: 'dealers', icon: Store }
     case 'coupon':
+      return { label: 'Coupon', group: 'marketing', icon: Megaphone }
     case 'banner':
+      return { label: 'Banner', group: 'marketing', icon: Megaphone }
     case 'offer':
-      return {
-        label:
-          entityType === 'coupon'
-            ? 'Coupon'
-            : entityType === 'banner'
-              ? 'Banner'
-              : 'Offer',
-        group: 'marketing',
-        icon: Megaphone,
-        badgeClass:
-          'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
-      }
+      return { label: 'Offer', group: 'marketing', icon: Megaphone }
     case 'rider':
-      return {
-        label: 'Rider / Courier',
-        group: 'riders',
-        icon: Bike,
-        badgeClass:
-          'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
-      }
+      return { label: 'Rider', group: 'riders', icon: Bike }
     default:
-      return {
-        label: 'Data Item',
-        group: 'other',
-        icon: Layers,
-        badgeClass: 'bg-muted text-muted-foreground border-border',
-      }
+      return { label: 'Data item', group: 'other', icon: Package }
   }
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback
 }
 
 export function RecycleBinPanel() {
   const queryClient = useQueryClient()
-  const { data, isLoading, isRefetching, isFetching, refetch } = useQuery(
-    adminQueries.recycleBin(),
-  )
+  const recycleBinQuery = adminQueries.recycleBin()
+  const { data, isLoading, isRefetching, isFetching, refetch } =
+    useQuery(recycleBinQuery)
 
   const [search, setSearch] = React.useState('')
-  const [selectedGroup, setSelectedGroup] = React.useState<string>('all')
-  const [urgencyFilter, setUrgencyFilter] = React.useState<string>('all')
+  const [selectedGroup, setSelectedGroup] = React.useState<GroupFilter>('all')
+  const [urgencyFilter, setUrgencyFilter] = React.useState<UrgencyFilter>('all')
 
-  // Permanent Delete single item modal state
   const [itemToDelete, setItemToDelete] = React.useState<{
     id: string
     name: string
   } | null>(null)
-
-  // Empty Bin modal state
   const [showEmptyConfirm, setShowEmptyConfirm] = React.useState(false)
 
-  // Mutations
   const restoreMutation = useMutation({
     mutationFn: (id: string) => restoreRecycleBinItemFn({ data: { id } }),
     onSuccess: (res) => {
-      toast.success(`Restored "${res.name}" successfully!`)
+      toast.success(`Restored "${res.name}" successfully`)
       queryClient.invalidateQueries({ queryKey: ['admin'] })
       queryClient.invalidateQueries({ queryKey: ['store'] })
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Failed to restore item')
+    onError: (error: unknown) => {
+      toast.error(errorMessage(error, 'Failed to restore item'))
     },
   })
 
@@ -154,31 +185,34 @@ export function RecycleBinPanel() {
     onSuccess: () => {
       toast.success('Item permanently deleted')
       setItemToDelete(null)
-      queryClient.invalidateQueries({ queryKey: ['admin', 'recycle-bin'] })
+      queryClient.invalidateQueries({ queryKey: recycleBinQuery.queryKey })
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Failed to permanently delete item')
+    onError: (error: unknown) => {
+      toast.error(errorMessage(error, 'Failed to permanently delete item'))
     },
   })
 
   const emptyBinMutation = useMutation({
     mutationFn: () => emptyRecycleBinFn(),
     onSuccess: () => {
-      toast.success('Recycle bin emptied successfully')
+      toast.success('Recycle bin emptied')
       setShowEmptyConfirm(false)
-      queryClient.invalidateQueries({ queryKey: ['admin', 'recycle-bin'] })
+      queryClient.invalidateQueries({ queryKey: recycleBinQuery.queryKey })
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Failed to empty recycle bin')
+    onError: (error: unknown) => {
+      toast.error(errorMessage(error, 'Failed to empty recycle bin'))
     },
   })
 
   const items = data?.items ?? []
-  const stats = data?.stats ?? { total: 0, expiringSoon: 0, retentionDays: 15 }
+  const stats = data?.stats ?? {
+    total: 0,
+    expiringSoon: 0,
+    retentionDays: 15,
+  }
 
-  // Group counts for filter pills
   const groupCounts = React.useMemo(() => {
-    const counts: Record<string, number> = {
+    const counts: Record<GroupFilter, number> = {
       all: items.length,
       products: 0,
       categories: 0,
@@ -187,451 +221,417 @@ export function RecycleBinPanel() {
       marketing: 0,
       riders: 0,
     }
+
     for (const item of items) {
-      const meta = getEntityMeta(item.entityType)
-      if (counts[meta.group] !== undefined) {
-        counts[meta.group]++
-      }
+      const group = getEntityMeta(item.entityType).group
+      if (group !== 'other') counts[group]++
     }
+
     return counts
   }, [items])
 
-  // Filtered list
+  const hasActiveFilters =
+    search.trim() !== '' || selectedGroup !== 'all' || urgencyFilter !== 'all'
+
   const filteredItems = React.useMemo(() => {
+    const query = search.trim().toLowerCase()
+
     return items.filter((item) => {
       const meta = getEntityMeta(item.entityType)
-      if (selectedGroup !== 'all' && meta.group !== selectedGroup) return false
 
-      if (urgencyFilter === 'expiring' && item.remainingDays > 3) return false
+      if (selectedGroup !== 'all' && meta.group !== selectedGroup) return false
+      if (urgencyFilter === 'expiring' && item.remainingDays > 7) return false
       if (urgencyFilter === 'safe' && item.remainingDays <= 7) return false
 
-      if (search.trim()) {
-        const q = search.toLowerCase()
-        const matchName = item.name.toLowerCase().includes(q)
-        const matchDesc = item.description?.toLowerCase().includes(q)
-        const matchType = meta.label.toLowerCase().includes(q)
-        const matchDeletedBy = item.deletedBy?.toLowerCase().includes(q)
-        return matchName || matchDesc || matchType || matchDeletedBy
-      }
+      if (!query) return true
 
-      return true
+      return (
+        item.name.toLowerCase().includes(query) ||
+        Boolean(item.description?.toLowerCase().includes(query)) ||
+        meta.label.toLowerCase().includes(query) ||
+        item.deletedBy.toLowerCase().includes(query)
+      )
     })
   }, [items, selectedGroup, urgencyFilter, search])
 
+  const resetFilters = () => {
+    setSearch('')
+    setSelectedGroup('all')
+    setUrgencyFilter('all')
+  }
+
   return (
-    <div className="space-y-6 w-full min-w-0 max-w-[1600px] mx-auto">
-      {/* Top Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-6">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-destructive/10 text-destructive border border-destructive/20 shadow-sm">
-              <Trash2 className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-foreground flex items-center gap-2">
-                Recycle Bin
-                {items.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-xs font-bold">
-                    {items.length} {items.length === 1 ? 'item' : 'items'}
-                  </Badge>
-                )}
-              </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                Deleted data is safely kept for 15 days before permanent purge.
-                You can restore items at any time.
-              </p>
-            </div>
-          </div>
-        </div>
+    <PageShell>
+      <PageHeader
+        title="Recycle Bin"
+        description="Restore deleted records within the retention period, or remove them permanently."
+        count={items.length}
+        actions={
+          <>
+            <DataRefreshButton
+              queryKeys={[recycleBinQuery.queryKey]}
+              onRefresh={() => refetch()}
+              isRefreshing={isFetching || isRefetching}
+              variant="icon"
+            />
 
-        <div className="flex items-center gap-2">
-          <DataRefreshButton
-            queryKeys={[adminQueries.recycleBin().queryKey]}
-            onRefresh={() => refetch()}
-            isRefreshing={isFetching || isRefetching}
-            variant="button"
-          />
-
-          {items.length > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setShowEmptyConfirm(true)}
-              className="gap-2 cursor-pointer shadow-sm"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span>Empty Bin</span>
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <DataSection isRefreshing={isFetching || isRefetching}>
-        {/* Metrics Cards */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-semibold uppercase tracking-wider">
-                In Recycle Bin
-              </span>
-              <Layers className="h-4 w-4 text-primary" />
-            </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black text-foreground tabular-nums">
-                {stats.total}
-              </span>
-              <span className="text-xs text-muted-foreground">items</span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Across catalog, dealers, marketing & riders
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-semibold uppercase tracking-wider">
-                Expiring Soon
-              </span>
-              <AlertTriangle
-                className={`h-4 w-4 ${stats.expiringSoon > 0 ? 'text-rose-500 animate-pulse' : 'text-muted-foreground'}`}
-              />
-            </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span
-                className={`text-2xl sm:text-3xl font-black tabular-nums ${stats.expiringSoon > 0 ? 'text-rose-500' : 'text-foreground'}`}
-              >
-                {stats.expiringSoon}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                &le; 3 days left
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Will be permanently deleted shortly
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-semibold uppercase tracking-wider">
-                Retention Window
-              </span>
-              <Clock className="h-4 w-4 text-amber-500" />
-            </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black text-foreground tabular-nums">
-                15
-              </span>
-              <span className="text-xs text-muted-foreground">days</span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Safety buffer prior to permanent purge
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-semibold uppercase tracking-wider">
-                Auto-Purge
-              </span>
-              <ShieldCheck className="h-4 w-4 text-emerald-500" />
-            </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black text-emerald-500 font-mono">
-                ACTIVE
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Automated database housekeeping
-            </p>
-          </div>
-        </div>
-
-        {/* Filter and Search Bar */}
-        <div className="space-y-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search deleted items by name, code, or user..."
-                className="pl-9 bg-card"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-
-            {/* Urgency Filter Dropdown / Pills */}
-            <div className="flex items-center gap-1.5 self-start sm:self-auto text-xs">
-              <span className="text-muted-foreground mr-1 hidden sm:inline">
-                Urgency:
-              </span>
-              <button
-                onClick={() => setUrgencyFilter('all')}
-                className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
-                  urgencyFilter === 'all'
-                    ? 'bg-foreground text-background'
-                    : 'bg-secondary/60 text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setUrgencyFilter('expiring')}
-                className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer flex items-center gap-1 ${
-                  urgencyFilter === 'expiring'
-                    ? 'bg-rose-500 text-white'
-                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20'
-                }`}
-              >
-                <AlertTriangle className="h-3 w-3" />
-                Expiring Soon
-              </button>
-              <button
-                onClick={() => setUrgencyFilter('safe')}
-                className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
-                  urgencyFilter === 'safe'
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
-                }`}
-              >
-                Safe (&gt;7d)
-              </button>
-            </div>
-          </div>
-
-          {/* Group Filter Tabs */}
-          <div className="flex flex-wrap items-center gap-1.5 border-b border-border pb-3">
-            {[
-              { id: 'all', label: 'All Items' },
-              { id: 'products', label: 'Products' },
-              { id: 'categories', label: 'Categories' },
-              { id: 'brands', label: 'Brands' },
-              { id: 'dealers', label: 'Dealers' },
-              { id: 'marketing', label: 'Marketing' },
-              { id: 'riders', label: 'Riders' },
-            ].map((tab) => {
-              const count = groupCounts[tab.id] || 0
-              const active = selectedGroup === tab.id
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setSelectedGroup(tab.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    active
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/40'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  <span
-                    className={`text-xs px-1.5 py-0.2 rounded-full tabular-nums ${
-                      active
-                        ? 'bg-primary-foreground/20 text-primary-foreground'
-                        : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Items List */}
-        {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="h-24 w-full animate-pulse rounded-xl border border-border bg-card/60"
-              />
-            ))}
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/40 py-16 px-4 text-center">
-            <div className="grid h-14 w-14 place-items-center rounded-full bg-secondary text-muted-foreground mb-4">
-              {search || selectedGroup !== 'all' || urgencyFilter !== 'all' ? (
-                <Search className="h-6 w-6" />
-              ) : (
-                <CheckCircle2 className="h-6 w-6 text-emerald-500" />
-              )}
-            </div>
-            <h3 className="text-base sm:text-lg font-bold text-foreground">
-              {search || selectedGroup !== 'all' || urgencyFilter !== 'all'
-                ? 'No matching deleted items found'
-                : 'Recycle Bin is empty'}
-            </h3>
-            <p className="mt-1 max-w-md text-xs sm:text-sm text-muted-foreground">
-              {search || selectedGroup !== 'all' || urgencyFilter !== 'all'
-                ? 'Try modifying your search keywords or resetting filters.'
-                : 'Items deleted from catalog, categories, dealers, marketing, and riders will appear here and be preserved for 15 days.'}
-            </p>
-            {(search || selectedGroup !== 'all' || urgencyFilter !== 'all') && (
+            {items.length > 0 && (
               <Button
-                variant="outline"
+                variant="destructive"
                 size="sm"
-                onClick={() => {
-                  setSearch('')
-                  setSelectedGroup('all')
-                  setUrgencyFilter('all')
-                }}
-                className="mt-4 cursor-pointer"
+                onClick={() => setShowEmptyConfirm(true)}
+                className="h-9 gap-2 px-3 text-xs"
               >
-                Reset Filters
+                <Trash2 className="size-4" />
+                Empty bin
               </Button>
             )}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredItems.map((item) => {
-              const meta = getEntityMeta(item.entityType)
-              const Icon = meta.icon
-              const isRestoring =
-                restoreMutation.isPending &&
-                restoreMutation.variables === item.id
-              const isDeleting =
-                permanentDeleteMutation.isPending &&
-                permanentDeleteMutation.variables === item.id
+          </>
+        }
+      />
 
-              return (
-                <div
-                  key={item.id}
-                  className="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 sm:p-5 shadow-xs transition-all hover:border-border/80 hover:shadow-md"
+      <DataSection isRefreshing={isFetching || isRefetching}>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <MetricCard
+              label="Items in bin"
+              value={stats.total.toLocaleString('en-IN')}
+              note="Across catalog, dealers, marketing and riders"
+              icon={Layers}
+              tone="info"
+            />
+            <MetricCard
+              label="Expiring soon"
+              value={stats.expiringSoon.toLocaleString('en-IN')}
+              note="3 days or fewer remaining"
+              icon={AlertTriangle}
+              tone={stats.expiringSoon > 0 ? 'danger' : 'success'}
+            />
+            <MetricCard
+              label="Safe items"
+              value={(stats.total - stats.expiringSoon).toLocaleString('en-IN')}
+              note="More than 3 days remaining"
+              icon={ShieldCheck}
+              tone="success"
+            />
+            <MetricCard
+              label="Retention"
+              value={`${stats.retentionDays} days`}
+              note="Automatic purge is enabled"
+              icon={Clock}
+              tone="neutral"
+            />
+          </div>
+
+          {stats.expiringSoon > 0 && urgencyFilter !== 'expiring' && (
+            <div className="flex flex-col gap-2 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2.5 text-xs sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="size-4 shrink-0 text-warning" />
+                <span className="text-foreground">
+                  <strong className="font-semibold">
+                    {stats.expiringSoon}
+                  </strong>{' '}
+                  {stats.expiringSoon === 1 ? 'item' : 'items'} will be
+                  permanently deleted within 3 days.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUrgencyFilter('expiring')}
+                className="self-start text-[11px] font-medium text-warning hover:underline sm:self-auto"
+              >
+                Review expiring items
+              </button>
+            </div>
+          )}
+
+          <div className="overflow-hidden rounded-lg border border-border bg-card shadow-none">
+            <div className="flex flex-col gap-3 border-b border-border/70 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="relative w-full lg:max-w-sm">
+                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search items, type or user"
+                  className="h-9 bg-background pl-8 text-xs"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    aria-label="Clear search"
+                    className="absolute top-1/2 right-2 grid size-5 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Select
+                  value={selectedGroup}
+                  onValueChange={(value) =>
+                    setSelectedGroup(value as GroupFilter)
+                  }
                 >
-                  {/* Left: Icon & Details */}
-                  <div className="flex items-start sm:items-center gap-3.5 min-w-0">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-secondary/80 border border-border text-foreground">
-                      <Icon className="h-5 w-5" />
-                    </div>
+                  <SelectTrigger
+                    aria-label="Filter by record type"
+                    className="h-9 w-[150px] bg-background text-xs"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GROUP_OPTIONS.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label} ({groupCounts[option.id]})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="font-bold text-sm sm:text-base text-foreground truncate max-w-xs sm:max-w-md">
-                          {item.name}
-                        </h4>
-                        <Badge
-                          variant="outline"
-                          className={`text-xs font-semibold border ${meta.badgeClass}`}
-                        >
-                          {meta.label}
-                        </Badge>
-                      </div>
+                <Select
+                  value={urgencyFilter}
+                  onValueChange={(value) =>
+                    setUrgencyFilter(value as UrgencyFilter)
+                  }
+                >
+                  <SelectTrigger
+                    aria-label="Filter by expiry"
+                    className="h-9 w-[150px] bg-background text-xs"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All expiry</SelectItem>
+                    <SelectItem value="expiring">Expiring ≤ 7 days</SelectItem>
+                    <SelectItem value="safe">Safe &gt; 7 days</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        {item.description && (
-                          <span className="font-mono text-muted-foreground/80 line-clamp-1">
-                            {item.description}
-                          </span>
-                        )}
-                        <span>•</span>
-                        <span>
-                          Deleted by{' '}
-                          <strong className="text-foreground/80 font-medium">
-                            {item.deletedBy}
-                          </strong>
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(item.deletedAt).toLocaleDateString(
-                            'en-US',
-                            {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            },
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                {hasActiveFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetFilters}
+                    className="h-9 px-2.5 text-xs"
+                  >
+                    Reset
+                  </Button>
+                )}
+              </div>
+            </div>
 
-                  {/* Right: Remaining Days Badge & Actions */}
-                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/50 shrink-0">
-                    {/* Countdown Badge */}
-                    <div className="flex items-center gap-1.5">
-                      <div
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold border transition-colors ${
-                          item.urgency === 'critical'
-                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 animate-pulse'
-                            : item.urgency === 'warning'
-                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                        }`}
-                        title={`Expires on ${new Date(item.expiresAt).toLocaleString()}`}
-                      >
-                        {item.urgency === 'critical' ? (
-                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                        ) : (
-                          <Clock className="h-3.5 w-3.5 shrink-0" />
-                        )}
-                        <span>{item.remainingLabel}</span>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => restoreMutation.mutate(item.id)}
-                        disabled={isRestoring || isDeleting}
-                        className="gap-1.5 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary hover:border-primary cursor-pointer font-semibold shadow-xs"
-                      >
-                        <RotateCcw
-                          className={`h-3.5 w-3.5 ${isRestoring ? 'animate-spin' : ''}`}
-                        />
-                        <span>{isRestoring ? 'Restoring...' : 'Restore'}</span>
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setItemToDelete({ id: item.id, name: item.name })
-                        }
-                        disabled={isRestoring || isDeleting}
-                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer p-2"
-                        title="Permanently Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+            {isLoading ? (
+              <div className="space-y-2 p-4">
+                {[1, 2, 3, 4, 5].map((row) => (
+                  <div
+                    key={row}
+                    className="h-10 animate-pulse rounded-md bg-muted/50"
+                  />
+                ))}
+              </div>
+            ) : filteredItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+                <div className="mb-3 grid size-10 place-items-center rounded-full border border-border bg-muted/40 text-muted-foreground">
+                  {hasActiveFilters ? (
+                    <Search className="size-4" />
+                  ) : (
+                    <CheckCircle2 className="size-4 text-success" />
+                  )}
                 </div>
-              )
-            })}
+                <h3 className="text-sm font-medium text-foreground">
+                  {hasActiveFilters
+                    ? 'No matching items'
+                    : 'Recycle bin is empty'}
+                </h3>
+                <p className="mt-1 max-w-sm text-xs text-muted-foreground">
+                  {hasActiveFilters
+                    ? 'Adjust your search or filters to find deleted records.'
+                    : `Deleted records will appear here and remain available for ${stats.retentionDays} days.`}
+                </p>
+                {hasActiveFilters && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resetFilters}
+                    className="mt-3 h-8 px-2.5 text-xs"
+                  >
+                    Reset filters
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b border-border/70 hover:bg-transparent">
+                        <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground">
+                          Item
+                        </TableHead>
+                        <TableHead className="hidden px-4 py-2.5 text-[11px] font-medium text-muted-foreground md:table-cell">
+                          Type
+                        </TableHead>
+                        <TableHead className="hidden px-4 py-2.5 text-[11px] font-medium text-muted-foreground lg:table-cell">
+                          Deleted by
+                        </TableHead>
+                        <TableHead className="hidden px-4 py-2.5 text-[11px] font-medium text-muted-foreground sm:table-cell">
+                          Deleted on
+                        </TableHead>
+                        <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground">
+                          Expires
+                        </TableHead>
+                        <TableHead className="px-4 py-2.5 text-right text-[11px] font-medium text-muted-foreground">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredItems.map((item) => {
+                        const meta = getEntityMeta(item.entityType)
+                        const Icon = meta.icon
+                        const isRestoring =
+                          restoreMutation.isPending &&
+                          restoreMutation.variables === item.id
+                        const isDeleting =
+                          permanentDeleteMutation.isPending &&
+                          permanentDeleteMutation.variables === item.id
+                        const isUrgent =
+                          item.urgency === 'critical' ||
+                          item.urgency === 'expired'
+
+                        return (
+                          <TableRow
+                            key={item.id}
+                            className="border-b border-border/50 last:border-b-0 hover:bg-muted/30"
+                          >
+                            <TableCell className="max-w-[320px] px-4 py-2.5">
+                              <p
+                                title={item.name}
+                                className="truncate text-xs font-medium text-foreground"
+                              >
+                                {item.name}
+                              </p>
+                              {item.description && (
+                                <p className="truncate text-[11px] text-muted-foreground">
+                                  {item.description}
+                                </p>
+                              )}
+                            </TableCell>
+                            <TableCell className="hidden px-4 py-2.5 md:table-cell">
+                              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Icon className="size-3.5 shrink-0" />
+                                {meta.label}
+                              </span>
+                            </TableCell>
+                            <TableCell className="hidden px-4 py-2.5 text-xs text-foreground lg:table-cell">
+                              {item.deletedBy || 'System'}
+                            </TableCell>
+                            <TableCell className="hidden px-4 py-2.5 sm:table-cell">
+                              <DateText
+                                date={item.deletedAt}
+                                showTime={false}
+                                className="text-xs text-muted-foreground"
+                              />
+                            </TableCell>
+                            <TableCell className="px-4 py-2.5">
+                              <span
+                                title={`Expires on ${new Date(item.expiresAt).toLocaleString()}`}
+                                className={cn(
+                                  'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium',
+                                  URGENCY_STYLES[item.urgency] ??
+                                    URGENCY_STYLES.safe,
+                                )}
+                              >
+                                {isUrgent ? (
+                                  <AlertTriangle className="size-3 shrink-0" />
+                                ) : (
+                                  <Clock className="size-3 shrink-0" />
+                                )}
+                                {item.remainingLabel}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-4 py-2.5">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    restoreMutation.mutate(item.id)
+                                  }
+                                  disabled={isRestoring || isDeleting}
+                                  aria-label={
+                                    isRestoring
+                                      ? `Restoring ${item.name}`
+                                      : `Restore ${item.name}`
+                                  }
+                                  title="Restore item"
+                                  className="h-8 gap-1.5 px-2.5 text-xs"
+                                >
+                                  <RotateCcw
+                                    className={cn(
+                                      'size-3.5',
+                                      isRestoring && 'animate-spin',
+                                    )}
+                                  />
+                                  <span className="hidden sm:inline">
+                                    {isRestoring ? 'Restoring' : 'Restore'}
+                                  </span>
+                                </Button>
+
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    setItemToDelete({
+                                      id: item.id,
+                                      name: item.name,
+                                    })
+                                  }
+                                  disabled={isRestoring || isDeleting}
+                                  aria-label={`Permanently delete ${item.name}`}
+                                  title="Permanently delete"
+                                  className="size-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                  <Trash2 className="size-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-border/70 px-4 py-2.5 text-[11px] text-muted-foreground">
+                  <span>
+                    Showing {filteredItems.length} of {items.length} items
+                  </span>
+                  <span>Auto-purge after {stats.retentionDays} days</span>
+                </div>
+              </>
+            )}
           </div>
-        )}
+        </div>
       </DataSection>
 
-      {/* Confirmation Dialog: Delete Single Item Permanently */}
       <ConfirmDialog
         open={Boolean(itemToDelete)}
-        title="Permanently Delete Item?"
+        title="Permanently delete item?"
         description={
           <div>
             Are you sure you want to permanently delete{' '}
             <strong className="text-foreground">{itemToDelete?.name}</strong>?
-            <br />
-            <span className="text-rose-500 font-semibold mt-2 block">
-              This action cannot be undone. It will be immediately purged from
-              the database.
+            <span className="mt-2 block font-medium text-destructive">
+              This action cannot be undone. The record will be purged
+              immediately.
             </span>
           </div>
         }
-        confirmLabel="Delete Permanently"
-        danger={true}
+        confirmLabel="Delete permanently"
+        tone="danger"
+        icon={<AlertTriangle className="size-4 text-destructive" />}
         isLoading={permanentDeleteMutation.isPending}
         onConfirm={() => {
           if (itemToDelete) {
@@ -641,30 +641,26 @@ export function RecycleBinPanel() {
         onClose={() => setItemToDelete(null)}
       />
 
-      {/* Confirmation Dialog: Empty Whole Bin */}
       <ConfirmDialog
         open={showEmptyConfirm}
-        title="Empty Entire Recycle Bin?"
+        title="Empty recycle bin?"
         description={
           <div>
             Are you sure you want to permanently remove all{' '}
-            <strong className="text-foreground">
-              {items.length} deleted items
-            </strong>{' '}
-            from the Recycle Bin?
-            <br />
-            <span className="text-rose-500 font-semibold mt-2 block">
-              All items will be permanently erased immediately and cannot be
-              recovered.
+            <strong className="text-foreground">{items.length} items</strong>{' '}
+            from the recycle bin?
+            <span className="mt-2 block font-medium text-destructive">
+              All records will be erased immediately and cannot be recovered.
             </span>
           </div>
         }
-        confirmLabel="Empty Recycle Bin"
-        danger={true}
+        confirmLabel="Empty recycle bin"
+        tone="danger"
+        icon={<AlertTriangle className="size-4 text-destructive" />}
         isLoading={emptyBinMutation.isPending}
         onConfirm={() => emptyBinMutation.mutate()}
         onClose={() => setShowEmptyConfirm(false)}
       />
-    </div>
+    </PageShell>
   )
 }

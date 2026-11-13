@@ -9,6 +9,8 @@ import { DateText } from '#/components/shared/date-text'
 import { StatusIndicator } from '#/components/shared/status-indicator'
 import { PageShell, PageHeader } from '#/components/shared/page-shell'
 import { LineChart } from '#/components/shared/charts'
+import { MetricCard, metricToneStyles } from '#/components/shared/metric-card'
+import type { MetricTone } from '#/components/shared/metric-card'
 import { cn } from '#/lib/utils'
 import {
   AlertCircle,
@@ -59,49 +61,6 @@ const RANGE_LABELS: Record<string, string> = {
   ytd: 'Year to date',
 }
 
-type Tone = 'neutral' | 'info' | 'success' | 'warning' | 'danger'
-
-const TONE_STYLES: Record<
-  Tone,
-  { card: string; icon: string; value: string; chip: string; dot: string }
-> = {
-  neutral: {
-    card: 'border-t-border',
-    icon: 'text-muted-foreground/70',
-    value: 'text-foreground',
-    chip: 'border-transparent text-muted-foreground',
-    dot: 'bg-muted-foreground',
-  },
-  info: {
-    card: 'border-t-info',
-    icon: 'text-info',
-    value: 'text-foreground',
-    chip: 'border-info/25 bg-info/10 text-info',
-    dot: 'bg-info',
-  },
-  success: {
-    card: 'border-t-success',
-    icon: 'text-success',
-    value: 'text-success',
-    chip: 'border-success/25 bg-success/10 text-success',
-    dot: 'bg-success',
-  },
-  warning: {
-    card: 'border-t-warning',
-    icon: 'text-warning',
-    value: 'text-foreground',
-    chip: 'border-warning/25 bg-warning/10 text-warning',
-    dot: 'bg-warning',
-  },
-  danger: {
-    card: 'border-t-destructive',
-    icon: 'text-destructive',
-    value: 'text-destructive',
-    chip: 'border-destructive/25 bg-destructive/10 text-destructive',
-    dot: 'bg-destructive',
-  },
-}
-
 export function DashboardPanel() {
   const search = routeApi.useSearch()
   const navigate = routeApi.useNavigate()
@@ -128,7 +87,7 @@ export function DashboardPanel() {
     count: number
     href: string
     icon: LucideIcon
-    tone: Tone
+    tone: MetricTone
   }> = [
     {
       label: 'Pending confirmation',
@@ -174,7 +133,7 @@ export function DashboardPanel() {
     'delivery_failed',
   ].reduce((total, status) => total + (statusCounts.get(status) ?? 0), 0)
 
-  const profitTone: Tone =
+  const profitTone: MetricTone =
     data.kpis.profit > 0
       ? 'success'
       : data.kpis.profit < 0
@@ -190,7 +149,7 @@ export function DashboardPanel() {
     value: ReactNode
     note: string
     icon: LucideIcon
-    tone: Tone
+    tone: MetricTone
   }> = [
     {
       label: 'Delivered revenue',
@@ -272,39 +231,16 @@ export function DashboardPanel() {
       <DataSection isRefreshing={isFetching}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {metrics.map((metric) => {
-              const Icon = metric.icon
-              const tone = TONE_STYLES[metric.tone]
-              return (
-                <Card
-                  key={metric.label}
-                  className={cn(
-                    'gap-0 rounded-lg border-border border-t-[3px] py-0 shadow-none',
-                    tone.card,
-                  )}
-                >
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        {metric.label}
-                      </p>
-                      <Icon className={cn('size-4 shrink-0', tone.icon)} />
-                    </div>
-                    <div
-                      className={cn(
-                        'mt-2 text-xl font-semibold tracking-tight tabular-nums sm:text-2xl',
-                        tone.value,
-                      )}
-                    >
-                      {metric.value}
-                    </div>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      {metric.note}
-                    </p>
-                  </div>
-                </Card>
-              )
-            })}
+            {metrics.map((metric) => (
+              <MetricCard
+                key={metric.label}
+                label={metric.label}
+                value={metric.value}
+                note={metric.note}
+                icon={metric.icon}
+                tone={metric.tone}
+              />
+            ))}
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -356,7 +292,7 @@ export function DashboardPanel() {
                 {actionQueues.map((item) => {
                   const Icon = item.icon
                   const tone =
-                    TONE_STYLES[item.count > 0 ? item.tone : 'neutral']
+                    metricToneStyles[item.count > 0 ? item.tone : 'neutral']
                   return (
                     <Link
                       key={item.label}
