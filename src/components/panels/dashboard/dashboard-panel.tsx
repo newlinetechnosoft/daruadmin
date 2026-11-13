@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Link, getRouteApi } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
@@ -8,28 +9,29 @@ import { DateText } from '#/components/shared/date-text'
 import { StatusIndicator } from '#/components/shared/status-indicator'
 import { PageShell, PageHeader } from '#/components/shared/page-shell'
 import { LineChart } from '#/components/shared/charts'
+import { cn } from '#/lib/utils'
 import {
-  Wallet,
-  ShoppingCart,
-  TrendingUp,
-  Bike,
-  Store,
-  PlusCircle,
   AlertCircle,
-  Clock,
   ArrowRight,
-  ShieldCheck,
+  Bike,
+  ChevronRight,
+  Clock,
   PackageCheck,
-  Banknote,
-  Sparkles,
+  PlusCircle,
+  ShoppingCart,
+  Store,
+  TrendingUp,
+  Truck,
+  Wallet,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from '#/components/ui/card'
 import {
   Select,
@@ -46,350 +48,434 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui/table'
-import { Badge } from '#/components/ui/badge'
 
 const routeApi = getRouteApi('/admin/')
+
+const RANGE_LABELS: Record<string, string> = {
+  today: 'Today',
+  '7d': 'Last 7 days',
+  '30d': 'Last 30 days',
+  '90d': 'Last 90 days',
+  ytd: 'Year to date',
+}
+
+type Tone = 'neutral' | 'info' | 'success' | 'warning' | 'danger'
+
+const TONE_STYLES: Record<
+  Tone,
+  { card: string; icon: string; value: string; chip: string; dot: string }
+> = {
+  neutral: {
+    card: 'border-t-border',
+    icon: 'text-muted-foreground/70',
+    value: 'text-foreground',
+    chip: 'border-transparent text-muted-foreground',
+    dot: 'bg-muted-foreground',
+  },
+  info: {
+    card: 'border-t-info',
+    icon: 'text-info',
+    value: 'text-foreground',
+    chip: 'border-info/25 bg-info/10 text-info',
+    dot: 'bg-info',
+  },
+  success: {
+    card: 'border-t-success',
+    icon: 'text-success',
+    value: 'text-success',
+    chip: 'border-success/25 bg-success/10 text-success',
+    dot: 'bg-success',
+  },
+  warning: {
+    card: 'border-t-warning',
+    icon: 'text-warning',
+    value: 'text-foreground',
+    chip: 'border-warning/25 bg-warning/10 text-warning',
+    dot: 'bg-warning',
+  },
+  danger: {
+    card: 'border-t-destructive',
+    icon: 'text-destructive',
+    value: 'text-destructive',
+    chip: 'border-destructive/25 bg-destructive/10 text-destructive',
+    dot: 'bg-destructive',
+  },
+}
 
 export function DashboardPanel() {
   const search = routeApi.useSearch()
   const navigate = routeApi.useNavigate()
   const range = search.range ?? '30d'
 
-  const { data, isFetching, refetch } = useSuspenseQuery(
-    adminQueries.dashboard({
-      range: range as any,
-      from: search.from,
-      to: search.to,
-    }),
+  const dashboardQuery = adminQueries.dashboard({
+    range,
+    from: search.from,
+    to: search.to,
+  })
+  const { data, isFetching, refetch } = useSuspenseQuery(dashboardQuery)
+
+  const statusCounts = new Map(
+    data.orderStatus.map((status) => [status.label, status.value]),
   )
+  const countStatuses = (...statuses: string[]) =>
+    statuses.reduce(
+      (total, status) => total + (statusCounts.get(status) ?? 0),
+      0,
+    )
 
-  // Determine attention queue numbers based on current order status counts
-  const pendingOrders =
-    data.orderStatus.find((s) => s.label.toLowerCase().includes('pending'))
-      ?.value ?? 0
-  const confirmedOrders =
-    data.orderStatus.find((s) => s.label.toLowerCase().includes('confirmed'))
-      ?.value ?? 0
-  const outForDelivery =
-    data.orderStatus.find(
-      (s) =>
-        s.label.toLowerCase().includes('delivery') ||
-        s.label.toLowerCase().includes('picked'),
-    )?.value ?? 0
-
-  const attentionItems = [
+  const actionQueues: Array<{
+    label: string
+    count: number
+    href: string
+    icon: LucideIcon
+    tone: Tone
+  }> = [
     {
-      id: 'pending_orders',
-      title: 'Awaiting confirmation',
-      count: pendingOrders,
-      tone: pendingOrders > 0 ? 'warning' : 'neutral',
+      label: 'Pending confirmation',
+      count: countStatuses('pending'),
       href: '/admin/orders',
       icon: Clock,
-      description: 'Customer COD & online orders needing operator approval',
+      tone: 'warning',
     },
     {
-      id: 'unassigned_orders',
-      title: 'Awaiting dispatch',
-      count: confirmedOrders,
-      tone: confirmedOrders > 0 ? 'info' : 'neutral',
+      label: 'Ready for sourcing',
+      count: countStatuses('confirmed'),
       href: '/admin/orders',
       icon: PackageCheck,
-      description: 'Confirmed orders ready to source from nearest dealer',
+      tone: 'info',
     },
     {
-      id: 'in_transit',
-      title: 'Out for delivery',
-      count: outForDelivery,
-      tone: outForDelivery > 0 ? 'info' : 'neutral',
+      label: 'Awaiting rider',
+      count: countStatuses('dealer_assigned'),
       href: '/admin/orders',
       icon: Bike,
-      description: 'Active riders en route to customers across Butwal',
+      tone: 'warning',
     },
     {
-      id: 'rider_cash',
-      title: 'Riders & fleet',
-      count: data.ridersOnline,
-      tone: 'neutral',
-      href: '/admin/riders',
-      icon: Banknote,
-      description: `${data.ridersOnline} active couriers currently on duty`,
+      label: 'In transit',
+      count: countStatuses('rider_assigned', 'picked_up', 'out_for_delivery'),
+      href: '/admin/orders',
+      icon: Truck,
+      tone: 'info',
+    },
+    {
+      label: 'Delivery failed',
+      count: countStatuses('delivery_failed'),
+      href: '/admin/orders',
+      icon: AlertCircle,
+      tone: 'danger',
     },
   ]
 
-  const shortcuts = [
-    { label: 'New Order', href: '/admin/orders/new', icon: PlusCircle },
-    { label: 'New Dealer', href: '/admin/dealers/new', icon: Store },
-    { label: 'Riders & Fleet', href: '/admin/riders', icon: Bike },
-    { label: 'Accounts & Ledger', href: '/admin/accounts', icon: Wallet },
-    { label: 'Catalog Directory', href: '/admin/liquor', icon: Sparkles },
-    { label: 'Settings', href: '/admin/settings', icon: ShieldCheck },
+  const openActions = [
+    'pending',
+    'confirmed',
+    'dealer_assigned',
+    'delivery_failed',
+  ].reduce((total, status) => total + (statusCounts.get(status) ?? 0), 0)
+
+  const profitTone: Tone =
+    data.kpis.profit > 0
+      ? 'success'
+      : data.kpis.profit < 0
+        ? 'danger'
+        : 'neutral'
+  const profitMargin =
+    data.kpis.revenue > 0
+      ? ((data.kpis.profit / data.kpis.revenue) * 100).toFixed(1)
+      : '0.0'
+
+  const metrics: Array<{
+    label: string
+    value: ReactNode
+    note: string
+    icon: LucideIcon
+    tone: Tone
+  }> = [
+    {
+      label: 'Delivered revenue',
+      value: <MoneyText paisa={data.kpis.revenue} />,
+      note: `${data.kpis.sales} delivered orders`,
+      icon: Wallet,
+      tone: 'info',
+    },
+    {
+      label: 'Orders',
+      value: data.kpis.orders.toLocaleString('en-IN'),
+      note: 'In selected period',
+      icon: ShoppingCart,
+      tone: 'neutral',
+    },
+    {
+      label: 'Realized profit',
+      value: <MoneyText paisa={data.kpis.profit} />,
+      note: `${profitMargin}% margin · after COGS`,
+      icon: TrendingUp,
+      tone: profitTone,
+    },
+    {
+      label: 'Active dealers',
+      value: data.kpis.activeDealers.toLocaleString('en-IN'),
+      note: `${data.kpis.dealers} registered dealers`,
+      icon: Store,
+      tone: 'neutral',
+    },
   ]
 
   return (
     <PageShell>
       <PageHeader
-        kicker="Mezmani Operations Desk"
-        title="Workspace"
-        description="Action-first hub for order desk dispatch, dealer sourcing, rider handovers, and cash reconciliation in Butwal."
+        title="Dashboard"
+        description="Orders, payables, and daily operations at a glance."
         actions={
-          <div className="flex items-center gap-2.5">
+          <>
             <DataRefreshButton
-              queryKeys={[
-                adminQueries.dashboard({
-                  range: range as any,
-                  from: search.from,
-                  to: search.to,
-                }).queryKey,
-              ]}
+              queryKeys={[dashboardQuery.queryKey]}
               onRefresh={() => refetch()}
               isRefreshing={isFetching}
-              variant="button"
+              variant="icon"
             />
 
             <Select
               value={range}
-              onValueChange={(val) =>
+              onValueChange={(value) =>
                 navigate({
-                  search: { range: val as typeof range },
+                  search: { range: value as typeof range },
                 })
               }
             >
-              <SelectTrigger className="h-9 w-[160px] text-xs sm:text-sm font-medium bg-card">
+              <SelectTrigger
+                aria-label="Date range"
+                className="h-9 w-[140px] bg-card text-xs font-medium"
+              >
                 <SelectValue placeholder="Date range" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="today">Today (Daily)</SelectItem>
-                <SelectItem value="7d">Last 7 days (Weekly)</SelectItem>
-                <SelectItem value="30d">Last 30 days (Monthly)</SelectItem>
-                <SelectItem value="90d">Last 90 days (Quarterly)</SelectItem>
-                <SelectItem value="ytd">Year to date (Yearly)</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+                <SelectItem value="30d">Last 30 days</SelectItem>
+                <SelectItem value="90d">Last 90 days</SelectItem>
+                <SelectItem value="ytd">Year to date</SelectItem>
               </SelectContent>
             </Select>
 
-            <Button
-              asChild
-              size="sm"
-              className="h-9 px-4 gap-2 text-xs sm:text-sm font-semibold shadow-xs"
-            >
+            <Button asChild size="sm" className="h-9 gap-2 px-3 text-xs">
               <Link to="/admin/orders">
-                <PlusCircle className="size-4" /> New Order
+                <PlusCircle className="size-4" />
+                New Order
               </Link>
             </Button>
-          </div>
+          </>
         }
       />
 
       <DataSection isRefreshing={isFetching}>
-        {/* 1. Needs Attention Work Queues */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <AlertCircle className="size-4 text-amber-500" />
-              <span>Needs Attention</span>
-            </h2>
-            <span className="text-xs text-muted-foreground font-medium">
-              Actionable work queues
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {attentionItems.map((item) => {
-              const Icon = item.icon
-              const isUrgent = item.count > 0 && item.tone !== 'neutral'
-
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {metrics.map((metric) => {
+              const Icon = metric.icon
+              const tone = TONE_STYLES[metric.tone]
               return (
-                <Link
-                  key={item.id}
-                  to={item.href}
-                  className="group relative flex flex-col justify-between p-4 sm:p-5 rounded-xl border border-border bg-card hover:bg-muted/30 hover:border-primary/50 transition-all shadow-xs hover:shadow-sm"
+                <Card
+                  key={metric.label}
+                  className={cn(
+                    'gap-0 rounded-lg border-border border-t-[3px] py-0 shadow-none',
+                    tone.card,
+                  )}
                 >
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2.5 rounded-lg bg-secondary text-foreground group-hover:text-primary transition-colors">
-                        <Icon className="size-5" />
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={`font-mono text-xs font-bold px-2.5 py-0.5 ${
-                          isUrgent
-                            ? 'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10'
-                            : 'text-muted-foreground border-border bg-muted/40'
-                        }`}
-                      >
-                        {item.count}
-                      </Badge>
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors">
-                        {item.title}
-                      </h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
-                        {item.description}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {metric.label}
                       </p>
+                      <Icon className={cn('size-4 shrink-0', tone.icon)} />
                     </div>
+                    <div
+                      className={cn(
+                        'mt-2 text-xl font-semibold tracking-tight tabular-nums sm:text-2xl',
+                        tone.value,
+                      )}
+                    >
+                      {metric.value}
+                    </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {metric.note}
+                    </p>
                   </div>
-
-                  <div className="flex items-center text-xs font-semibold text-primary pt-3 border-t border-border/50 mt-4">
-                    <span>Open queue</span>
-                    <ArrowRight className="size-3.5 ml-1.5 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </Link>
+                </Card>
               )
             })}
           </div>
-        </div>
 
-        {/* 2. Quick Shortcuts */}
-        <div className="space-y-3">
-          <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground">
-            Quick Shortcuts
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
-            {shortcuts.map((sc) => {
-              const Icon = sc.icon
-              return (
-                <Link
-                  key={sc.label}
-                  to={sc.href}
-                  className="flex items-center gap-2.5 p-3 rounded-xl border border-border bg-card hover:bg-muted/40 hover:border-border/80 transition-all text-xs sm:text-sm font-semibold text-foreground group shadow-xs"
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <Card className="gap-0 rounded-lg border-border py-0 shadow-none lg:col-span-2">
+              <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border/70 px-4 py-3">
+                <div>
+                  <CardTitle className="text-sm font-medium">
+                    Sales trend
+                  </CardTitle>
+                  <CardDescription className="mt-0.5 text-xs">
+                    Revenue in NPR · {RANGE_LABELS[range] ?? 'Selected range'}
+                  </CardDescription>
+                </div>
+                <span className="font-mono text-[11px] font-medium text-muted-foreground">
+                  NPR
+                </span>
+              </CardHeader>
+              <CardContent className="px-2 pt-3 pb-2 sm:px-4">
+                <LineChart data={data.salesTrend} money />
+              </CardContent>
+            </Card>
+
+            <Card className="gap-0 rounded-lg border-border py-0 shadow-none">
+              <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 border-b border-border/70 px-4 py-3">
+                <div>
+                  <CardTitle className="text-sm font-medium">
+                    Action queues
+                  </CardTitle>
+                  <CardDescription className="mt-0.5 text-xs">
+                    Orders needing attention
+                  </CardDescription>
+                </div>
+                <span
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1.5 pt-0.5 text-[11px] font-medium',
+                    openActions > 0 ? 'text-warning' : 'text-success',
+                  )}
                 >
-                  <Icon className="size-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-                  <span className="truncate">{sc.label}</span>
-                </Link>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* 3. Primary Secondary KPIs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="p-5 border-border bg-card rounded-xl shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider">
-              <span>Delivered Revenue</span>
-              <Wallet className="size-4 text-primary" />
-            </div>
-            <div className="text-xl sm:text-2xl font-bold font-mono text-foreground mt-2">
-              <MoneyText paisa={data.kpis.revenue} />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1.5">
-              In selected range
-            </p>
-          </Card>
-
-          <Card className="p-5 border-border bg-card rounded-xl shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider">
-              <span>Total Orders</span>
-              <ShoppingCart className="size-4 text-primary" />
-            </div>
-            <div className="text-xl sm:text-2xl font-bold font-mono text-foreground mt-2">
-              {data.kpis.orders}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1.5">
-              {data.kpis.sales} delivered
-            </p>
-          </Card>
-
-          <Card className="p-5 border-border bg-card rounded-xl shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider">
-              <span>Realized Profit</span>
-              <TrendingUp className="size-4 text-emerald-500" />
-            </div>
-            <div className="text-xl sm:text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-2">
-              <MoneyText paisa={data.kpis.profit} />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1.5">
-              After dealer payouts & COGS
-            </p>
-          </Card>
-
-          <Card className="p-5 border-border bg-card rounded-xl shadow-xs">
-            <div className="flex items-center justify-between text-muted-foreground text-xs font-semibold uppercase tracking-wider">
-              <span>Active Sourcing Hubs</span>
-              <Store className="size-4 text-primary" />
-            </div>
-            <div className="text-xl sm:text-2xl font-bold font-mono text-foreground mt-2">
-              {data.kpis.dealers}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1.5">
-              {data.kpis.activeDealers} online in Butwal
-            </p>
-          </Card>
-        </div>
-
-        {/* 4. Sales Trend & Live Feed */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2 border-border bg-card p-5 rounded-xl shadow-xs">
-            <CardHeader className="p-0 pb-4 flex flex-row items-center justify-between space-y-0">
+                  <span
+                    className={cn(
+                      'size-1.5 rounded-full',
+                      openActions > 0 ? 'bg-warning' : 'bg-success',
+                    )}
+                  />
+                  {openActions > 0 ? `${openActions} open` : 'All clear'}
+                </span>
+              </CardHeader>
               <div>
-                <CardTitle className="text-base font-bold text-foreground">
-                  Sales & Revenue Trend
+                {actionQueues.map((item) => {
+                  const Icon = item.icon
+                  const tone =
+                    TONE_STYLES[item.count > 0 ? item.tone : 'neutral']
+                  return (
+                    <Link
+                      key={item.label}
+                      to={item.href}
+                      className="group flex items-center justify-between gap-3 border-b border-border/60 px-4 py-2.5 transition-colors last:border-b-0 hover:bg-muted/40"
+                    >
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <Icon className={cn('size-4 shrink-0', tone.icon)} />
+                        <span className="truncate text-xs font-medium text-foreground">
+                          {item.label}
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        <span
+                          className={cn(
+                            'min-w-6 rounded border px-1.5 py-0.5 text-center font-mono text-[11px] font-semibold tabular-nums',
+                            tone.chip,
+                          )}
+                        >
+                          {item.count}
+                        </span>
+                        <ChevronRight className="size-3.5 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5" />
+                      </span>
+                    </Link>
+                  )
+                })}
+              </div>
+              <div className="mt-auto flex items-center justify-between border-t border-border/70 px-4 py-2.5">
+                <span className="text-[11px] text-muted-foreground">
+                  {data.ridersOnline} riders online
+                </span>
+                <Link
+                  to="/admin/riders"
+                  className="text-[11px] font-medium text-primary hover:underline"
+                >
+                  Manage fleet
+                </Link>
+              </div>
+            </Card>
+          </div>
+
+          <Card className="gap-0 rounded-lg border-border py-0 shadow-none">
+            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border/70 px-4 py-3">
+              <div>
+                <CardTitle className="text-sm font-medium">
+                  Recent orders
                 </CardTitle>
-                <CardDescription className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                  Revenue progression in NPR over {range}
+                <CardDescription className="mt-0.5 text-xs">
+                  Latest activity across all channels
                 </CardDescription>
               </div>
-              <span className="text-xs font-mono font-bold text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-md">
-                NPR
-              </span>
-            </CardHeader>
-            <CardContent className="p-0 pt-2">
-              <LineChart data={data.salesTrend} money />
-            </CardContent>
-          </Card>
-
-          <Card className="border-border bg-card overflow-hidden flex flex-col rounded-xl shadow-xs">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 px-5 py-4 space-y-0">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Recent Orders
-              </CardTitle>
               <Link
                 to="/admin/orders"
-                className="text-xs text-primary font-bold hover:underline flex items-center gap-1"
+                className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
               >
-                <span>View all</span>
+                View all
                 <ArrowRight className="size-3.5" />
               </Link>
             </CardHeader>
-            <div className="flex-1 overflow-x-auto">
+            <div className="overflow-x-auto">
               <Table>
-                <TableHeader className="bg-muted/40">
-                  <TableRow className="border-b border-border">
-                    <TableHead className="text-xs font-bold uppercase tracking-wider py-3 px-4">
+                <TableHeader>
+                  <TableRow className="border-b border-border/70 hover:bg-transparent">
+                    <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground">
                       Order
                     </TableHead>
-                    <TableHead className="text-xs font-bold uppercase tracking-wider py-3 px-4">
+                    <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground">
+                      Customer
+                    </TableHead>
+                    <TableHead className="hidden px-4 py-2.5 text-[11px] font-medium text-muted-foreground sm:table-cell">
+                      Placed
+                    </TableHead>
+                    <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground">
                       Status
                     </TableHead>
-                    <TableHead className="text-right text-xs font-bold uppercase tracking-wider py-3 px-4">
+                    <TableHead className="px-4 py-2.5 text-right text-[11px] font-medium text-muted-foreground">
                       Total
                     </TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody className="divide-y divide-border/60">
-                  {data.recentOrders.slice(0, 5).map((o) => (
+                <TableBody>
+                  {data.recentOrders.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="px-4 py-8 text-center text-xs text-muted-foreground"
+                      >
+                        No orders yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {data.recentOrders.slice(0, 6).map((order) => (
                     <TableRow
-                      key={o.id}
-                      className="hover:bg-muted/30 transition-colors"
+                      key={order.id}
+                      className="border-b border-border/50 last:border-b-0 hover:bg-muted/30"
                     >
-                      <TableCell className="py-3 px-4">
+                      <TableCell className="px-4 py-2.5">
                         <Link
                           to="/admin/orders"
-                          className="font-mono text-sm font-bold text-foreground hover:text-primary transition-colors"
+                          className="font-mono text-xs font-medium text-foreground hover:text-primary"
                         >
-                          {o.number}
+                          {order.number}
                         </Link>
-                        <div className="text-xs text-muted-foreground truncate max-w-[140px] mt-0.5">
-                          {o.customerName}
-                        </div>
                       </TableCell>
-                      <TableCell className="py-3 px-4">
-                        <StatusIndicator status={o.status} />
+                      <TableCell className="px-4 py-2.5 text-xs text-foreground">
+                        {order.customerName}
                       </TableCell>
-                      <TableCell className="text-right py-3 px-4">
-                        <MoneyText
-                          paisa={o.total}
-                          className="text-sm font-bold"
+                      <TableCell className="hidden px-4 py-2.5 sm:table-cell">
+                        <DateText
+                          date={order.createdAt}
+                          showTime={false}
+                          className="text-xs text-muted-foreground"
                         />
+                      </TableCell>
+                      <TableCell className="px-4 py-2.5">
+                        <StatusIndicator status={order.status} />
+                      </TableCell>
+                      <TableCell className="px-4 py-2.5 text-right text-xs font-medium">
+                        <MoneyText paisa={order.total} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -398,47 +484,6 @@ export function DashboardPanel() {
             </div>
           </Card>
         </div>
-
-        {/* 5. Recent Activity Feed */}
-        <Card className="border-border bg-card p-5 rounded-xl shadow-xs">
-          <CardHeader className="p-0 pb-4 flex flex-row items-center justify-between space-y-0 border-b border-border/50 pb-3">
-            <CardTitle className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground">
-              Recent Audit & Operations Activity
-            </CardTitle>
-            <span className="text-xs text-muted-foreground font-mono font-medium">
-              Live events
-            </span>
-          </CardHeader>
-          <CardContent className="p-0 pt-3">
-            <ul className="divide-y divide-border/50">
-              {data.activities.slice(0, 6).map((a) => (
-                <li
-                  key={a.id}
-                  className="flex items-center justify-between py-3 text-xs sm:text-sm"
-                >
-                  <div className="flex items-center gap-3 min-w-0 pr-3">
-                    <span className="size-2 rounded-full bg-primary shrink-0" />
-                    <span className="font-semibold text-foreground truncate">
-                      {a.detail}
-                    </span>
-                    <span className="text-xs text-muted-foreground hidden sm:inline">
-                      ·{' '}
-                      <strong className="font-medium text-foreground/70">
-                        {a.actor}
-                      </strong>{' '}
-                      ({a.module})
-                    </span>
-                  </div>
-                  <DateText
-                    date={a.at}
-                    showRelative
-                    className="text-xs text-muted-foreground font-medium shrink-0"
-                  />
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
       </DataSection>
     </PageShell>
   )
