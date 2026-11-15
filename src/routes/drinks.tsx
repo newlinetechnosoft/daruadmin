@@ -339,9 +339,41 @@ function DrinksPage() {
       <Header />
 
       <main className="flex-1">
-        {/* Page Hero */}
-        <section className="border-b border-border/70 bg-muted/20 py-3 sm:py-5 lg:py-7">
-          <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+        {/* Page Hero with Responsive Dark/Light Background Images */}
+        <section className="relative isolate overflow-hidden border-b border-border/70 bg-muted/20 py-3.5 sm:py-5 lg:py-7">
+          {/* Responsive Background Images Layer */}
+          <div className="pointer-events-none absolute inset-0 -z-10 select-none overflow-hidden">
+            {/* Light Mode Background Image */}
+            <img
+              src="/images/mezmani-drinks-bg-light.webp"
+              alt=""
+              aria-hidden="true"
+              className="h-full w-full object-cover object-right sm:object-center transition-opacity duration-500 dark:hidden"
+              onError={(e) => {
+                const target = e.currentTarget
+                if (!target.src.includes('/mezmani-drinks-bg-light.webp') || target.src.includes('/images/')) {
+                  target.src = '/mezmani-drinks-bg-light.webp'
+                }
+              }}
+            />
+            {/* Dark Mode Background Image */}
+            <img
+              src="/images/mezmani-drinks-bg-dark.webp"
+              alt=""
+              aria-hidden="true"
+              className="hidden h-full w-full object-cover object-right sm:object-center transition-opacity duration-500 dark:block"
+              onError={(e) => {
+                const target = e.currentTarget
+                if (!target.src.includes('/mezmani-drinks-bg-dark.webp') || target.src.includes('/images/')) {
+                  target.src = '/mezmani-drinks-bg-dark.webp'
+                }
+              }}
+            />
+            {/* Directional gradient overlay to guarantee 100% clear text visibility on all devices */}
+            <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/80 to-background/35 sm:from-background/95 sm:via-background/70 sm:to-transparent dark:from-background/95 dark:via-background/85 dark:to-background/40" />
+          </div>
+
+          <div className="relative z-10 mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
             <Breadcrumb className="mb-1 sm:mb-2">
               <BreadcrumbList className="text-[11px] sm:text-xs">
                 <BreadcrumbItem>
@@ -374,7 +406,7 @@ function DrinksPage() {
               {activeCategoryObj ? activeCategoryObj.name : 'Drinks'}
             </h1>
 
-            <p className="mt-0.5 sm:mt-1 max-w-lg text-[11px] sm:text-xs leading-relaxed text-muted-foreground">
+            <p className="mt-0.5 sm:mt-1 max-w-lg text-[11px] sm:text-xs leading-relaxed text-muted-foreground font-medium">
               {activeCategoryObj?.description ??
                 'Discover our selection of spirits, vodka, whiskey, beer, wine and more with 30-minute night delivery.'}
             </p>
