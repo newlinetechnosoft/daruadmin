@@ -163,7 +163,7 @@ export function LiquorPanel() {
       sku: '',
       price: 2500,
       mrp: 2700,
-      abv: '40.0',
+      abv: '40',
       stock: 50,
       isActive: true,
     },
@@ -222,7 +222,7 @@ export function LiquorPanel() {
         sku: 'SKU-' + Math.floor(1000 + Math.random() * 9000),
         price: 2500,
         mrp: 2700,
-        abv: '40.0',
+        abv: '40',
         stock: 50,
         isActive: true,
       },
@@ -258,7 +258,7 @@ export function LiquorPanel() {
         sku: v.sku,
         price: toRupees(v.price),
         mrp: v.mrp ? toRupees(v.mrp) : undefined,
-        abv: v.abv ?? '40.0',
+        abv: v.abv ? String(parseFloat(v.abv)) : '',
         stock: v.stock,
         isActive: v.isActive,
       })),
@@ -267,6 +267,7 @@ export function LiquorPanel() {
   }
 
   const handleAddVariantRow = () => {
+    const parentAbv = formVariants[0]?.abv ?? '40'
     setFormVariants((prev) => [
       ...prev,
       {
@@ -275,7 +276,7 @@ export function LiquorPanel() {
         sku: 'SKU-' + Math.floor(1000 + Math.random() * 9000),
         price: 1300,
         mrp: 1400,
-        abv: '40.0',
+        abv: parentAbv,
         stock: 30,
         isActive: true,
       },
@@ -340,7 +341,10 @@ export function LiquorPanel() {
             sku: v.sku.trim() || `SKU-${Date.now()}`,
             price: toPaisa(v.price),
             mrp: v.mrp ? toPaisa(v.mrp) : null,
-            abv: v.abv ? String(v.abv) : null,
+            abv:
+              v.abv && v.abv.trim() && !isNaN(Number(v.abv))
+                ? String(Number(v.abv))
+                : null,
             stock: Number(v.stock),
             isActive: v.isActive,
           })),
@@ -630,9 +634,9 @@ export function LiquorPanel() {
                             <span className="font-medium text-xs">
                               {v.name}
                             </span>
-                            {v.abv && (
+                            {v.abv && !isNaN(Number(v.abv)) && Number(v.abv) > 0 && (
                               <span className="text-xs text-muted-foreground font-mono">
-                                {v.abv}%
+                                {Number(parseFloat(v.abv))}%
                               </span>
                             )}
                             <span className="font-mono font-semibold text-xs tabular-nums">
@@ -1101,12 +1105,13 @@ export function LiquorPanel() {
                 </div>
 
                 <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-2 text-xs text-muted-foreground font-medium">
-                  <div className="col-span-3">Variant Name</div>
-                  <div className="col-span-2">Volume (ml)</div>
-                  <div className="col-span-2">Price (Rs.)</div>
-                  <div className="col-span-2">MRP (Rs.)</div>
-                  <div className="col-span-2">Stock</div>
-                  <div className="col-span-1"></div>
+                  <div className="col-span-3 sm:col-span-3">Variant Name</div>
+                  <div className="col-span-2 sm:col-span-2">Volume (ml)</div>
+                  <div className="col-span-2 sm:col-span-2">ABV (%)</div>
+                  <div className="col-span-2 sm:col-span-2">Price (Rs.)</div>
+                  <div className="col-span-1 sm:col-span-1">MRP (Rs.)</div>
+                  <div className="col-span-1 sm:col-span-1">Stock</div>
+                  <div className="col-span-1 sm:col-span-1"></div>
                 </div>
 
                 <div className="max-h-60 space-y-2 overflow-y-auto">
@@ -1118,7 +1123,7 @@ export function LiquorPanel() {
                       <div className="col-span-2 sm:col-span-3">
                         <Input
                           type="text"
-                          placeholder="Variant name"
+                          placeholder="e.g. 750 ml"
                           value={v.name}
                           onChange={(e) =>
                             updateVariant(i, { name: e.target.value })
@@ -1127,25 +1132,49 @@ export function LiquorPanel() {
                         />
                       </div>
 
-                      <div className="sm:col-span-2">
+                      <div className="col-span-1 sm:col-span-2">
                         <Input
                           type="number"
                           placeholder="ml"
-                          value={v.volumeMl}
+                          value={v.volumeMl || ''}
                           onChange={(e) =>
                             updateVariant(i, {
                               volumeMl: Number(e.target.value),
                             })
                           }
                           className="h-7 font-mono text-xs"
+                          title="Volume (ml)"
                         />
                       </div>
 
-                      <div className="sm:col-span-2">
+                      <div className="col-span-1 sm:col-span-2">
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="100"
+                            placeholder="e.g. 40"
+                            value={v.abv}
+                            onChange={(e) =>
+                              updateVariant(i, {
+                                abv: e.target.value,
+                              })
+                            }
+                            className="h-7 font-mono text-xs pr-6"
+                            title="Alcohol by Volume (%) percentage"
+                          />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-mono pointer-events-none">
+                            %
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="col-span-1 sm:col-span-2">
                         <Input
                           type="number"
                           placeholder="Price"
-                          value={v.price}
+                          value={v.price || ''}
                           onChange={(e) =>
                             updateVariant(i, {
                               price: Number(e.target.value),
@@ -1156,7 +1185,7 @@ export function LiquorPanel() {
                         />
                       </div>
 
-                      <div className="sm:col-span-2">
+                      <div className="col-span-1 sm:col-span-1">
                         <Input
                           type="number"
                           placeholder="MRP"
@@ -1173,7 +1202,7 @@ export function LiquorPanel() {
                         />
                       </div>
 
-                      <div className="sm:col-span-2">
+                      <div className="col-span-1 sm:col-span-1">
                         <Input
                           type="number"
                           placeholder="Stock"
@@ -1184,16 +1213,18 @@ export function LiquorPanel() {
                             })
                           }
                           className="h-7 font-mono text-xs"
+                          title="Stock quantity"
                         />
                       </div>
 
-                      <div className="col-span-2 flex justify-end sm:col-span-1">
+                      <div className="col-span-1 flex justify-end sm:col-span-1">
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
                           onClick={() => handleRemoveVariantRow(i)}
                           className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          title="Remove variant"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>

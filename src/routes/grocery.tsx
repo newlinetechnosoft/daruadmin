@@ -404,8 +404,8 @@ function GroceryPage() {
         )}
 
         {/* Main Content Layout */}
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          <div className="lg:grid lg:grid-cols-[220px_1fr] lg:gap-10">
+        <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-3.5 sm:py-6">
+          <div className="lg:grid lg:grid-cols-[220px_1fr] lg:gap-8">
             {/* Desktop Filter Sidebar */}
             <aside className="hidden lg:block shrink-0">
               <div className="sticky top-20">{filterPanel}</div>
@@ -437,11 +437,11 @@ function GroceryPage() {
                 />
               ) : (
                 <>
-                  <div className="text-xs text-muted-foreground mb-4">
+                  <div className="text-xs text-muted-foreground mb-3">
                     Showing {filteredProducts.length} item
                     {filteredProducts.length === 1 ? '' : 's'}
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3.5 md:gap-4 lg:grid-cols-3 xl:grid-cols-4">
                     {filteredProducts.map((p) => (
                       <ProductCard
                         key={p.id}

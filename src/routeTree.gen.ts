@@ -23,6 +23,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as RiderRouteRouteImport } from './routes/rider/route'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as SuperadminRouteRouteImport } from './routes/superadmin/route'
 import { Route as VerifyPhoneRouteImport } from './routes/verify-phone'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminAccountsRouteImport } from './routes/admin/accounts'
@@ -45,6 +46,7 @@ import { Route as AdminRidersRouteImport } from './routes/admin/riders'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminShippingRouteImport } from './routes/admin/shipping'
 import { Route as AdminStaffRouteImport } from './routes/admin/staff'
+import { Route as AdminSuperadminRouteImport } from './routes/admin/superadmin'
 import { Route as AdminTaxonomyRouteImport } from './routes/admin/taxonomy'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiNeonHealthRouteImport } from './routes/api/neon-health'
@@ -54,6 +56,7 @@ import { Route as RiderIndexRouteImport } from './routes/rider/index'
 import { Route as RiderDeliveriesRouteImport } from './routes/rider/deliveries'
 import { Route as RiderEarningsRouteImport } from './routes/rider/earnings'
 import { Route as RiderProfileRouteImport } from './routes/rider/profile'
+import { Route as SuperadminIndexRouteImport } from './routes/superadmin/index'
 import { Route as TrackIndexRouteImport } from './routes/track.index'
 import { Route as TrackCodeRouteImport } from './routes/track.$code'
 import { Route as VoucherSlugRouteImport } from './routes/voucher.$slug'
@@ -134,6 +137,11 @@ const RiderRouteRoute = RiderRouteRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuperadminRouteRoute = SuperadminRouteRouteImport.update({
+  id: '/superadmin',
+  path: '/superadmin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VerifyPhoneRoute = VerifyPhoneRouteImport.update({
@@ -246,6 +254,11 @@ const AdminStaffRoute = AdminStaffRouteImport.update({
   path: '/staff',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminSuperadminRoute = AdminSuperadminRouteImport.update({
+  id: '/superadmin',
+  path: '/superadmin',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminTaxonomyRoute = AdminTaxonomyRouteImport.update({
   id: '/taxonomy',
   path: '/taxonomy',
@@ -291,6 +304,11 @@ const RiderProfileRoute = RiderProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
   getParentRoute: () => RiderRouteRoute,
+} as any)
+const SuperadminIndexRoute = SuperadminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SuperadminRouteRoute,
 } as any)
 const TrackIndexRoute = TrackIndexRouteImport.update({
   id: '/track/',
@@ -354,6 +372,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
   '/rider': typeof RiderRouteRouteWithChildren
+  '/superadmin': typeof SuperadminRouteRouteWithChildren
   '/checkout': typeof CheckoutRouteWithChildren
   '/ddc': typeof DdcRoute
   '/drinks': typeof DrinksRoute
@@ -386,6 +405,7 @@ export interface FileRoutesByFullPath {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shipping': typeof AdminShippingRoute
   '/admin/staff': typeof AdminStaffRoute
+  '/admin/superadmin': typeof AdminSuperadminRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/neon-health': typeof ApiNeonHealthRoute
@@ -398,6 +418,7 @@ export interface FileRoutesByFullPath {
   '/voucher/$slug': typeof VoucherSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/rider/': typeof RiderIndexRoute
+  '/superadmin/': typeof SuperadminIndexRoute
   '/track/': typeof TrackIndexRoute
   '/admin/dealers/$id': typeof AdminDealersIdRoute
   '/admin/dealers/new': typeof AdminDealersNewRoute
@@ -441,6 +462,7 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shipping': typeof AdminShippingRoute
   '/admin/staff': typeof AdminStaffRoute
+  '/admin/superadmin': typeof AdminSuperadminRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/neon-health': typeof ApiNeonHealthRoute
@@ -453,6 +475,7 @@ export interface FileRoutesByTo {
   '/voucher/$slug': typeof VoucherSlugRoute
   '/admin': typeof AdminIndexRoute
   '/rider': typeof RiderIndexRoute
+  '/superadmin': typeof SuperadminIndexRoute
   '/track': typeof TrackIndexRoute
   '/admin/dealers/$id': typeof AdminDealersIdRoute
   '/admin/dealers/new': typeof AdminDealersNewRoute
@@ -468,6 +491,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
   '/rider': typeof RiderRouteRouteWithChildren
+  '/superadmin': typeof SuperadminRouteRouteWithChildren
   '/checkout': typeof CheckoutRouteWithChildren
   '/ddc': typeof DdcRoute
   '/drinks': typeof DrinksRoute
@@ -500,6 +524,7 @@ export interface FileRoutesById {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shipping': typeof AdminShippingRoute
   '/admin/staff': typeof AdminStaffRoute
+  '/admin/superadmin': typeof AdminSuperadminRoute
   '/admin/taxonomy': typeof AdminTaxonomyRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/neon-health': typeof ApiNeonHealthRoute
@@ -512,6 +537,7 @@ export interface FileRoutesById {
   '/voucher/$slug': typeof VoucherSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/rider/': typeof RiderIndexRoute
+  '/superadmin/': typeof SuperadminIndexRoute
   '/track/': typeof TrackIndexRoute
   '/admin/dealers/$id': typeof AdminDealersIdRoute
   '/admin/dealers/new': typeof AdminDealersNewRoute
@@ -528,6 +554,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/rider'
+    | '/superadmin'
     | '/checkout'
     | '/ddc'
     | '/drinks'
@@ -560,6 +587,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/shipping'
     | '/admin/staff'
+    | '/admin/superadmin'
     | '/admin/taxonomy'
     | '/admin/users'
     | '/api/neon-health'
@@ -572,6 +600,7 @@ export interface FileRouteTypes {
     | '/voucher/$slug'
     | '/admin/'
     | '/rider/'
+    | '/superadmin/'
     | '/track/'
     | '/admin/dealers/$id'
     | '/admin/dealers/new'
@@ -615,6 +644,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/shipping'
     | '/admin/staff'
+    | '/admin/superadmin'
     | '/admin/taxonomy'
     | '/admin/users'
     | '/api/neon-health'
@@ -627,6 +657,7 @@ export interface FileRouteTypes {
     | '/voucher/$slug'
     | '/admin'
     | '/rider'
+    | '/superadmin'
     | '/track'
     | '/admin/dealers/$id'
     | '/admin/dealers/new'
@@ -641,6 +672,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/rider'
+    | '/superadmin'
     | '/checkout'
     | '/ddc'
     | '/drinks'
@@ -673,6 +705,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/shipping'
     | '/admin/staff'
+    | '/admin/superadmin'
     | '/admin/taxonomy'
     | '/admin/users'
     | '/api/neon-health'
@@ -685,6 +718,7 @@ export interface FileRouteTypes {
     | '/voucher/$slug'
     | '/admin/'
     | '/rider/'
+    | '/superadmin/'
     | '/track/'
     | '/admin/dealers/$id'
     | '/admin/dealers/new'
@@ -700,6 +734,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   RiderRouteRoute: typeof RiderRouteRouteWithChildren
+  SuperadminRouteRoute: typeof SuperadminRouteRouteWithChildren
   CheckoutRoute: typeof CheckoutRouteWithChildren
   DdcRoute: typeof DdcRoute
   DrinksRoute: typeof DrinksRoute
@@ -821,6 +856,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/superadmin': {
+      id: '/superadmin'
+      path: '/superadmin'
+      fullPath: '/superadmin'
+      preLoaderRoute: typeof SuperadminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/verify-phone': {
@@ -977,6 +1019,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStaffRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/superadmin': {
+      id: '/admin/superadmin'
+      path: '/superadmin'
+      fullPath: '/admin/superadmin'
+      preLoaderRoute: typeof AdminSuperadminRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/taxonomy': {
       id: '/admin/taxonomy'
       path: '/taxonomy'
@@ -1039,6 +1088,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/rider/profile'
       preLoaderRoute: typeof RiderProfileRouteImport
       parentRoute: typeof RiderRouteRoute
+    }
+    '/superadmin/': {
+      id: '/superadmin/'
+      path: '/'
+      fullPath: '/superadmin/'
+      preLoaderRoute: typeof SuperadminIndexRouteImport
+      parentRoute: typeof SuperadminRouteRoute
     }
     '/track/': {
       id: '/track/'
@@ -1157,6 +1213,7 @@ interface AdminRouteRouteChildren {
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminShippingRoute: typeof AdminShippingRoute
   AdminStaffRoute: typeof AdminStaffRoute
+  AdminSuperadminRoute: typeof AdminSuperadminRoute
   AdminTaxonomyRoute: typeof AdminTaxonomyRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -1183,6 +1240,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminSettingsRoute: AdminSettingsRoute,
   AdminShippingRoute: AdminShippingRoute,
   AdminStaffRoute: AdminStaffRoute,
+  AdminSuperadminRoute: AdminSuperadminRoute,
   AdminTaxonomyRoute: AdminTaxonomyRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
@@ -1210,6 +1268,18 @@ const RiderRouteRouteWithChildren = RiderRouteRoute._addFileChildren(
   RiderRouteRouteChildren,
 )
 
+interface SuperadminRouteRouteChildren {
+  SuperadminIndexRoute: typeof SuperadminIndexRoute
+}
+
+const SuperadminRouteRouteChildren: SuperadminRouteRouteChildren = {
+  SuperadminIndexRoute: SuperadminIndexRoute,
+}
+
+const SuperadminRouteRouteWithChildren = SuperadminRouteRoute._addFileChildren(
+  SuperadminRouteRouteChildren,
+)
+
 interface CheckoutRouteChildren {
   CheckoutPaymentEsewaFailureRoute: typeof CheckoutPaymentEsewaFailureRoute
   CheckoutPaymentEsewaSuccessRoute: typeof CheckoutPaymentEsewaSuccessRoute
@@ -1228,6 +1298,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRouteRoute: AdminRouteRouteWithChildren,
   RiderRouteRoute: RiderRouteRouteWithChildren,
+  SuperadminRouteRoute: SuperadminRouteRouteWithChildren,
   CheckoutRoute: CheckoutRouteWithChildren,
   DdcRoute: DdcRoute,
   DrinksRoute: DrinksRoute,

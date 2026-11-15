@@ -1,3 +1,4 @@
+import { isSuperAdmin } from '#/server/auth/permissions-shared'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import {
@@ -442,27 +443,39 @@ export const updateUserRoleFn = createServerFn({ method: 'POST' })
     z
       .object({
         userId: z.string(),
-        role: z.string(),
+        role: z.string().optional(),
         isActive: z.boolean().optional(),
+        banned: z.boolean().optional(),
+        banReason: z.string().optional().nullable(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
     const { user: actor } = await requireRole('admin')
+    const actorIsSuperAdmin = isSuperAdmin(actor)
 
-    if (actor.id === data.userId && data.role !== actor.role) {
+    if (!actorIsSuperAdmin && actor.id === data.userId && data.role && data.role !== actor.role) {
       throw new Error('Forbidden: You cannot change your own role')
+    }
+
+    if (actor.id === data.userId && (data.isActive === false || data.banned === true)) {
+      throw new Error('Forbidden: You cannot suspend or deactivate your own account')
     }
 
     const allUsers = await getAdminUsersQuery()
     const targetUser = allUsers.find((u) => u.id === data.userId)
 
+    if (targetUser && isSuperAdmin(targetUser)) {
+      throw new Error('Forbidden: Superadmin role and status cannot be altered')
+    }
+
     if (
       targetUser?.role === 'admin' &&
-      (data.role !== 'admin' || data.isActive === false)
+      ((data.role && data.role !== 'admin') || data.isActive === false || data.banned === true) &&
+      !actorIsSuperAdmin
     ) {
       const activeAdmins = allUsers.filter(
-        (u) => u.role === 'admin' && u.isActive !== false,
+        (u) => (u.role === 'admin' || isSuperAdmin(u)) && u.isActive !== false && !u.banned,
       )
       if (activeAdmins.length <= 1) {
         throw new Error(
@@ -472,13 +485,37 @@ export const updateUserRoleFn = createServerFn({ method: 'POST' })
     }
 
     const result = await updateUserRoleQuery(data)
+    const auditDetails = [
+      data.role ? `role: ${data.role}` : '',
+      data.isActive !== undefined ? `active: ${data.isActive}` : '',
+      data.banned !== undefined ? `banned: ${data.banned}` : '',
+      data.banReason ? `reason: ${data.banReason}` : '',
+    ]
+      .filter(Boolean)
+      .join(', ')
+
     await logAudit(
       actor.name,
       'staff',
       'edit',
-      `Updated user ${data.userId} to role ${data.role}${data.isActive !== undefined ? ` (active: ${data.isActive})` : ''}`,
+      `Updated user ${data.userId} (${auditDetails})`,
     )
     return result
+  })
+
+export const updateUserStatusFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        userId: z.string(),
+        isActive: z.boolean().optional(),
+        banned: z.boolean().optional(),
+        banReason: z.string().optional().nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    return updateUserRoleFn({ data })
   })
 
 export const checkAdminSessionFn = createServerFn({ method: 'GET' }).handler(

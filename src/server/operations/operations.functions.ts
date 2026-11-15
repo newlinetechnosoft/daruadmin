@@ -26,6 +26,7 @@ import {
   getSessionUser,
   getUserGrants,
   can,
+  isSuperAdmin,
 } from '#/server/auth/permissions'
 import {
   getAdminFoodProductsQuery,
@@ -267,7 +268,7 @@ export const getStaffSessionFn = createServerFn({ method: 'GET' }).handler(
     try {
       const user = await getSessionUser()
       const grants = await getUserGrants(user)
-      const isStaff = user.role === 'admin' || user.role === 'manager'
+      const isStaff = user.role === 'admin' || user.role === 'manager' || user.role === 'superadmin' || isSuperAdmin(user)
       return {
         authenticated: true,
         isStaff,
@@ -799,6 +800,7 @@ export const getStaffOpsFn = createServerFn({ method: 'GET' }).handler(
       },
       users,
       currentUserId: actor.id,
+      isSuperAdmin: isSuperAdmin(actor),
     }
   },
 )
@@ -1399,7 +1401,7 @@ export const markOrderItemUnavailableFn = createServerFn({ method: 'POST' })
           const r = await getRiderByUserIdQuery(session.id)
           return r?.id === order.riderId
         })()))
-    const isStaff = session.role === 'admin' || session.role === 'manager'
+    const isStaff = session.role === 'admin' || session.role === 'manager' || session.role === 'superadmin' || isSuperAdmin(session)
     if (!isAssignedRider && !isStaff) {
       throw new Error(
         'Forbidden: only assigned rider or manager can mark an item unavailable',
@@ -2604,9 +2606,10 @@ export const savePermissionsFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const { user: actor } = await requirePermission('staff', 'edit')
+    const actorIsSuperAdmin = isSuperAdmin(actor)
 
-    // Guard 1: Non-admins cannot edit their own permissions
-    if (actor.role !== 'admin' && actor.id === data.userId) {
+    // Guard 1: Non-superadmins cannot edit their own permissions
+    if (!actorIsSuperAdmin && actor.id === data.userId) {
       throw new Error('Forbidden: You cannot modify your own permissions')
     }
 
@@ -2616,13 +2619,18 @@ export const savePermissionsFn = createServerFn({ method: 'POST' })
       throw new Error('User not found')
     }
 
-    // Guard 2: Non-admins cannot edit admin accounts
-    if (targetUser.role === 'admin' && actor.role !== 'admin') {
-      throw new Error('Forbidden: You cannot modify administrator permissions')
+    // Guard 2: Superadmin permissions are immutable and cannot be altered via matrix
+    if (isSuperAdmin(targetUser)) {
+      throw new Error('Forbidden: Superadmin permissions cannot be modified via matrix')
     }
 
-    // Guard 3: Non-admins cannot grant actions they do not hold themselves
-    if (actor.role !== 'admin') {
+    // Guard 3: Only Super Admin (Developer Team) can modify administrator permissions
+    if (targetUser.role === 'admin' && !actorIsSuperAdmin) {
+      throw new Error('Forbidden: Only Super Admin (Developer Team) can modify administrator permissions')
+    }
+
+    // Guard 4: Non-admins cannot grant actions they do not hold themselves
+    if (!actorIsSuperAdmin && actor.role !== 'admin') {
       const actorGrants = await getUserGrants(actor)
       for (const [mod, acts] of Object.entries(data.permissions)) {
         for (const act of acts) {
@@ -2669,8 +2677,9 @@ export const resetPermissionsFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const { user: actor } = await requirePermission('staff', 'edit')
+    const actorIsSuperAdmin = isSuperAdmin(actor)
 
-    if (actor.role !== 'admin' && actor.id === data.userId) {
+    if (!actorIsSuperAdmin && actor.id === data.userId) {
       throw new Error('Forbidden: You cannot reset your own permissions')
     }
 
@@ -2678,8 +2687,12 @@ export const resetPermissionsFn = createServerFn({ method: 'POST' })
     const targetUser = allUsers.find((u) => u.id === data.userId)
     if (!targetUser) throw new Error('User not found')
 
-    if (targetUser.role === 'admin' && actor.role !== 'admin') {
-      throw new Error('Forbidden: You cannot modify administrator permissions')
+    if (isSuperAdmin(targetUser)) {
+      throw new Error('Forbidden: Superadmin permissions cannot be reset')
+    }
+
+    if (targetUser.role === 'admin' && !actorIsSuperAdmin) {
+      throw new Error('Forbidden: Only Super Admin (Developer Team) can reset administrator permissions')
     }
 
     await resetUserPermissionsQuery(data.userId)

@@ -11,7 +11,7 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { markNotificationsFn } from '#/server/operations/operations.functions'
 import { adminQueries } from '#/queries/admin'
-import { can } from '#/server/auth/permissions-shared'
+import { can, isSuperAdmin } from '#/server/auth/permissions-shared'
 import type { ModuleKey } from '#/server/operations/types'
 import { authClient } from '#/lib/auth-client'
 import { clearAllLocalData } from '#/lib/idb'
@@ -19,6 +19,9 @@ import { Awesomebar } from '#/components/shared/awesomebar'
 import { ShortcutsHelp } from '#/components/shared/shortcuts-help'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import {
+  Terminal,
+  AlertCircle,
+  X,
   LayoutDashboard,
   Wine,
   ShoppingBag,
@@ -116,7 +119,10 @@ export const Route = createFileRoute('/admin')({
     if (access.user.role === 'rider') {
       throw redirect({ to: '/rider' })
     }
-    if (access.user.role !== 'admin' && access.user.role !== 'manager') {
+    if (isSuperAdmin(access.user) && (location.pathname === '/admin' || location.pathname === '/admin/')) {
+      throw redirect({ to: '/superadmin' })
+    }
+    if (access.user.role !== 'admin' && access.user.role !== 'manager' && !isSuperAdmin(access.user)) {
       throw redirect({ to: '/' })
     }
     return {
@@ -330,6 +336,89 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       },
     ],
   },
+  {
+    label: 'Developer',
+    items: [
+      {
+        label: 'Super Admin Panel',
+        to: '/superadmin',
+        icon: Terminal,
+        module: 'staff',
+        subItems: [
+          {
+            label: 'Customers Management',
+            to: '/superadmin',
+            search: { tab: 'customers' },
+          },
+          {
+            label: 'Catalog Items Management',
+            to: '/superadmin',
+            search: { tab: 'items' },
+          },
+          {
+            label: 'Dealers & Suppliers',
+            to: '/superadmin',
+            search: { tab: 'dealers' },
+          },
+          {
+            label: 'Delivery Riders',
+            to: '/superadmin',
+            search: { tab: 'riders' },
+          },
+          {
+            label: 'Categories Management',
+            to: '/superadmin',
+            search: { tab: 'categories' },
+          },
+          {
+            label: 'Brands Management',
+            to: '/superadmin',
+            search: { tab: 'brands' },
+          },
+          {
+            label: 'Dynamic Feature Flags',
+            to: '/superadmin',
+            search: { tab: 'features' },
+          },
+          {
+            label: 'Pricing & Delivery Rules',
+            to: '/superadmin',
+            search: { tab: 'pricing' },
+          },
+          {
+            label: 'Admin Panel Management',
+            to: '/superadmin',
+            search: { tab: 'admin-panel' },
+          },
+          {
+            label: 'System Management',
+            to: '/superadmin',
+            search: { tab: 'system' },
+          },
+          {
+            label: 'Website Management',
+            to: '/superadmin',
+            search: { tab: 'website' },
+          },
+          {
+            label: 'User & Role Engine',
+            to: '/superadmin',
+            search: { tab: 'users' },
+          },
+          {
+            label: 'Live Audit Trail',
+            to: '/superadmin',
+            search: { tab: 'audit' },
+          },
+          {
+            label: 'Telemetry & Sandbox',
+            to: '/superadmin',
+            search: { tab: 'console' },
+          },
+        ],
+      },
+    ],
+  },
 ]
 
 const ALL_NAV = NAV_GROUPS.flatMap((g) => g.items)
@@ -343,6 +432,18 @@ function crumbLabel(path: string) {
 }
 
 function AdminLayout() {
+  const noticesQuery = useQuery({
+    ...adminQueries.adminPanelNotices(),
+    refetchInterval: 30_000,
+  })
+  const activeAdminNotices = useMemo(
+    () => noticesQuery.data?.notices?.filter((n) => n.active) || [],
+    [noticesQuery.data],
+  )
+  const [dismissedNoticeIds, setDismissedNoticeIds] = useState<string[]>([])
+  const visibleAdminNotices = activeAdminNotices.filter(
+    (n) => !dismissedNoticeIds.includes(n.id),
+  )
   const { adminUser, grants } = Route.useRouteContext()
   const { notifications } = Route.useLoaderData()
   const chromeQuery = useQuery({
@@ -442,9 +543,14 @@ function AdminLayout() {
   const visibleNavGroups = useMemo(() => {
     return NAV_GROUPS.map((group) => ({
       ...group,
-      items: group.items.filter((item) => can(grants, item.module, 'view')),
+      items: group.items.filter((item) => {
+        if (group.label === 'Developer') {
+          return isSuperAdmin(adminUser)
+        }
+        return can(grants, item.module, 'view')
+      }),
     })).filter((group) => group.items.length > 0)
-  }, [grants])
+  }, [grants, adminUser])
 
   return (
     <SidebarProvider>
@@ -458,18 +564,42 @@ function AdminLayout() {
               <SidebarMenuItem>
                 <SidebarMenuButton size="lg" asChild>
                   <Link to="/admin" className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary font-black text-sm text-primary-foreground shadow-xs">
-                      M
+                    <div className="flex shrink-0 items-center">
+                      <img
+                        src="https://mezmani.com/mezmani_logo.webp"
+                        onError={(e) => {
+                          const target = e.currentTarget
+                          if (target.src !== `${window.location.origin}/mezmani_logo.webp`) {
+                            target.src = '/mezmani_logo.webp'
+                          }
+                        }}
+                        alt="Mezmani"
+                        width="110"
+                        height="32"
+                        className="h-7 w-auto object-contain dark:hidden"
+                      />
+                      <img
+                        src="https://mezmani.com/mezmani_logo_bg.svg"
+                        onError={(e) => {
+                          const target = e.currentTarget
+                          if (target.src !== `${window.location.origin}/mezmani_logo_bg.svg`) {
+                            target.src = '/mezmani_logo_bg.svg'
+                          }
+                        }}
+                        alt="Mezmani"
+                        width="110"
+                        height="32"
+                        className="h-7 w-auto object-contain hidden dark:block"
+                      />
                     </div>
 
                     <div className="grid min-w-0 flex-1 text-left leading-tight">
-                      <span className="font-bold text-sm text-sidebar-foreground tracking-tight">
-                        Mezmani
-                      </span>
                       <span className="text-xs text-sidebar-foreground/60 font-medium">
                         {adminUser.role === 'manager'
                           ? 'Manager Console'
-                          : 'Admin Console'}
+                          : isSuperAdmin(adminUser)
+                            ? 'Super Admin Console'
+                            : 'Admin Console'}
                       </span>
                     </div>
                   </Link>
@@ -507,14 +637,15 @@ function AdminLayout() {
                             active && (
                               <SidebarMenuSub className="my-1 ml-3 border-l border-border/60 pl-2">
                                 {item.subItems.map((sub) => {
+                                  const defaultTab =
+                                    sub.to === '/admin/accounts' ? 'ledger' : 'customers'
                                   const currentTab =
-                                    (routerState.location.search as any)?.tab ||
-                                    'ledger'
+                                    (routerState.location.search as any)?.tab || defaultTab
                                   const isSubActive =
                                     currentPath === sub.to &&
                                     (sub.search?.tab === currentTab ||
                                       (!sub.search?.tab &&
-                                        currentTab === 'ledger'))
+                                        currentTab === defaultTab))
                                   return (
                                     <SidebarMenuSubItem key={sub.label}>
                                       <SidebarMenuSubButton
@@ -570,7 +701,7 @@ function AdminLayout() {
                 <BreadcrumbItem>
                   <BreadcrumbLink asChild>
                     <Link to="/admin">
-                      {adminUser.role === 'manager' ? 'Manager' : 'Admin'}
+                      {adminUser.role === 'manager' ? 'Manager' : isSuperAdmin(adminUser) ? 'Super Admin' : 'Admin'}
                     </Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
@@ -595,7 +726,9 @@ function AdminLayout() {
                   <span className="hidden sm:inline">
                     {adminUser.role === 'manager'
                       ? 'Search console...'
-                      : 'Search admin...'}
+                      : isSuperAdmin(adminUser)
+                        ? 'Search superadmin...'
+                        : 'Search admin...'}
                   </span>
                   <span className="sm:hidden">Search...</span>
                 </span>
@@ -686,10 +819,10 @@ function AdminLayout() {
                       </p>
                       <div className="pt-1">
                         <Badge
-                          variant="outline"
+                          variant={isSuperAdmin(adminUser) ? 'default' : 'outline'}
                           className="text-xs font-semibold capitalize px-2 py-0.5"
                         >
-                          {adminUser.role}
+                          {isSuperAdmin(adminUser) ? 'Super Admin (Dev)' : adminUser.role}
                         </Badge>
                       </div>
                     </div>
@@ -716,6 +849,61 @@ function AdminLayout() {
               </DropdownMenu>
             </div>
           </header>
+
+          {visibleAdminNotices.length > 0 && (
+            <div className="px-4 sm:px-6 pt-3 space-y-2">
+              {visibleAdminNotices.map((notice) => (
+                <div
+                  key={notice.id}
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-lg border text-xs shadow-xs ${
+                    notice.type === 'destructive'
+                      ? 'bg-destructive/10 border-destructive/30 text-destructive'
+                      : notice.type === 'warning'
+                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200'
+                        : notice.type === 'success'
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200'
+                          : 'bg-primary/10 border-primary/25 text-foreground'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-primary" />
+                    <div>
+                      <span className="font-bold">{notice.title}:</span>{' '}
+                      <span className="font-medium">{notice.message}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                    {notice.actionLabel && (
+                      <Button size="sm" variant="outline" asChild className="h-7 text-xs font-semibold bg-background">
+                        {notice.actionUrl?.startsWith('http') ? (
+                          <a href={notice.actionUrl} target="_blank" rel="noreferrer">
+                            {notice.actionLabel}
+                          </a>
+                        ) : (
+                          <Link to={notice.actionUrl || '/admin'}>
+                            {notice.actionLabel}
+                          </Link>
+                        )}
+                      </Button>
+                    )}
+                    {notice.dismissible && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() =>
+                          setDismissedNoticeIds((prev) => [...prev, notice.id])
+                        }
+                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        <span className="sr-only">Dismiss</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <main className="flex-1 min-w-0 bg-background p-4 sm:p-6 lg:p-7 overflow-x-clip">
             <Outlet />

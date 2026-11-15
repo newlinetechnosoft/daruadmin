@@ -1,3 +1,15 @@
+import {
+  getSuperAdminBulkOverviewFn,
+  getAdminPanelNoticesFn,
+  getSuperAdminSupportSettingsFn,
+  getSuperAdminSystemSettingsFn,
+  getSuperAdminWebsiteSettingsFn,
+  getSuperAdminFeatureFlagsFn,
+  getSuperAdminPricingRulesFn,
+  getSuperAdminTelemetryFn,
+  getSuperAdminAuditLogsFn,
+  getPublicStoreOperatingStatusFn,
+} from '#/server/superadmin/superadmin.functions'
 import { getRecycleBinFn } from '#/server/recycle-bin/recycle-bin.functions'
 import { queryOptions } from '@tanstack/react-query'
 import {
@@ -331,6 +343,69 @@ export const adminQueries = {
       staleTime: 1000 * 60 * 2,
     }),
 
+  adminPanelNotices: () =>
+    queryOptions({
+      queryKey: ['admin', 'superadmin', 'notices'],
+      queryFn: () => getAdminPanelNoticesFn(),
+      staleTime: 1000 * 15,
+    }),
+
+  superAdminSupport: () =>
+    queryOptions({
+      queryKey: ['admin', 'superadmin', 'support'],
+      queryFn: () => getSuperAdminSupportSettingsFn(),
+      staleTime: 1000 * 60,
+    }),
+
+  superAdminSystem: () =>
+    queryOptions({
+      queryKey: ['admin', 'superadmin', 'system'],
+      queryFn: () => getSuperAdminSystemSettingsFn(),
+      staleTime: 1000 * 30,
+    }),
+
+  superAdminWebsite: () =>
+    queryOptions({
+      queryKey: ['admin', 'superadmin', 'website'],
+      queryFn: () => getSuperAdminWebsiteSettingsFn(),
+      staleTime: 1000 * 60,
+    }),
+
+  superAdminOverview: () =>
+    queryOptions({
+      queryKey: ['admin', 'superadmin', 'overview'],
+      queryFn: () => getSuperAdminBulkOverviewFn(),
+      staleTime: 1000 * 30,
+    }),
+
+  superAdminFeatureFlags: () =>
+    queryOptions({
+      queryKey: ['admin', 'superadmin', 'feature-flags'],
+      queryFn: () => getSuperAdminFeatureFlagsFn(),
+      staleTime: 1000 * 30,
+    }),
+
+  superAdminPricingRules: () =>
+    queryOptions({
+      queryKey: ['admin', 'superadmin', 'pricing-rules'],
+      queryFn: () => getSuperAdminPricingRulesFn(),
+      staleTime: 1000 * 30,
+    }),
+
+  superAdminTelemetry: () =>
+    queryOptions({
+      queryKey: ['admin', 'superadmin', 'telemetry'],
+      queryFn: () => getSuperAdminTelemetryFn(),
+      staleTime: 1000 * 10,
+    }),
+
+  superAdminAuditLogs: (limit = 50) =>
+    queryOptions({
+      queryKey: ['admin', 'superadmin', 'audit-logs', limit],
+      queryFn: () => getSuperAdminAuditLogsFn({ data: { limit } }),
+      staleTime: 1000 * 15,
+    }),
+
   recycleBin: () =>
     queryOptions({
       queryKey: ['admin', 'recycle-bin'],
@@ -345,5 +420,11 @@ export const storeQueries = {
       queryKey: ['store', 'delivery-pricing'],
       queryFn: () => getPublicDeliverySettingsFn(),
       staleTime: 1000 * 60 * 5, // 5 min
+    }),
+  operatingStatus: () =>
+    queryOptions({
+      queryKey: ['store', 'operating-status'],
+      queryFn: () => getPublicStoreOperatingStatusFn(),
+      staleTime: 1000 * 30, // 30 sec
     }),
 }

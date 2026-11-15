@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { DEFAULT_GRANTS_BY_ROLE, can } from './permissions-shared'
+import { DEFAULT_GRANTS_BY_ROLE, can, isSuperAdmin } from './permissions-shared'
 import type { UserGrants } from './permissions-shared'
 import { MODULES, ACTIONS } from '#/server/operations/types'
 
@@ -239,6 +239,38 @@ describe('Role & Financial Permissions Alignment (ACC-0.7 / G8)', () => {
 
       expect(can(grantsWithNothing, 'products', 'view')).toBe(false)
       expect(can(grantsWithNothing, 'products', 'create')).toBe(false)
+    })
+  })
+  describe('5. Super Admin (Developer Team: admin@newline.com) RBAC Governance', () => {
+    it('identifies admin@newline.com and role superadmin as superadmin', () => {
+      expect(isSuperAdmin({ email: 'admin@newline.com', role: 'admin' })).toBe(true)
+      expect(isSuperAdmin({ email: 'ADMIN@NEWLINE.COM', role: 'customer' })).toBe(true)
+      expect(isSuperAdmin({ email: 'dev@example.com', role: 'superadmin' })).toBe(true)
+      expect(isSuperAdmin({ email: 'manager@mezmani.com', role: 'admin' })).toBe(false)
+      expect(isSuperAdmin({ email: 'rider@mezmani.com', role: 'rider' })).toBe(false)
+      expect(isSuperAdmin(null)).toBe(false)
+    })
+
+    it('ensures superadmin has unrestricted access across all modules and actions', () => {
+      const superGrants = DEFAULT_GRANTS_BY_ROLE.superadmin
+      for (const mod of MODULES) {
+        for (const act of ACTIONS) {
+          expect(can(superGrants, mod, act)).toBe(true)
+        }
+      }
+    })
+
+    it('supports customizing matrix access for an administrator while leaving superadmin unrestricted', () => {
+      // Super admin assigns restricted permissions to an admin account
+      const customizedAdminGrants: UserGrants = {
+        ...DEFAULT_GRANTS_BY_ROLE.admin,
+        accounts: ['view'],
+        settings: ['view'],
+      }
+
+      expect(can(customizedAdminGrants, 'accounts', 'view')).toBe(true)
+      // Superadmin default role remains completely unrestricted
+      expect(can(DEFAULT_GRANTS_BY_ROLE.superadmin, 'settings', 'delete')).toBe(true)
     })
   })
 })

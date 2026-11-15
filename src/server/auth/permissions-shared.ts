@@ -14,7 +14,21 @@ export interface SessionUser {
   phoneVerified?: boolean
 }
 
+/**
+ * Super Admin represents the developer team (root access).
+ * Specifically designates user admin@newline.com or any account with role 'superadmin'.
+ */
+export function isSuperAdmin(
+  user?: { email?: string | null; role?: string | null } | null,
+): boolean {
+  if (!user) return false
+  const email = user.email?.toLowerCase().trim()
+  const role = user.role?.toLowerCase().trim()
+  return role === 'superadmin' || email === 'admin@newline.com'
+}
+
 export const DEFAULT_GRANTS_BY_ROLE: Record<string, UserGrants> = {
+  superadmin: Object.fromEntries(MODULES.map((m) => [m, [...ACTIONS]])),
   admin: Object.fromEntries(MODULES.map((m) => [m, [...ACTIONS]])),
   manager: {
     dashboard: ['view'],

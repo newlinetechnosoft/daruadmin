@@ -54,12 +54,16 @@ export async function seed() {
 
   console.log('🌱 Starting database seed...')
 
-  // 1. Upgrade Admin Role
+  // 1. Upgrade Admin Role & Superadmin Developer Account
   await db
     .update(user)
     .set({ role: 'admin', phone: '+977-9800000000' })
     .where(eq(user.email, 'admin@Mezmani.com.np'))
-  console.log('✅ Admin user role verified.')
+  await db
+    .update(user)
+    .set({ role: 'superadmin', phone: '+977-9800000001' })
+    .where(eq(user.email, 'admin@newline.com'))
+  console.log('✅ Admin and Super Admin user roles verified.')
 
   // 2. Liquor Categories
   const categoriesData = [

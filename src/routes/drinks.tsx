@@ -340,10 +340,10 @@ function DrinksPage() {
 
       <main className="flex-1">
         {/* Page Hero */}
-        <section className="border-b border-border bg-muted/20 py-8 sm:py-12">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <Breadcrumb className="mb-4">
-              <BreadcrumbList className="text-xs">
+        <section className="border-b border-border/70 bg-muted/20 py-3 sm:py-5 lg:py-7">
+          <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+            <Breadcrumb className="mb-1 sm:mb-2">
+              <BreadcrumbList className="text-[11px] sm:text-xs">
                 <BreadcrumbItem>
                   <BreadcrumbLink asChild>
                     <Link to="/">Home</Link>
@@ -370,11 +370,11 @@ function DrinksPage() {
               </BreadcrumbList>
             </Breadcrumb>
 
-            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
               {activeCategoryObj ? activeCategoryObj.name : 'Drinks'}
             </h1>
 
-            <p className="mt-2 max-w-lg text-xs leading-relaxed text-muted-foreground">
+            <p className="mt-0.5 sm:mt-1 max-w-lg text-[11px] sm:text-xs leading-relaxed text-muted-foreground">
               {activeCategoryObj?.description ??
                 'Discover our selection of spirits, vodka, whiskey, beer, wine and more with 30-minute night delivery.'}
             </p>
@@ -382,10 +382,10 @@ function DrinksPage() {
         </section>
 
         {/* Shop Area */}
-        <section className="py-8 sm:py-10">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <section className="py-3 sm:py-5 lg:py-7">
+          <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
             {/* Toolbar */}
-            <div className="flex items-center justify-between gap-4 border-b border-border pb-4">
+            <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-2.5 sm:pb-3.5">
               <p className="text-xs text-muted-foreground">
                 <span className="font-semibold text-foreground font-mono">
                   {filteredProducts.length}
@@ -393,19 +393,19 @@ function DrinksPage() {
                 of {products.length} products
               </p>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setMobileFilterOpen(true)}
-                  className="gap-2 text-xs md:hidden"
+                  className="gap-1.5 text-xs h-8 px-2.5 md:hidden"
                 >
                   <SlidersHorizontal className="h-3.5 w-3.5" />
                   Filters
                 </Button>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <span className="hidden text-xs text-muted-foreground sm:inline">
                     Sort by
                   </span>
@@ -424,7 +424,7 @@ function DrinksPage() {
             </div>
 
             {/* Sidebar + Grid */}
-            <div className="grid grid-cols-1 gap-8 pt-8 md:grid-cols-[220px_1fr] lg:grid-cols-[240px_1fr] lg:gap-12">
+            <div className="grid grid-cols-1 gap-4 pt-3 sm:pt-5 md:grid-cols-[200px_1fr] lg:grid-cols-[220px_1fr] lg:gap-8 xl:grid-cols-[240px_1fr]">
               <aside className="hidden md:block">
                 <div className="sticky top-20">
                   {filterPanel}
@@ -435,7 +435,7 @@ function DrinksPage() {
                       variant="ghost"
                       size="sm"
                       onClick={handleResetFilters}
-                      className="mt-6 gap-2 text-xs text-muted-foreground hover:text-foreground w-full justify-start px-0"
+                      className="mt-4 gap-2 text-xs text-muted-foreground hover:text-foreground w-full justify-start px-0"
                     >
                       <RotateCcw className="h-3.5 w-3.5" /> Reset all filters
                     </Button>
@@ -445,7 +445,7 @@ function DrinksPage() {
 
               <section>
                 {filteredProducts.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3.5 md:gap-4 lg:grid-cols-3 xl:grid-cols-4">
                     {filteredProducts.map((product) => (
                       <ProductCard
                         key={product.id}

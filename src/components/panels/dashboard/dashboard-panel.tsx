@@ -1,3 +1,4 @@
+import { Badge } from '#/components/ui/badge'
 import type { ReactNode } from 'react'
 import { Link, getRouteApi } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
@@ -13,6 +14,11 @@ import { MetricCard, metricToneStyles } from '#/components/shared/metric-card'
 import type { MetricTone } from '#/components/shared/metric-card'
 import { cn } from '#/lib/utils'
 import {
+  Terminal,
+  ShieldCheck,
+  KeyRound,
+  Users,
+  FileSpreadsheet,
   AlertCircle,
   ArrowRight,
   Bike,
@@ -199,7 +205,7 @@ export function DashboardPanel() {
               value={range}
               onValueChange={(value) =>
                 navigate({
-                  search: { range: value as typeof range },
+                  search: { range: value } as any,
                 })
               }
             >
@@ -230,6 +236,83 @@ export function DashboardPanel() {
 
       <DataSection isRefreshing={isFetching}>
         <div className="space-y-4">
+                    {/* Super Admin & Developer Team Panel */}
+          <Card className="rounded-lg border border-border bg-card shadow-xs overflow-hidden">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 sm:p-5 border-b border-border/70 bg-muted/20">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
+                  <Terminal className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-sm font-semibold text-foreground tracking-tight">
+                      Super Admin Panel
+                    </h2>
+                    <Badge variant="default" className="text-[11px] px-2 py-0.5 font-medium">
+                      Developer Team
+                    </Badge>
+                    <Badge variant="outline" className="text-[11px] px-2 py-0.5 text-muted-foreground font-mono">
+                      admin@newline.com
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Root developer console: inspect all users, control Admin & Rider RBAC matrix, and audit operational logs.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-1 md:pt-0">
+                <Button asChild size="sm" variant="outline" className="h-8 text-xs gap-1.5">
+                  <Link to="/admin/staff">
+                    <Users className="h-3.5 w-3.5" />
+                    <span>All Users & Details</span>
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="h-8 text-xs gap-1.5">
+                  <Link to="/admin/staff">
+                    <KeyRound className="h-3.5 w-3.5" />
+                    <span>Admin & Rider Matrix</span>
+                  </Link>
+                </Button>
+                <Button asChild size="sm" className="h-8 text-xs gap-1.5 bg-primary text-primary-foreground shadow-xs hover:bg-primary/90">
+                  <Link to="/superadmin">
+                    <FileSpreadsheet className="h-3.5 w-3.5" />
+                    <span>Super Admin Console</span>
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border/60 text-xs bg-card">
+              <div className="p-3.5 sm:p-4">
+                <div className="font-semibold text-foreground flex items-center gap-1.5">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Unrestricted Root Access</span>
+                </div>
+                <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
+                  Super Admin possesses full bypass across catalog, orders, double-entry finance, and settings.
+                </p>
+              </div>
+              <div className="p-3.5 sm:p-4">
+                <div className="font-semibold text-foreground flex items-center gap-1.5">
+                  <KeyRound className="h-4 w-4 text-primary" />
+                  <span>Matrix Governance</span>
+                </div>
+                <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
+                  Configure granular action overrides for Admins and Riders. Super Admin is safely shielded from matrix tampering.
+                </p>
+              </div>
+              <div className="p-3.5 sm:p-4">
+                <div className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Users className="h-4 w-4 text-primary" />
+                  <span>Full User Directory</span>
+                </div>
+                <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
+                  Inspect complete user profiles, verified phones, emails, roles, and ban reasons across all accounts.
+                </p>
+              </div>
+            </div>
+          </Card>
+
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {metrics.map((metric) => (
               <MetricCard

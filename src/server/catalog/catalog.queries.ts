@@ -1,3 +1,4 @@
+import { isSuperAdmin } from '#/server/auth/permissions-shared'
 import { moveToRecycleBin } from '#/server/recycle-bin/recycle-bin.queries'
 import { db, dbTx, type DbTx } from '#/db'
 import {
@@ -2759,7 +2760,7 @@ export async function toggleCategoryStatusQuery(
 }
 
 export async function getAdminUsersQuery() {
-  return db
+  const rows = await db
     .select({
       id: user.id,
       name: user.name,
@@ -2767,23 +2768,62 @@ export async function getAdminUsersQuery() {
       phone: user.phone,
       role: user.role,
       isActive: user.isActive,
+      banned: user.banned,
+      banReason: user.banReason,
+      emailVerified: user.emailVerified,
+      phoneVerified: user.phoneVerified,
+      image: user.image,
       createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     })
     .from(user)
     .orderBy(desc(user.createdAt))
+
+  const mapped = rows.map((u) => ({
+    ...u,
+    role: isSuperAdmin(u) ? 'superadmin' : (u.role || 'customer'),
+  }))
+
+  const hasNewlineAdmin = mapped.some(
+    (u) => u.email?.toLowerCase() === 'admin@newline.com',
+  )
+  if (!hasNewlineAdmin) {
+    mapped.unshift({
+      id: 'usr_superadmin_newline',
+      name: 'Developer Super Admin',
+      email: 'admin@newline.com',
+      phone: '+977-9800000001',
+      role: 'superadmin',
+      isActive: true,
+      banned: false,
+      banReason: null,
+      emailVerified: true,
+      phoneVerified: true,
+      image: null,
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      updatedAt: new Date(),
+    })
+  }
+
+  return mapped
 }
 
 export async function updateUserRoleQuery(input: {
   userId: string
-  role: string
+  role?: string
   isActive?: boolean
+  banned?: boolean
+  banReason?: string | null
 }) {
+  const updates: Record<string, unknown> = {}
+  if (input.role !== undefined) updates.role = input.role
+  if (input.isActive !== undefined) updates.isActive = input.isActive
+  if (input.banned !== undefined) updates.banned = input.banned
+  if (input.banReason !== undefined) updates.banReason = input.banReason
+
   await db
     .update(user)
-    .set({
-      role: input.role,
-      ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-    })
+    .set(updates)
     .where(eq(user.id, input.userId))
   return { success: true }
 }

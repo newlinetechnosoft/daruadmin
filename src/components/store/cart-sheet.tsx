@@ -16,8 +16,10 @@ import { useNavigate } from '@tanstack/react-router'
 import { formatNPR } from '#/lib/money'
 import { storeQueries } from '#/queries/admin'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
+import { formatAbv } from '#/components/store/product-card'
 import {
   ShoppingBag,
+  Clock,
   Plus,
   Minus,
   Trash2,
@@ -41,6 +43,7 @@ export function CartSheet() {
   const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   const { data: deliverySettings } = useQuery(storeQueries.deliveryPricing())
+  const { data: storeStatus } = useQuery(storeQueries.operatingStatus())
   const deliveryFeePaisa = deliverySettings?.deliveryFee ?? 0
   const freeThresholdPaisa = deliverySettings?.freeDeliveryThreshold ?? 0
   const isGrowthFreeDelivery = deliveryFeePaisa === 0
@@ -199,6 +202,11 @@ export function CartSheet() {
                           <span className="text-[11px] text-muted-foreground">
                             {item.variantName}
                           </span>
+                          {item.abv && formatAbv(item.abv) && (
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              · {formatAbv(item.abv)}
+                            </span>
+                          )}
                           {badgeLabel && (
                             <Badge
                               variant="default"
@@ -325,16 +333,46 @@ export function CartSheet() {
                 </div>
               </div>
 
+              {storeStatus && !storeStatus.isOpen && (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-950 dark:text-amber-200 flex items-start gap-2">
+                  <Clock className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5 text-left">
+                    <span className="font-semibold block">
+                      {storeStatus.allowAdvanceOrders
+                        ? 'Store Currently Closed (Advance Orders Active)'
+                        : 'Store Currently Closed'}
+                    </span>
+                    <p className="text-[11px] text-muted-foreground leading-tight">
+                      {storeStatus.allowAdvanceOrders
+                        ? `You can place your order now! Delivery will take place once our system reopens (${storeStatus.nextOpeningFormatted || 'our next shift'}).`
+                        : `Orders cannot be placed right now. Reopening on ${storeStatus.nextOpeningFormatted || 'soon'}.`}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <Button
                 type="button"
-                className="w-full h-10 text-xs font-medium gap-2 cursor-pointer"
+                disabled={Boolean(storeStatus && !storeStatus.isOpen && !storeStatus.allowAdvanceOrders)}
+                className="w-full h-10 text-xs font-medium gap-2 cursor-pointer disabled:cursor-not-allowed"
                 onClick={() => {
                   setIsOpen(false)
                   navigate({ to: '/checkout' })
                 }}
               >
-                Proceed to checkout
-                <ArrowRight className="h-4 w-4" />
+                {storeStatus && !storeStatus.isOpen && !storeStatus.allowAdvanceOrders ? (
+                  <span>Store Closed (Reopens {storeStatus.nextOpeningFormatted || 'Soon'})</span>
+                ) : storeStatus && !storeStatus.isOpen && storeStatus.allowAdvanceOrders ? (
+                  <>
+                    <span>Proceed with Scheduled Delivery</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                ) : (
+                  <>
+                    <span>Proceed to checkout</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
               </Button>
             </div>
           </SheetFooter>

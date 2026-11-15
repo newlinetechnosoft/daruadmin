@@ -15,9 +15,9 @@ import {
 import { useCart } from '#/lib/cart-context'
 import { useIsFavorite, toggleFavorite } from '#/lib/favorites'
 import { formatNPR } from '#/lib/money'
+import { cn } from '#/lib/utils'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
-import { Card, CardContent } from '#/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -67,6 +67,18 @@ export interface ProductCardProps {
   product: ProductProps
   suggestedProducts?: ProductProps[]
   className?: string
+}
+
+/**
+ * Format alcohol by volume (ABV) into clean commercial representation.
+ * Prevents forced 40.00% default strings and outputs 40% ABV, 42.8% ABV, etc.
+ */
+export function formatAbv(abv?: string | number | null): string | null {
+  if (abv === null || abv === undefined || abv === '') return null
+  const num = typeof abv === 'number' ? abv : parseFloat(String(abv))
+  if (isNaN(num) || num <= 0) return null
+  const clean = num % 1 === 0 ? num.toString() : Number(num.toFixed(2)).toString()
+  return `${clean}% ABV`
 }
 
 function ProductCardComponent({
@@ -119,6 +131,8 @@ function ProductCardComponent({
       imageUrl: product.primaryImage,
       customBadge: badgeLabel,
       customDiscountLabel: discountLabel,
+      volumeMl: activeVariant.volumeMl,
+      abv: activeVariant.abv,
     })
     toast.success(`Added ${product.name} to cart`)
   }
@@ -141,7 +155,7 @@ function ProductCardComponent({
     activeVariant.volumeMl
       ? `${activeVariant.volumeMl}ml`
       : (activeVariant.quantity ?? activeVariant.name),
-    activeVariant.abv ? `${activeVariant.abv}% ABV` : null,
+    formatAbv(activeVariant.abv),
   ]
     .filter(Boolean)
     .join(' · ')
@@ -182,7 +196,7 @@ function ProductCardComponent({
     modalActiveVariant.volumeMl
       ? `${modalActiveVariant.volumeMl}ml`
       : (modalActiveVariant.quantity ?? modalActiveVariant.name),
-    modalActiveVariant.abv ? `${modalActiveVariant.abv}% ABV` : null,
+    formatAbv(modalActiveVariant.abv),
   ]
     .filter(Boolean)
     .join(' · ')
@@ -246,6 +260,8 @@ function ProductCardComponent({
       imageUrl: modalProduct.primaryImage,
       customBadge: modalProduct.customBadge,
       customDiscountLabel: modalDiscountLabel,
+      volumeMl: modalActiveVariant.volumeMl,
+      abv: modalActiveVariant.abv,
     })
   }
 
@@ -266,27 +282,32 @@ function ProductCardComponent({
       price: v.price,
       mrp: v.mrp,
       imageUrl: item.primaryImage,
+      volumeMl: v.volumeMl,
+      abv: v.abv,
     })
     toast.success(`Added ${item.name} to cart`)
   }
 
   return (
     <>
-      <Card
+      <div
         onClick={handleCardClick}
-        className={`group relative flex flex-col justify-between overflow-hidden transition-all duration-300 hover:border-amber-500/50 hover:shadow-xl bg-card border border-border/80 rounded-2xl cursor-pointer select-none ${className}`}
+        className={cn(
+          'group relative flex flex-col justify-between overflow-hidden transition-all duration-300 hover:border-amber-500/50 hover:shadow-lg bg-card border border-border/80 rounded-xl sm:rounded-2xl cursor-pointer select-none',
+          className,
+        )}
       >
-        {/* 1. PRODUCT IMAGE CONTAINER (100% width, ZERO top/side margins) */}
-        <div className="relative aspect-square w-full overflow-hidden bg-zinc-900/30 dark:bg-zinc-900/50 flex items-center justify-center p-0 m-0">
+        {/* 1. PRODUCT IMAGE CONTAINER (100% width, flush to card top and sides, zero unwanted margins) */}
+        <div className="relative aspect-square w-full overflow-hidden bg-muted/30 dark:bg-zinc-900/40 flex items-center justify-center p-0 m-0">
           {/* Top-Left Floating Badges */}
-          <div className="absolute left-2.5 top-2.5 z-10 flex flex-col gap-1 items-start pointer-events-none">
+          <div className="absolute left-2 top-2 sm:left-2.5 sm:top-2.5 z-10 flex flex-col gap-1 items-start pointer-events-none">
             {discountLabel && (
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md text-emerald-400 bg-emerald-950/80 backdrop-blur-md border border-emerald-500/25 shadow-xs">
+              <span className="text-[10px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.5 rounded-md text-emerald-400 bg-emerald-950/85 backdrop-blur-md border border-emerald-500/25 shadow-xs">
                 {discountLabel}
               </span>
             )}
             {badgeLabel && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500 text-zinc-950 shadow-xs">
+              <span className="text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500 text-zinc-950 shadow-xs">
                 {badgeLabel}
               </span>
             )}
@@ -304,10 +325,10 @@ function ProductCardComponent({
                 ? `Remove ${product.name} from favorites`
                 : `Add ${product.name} to favorites`
             }
-            className="absolute right-2.5 top-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 hover:bg-black/85 text-white/80 hover:text-white backdrop-blur-md transition-all active:scale-90 border border-white/10 shadow-xs cursor-pointer"
+            className="absolute right-2 top-2 sm:right-2.5 sm:top-2.5 z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-black/60 hover:bg-black/85 text-white/80 hover:text-white backdrop-blur-md transition-all active:scale-90 border border-white/10 shadow-xs cursor-pointer"
           >
             <Heart
-              className={`h-4 w-4 transition-colors ${
+              className={`h-3.5 w-3.5 sm:h-4 sm:w-4 transition-colors ${
                 isWishlisted
                   ? 'fill-rose-500 text-rose-500'
                   : 'text-white/80 hover:text-white'
@@ -320,36 +341,36 @@ function ProductCardComponent({
             <img
               src={product.primaryImage}
               alt={product.name}
-              className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-105"
+              className="w-full h-full object-contain p-2 sm:p-2.5 transition-transform duration-500 ease-out group-hover:scale-105"
               loading="lazy"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+            <div className="flex h-full w-full items-center justify-center text-muted-foreground/50">
               {product.catalogType === 'liquor' ? (
-                <Wine className="h-12 w-12 stroke-1" />
+                <Wine className="h-10 w-10 sm:h-12 sm:w-12 stroke-[1.25]" />
               ) : (
-                <Package className="h-12 w-12 stroke-1" />
+                <Package className="h-10 w-10 sm:h-12 sm:w-12 stroke-[1.25]" />
               )}
             </div>
           )}
         </div>
 
-        {/* 2. PRODUCT INFO & DETAILS (Consistent stylish padding, gap & perfect alignment) */}
-        <CardContent className="p-3.5 sm:p-4 flex flex-1 flex-col justify-between space-y-3">
-          <div className="space-y-1">
+        {/* 2. PRODUCT INFO & DETAILS (Responsive padding, natural gap & perfect alignment) */}
+        <div className="p-2 sm:p-3.5 flex flex-1 flex-col justify-between gap-1.5 sm:gap-2">
+          <div className="space-y-0.5 sm:space-y-1">
             {/* Category / Brand */}
-            <div className="text-[11px] font-medium text-muted-foreground tracking-wide line-clamp-1 uppercase">
+            <div className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground tracking-wider uppercase line-clamp-1">
               {categoryLabel}
             </div>
 
             {/* Product Title */}
-            <h3 className="text-sm font-bold text-foreground line-clamp-1 group-hover:text-amber-500 transition-colors">
+            <h3 className="text-xs sm:text-sm font-bold text-foreground line-clamp-1 group-hover:text-amber-500 transition-colors leading-snug">
               {product.name}
             </h3>
 
             {/* Meta Text: Volume & ABV */}
             {metaText && (
-              <p className="text-xs text-muted-foreground font-mono">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-mono line-clamp-1">
                 {metaText}
               </p>
             )}
@@ -357,17 +378,17 @@ function ProductCardComponent({
             {/* Description (subtle italic 1 line if present) */}
             {product.description && (
               <p
-                className="text-[11px] text-muted-foreground/80 line-clamp-1 italic"
+                className="text-[10px] sm:text-[11px] text-muted-foreground/80 line-clamp-1 italic"
                 title={product.description}
               >
                 {product.description}
               </p>
             )}
 
-            {/* Variant selector pills (Maintains baseline gap so all cards align) */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1 min-h-[26px]">
-              {product.variants.length > 1 ? (
-                product.variants.map((v) => {
+            {/* Variant selector pills (only rendered when multiple packaging sizes exist) */}
+            {product.variants.length > 1 && (
+              <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                {product.variants.map((v) => {
                   const isSelected = v.id === activeVariant.id
                   const label = v.volumeMl
                     ? `${v.volumeMl}ml`
@@ -380,35 +401,31 @@ function ProductCardComponent({
                         e.stopPropagation()
                         setSelectedVariantId(v.id)
                       }}
-                      className={`h-6 px-2.5 text-[11px] rounded-md transition-all cursor-pointer ${
+                      className={`h-5 sm:h-6 px-1.5 sm:px-2 text-[10px] sm:text-[11px] rounded transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-amber-500 text-zinc-950 font-bold shadow-xs'
-                          : 'bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 font-medium border border-border/40'
+                          : 'bg-muted/80 hover:bg-muted text-muted-foreground font-medium border border-border/50'
                       }`}
                     >
                       {label}
                     </button>
                   )
-                })
-              ) : (
-                <span className="text-[11px] text-muted-foreground/60 italic">
-                  Standard size
-                </span>
-              )}
-            </div>
+                })}
+              </div>
+            )}
           </div>
 
           {/* 3. BOTTOM ROW: PRICE & ORANGE ADD BUTTON */}
-          <div className="pt-2.5 border-t border-border/40 flex items-center justify-between gap-2">
+          <div className="pt-1.5 sm:pt-2 border-t border-border/50 flex items-center justify-between gap-1.5 sm:gap-2 mt-auto">
             {/* Price display */}
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-sm font-bold text-foreground font-mono">
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs sm:text-sm font-bold text-foreground font-mono leading-tight">
                 {formatNPR(activeVariant.price)}
               </span>
               {(activeVariant.compareAtPrice || activeVariant.mrp) &&
                 (activeVariant.compareAtPrice || activeVariant.mrp)! >
                   activeVariant.price && (
-                  <span className="text-xs text-muted-foreground line-through font-mono">
+                  <span className="text-[10px] sm:text-xs text-muted-foreground line-through font-mono leading-tight">
                     {formatNPR(
                       activeVariant.compareAtPrice || activeVariant.mrp!,
                     )}
@@ -419,7 +436,7 @@ function ProductCardComponent({
             {/* Interactive Add Button / Quantity Stepper */}
             {qty >= 1 ? (
               <div
-                className="flex items-center justify-between h-8 w-24 rounded-lg border border-amber-500/50 bg-amber-500/10 px-1"
+                className="flex items-center justify-between h-7 sm:h-8 w-20 sm:w-24 rounded-lg border border-amber-500/50 bg-amber-500/10 px-1 shrink-0"
                 onClick={(e) => e.stopPropagation()}
                 role="group"
                 aria-label={`Quantity for ${product.name}`}
@@ -431,14 +448,14 @@ function ProductCardComponent({
                     handleDecrement()
                   }}
                   aria-label={`Decrease quantity`}
-                  className="flex items-center justify-center h-6 w-6 rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  className="flex items-center justify-center h-5 w-5 sm:h-6 sm:w-6 rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 >
-                  <Minus className="h-3.5 w-3.5" />
+                  <Minus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 </button>
 
                 <span
                   aria-live="polite"
-                  className="text-xs font-bold font-mono text-amber-500 min-w-4 text-center select-none"
+                  className="text-[11px] sm:text-xs font-bold font-mono text-amber-500 min-w-4 text-center select-none"
                 >
                   {qty}
                 </span>
@@ -451,13 +468,13 @@ function ProductCardComponent({
                     handleIncrement()
                   }}
                   aria-label={`Increase quantity`}
-                  className={`flex items-center justify-center h-6 w-6 rounded transition-colors ${
+                  className={`flex items-center justify-center h-5 w-5 sm:h-6 sm:w-6 rounded transition-colors ${
                     isMaxStockReached
                       ? 'text-muted-foreground/30 cursor-not-allowed'
                       : 'text-muted-foreground hover:text-foreground cursor-pointer'
                   }`}
                 >
-                  <Plus className="h-3.5 w-3.5" />
+                  <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 </button>
               </div>
             ) : (
@@ -473,7 +490,7 @@ function ProductCardComponent({
                     ? `${product.name} is out of stock`
                     : `Add ${product.name} to cart`
                 }
-                className={`h-8 px-4 rounded-lg text-xs font-bold shadow-xs transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer ${
+                className={`h-7 sm:h-8 px-2.5 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold shadow-xs transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer shrink-0 ${
                   isOutOfStock
                     ? 'bg-muted text-muted-foreground cursor-not-allowed'
                     : 'bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold'
@@ -483,8 +500,8 @@ function ProductCardComponent({
               </button>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* -------------------------------------------------------------
           PRODUCT DETAIL MODAL DIALOG (Opens on Card Click)

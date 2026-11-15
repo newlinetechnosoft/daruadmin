@@ -28,7 +28,13 @@ export function Footer() {
           <div className="col-span-2 space-y-3 lg:col-span-1">
             <Link to="/" className="inline-block">
               <img
-                src="/mezmani_logo_bg.svg"
+                src="https://mezmani.com/mezmani_logo_bg.svg"
+                onError={(e) => {
+                  const target = e.currentTarget
+                  if (target.src !== `${window.location.origin}/mezmani_logo_bg.svg`) {
+                    target.src = '/mezmani_logo_bg.svg'
+                  }
+                }}
                 alt="Mezmani"
                 width="190"
                 height="80"

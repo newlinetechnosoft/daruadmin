@@ -19,6 +19,8 @@ export interface CartItem {
   quantity: number
   customBadge?: string | null
   customDiscountLabel?: string | null
+  volumeMl?: number | null
+  abv?: string | null
 }
 
 interface CartContextType {

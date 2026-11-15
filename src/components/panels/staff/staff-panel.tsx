@@ -13,7 +13,7 @@ import {
   PERMISSION_SECTIONS,
 } from '#/server/operations/types'
 import type { ModuleKey, ActionKey } from '#/server/operations/types'
-import { DEFAULT_GRANTS_BY_ROLE } from '#/server/auth/permissions-shared'
+import { DEFAULT_GRANTS_BY_ROLE, isSuperAdmin } from '#/server/auth/permissions-shared'
 import type { UserGrants } from '#/server/auth/permissions-shared'
 import { PageHeader } from '#/components/shared/page-header'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
@@ -50,7 +50,19 @@ import {
   Eye,
   Award,
   Store,
+  Terminal,
+  CheckCircle2,
+  Info,
+  Copy,
 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
 import { CreateStaffDialog } from './create-staff-dialog'
 import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
@@ -172,25 +184,51 @@ export function StaffPanel() {
     'users',
   )
   const [searchQuery, setSearchQuery] = useState('')
+  const [userScopeFilter, setUserScopeFilter] = useState<
+    'all' | 'staff' | 'superadmin' | 'admin' | 'manager' | 'rider' | 'customer'
+  >('all')
+  const [inspectingUser, setInspectingUser] = useState<StaffUser | null>(null)
 
-  // Filter staff users (admin, manager, or rider) - excluding pure customers
+  const currentUser = useMemo(
+    () => users.find((u) => u.id === currentUserId),
+    [users, currentUserId],
+  )
+  const isSuperAdminUser = isSuperAdmin(currentUser)
+
+  // Filter staff users (admin, manager, rider, or superadmin)
   const staffUsers = useMemo(() => {
     return users.filter(
-      (u) => u.role === 'admin' || u.role === 'manager' || u.role === 'rider',
+      (u) => u.role === 'admin' || u.role === 'manager' || u.role === 'rider' || isSuperAdmin(u),
     )
   }, [users])
 
-  // Track selected staff id initialized from staffUsers
+  // Matrix-eligible users: HIDE super admin completely from permission matrix
+  const matrixEligibleUsers = useMemo(() => {
+    return users.filter(
+      (u) => !isSuperAdmin(u) && (u.role === 'admin' || u.role === 'manager' || u.role === 'rider'),
+    )
+  }, [users])
+
+  // Track selected staff id initialized from matrixEligibleUsers
   const [selectedStaffId, setSelectedStaffId] = useState<string>(
-    staffUsers[0]?.id || '',
+    matrixEligibleUsers[0]?.id || '',
   )
 
-  // Derived selected staff, falling back to first staff user if current is demoted/removed
+  // Derived selected staff, falling back to first matrix-eligible user
   const selectedStaff: StaffUser | null = useMemo(() => {
-    if (staffUsers.length === 0) return null
-    const found = staffUsers.find((u) => u.id === selectedStaffId)
-    return found ?? (staffUsers.length > 0 ? staffUsers[0] : null)
-  }, [staffUsers, selectedStaffId])
+    if (matrixEligibleUsers.length === 0) return null
+    const found = matrixEligibleUsers.find((u) => u.id === selectedStaffId)
+    return found ?? (matrixEligibleUsers.length > 0 ? matrixEligibleUsers[0] : null)
+  }, [matrixEligibleUsers, selectedStaffId])
+
+  // Whether current viewer can customize permissions for selected staff:
+  // Super Admin can customize Admin, Manager, and Rider. Regular Admin can customize Manager and Rider.
+  const isTargetAdmin = selectedStaff?.role === 'admin'
+  const canEditSelected = Boolean(
+    selectedStaff &&
+      !isSuperAdmin(selectedStaff) &&
+      (!isTargetAdmin || isSuperAdminUser),
+  )
 
   // Per-user drafts for the permission matrix to allow non-destructive user switching
   const [drafts, setDrafts] = useState<Record<string, UserGrants | undefined>>(
@@ -213,17 +251,31 @@ export function StaffPanel() {
     newRole: string
   } | null>(null)
 
-  const filteredStaff = useMemo(() => {
-    return staffUsers.filter((u) => {
-      if (!searchQuery.trim()) return true
-      const q = searchQuery.toLowerCase()
+  // All Users / Directory filter
+  const displayedUsers = useMemo(() => {
+    let list = users
+    if (userScopeFilter === 'staff') {
+      list = users.filter(
+        (u) => u.role === 'admin' || u.role === 'manager' || u.role === 'rider' || isSuperAdmin(u),
+      )
+    } else if (userScopeFilter === 'superadmin') {
+      list = users.filter((u) => isSuperAdmin(u))
+    } else if (userScopeFilter !== 'all') {
+      list = users.filter((u) => !isSuperAdmin(u) && u.role === userScopeFilter)
+    }
+
+    if (!searchQuery.trim()) return list
+    const q = searchQuery.toLowerCase()
+    return list.filter((u) => {
       return (
         u.name.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
-        (u.role || '').includes(q)
+        (u.phone || '').toLowerCase().includes(q) ||
+        (u.role || '').toLowerCase().includes(q) ||
+        u.id.toLowerCase().includes(q)
       )
     })
-  }, [staffUsers, searchQuery])
+  }, [users, userScopeFilter, searchQuery])
 
   const filteredAudit = useMemo(() => {
     return ops.audit.filter((a) => {
@@ -241,9 +293,6 @@ export function StaffPanel() {
   // Effective baseline grants from server data
   const baselineGrants = useMemo((): UserGrants => {
     if (!selectedStaff) return {}
-    if (selectedStaff.role === 'admin') {
-      return Object.fromEntries(MODULES.map((m) => [m, [...ACTIONS]]))
-    }
     if (selectedStaff.id in ops.permissions) {
       return ops.permissions[selectedStaff.id]
     }
@@ -254,33 +303,30 @@ export function StaffPanel() {
 
   // Check if current user has custom permissions saved in DB
   const hasCustomPermissions = useMemo(() => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return false
+    if (!selectedStaff) return false
     return selectedStaff.id in ops.permissions
   }, [selectedStaff, ops.permissions])
 
   // Current effective grants for editing
   const currentGrants = useMemo((): UserGrants => {
     if (!selectedStaff) return {}
-    if (selectedStaff.role === 'admin') {
-      return Object.fromEntries(MODULES.map((m) => [m, [...ACTIONS]]))
-    }
     return drafts[selectedStaff.id] ?? baselineGrants
   }, [selectedStaff, drafts, baselineGrants])
 
   // Check if draft has unsaved changes compared to server baseline
   const isDirty = useMemo(() => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return false
+    if (!selectedStaff || !canEditSelected) return false
     const draft = drafts[selectedStaff.id]
     if (!draft) return false
     return !areGrantsEqual(draft, baselineGrants)
-  }, [selectedStaff, drafts, baselineGrants])
+  }, [selectedStaff, drafts, baselineGrants, canEditSelected])
 
   const handleSelectStaffForMatrix = (userId: string) => {
     setSelectedStaffId(userId)
   }
 
   const handleTogglePermission = (mod: ModuleKey, action: ActionKey) => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return
+    if (!selectedStaff || !canEditSelected) return
 
     setDrafts((prev) => {
       const userDraft = prev[selectedStaff.id] ?? baselineGrants
@@ -321,7 +367,7 @@ export function StaffPanel() {
     modules: ModuleKey[],
     action: ActionKey,
   ) => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return
+    if (!selectedStaff || !canEditSelected) return
 
     setDrafts((prev) => {
       const userDraft = { ...(prev[selectedStaff.id] ?? baselineGrants) }
@@ -355,7 +401,7 @@ export function StaffPanel() {
 
   // Batch action: toggle all actions for a specific module
   const handleToggleModuleAll = (mod: ModuleKey) => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return
+    if (!selectedStaff || !canEditSelected) return
 
     setDrafts((prev) => {
       const userDraft = prev[selectedStaff.id] ?? baselineGrants
@@ -375,7 +421,7 @@ export function StaffPanel() {
 
   // Batch action: grant all actions for an entire section
   const handleSectionGrantAll = (modules: ModuleKey[]) => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return
+    if (!selectedStaff || !canEditSelected) return
 
     setDrafts((prev) => {
       const userDraft = { ...(prev[selectedStaff.id] ?? baselineGrants) }
@@ -392,7 +438,7 @@ export function StaffPanel() {
 
   // Batch action: full CRUD (view, create, edit, delete) for an entire section
   const handleSectionFullCrud = (modules: ModuleKey[]) => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return
+    if (!selectedStaff || !canEditSelected) return
 
     setDrafts((prev) => {
       const userDraft = { ...(prev[selectedStaff.id] ?? baselineGrants) }
@@ -409,7 +455,7 @@ export function StaffPanel() {
 
   // Batch action: view only for an entire section
   const handleSectionViewOnly = (modules: ModuleKey[]) => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return
+    if (!selectedStaff || !canEditSelected) return
 
     setDrafts((prev) => {
       const userDraft = { ...(prev[selectedStaff.id] ?? baselineGrants) }
@@ -426,7 +472,7 @@ export function StaffPanel() {
 
   // Batch action: clear an entire section
   const handleSectionClearAll = (modules: ModuleKey[]) => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return
+    if (!selectedStaff || !canEditSelected) return
 
     setDrafts((prev) => {
       const userDraft = { ...(prev[selectedStaff.id] ?? baselineGrants) }
@@ -443,7 +489,7 @@ export function StaffPanel() {
 
   // Preset: Read-Only across all modules
   const handlePresetReadOnly = () => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return
+    if (!selectedStaff || !canEditSelected) return
     const allKeys = PERMISSION_SECTIONS.flatMap((s) =>
       s.modules.map((m) => m.key),
     )
@@ -462,7 +508,7 @@ export function StaffPanel() {
 
   // Preset: Full CRUD across all modules
   const handlePresetFullCrud = () => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return
+    if (!selectedStaff || !canEditSelected) return
     const allKeys = PERMISSION_SECTIONS.flatMap((s) =>
       s.modules.map((m) => m.key),
     )
@@ -481,7 +527,7 @@ export function StaffPanel() {
 
   // Preset: Full Access across all modules
   const handlePresetFullAccess = () => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return
+    if (!selectedStaff || !canEditSelected) return
     const allKeys = PERMISSION_SECTIONS.flatMap((s) =>
       s.modules.map((m) => m.key),
     )
@@ -500,7 +546,7 @@ export function StaffPanel() {
 
   // Preset: Clear All
   const handlePresetClearAll = () => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return
+    if (!selectedStaff || !canEditSelected) return
     const allKeys = PERMISSION_SECTIONS.flatMap((s) =>
       s.modules.map((m) => m.key),
     )
@@ -560,7 +606,7 @@ export function StaffPanel() {
 
   // Unsaved changes diff count
   const grantDiffStats = useMemo(() => {
-    if (!selectedStaff || selectedStaff.role === 'admin') {
+    if (!selectedStaff || !canEditSelected) {
       return { added: 0, removed: 0 }
     }
     const draft = drafts[selectedStaff.id]
@@ -596,7 +642,7 @@ export function StaffPanel() {
   }
 
   const handleResetToRoleDefaults = async () => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return
+    if (!selectedStaff || !canEditSelected) return
 
     try {
       setIsResettingDefaults(true)
@@ -622,7 +668,7 @@ export function StaffPanel() {
   }
 
   const handleSaveMatrix = async () => {
-    if (!selectedStaff || selectedStaff.role === 'admin') return
+    if (!selectedStaff || !canEditSelected) return
 
     try {
       setIsSavingMatrix(true)
@@ -762,24 +808,30 @@ export function StaffPanel() {
 
       <DataSection isRefreshing={isFetching}>
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard
-            label="Staff and operators"
+            label="Total Registered Users"
+            value={users.length}
+            note="All user accounts & directory"
+            icon={Users}
+          />
+          <KpiCard
+            label="Staff & Operators"
             value={staffUsers.length}
-            note="Active administrative accounts"
+            note="Admins, managers, riders"
             icon={ShieldCheck}
           />
           <KpiCard
-            label="Protected modules"
+            label="Matrix Protected Nodes"
             value={MODULES.length}
-            note="Granular permission nodes"
+            note="Granular RBAC modules"
             icon={KeyRound}
             tone="success"
           />
           <KpiCard
-            label="Audit log entries"
+            label="Audit Log Entries"
             value={ops.audit.length}
-            note="Recorded actions in Neon DB"
+            note="Recorded system events"
             icon={History}
           />
         </div>
@@ -794,28 +846,28 @@ export function StaffPanel() {
           <TabsList className="h-9">
             <TabsTrigger value="users" className="gap-2 text-xs">
               <Users className="h-3.5 w-3.5" />
-              <span>Staff accounts ({staffUsers.length})</span>
+              <span>User Directory & Details ({users.length})</span>
             </TabsTrigger>
             <TabsTrigger value="matrix" className="gap-2 text-xs">
               <KeyRound className="h-3.5 w-3.5" />
-              <span>Permission matrix</span>
+              <span>Admin & Rider Matrix ({matrixEligibleUsers.length})</span>
             </TabsTrigger>
             <TabsTrigger value="audit" className="gap-2 text-xs">
               <History className="h-3.5 w-3.5" />
-              <span>Audit trail ({ops.audit.length})</span>
+              <span>Audit Trail ({ops.audit.length})</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        {/* Search Bar */}
+        {/* Search Bar & Scope Filters */}
         {activeTab !== 'matrix' && (
-          <div className="flex rounded-lg border border-border bg-card p-3">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 rounded-lg border border-border bg-card p-3">
             <div className="relative w-full max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 placeholder={
                   activeTab === 'users'
-                    ? 'Search staff by name, email, role...'
+                    ? 'Search users by name, email, phone, role, ID...'
                     : 'Search audit trail by actor, module, action...'
                 }
                 value={searchQuery}
@@ -823,131 +875,275 @@ export function StaffPanel() {
                 className="h-8 pl-9 text-xs"
               />
             </div>
+
+            {activeTab === 'users' && (
+              <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto text-xs">
+                <span className="text-muted-foreground text-[11px] font-medium mr-1">Filter:</span>
+                {(
+                  [
+                    { id: 'all', label: `All (${users.length})` },
+                    { id: 'staff', label: `Staff (${staffUsers.length})` },
+                    { id: 'superadmin', label: `Super Admin (${users.filter((u) => isSuperAdmin(u)).length})` },
+                    { id: 'admin', label: `Admin (${users.filter((u) => u.role === 'admin').length})` },
+                    { id: 'manager', label: `Manager (${users.filter((u) => u.role === 'manager').length})` },
+                    { id: 'rider', label: `Rider (${users.filter((u) => u.role === 'rider').length})` },
+                    { id: 'customer', label: `Customer (${users.filter((u) => u.role === 'customer').length})` },
+                  ] as const
+                ).map((scope) => (
+                  <Button
+                    key={scope.id}
+                    variant={userScopeFilter === scope.id ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setUserScopeFilter(scope.id)}
+                    className="h-7 px-2.5 text-xs font-normal"
+                  >
+                    {scope.label}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'users' ? (
-          /* Staff Users Table */
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Staff name</TableHead>
-                  <TableHead className="text-xs">Email address</TableHead>
-                  <TableHead className="text-xs">Current role</TableHead>
-                  <TableHead className="text-xs">Access rights</TableHead>
-                  <TableHead className="text-right text-xs">
-                    Change role
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStaff.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="p-0">
-                      <EmptyState
-                        title="No staff members found"
-                        description="Try adjusting your search terms or create a new staff account."
-                      />
-                    </TableCell>
+          /* All Users Directory Table */
+          <div className="overflow-hidden rounded-lg border border-border bg-card shadow-xs">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30">
+                    <TableHead className="text-xs min-w-[200px]">User Name & Profile</TableHead>
+                    <TableHead className="text-xs min-w-[200px]">Email & Verification</TableHead>
+                    <TableHead className="text-xs min-w-[130px]">Phone Contact</TableHead>
+                    <TableHead className="text-xs min-w-[140px]">System Role</TableHead>
+                    <TableHead className="text-xs min-w-[100px]">Account State</TableHead>
+                    <TableHead className="text-xs min-w-[140px]">Access Rights</TableHead>
+                    <TableHead className="text-right text-xs min-w-[180px]">Role Governance</TableHead>
                   </TableRow>
-                ) : (
-                  filteredStaff.map((staff) => {
-                    const isSelf = staff.id === currentUserId
-                    const isUpdatingThisRow = updatingRoleUserIds.has(staff.id)
+                </TableHeader>
+                <TableBody>
+                  {displayedUsers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="p-0">
+                        <EmptyState
+                          title="No users match your criteria"
+                          description="Try switching the scope filter or modifying your search query."
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    displayedUsers.map((u) => {
+                      const isSelf = u.id === currentUserId
+                      const isUpdatingThisRow = updatingRoleUserIds.has(u.id)
+                      const isSuper = isSuperAdmin(u)
+                      const isEligibleForMatrix = !isSuper && (u.role === 'admin' || u.role === 'manager' || u.role === 'rider')
+                      const canChangeRole = !isSelf && !isSuper && (!isTargetAdmin || isSuperAdminUser)
 
-                    return (
-                      <TableRow key={staff.id}>
-                        <TableCell>
-                          <div className="font-medium text-xs text-foreground flex items-center gap-1.5">
-                            <span>{staff.name}</span>
-                            {isSelf && (
+                      return (
+                        <TableRow key={u.id} className="hover:bg-muted/20">
+                          <TableCell>
+                            <div className="flex items-center gap-2.5">
+                              <Avatar className="h-7 w-7 shrink-0">
+                                <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                                  {u.name.slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col min-w-0">
+                                <div className="font-medium text-xs text-foreground flex items-center gap-1.5 flex-wrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => setInspectingUser(u)}
+                                    className="font-semibold hover:underline text-left truncate"
+                                    title="Click to inspect complete user details"
+                                  >
+                                    {u.name}
+                                  </button>
+                                  {isSelf && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] py-0 px-1 font-mono text-muted-foreground"
+                                    >
+                                      You
+                                    </Badge>
+                                  )}
+                                  {isSuper && (
+                                    <Badge
+                                      variant="default"
+                                      className="text-[10px] py-0 px-1.5 gap-1 bg-primary text-primary-foreground font-semibold"
+                                    >
+                                      <Terminal className="h-2.5 w-2.5" />
+                                      Developer Team
+                                    </Badge>
+                                  )}
+                                </div>
+                                <span className="font-mono text-[11px] text-muted-foreground truncate">
+                                  ID: {u.id}
+                                </span>
+                              </div>
+                            </div>
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="flex flex-col text-xs">
+                              <span className="font-mono text-muted-foreground truncate">
+                                {u.email}
+                              </span>
+                              <div className="flex items-center gap-1 text-[11px]">
+                                {u.emailVerified ? (
+                                  <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                    <CheckCircle2 className="h-3 w-3" /> Verified
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">Unverified email</span>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="flex flex-col text-xs font-mono">
+                              <span className="text-foreground">
+                                {u.phone || 'No phone'}
+                              </span>
+                              {u.phone && (
+                                <span className="text-[11px] text-muted-foreground font-sans">
+                                  {u.phoneVerified ? 'Verified SMS' : 'Unverified'}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          <TableCell>
+                            {isSuper ? (
                               <Badge
-                                variant="outline"
-                                className="text-xs py-0 px-1 font-mono text-muted-foreground"
+                                variant="default"
+                                className="text-xs font-semibold py-0.5 px-2 bg-primary text-primary-foreground gap-1"
                               >
-                                You
+                                <Terminal className="h-3 w-3" />
+                                Super Admin
+                              </Badge>
+                            ) : u.role === 'admin' ? (
+                              <Badge variant="default" className="text-xs font-medium py-0.5 px-2">
+                                Admin
+                              </Badge>
+                            ) : u.role === 'manager' ? (
+                              <Badge variant="secondary" className="text-xs font-medium py-0.5 px-2">
+                                Manager
+                              </Badge>
+                            ) : u.role === 'rider' ? (
+                              <Badge variant="outline" className="text-xs font-medium py-0.5 px-2 border-primary/40 text-primary">
+                                Rider
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs font-normal py-0.5 px-2 text-muted-foreground">
+                                Customer
                               </Badge>
                             )}
-                          </div>
-                          <span className="font-mono text-xs text-muted-foreground">
-                            ID: {staff.id.slice(0, 10)}...
-                          </span>
-                        </TableCell>
+                          </TableCell>
 
-                        <TableCell>
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {staff.email}
-                          </span>
-                        </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5 text-xs">
+                              {u.banned ? (
+                                <Badge variant="destructive" className="text-[10px] py-0 px-1.5">
+                                  Suspended
+                                </Badge>
+                              ) : u.isActive === false ? (
+                                <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-muted-foreground">
+                                  Inactive
+                                </Badge>
+                              ) : (
+                                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-[11px]">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                  Active
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
 
-                        <TableCell>
-                          <Badge
-                            variant={
-                              staff.role === 'admin' ? 'default' : 'secondary'
-                            }
-                            className="text-xs font-normal capitalize"
-                          >
-                            {staff.role}
-                          </Badge>
-                        </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setInspectingUser(u)}
+                                className="h-7 px-2 text-[11px] gap-1"
+                              >
+                                <Info className="h-3 w-3" />
+                                Details
+                              </Button>
+                              {isEligibleForMatrix ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    handleSelectStaffForMatrix(u.id)
+                                    setActiveTab('matrix')
+                                  }}
+                                  className="h-7 px-2 text-[11px] text-primary hover:text-primary hover:bg-primary/10"
+                                >
+                                  Matrix →
+                                </Button>
+                              ) : isSuper ? (
+                                <span className="text-[11px] text-muted-foreground font-mono">
+                                  Root Bypass
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground">
+                                  Storefront only
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
 
-                        <TableCell>
-                          <Button
-                            variant="link"
-                            size="sm"
-                            onClick={() => {
-                              handleSelectStaffForMatrix(staff.id)
-                              setActiveTab('matrix')
-                            }}
-                            className="h-auto p-0 text-xs text-primary"
-                          >
-                            Configure RBAC node →
-                          </Button>
-                        </TableCell>
-
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {isUpdatingThisRow && (
-                              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                            )}
-                            <NativeSelect
-                              value={staff.role || 'customer'}
-                              onChange={(e) =>
-                                handleRoleSelectChange(staff.id, e.target.value)
-                              }
-                              disabled={isUpdatingThisRow || isSelf}
-                              title={
-                                isSelf
-                                  ? 'You cannot change your own role'
-                                  : 'Change account role'
-                              }
-                              size="sm"
-                              className={`h-7 text-xs ${
-                                isSelf ? 'opacity-60 cursor-not-allowed' : ''
-                              }`}
-                            >
-                              <NativeSelectOption value="admin">
-                                Admin
-                              </NativeSelectOption>
-                              <NativeSelectOption value="manager">
-                                Manager
-                              </NativeSelectOption>
-                              <NativeSelectOption value="rider">
-                                Rider
-                              </NativeSelectOption>
-                              <NativeSelectOption value="customer">
-                                Demote to customer
-                              </NativeSelectOption>
-                            </NativeSelect>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {isUpdatingThisRow && (
+                                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                              )}
+                              {isSuper ? (
+                                <span className="text-[11px] font-mono text-muted-foreground bg-muted/40 px-2 py-1 rounded">
+                                  Root Protected
+                                </span>
+                              ) : (
+                                <NativeSelect
+                                  value={u.role || 'customer'}
+                                  onChange={(e) =>
+                                    handleRoleSelectChange(u.id, e.target.value)
+                                  }
+                                  disabled={isUpdatingThisRow || !canChangeRole}
+                                  title={
+                                    !canChangeRole
+                                      ? 'You cannot modify this role'
+                                      : 'Change account role'
+                                  }
+                                  size="sm"
+                                  className={`h-7 text-xs ${
+                                    !canChangeRole ? 'opacity-60 cursor-not-allowed' : ''
+                                  }`}
+                                >
+                                  <NativeSelectOption value="admin">
+                                    Admin
+                                  </NativeSelectOption>
+                                  <NativeSelectOption value="manager">
+                                    Manager
+                                  </NativeSelectOption>
+                                  <NativeSelectOption value="rider">
+                                    Rider
+                                  </NativeSelectOption>
+                                  <NativeSelectOption value="customer">
+                                    Customer
+                                  </NativeSelectOption>
+                                </NativeSelect>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         ) : activeTab === 'matrix' ? (
           /* Granular RBAC Matrix */
@@ -1043,7 +1239,7 @@ export function StaffPanel() {
                           size="sm"
                           className="h-8 text-xs min-w-[170px]"
                         >
-                          {staffUsers.map((u) => (
+                          {matrixEligibleUsers.map((u) => (
                             <NativeSelectOption key={u.id} value={u.id}>
                               {u.name} ({u.role})
                             </NativeSelectOption>
@@ -1065,8 +1261,7 @@ export function StaffPanel() {
                       )}
 
                       {/* Reset to Role Defaults button */}
-                      {hasCustomPermissions &&
-                        selectedStaff.role !== 'admin' && (
+                      {hasCustomPermissions && canEditSelected && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -1091,7 +1286,7 @@ export function StaffPanel() {
                         disabled={
                           !isDirty ||
                           isSavingMatrix ||
-                          selectedStaff.role === 'admin'
+                          !canEditSelected
                         }
                         className="h-8 gap-1.5 text-xs shadow-xs"
                       >
@@ -1119,7 +1314,7 @@ export function StaffPanel() {
 
                     {/* Quick Presets & Stats */}
                     <div className="flex flex-wrap items-center gap-2">
-                      {selectedStaff.role !== 'admin' && (
+                      {canEditSelected && (
                         <div className="flex items-center gap-1.5 border border-border/60 rounded-md p-0.5 bg-muted/20">
                           <Button
                             variant="ghost"
@@ -1181,18 +1376,38 @@ export function StaffPanel() {
                   </div>
                 </Card>
 
-                {/* Super Admin Notice */}
+                {/* Admin Matrix Customization Notice */}
                 {selectedStaff.role === 'admin' && (
-                  <div className="p-3 bg-muted/40 rounded-lg border border-border text-xs flex items-center gap-2.5">
-                    <ShieldCheck className="h-4 w-4 text-foreground shrink-0" />
-                    <span className="text-muted-foreground">
-                      <strong className="text-foreground">
-                        Super admin unrestricted access:
-                      </strong>{' '}
-                      Administrator accounts inherently possess full bypass
-                      permissions across all modules, categories, actions, and
-                      data exports.
-                    </span>
+                  <div
+                    className={`p-3.5 rounded-lg border text-xs flex items-center gap-3 ${
+                      isSuperAdminUser
+                        ? 'bg-primary/10 border-primary/20 text-foreground'
+                        : 'bg-muted/40 border-border text-muted-foreground'
+                    }`}
+                  >
+                    <ShieldCheck
+                      className={`h-4 w-4 shrink-0 ${
+                        isSuperAdminUser ? 'text-primary' : 'text-foreground'
+                      }`}
+                    />
+                    <div className="leading-relaxed">
+                      {isSuperAdminUser ? (
+                        <>
+                          <strong className="text-foreground font-semibold">
+                            Super Admin Governance Active:
+                          </strong>{' '}
+                          You are customizing granular matrix access for Administrator{' '}
+                          <span className="font-semibold text-foreground">{selectedStaff.name}</span>. Overrides saved here take precedence over standard administrator defaults.
+                        </>
+                      ) : (
+                        <>
+                          <strong className="text-foreground font-semibold">
+                            Administrator Account:
+                          </strong>{' '}
+                          Administrator permissions can only be reconfigured or customized by the Super Admin (Developer Team: admin@newline.com).
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1334,7 +1549,7 @@ export function StaffPanel() {
                                       className="text-center text-xs capitalize w-[10%] min-w-[70px] p-1"
                                       title={`${act.toUpperCase()}: ${ACTION_DESCRIPTIONS[act]}. Click to toggle column across ${section.name}.`}
                                     >
-                                      {selectedStaff.role === 'admin' ? (
+                                      {!canEditSelected ? (
                                         <div>
                                           <div>{act}</div>
                                           <div className="text-xs font-normal text-muted-foreground tracking-tight lowercase">
@@ -1466,7 +1681,7 @@ export function StaffPanel() {
                                             )}
 
                                             {/* Row Quick Toggle */}
-                                            {selectedStaff.role !== 'admin' && (
+                                            {canEditSelected && (
                                               <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -1506,7 +1721,7 @@ export function StaffPanel() {
                                           <Checkbox
                                             checked={hasGrant}
                                             disabled={
-                                              selectedStaff.role === 'admin' ||
+                                              !canEditSelected ||
                                               isSavingMatrix ||
                                               isResettingDefaults
                                             }
@@ -1607,6 +1822,151 @@ export function StaffPanel() {
           </div>
         )}
       </DataSection>
+
+      {/* Complete User Details Dialog */}
+      <Dialog
+        open={Boolean(inspectingUser)}
+        onOpenChange={(open) => !open && setInspectingUser(null)}
+      >
+        <DialogContent className="max-w-lg p-0 overflow-hidden">
+          <DialogHeader className="p-5 pb-3 border-b border-border/70 bg-muted/20">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
+                  {inspectingUser?.name.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <DialogTitle className="text-base font-semibold flex items-center gap-2">
+                  <span>{inspectingUser?.name}</span>
+                  {inspectingUser && isSuperAdmin(inspectingUser) && (
+                    <Badge variant="default" className="text-[10px] py-0 px-1.5 gap-1">
+                      <Terminal className="h-3 w-3" /> Super Admin
+                    </Badge>
+                  )}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  Account profile, verification status, and permissions.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {inspectingUser && (
+            <div className="p-5 space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-muted/30 border border-border/60">
+                <div>
+                  <span className="text-muted-foreground text-[11px]">System Role</span>
+                  <div className="font-semibold text-foreground capitalize mt-0.5">
+                    {isSuperAdmin(inspectingUser) ? 'Super Admin (Developer Team)' : inspectingUser.role}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-[11px]">Account Status</span>
+                  <div className="font-semibold text-foreground mt-0.5">
+                    {inspectingUser.banned ? (
+                      <span className="text-destructive">Banned / Suspended</span>
+                    ) : inspectingUser.isActive === false ? (
+                      <span className="text-muted-foreground">Inactive</span>
+                    ) : (
+                      <span className="text-emerald-600 dark:text-emerald-400">Active</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-[11px]">Email Verification</span>
+                  <div className="font-semibold text-foreground mt-0.5">
+                    {inspectingUser.emailVerified ? 'Verified' : 'Unverified'}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-[11px]">Phone Verification</span>
+                  <div className="font-semibold text-foreground mt-0.5">
+                    {inspectingUser.phoneVerified ? 'Verified' : 'Unverified'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">Email Address</span>
+                  <span className="font-mono text-foreground">{inspectingUser.email}</span>
+                </div>
+                <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">Mobile Phone</span>
+                  <span className="font-mono text-foreground">{inspectingUser.phone || 'None registered'}</span>
+                </div>
+                <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">User ID</span>
+                  <div className="flex items-center gap-1.5 font-mono text-foreground">
+                    <span>{inspectingUser.id}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        navigator.clipboard.writeText(inspectingUser.id)
+                        toast.success('User ID copied to clipboard')
+                      }}
+                      className="h-5 w-5"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">Registered At</span>
+                  <span className="text-foreground">
+                    {new Date(inspectingUser.createdAt).toLocaleString()}
+                  </span>
+                </div>
+                {inspectingUser.banReason && (
+                  <div className="p-2.5 rounded bg-destructive/10 border border-destructive/20 text-destructive text-xs">
+                    <strong>Ban Reason:</strong> {inspectingUser.banReason}
+                  </div>
+                )}
+              </div>
+
+              {isSuperAdmin(inspectingUser) && (
+                <div className="p-3 bg-primary/10 rounded-lg border border-primary/20 text-xs">
+                  <strong className="text-foreground">Developer Root Access:</strong>{' '}
+                  This account possesses immutable root authority across all database modules, double-entry ledgers, and system settings.
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="p-4 border-t border-border/70 bg-muted/20 flex sm:justify-between items-center gap-2">
+            {inspectingUser &&
+              !isSuperAdmin(inspectingUser) &&
+              (inspectingUser.role === 'admin' ||
+                inspectingUser.role === 'manager' ||
+                inspectingUser.role === 'rider') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const id = inspectingUser.id
+                    setInspectingUser(null)
+                    handleSelectStaffForMatrix(id)
+                    setActiveTab('matrix')
+                  }}
+                  className="h-8 text-xs text-primary gap-1"
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  Open Permission Matrix
+                </Button>
+              )}
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setInspectingUser(null)}
+              className="h-8 text-xs ml-auto"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Role Change Confirmation Dialog */}
       <AlertDialog

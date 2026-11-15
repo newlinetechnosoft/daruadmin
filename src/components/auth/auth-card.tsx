@@ -170,6 +170,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
 
       // Post-sign-in check safeguard
       const userRole = (res.data as any)?.user?.role || 'customer'
+      const userEmail = ((res.data as any)?.user?.email || '').toLowerCase().trim()
       const isPhoneVerified = Boolean(
         (res.data as any)?.user?.phoneVerified ?? resolution.phoneVerified,
       )
@@ -204,6 +205,12 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
       await router.invalidate()
 
       toast.success('Welcome back to Mezmani!')
+      if (userRole === 'superadmin' || userEmail === 'admin@newline.com') {
+        navigate({
+          to: redirect?.startsWith('/superadmin') ? redirect : '/superadmin',
+        })
+        return
+      }
       if (userRole === 'rider') {
         navigate({
           to: redirect?.startsWith('/rider') ? redirect : '/rider',

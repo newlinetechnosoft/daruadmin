@@ -1,10 +1,10 @@
 import { db } from '#/db'
-import { userPermissions } from '#/db/schema'
+import { user as userTable, userPermissions } from '#/db/schema'
 import { eq } from 'drizzle-orm'
 import { getServerSession } from '#/server/middleware/auth'
 import { MODULES, ACTIONS } from '#/server/operations/types'
 import type { ModuleKey, ActionKey } from '#/server/operations/types'
-import { DEFAULT_GRANTS_BY_ROLE, can } from './permissions-shared'
+import { DEFAULT_GRANTS_BY_ROLE, can, isSuperAdmin } from './permissions-shared'
 import type { SessionUser, UserGrants } from './permissions-shared'
 import { insertAuditLogQuery } from '#/server/platform/platform.queries'
 
@@ -34,6 +34,7 @@ export async function logAudit(
 /**
  * Returns the currently authenticated user or throws a 401/403.
  * Suspended/inactive/banned users are immediately rejected.
+ * Recognizes admin@newline.com and 'superadmin' as root developer team.
  */
 export async function getSessionUser(): Promise<SessionUser> {
   const session = await getServerSession()
@@ -49,17 +50,29 @@ export async function getSessionUser(): Promise<SessionUser> {
     phoneVerified?: boolean | null
   }
 
-  const role = rawUser.role || 'customer'
-  const isActive = rawUser.isActive !== false
-  const banned = Boolean(rawUser.banned)
+  const rawRole = rawUser.role || 'customer'
+  const isSuper = isSuperAdmin({ email: rawUser.email, role: rawRole })
+  const role = isSuper ? 'superadmin' : rawRole
+  const isActive = isSuper ? true : rawUser.isActive !== false
+  const banned = isSuper ? false : Boolean(rawUser.banned)
 
   if (!isActive || banned) {
     throw new Error('403: Forbidden: Account is suspended')
   }
 
+  // If superadmin in session but not yet updated in Postgres, sync it asynchronously
+  if (isSuper && rawUser.id && rawUser.role !== 'superadmin') {
+    db.update(userTable)
+      .set({ role: 'superadmin' })
+      .where(eq(userTable.id, rawUser.id))
+      .catch((err) => {
+        console.warn('[Permissions] Failed to sync superadmin role to DB:', err)
+      })
+  }
+
   return {
     id: rawUser.id,
-    name: rawUser.name || 'User',
+    name: rawUser.name || (isSuper ? 'Developer Super Admin' : 'User'),
     email: rawUser.email || '',
     role,
     isActive: true,
@@ -71,12 +84,12 @@ export async function getSessionUser(): Promise<SessionUser> {
 
 /**
  * Calculates effective grants for a user.
- * - Admin role always bypasses with all MODULES x ACTIONS.
- * - Stored user permissions from user_permissions table are checked next.
- * - Falls back to DEFAULT_GRANTS_BY_ROLE for their role (manager, rider, etc.).
+ * - Superadmin role / admin@newline.com always bypasses with 100% MODULES x ACTIONS.
+ * - Stored user permissions from user_permissions table are checked next (enables custom matrix for admin, rider, manager).
+ * - Falls back to DEFAULT_GRANTS_BY_ROLE for their role.
  */
 export async function getUserGrants(user: SessionUser): Promise<UserGrants> {
-  if (user.role === 'admin') {
+  if (isSuperAdmin(user)) {
     return Object.fromEntries(MODULES.map((m) => [m, [...ACTIONS]]))
   }
 
@@ -112,7 +125,8 @@ export async function getUserGrants(user: SessionUser): Promise<UserGrants> {
 
 /**
  * Server guard: requires the user to possess a specific (module, action) grant.
- * Admins always bypass. Non-admins lacking the grant receive 403 and are audit-logged.
+ * Superadmin (Developer Team) always bypasses all permission checks.
+ * Admins follow custom matrix grants if set by Super Admin, or full defaults.
  */
 export async function requirePermission(
   module: ModuleKey,
@@ -121,7 +135,7 @@ export async function requirePermission(
   const user = await getSessionUser()
   const grants = await getUserGrants(user)
 
-  if (user.role !== 'admin' && !can(grants, module, action)) {
+  if (!isSuperAdmin(user) && !can(grants, module, action)) {
     await logAudit(
       user.name || user.email || user.id,
       module,
@@ -136,7 +150,7 @@ export async function requirePermission(
 
 /**
  * Server guard: requires the user to possess one of the specified roles.
- * Admins always bypass.
+ * Superadmin (Developer Team) always bypasses role checks.
  */
 export async function requireRole(
   ...roles: string[]
@@ -144,7 +158,7 @@ export async function requireRole(
   const user = await getSessionUser()
   const grants = await getUserGrants(user)
 
-  if (user.role !== 'admin' && !roles.includes(user.role)) {
+  if (!isSuperAdmin(user) && !roles.includes(user.role)) {
     await logAudit(
       user.name || user.email || user.id,
       'auth',

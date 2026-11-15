@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useRouter } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Bike,
+  Clock,
   Heart,
   LogOut,
   Menu,
@@ -21,6 +22,7 @@ import { authClient } from '#/lib/auth-client'
 import { clearAllLocalData } from '#/lib/idb'
 import { ThemeToggle } from '#/components/shared/theme-toggle'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
+import { storeQueries } from '#/queries/admin'
 import { Avatar, AvatarFallback } from '#/components/ui/avatar'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -84,12 +86,25 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
     }
   }
 
+  const { data: storeStatus } = useQuery(storeQueries.operatingStatus())
+
   const navLinkClass =
     'relative py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground [&.active]:text-foreground'
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur-xl">
-      <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      {storeStatus?.showNotice && !storeStatus?.isOpen && (
+        <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-950 dark:text-amber-200 px-4 py-2 text-xs font-medium flex items-center justify-center gap-2 text-center transition-colors">
+          <Clock className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+          <span>{storeStatus.noticeMessage}</span>
+          {storeStatus.nextOpeningFormatted && (
+            <Badge variant="outline" className="text-[10px] bg-amber-500/20 border-amber-500/40 text-amber-800 dark:text-amber-300 font-mono font-bold">
+              Opens: {storeStatus.nextOpeningFormatted}
+            </Badge>
+          )}
+        </div>
+      )}
+      <div className="mx-auto flex h-14 sm:h-16 lg:h-[4.25rem] max-w-7xl items-center justify-between gap-3 sm:gap-4 px-3 sm:px-6 lg:px-8">
         {/* Brand */}
         <div className="flex gap-4">
           <Link
@@ -97,12 +112,33 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
             aria-label="Mezmani home"
             className="flex shrink-0 items-center"
           >
+            {/* Light Theme Logo */}
             <img
-              src="/mezmani_logo.webp"
+              src="https://mezmani.com/mezmani_logo.webp"
+              onError={(e) => {
+                const target = e.currentTarget
+                if (target.src !== `${window.location.origin}/mezmani_logo.webp`) {
+                  target.src = '/mezmani_logo.webp'
+                }
+              }}
               alt="Mezmani"
               width="156"
               height="48"
-              className="h-9 w-auto object-contain sm:h-10"
+              className="h-7 sm:h-8 lg:h-9 w-auto object-contain dark:hidden"
+            />
+            {/* Dark Theme Logo */}
+            <img
+              src="https://mezmani.com/mezmani_logo_bg.svg"
+              onError={(e) => {
+                const target = e.currentTarget
+                if (target.src !== `${window.location.origin}/mezmani_logo_bg.svg`) {
+                  target.src = '/mezmani_logo_bg.svg'
+                }
+              }}
+              alt="Mezmani"
+              width="156"
+              height="48"
+              className="h-7 sm:h-8 lg:h-9 w-auto object-contain hidden dark:block"
             />
           </Link>
 
@@ -260,7 +296,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
           {/* Cart is the primary action */}
           <Button
             onClick={() => setIsOpen(true)}
-            className="relative h-10 gap-2 rounded-full px-3.5 font-semibold shadow-sm"
+            className="relative h-9 sm:h-10 gap-1.5 sm:gap-2 rounded-full px-2.5 sm:px-3.5 font-semibold shadow-xs"
             aria-label={
               itemCount > 0
                 ? `Open your cart, ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`
@@ -282,7 +318,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-10 w-10 rounded-full lg:hidden"
+                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full lg:hidden"
                 aria-label="Open menu"
               >
                 <Menu className="h-[18px] w-[18px]" />

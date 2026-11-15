@@ -41,6 +41,7 @@ import {
   transitionOrder,
   transitionOrderTx,
 } from '#/server/orders/order.transitions'
+import { getPublicStoreOperatingStatusFn } from '#/server/superadmin/superadmin.functions'
 
 // eSewa configuration & guard
 export interface EsewaConfig {
@@ -181,6 +182,33 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) => checkoutFormSchema.parse(d))
   .handler(async ({ data }) => {
     const sessionUser = await getSessionUser()
+
+    // Enforce Store Operational Status & Dynamic Operating Schedule
+    const storeStatus = await getPublicStoreOperatingStatusFn()
+    if (storeStatus.isMaintenanceMode) {
+      throw new Error(
+        storeStatus.settings.maintenanceMessage ||
+          'Storefront is undergoing scheduled maintenance. Orders are temporarily disabled.',
+      )
+    }
+    if (storeStatus.isOrderFreeze) {
+      throw new Error(
+        storeStatus.settings.freezeReason ||
+          'New order placement is temporarily paused by operations.',
+      )
+    }
+    if (!storeStatus.isOpen) {
+      if (!storeStatus.allowAdvanceOrders) {
+        throw new Error(
+          `Store is currently closed. We reopen ${storeStatus.nextOpeningFormatted || 'soon'}. Orders cannot be placed at this time.`,
+        )
+      }
+      if (data.deliverySlot === 'express') {
+        throw new Error(
+          `Express immediate delivery is unavailable because our store is currently closed. Please select a scheduled delivery time after our reopening (${storeStatus.nextOpeningFormatted || 'our next shift'}).`,
+        )
+      }
+    }
 
     // Idempotency check: if an order with this idempotency key already exists, return it
     if (data.idempotencyKey) {

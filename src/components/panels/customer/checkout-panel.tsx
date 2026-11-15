@@ -56,6 +56,8 @@ import {
   Briefcase,
   Check,
   Clock,
+  Calendar,
+  Lock,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -126,6 +128,8 @@ export function CheckoutPanel() {
   const [isValidatingPromo, setIsValidatingPromo] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const { data: storeStatus } = useQuery(storeQueries.operatingStatus())
+
   // Saved Addresses
   const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string>('custom')
@@ -164,6 +168,13 @@ export function CheckoutPanel() {
 
   const selectedPaymentMethod = watch('paymentMethod')
   const watchedDeliverySlot = watch('deliverySlot')
+
+  // When store is closed, automatically route from express to custom scheduled delivery
+  useEffect(() => {
+    if (storeStatus && !storeStatus.isOpen && watchedDeliverySlot === 'express') {
+      setValue('deliverySlot', 'custom')
+    }
+  }, [storeStatus, watchedDeliverySlot, setValue])
   const watchedCustomDate = watch('customDeliveryDate')
   const watchedCustomTime = watch('customDeliveryTime')
   const selectedLocation = {
@@ -424,6 +435,32 @@ export function CheckoutPanel() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            {/* Store Operating Status Notice */}
+            {storeStatus && !storeStatus.isOpen && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-950 dark:text-amber-200">
+                <div className="flex items-start gap-3">
+                  <Clock className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-sm">Store is Currently Closed</span>
+                      {storeStatus.nextOpeningFormatted && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-amber-500/20 border-amber-500/40 text-amber-800 dark:text-amber-300 font-mono font-bold"
+                        >
+                          Reopens: {storeStatus.nextOpeningFormatted}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {storeStatus.allowAdvanceOrders
+                        ? `Advance Ordering Active: You can place your order now! Please select a scheduled delivery date and time that falls on or after our reopening (${storeStatus.nextOpeningFormatted || 'our next shift'}).`
+                        : `Store is currently closed and new orders cannot be placed. Please return after our reopening (${storeStatus.nextOpeningFormatted || 'soon'}).`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* 1. DELIVERY LOCATION SECTION (LEAFLET MAP PIN) */}
             <Card className="border-border shadow-xs">
               <CardHeader className="pb-4">
@@ -775,71 +812,110 @@ export function CheckoutPanel() {
                 <Controller
                   name="deliverySlot"
                   control={control}
-                  render={({ field }) => (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      {[
-                        {
-                          id: 'express',
-                          title: '⚡ Express Delivery',
-                          time: 'Within 30–45 mins',
-                          desc: 'Immediate rider dispatch from nearest dealer partner',
-                        },
-                        {
-                          id: 'evening',
-                          title: '🌙 Evening Slot',
-                          time: '6:00 PM – 8:00 PM',
-                          desc: 'Convenient post-work delivery window',
-                        },
-                        {
-                          id: 'late_night',
-                          title: '✨ Late Night Slot',
-                          time: '8:00 PM – 10:00 PM',
-                          desc: 'Prime party & weekend social gathering time',
-                        },
-                        {
-                          id: 'custom',
-                          title: '📅 Custom Schedule',
-                          time: 'Pick Date & Time',
-                          desc: 'Schedule in advance for parties or later today (min 30m)',
-                        },
-                      ].map((slot) => {
-                        const isSelected = field.value === slot.id
-                        return (
-                          <div
-                            key={slot.id}
-                            onClick={() => field.onChange(slot.id)}
-                            className={cn(
-                              'p-3 rounded-lg border cursor-pointer transition-all flex flex-col justify-between space-y-2',
-                              isSelected
-                                ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                                : 'border-border bg-card hover:border-muted-foreground/30 hover:bg-accent/40',
-                            )}
-                          >
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between">
-                                <span className="font-semibold text-xs flex items-center gap-1.5">
-                                  {slot.title}
+                  render={({ field }) => {
+                    const isClosed = Boolean(storeStatus && !storeStatus.isOpen)
+                    const slots = [
+                      {
+                        id: 'express',
+                        title: '⚡ Express Delivery',
+                        time: isClosed ? 'Unavailable (Closed)' : 'Within 30–45 mins',
+                        desc: isClosed
+                          ? 'Immediate dispatch paused while store is offline/closed. Please select custom advance schedule.'
+                          : 'Immediate rider dispatch from nearest dealer partner',
+                        disabled: isClosed,
+                      },
+                      {
+                        id: 'evening',
+                        title: '🌙 Evening Slot',
+                        time: '6:00 PM – 8:00 PM',
+                        desc: 'Convenient post-work delivery window',
+                        disabled: false,
+                      },
+                      {
+                        id: 'late_night',
+                        title: '✨ Late Night Slot',
+                        time: '8:00 PM – 10:00 PM',
+                        desc: 'Prime party & weekend social gathering time',
+                        disabled: false,
+                      },
+                      {
+                        id: 'custom',
+                        title: '📅 Custom Schedule',
+                        time: isClosed ? 'Pick Reopen Time' : 'Pick Date & Time',
+                        desc: isClosed
+                          ? 'Schedule advance delivery for when the store is open'
+                          : 'Schedule in advance for parties or later today (min 30m)',
+                        disabled: false,
+                      },
+                    ]
+
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {slots.map((slot) => {
+                          const isSelected = field.value === slot.id
+                          return (
+                            <div
+                              key={slot.id}
+                              onClick={() => {
+                                if (slot.disabled) return
+                                field.onChange(slot.id)
+                              }}
+                              className={cn(
+                                'p-3 rounded-lg border transition-all flex flex-col justify-between space-y-2',
+                                slot.disabled
+                                  ? 'opacity-50 cursor-not-allowed bg-muted/40 border-dashed border-border'
+                                  : 'cursor-pointer hover:border-muted-foreground/30 hover:bg-accent/40',
+                                isSelected && !slot.disabled
+                                  ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                                  : !slot.disabled
+                                    ? 'border-border bg-card'
+                                    : '',
+                              )}
+                            >
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold text-xs flex items-center gap-1.5">
+                                    {slot.title}
+                                  </span>
+                                  {isSelected && (
+                                    <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                                  )}
+                                </div>
+                                <span
+                                  className={cn(
+                                    'inline-block text-xs font-mono font-medium px-1.5 py-0.5 rounded',
+                                    slot.disabled
+                                      ? 'bg-muted text-muted-foreground line-through'
+                                      : 'text-primary bg-primary/10',
+                                  )}
+                                >
+                                  {slot.time}
                                 </span>
-                                {isSelected && (
-                                  <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                                )}
+                                <p className="text-xs text-muted-foreground pt-1 leading-snug">
+                                  {slot.desc}
+                                </p>
                               </div>
-                              <span className="inline-block text-xs font-mono font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                                {slot.time}
-                              </span>
-                              <p className="text-xs text-muted-foreground pt-1 leading-snug">
-                                {slot.desc}
-                              </p>
                             </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                          )
+                        })}
+                      </div>
+                    )
+                  }}
                 />
 
                 {watchedDeliverySlot === 'custom' && (
                   <div className="rounded-lg border border-primary/30 bg-primary/5 p-3.5 space-y-3 animate-in fade-in-50 duration-200">
+                    {storeStatus && !storeStatus.isOpen && (
+                      <div className="flex items-center gap-2 p-2.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-xs text-amber-800 dark:text-amber-300">
+                        <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                        <div>
+                          <p className="font-semibold">Advance Operating Hours Notice</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            The store is currently offline/closed. {storeStatus.nextOpeningFormatted ? `Next reopening: ${storeStatus.nextOpeningFormatted}. ` : ''}Please select a delivery date and time that falls after reopening.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="space-y-0.5">
                         <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
@@ -1293,23 +1369,45 @@ export function CheckoutPanel() {
                 </div>
 
                 {/* Place Order Button */}
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full h-12 text-sm font-bold uppercase tracking-wide gap-2 cursor-pointer shadow-md"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Placing Order...
-                    </>
-                  ) : (
-                    <>
-                      Place Order · {formatNPR(orderTotal)}
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </Button>
+                {storeStatus && !storeStatus.isOpen && !storeStatus.allowAdvanceOrders ? (
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      disabled
+                      className="w-full h-12 text-sm font-bold uppercase tracking-wide gap-2 bg-muted text-muted-foreground cursor-not-allowed opacity-70"
+                    >
+                      <Lock className="h-4 w-4" />
+                      Orders Closed · Reopens {storeStatus.nextOpeningFormatted || 'Soon'}
+                    </Button>
+                    <p className="text-center text-xs text-muted-foreground font-medium">
+                      Store orders are currently closed by administration. You can browse and keep items in your cart until reopening.
+                    </p>
+                  </div>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full h-12 text-sm font-bold uppercase tracking-wide gap-2 cursor-pointer shadow-md"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Placing Order...
+                      </>
+                    ) : storeStatus && !storeStatus.isOpen && storeStatus.allowAdvanceOrders ? (
+                      <>
+                        <Calendar className="h-4 w-4" />
+                        Place Scheduled Order · {formatNPR(orderTotal)}
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    ) : (
+                      <>
+                        Place Order · {formatNPR(orderTotal)}
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </form>
