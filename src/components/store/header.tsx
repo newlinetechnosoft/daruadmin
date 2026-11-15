@@ -326,6 +326,46 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
             </SheetTrigger>
             <SheetContent side="right" className="flex w-[min(22rem,90vw)] flex-col p-0">
               <div className="border-b border-border px-6 py-5">
+                <div className="mb-4 flex items-center justify-between pr-8">
+                  <Link
+                    to="/"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center focus-visible:outline-none"
+                    aria-label="Mezmani home"
+                  >
+                    <img
+                      src="https://mezmani.com/mezmani_logo.webp"
+                      onError={(e) => {
+                        const target = e.currentTarget
+                        if (target.src !== `${window.location.origin}/mezmani_logo.webp`) {
+                          target.src = '/mezmani_logo.webp'
+                        }
+                      }}
+                      alt="Mezmani"
+                      width="140"
+                      height="42"
+                      className="h-7 w-auto object-contain dark:hidden"
+                    />
+                    <img
+                      src="https://mezmani.com/mezmani_logo_bg.svg"
+                      onError={(e) => {
+                        const target = e.currentTarget
+                        if (target.src !== `${window.location.origin}/mezmani_logo_bg.svg`) {
+                          target.src = '/mezmani_logo_bg.svg'
+                        }
+                      }}
+                      alt="Mezmani"
+                      width="140"
+                      height="42"
+                      className="h-7 w-auto object-contain hidden dark:block"
+                    />
+                  </Link>
+
+                  <div className="flex items-center gap-1.5">
+                    <ThemeToggle variant="outline" className="h-9 w-9 rounded-full" />
+                  </div>
+                </div>
+
                 <SheetHeader className="text-left">
                   <SheetTitle className="text-lg">
                     {firstName ? `Hey, ${firstName}` : 'Welcome to Mezmani'}
@@ -461,7 +501,10 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                   <a href="tel:+9779847820683" className="text-xs text-muted-foreground hover:text-foreground">
                     Need help? +977-9847820683
                   </a>
-                  <ThemeToggle />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">Theme</span>
+                    <ThemeToggle />
+                  </div>
                 </div>
               </div>
             </SheetContent>
