@@ -445,7 +445,7 @@ function DrinksPage() {
 
               <section>
                 {filteredProducts.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-2 sm:gap-3.5 md:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3.5 md:gap-4 lg:grid-cols-3">
                     {filteredProducts.map((product) => (
                       <ProductCard
                         key={product.id}
