@@ -43,6 +43,7 @@ import { Route as AdminPaymentsRouteImport } from './routes/admin/payments'
 import { Route as AdminRecycleBinRouteImport } from './routes/admin/recycle-bin'
 import { Route as AdminReportsRouteImport } from './routes/admin/reports'
 import { Route as AdminRidersRouteImport } from './routes/admin/riders'
+import { Route as AdminServiceZonesRouteImport } from './routes/admin/service-zones'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminShippingRouteImport } from './routes/admin/shipping'
 import { Route as AdminStaffRouteImport } from './routes/admin/staff'
@@ -60,12 +61,16 @@ import { Route as SuperadminIndexRouteImport } from './routes/superadmin/index'
 import { Route as TrackIndexRouteImport } from './routes/track.index'
 import { Route as TrackCodeRouteImport } from './routes/track.$code'
 import { Route as VoucherSlugRouteImport } from './routes/voucher.$slug'
+import { Route as ZonesIndexRouteImport } from './routes/zones.index'
+import { Route as ZonesIdRouteImport } from './routes/zones.$id'
+import { Route as ZonesActiveRouteImport } from './routes/zones.active'
 import { Route as AdminDealersIndexRouteImport } from './routes/admin/dealers/index'
 import { Route as AdminDealersIdRouteImport } from './routes/admin/dealers/$id'
 import { Route as AdminDealersNewRouteImport } from './routes/admin/dealers/new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiWebhooksNepalotpRouteImport } from './routes/api/webhooks/nepalotp'
 import { Route as ApiWebhooksOtpRouteImport } from './routes/api/webhooks/otp'
+import { Route as ZonesIdActiveRouteImport } from './routes/zones.$id.active'
 import { Route as CheckoutPaymentEsewaFailureRouteImport } from './routes/checkout.payment.esewa.failure'
 import { Route as CheckoutPaymentEsewaSuccessRouteImport } from './routes/checkout.payment.esewa.success'
 
@@ -239,6 +244,11 @@ const AdminRidersRoute = AdminRidersRouteImport.update({
   path: '/riders',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminServiceZonesRoute = AdminServiceZonesRouteImport.update({
+  id: '/service-zones',
+  path: '/service-zones',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -325,6 +335,21 @@ const VoucherSlugRoute = VoucherSlugRouteImport.update({
   path: '/voucher/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ZonesIndexRoute = ZonesIndexRouteImport.update({
+  id: '/zones/',
+  path: '/zones/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZonesIdRoute = ZonesIdRouteImport.update({
+  id: '/zones/$id',
+  path: '/zones/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZonesActiveRoute = ZonesActiveRouteImport.update({
+  id: '/zones/active',
+  path: '/zones/active',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminDealersIndexRoute = AdminDealersIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -354,6 +379,11 @@ const ApiWebhooksOtpRoute = ApiWebhooksOtpRouteImport.update({
   id: '/api/webhooks/otp',
   path: '/api/webhooks/otp',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ZonesIdActiveRoute = ZonesIdActiveRouteImport.update({
+  id: '/active',
+  path: '/active',
+  getParentRoute: () => ZonesIdRoute,
 } as any)
 const CheckoutPaymentEsewaFailureRoute =
   CheckoutPaymentEsewaFailureRouteImport.update({
@@ -402,6 +432,7 @@ export interface FileRoutesByFullPath {
   '/admin/recycle-bin': typeof AdminRecycleBinRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/riders': typeof AdminRidersRoute
+  '/admin/service-zones': typeof AdminServiceZonesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shipping': typeof AdminShippingRoute
   '/admin/staff': typeof AdminStaffRoute
@@ -416,15 +447,19 @@ export interface FileRoutesByFullPath {
   '/rider/profile': typeof RiderProfileRoute
   '/track/$code': typeof TrackCodeRoute
   '/voucher/$slug': typeof VoucherSlugRoute
+  '/zones/$id': typeof ZonesIdRouteWithChildren
+  '/zones/active': typeof ZonesActiveRoute
   '/admin/': typeof AdminIndexRoute
   '/rider/': typeof RiderIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
   '/track/': typeof TrackIndexRoute
+  '/zones/': typeof ZonesIndexRoute
   '/admin/dealers/$id': typeof AdminDealersIdRoute
   '/admin/dealers/new': typeof AdminDealersNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/webhooks/nepalotp': typeof ApiWebhooksNepalotpRoute
   '/api/webhooks/otp': typeof ApiWebhooksOtpRoute
+  '/zones/$id/active': typeof ZonesIdActiveRoute
   '/admin/dealers/': typeof AdminDealersIndexRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
@@ -459,6 +494,7 @@ export interface FileRoutesByTo {
   '/admin/recycle-bin': typeof AdminRecycleBinRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/riders': typeof AdminRidersRoute
+  '/admin/service-zones': typeof AdminServiceZonesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shipping': typeof AdminShippingRoute
   '/admin/staff': typeof AdminStaffRoute
@@ -473,15 +509,19 @@ export interface FileRoutesByTo {
   '/rider/profile': typeof RiderProfileRoute
   '/track/$code': typeof TrackCodeRoute
   '/voucher/$slug': typeof VoucherSlugRoute
+  '/zones/$id': typeof ZonesIdRouteWithChildren
+  '/zones/active': typeof ZonesActiveRoute
   '/admin': typeof AdminIndexRoute
   '/rider': typeof RiderIndexRoute
   '/superadmin': typeof SuperadminIndexRoute
   '/track': typeof TrackIndexRoute
+  '/zones': typeof ZonesIndexRoute
   '/admin/dealers/$id': typeof AdminDealersIdRoute
   '/admin/dealers/new': typeof AdminDealersNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/webhooks/nepalotp': typeof ApiWebhooksNepalotpRoute
   '/api/webhooks/otp': typeof ApiWebhooksOtpRoute
+  '/zones/$id/active': typeof ZonesIdActiveRoute
   '/admin/dealers': typeof AdminDealersIndexRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
@@ -521,6 +561,7 @@ export interface FileRoutesById {
   '/admin/recycle-bin': typeof AdminRecycleBinRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/riders': typeof AdminRidersRoute
+  '/admin/service-zones': typeof AdminServiceZonesRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/shipping': typeof AdminShippingRoute
   '/admin/staff': typeof AdminStaffRoute
@@ -535,15 +576,19 @@ export interface FileRoutesById {
   '/rider/profile': typeof RiderProfileRoute
   '/track/$code': typeof TrackCodeRoute
   '/voucher/$slug': typeof VoucherSlugRoute
+  '/zones/$id': typeof ZonesIdRouteWithChildren
+  '/zones/active': typeof ZonesActiveRoute
   '/admin/': typeof AdminIndexRoute
   '/rider/': typeof RiderIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
   '/track/': typeof TrackIndexRoute
+  '/zones/': typeof ZonesIndexRoute
   '/admin/dealers/$id': typeof AdminDealersIdRoute
   '/admin/dealers/new': typeof AdminDealersNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/webhooks/nepalotp': typeof ApiWebhooksNepalotpRoute
   '/api/webhooks/otp': typeof ApiWebhooksOtpRoute
+  '/zones/$id/active': typeof ZonesIdActiveRoute
   '/admin/dealers/': typeof AdminDealersIndexRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
@@ -584,6 +629,7 @@ export interface FileRouteTypes {
     | '/admin/recycle-bin'
     | '/admin/reports'
     | '/admin/riders'
+    | '/admin/service-zones'
     | '/admin/settings'
     | '/admin/shipping'
     | '/admin/staff'
@@ -598,15 +644,19 @@ export interface FileRouteTypes {
     | '/rider/profile'
     | '/track/$code'
     | '/voucher/$slug'
+    | '/zones/$id'
+    | '/zones/active'
     | '/admin/'
     | '/rider/'
     | '/superadmin/'
     | '/track/'
+    | '/zones/'
     | '/admin/dealers/$id'
     | '/admin/dealers/new'
     | '/api/auth/$'
     | '/api/webhooks/nepalotp'
     | '/api/webhooks/otp'
+    | '/zones/$id/active'
     | '/admin/dealers/'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
@@ -641,6 +691,7 @@ export interface FileRouteTypes {
     | '/admin/recycle-bin'
     | '/admin/reports'
     | '/admin/riders'
+    | '/admin/service-zones'
     | '/admin/settings'
     | '/admin/shipping'
     | '/admin/staff'
@@ -655,15 +706,19 @@ export interface FileRouteTypes {
     | '/rider/profile'
     | '/track/$code'
     | '/voucher/$slug'
+    | '/zones/$id'
+    | '/zones/active'
     | '/admin'
     | '/rider'
     | '/superadmin'
     | '/track'
+    | '/zones'
     | '/admin/dealers/$id'
     | '/admin/dealers/new'
     | '/api/auth/$'
     | '/api/webhooks/nepalotp'
     | '/api/webhooks/otp'
+    | '/zones/$id/active'
     | '/admin/dealers'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
@@ -702,6 +757,7 @@ export interface FileRouteTypes {
     | '/admin/recycle-bin'
     | '/admin/reports'
     | '/admin/riders'
+    | '/admin/service-zones'
     | '/admin/settings'
     | '/admin/shipping'
     | '/admin/staff'
@@ -716,15 +772,19 @@ export interface FileRouteTypes {
     | '/rider/profile'
     | '/track/$code'
     | '/voucher/$slug'
+    | '/zones/$id'
+    | '/zones/active'
     | '/admin/'
     | '/rider/'
     | '/superadmin/'
     | '/track/'
+    | '/zones/'
     | '/admin/dealers/$id'
     | '/admin/dealers/new'
     | '/api/auth/$'
     | '/api/webhooks/nepalotp'
     | '/api/webhooks/otp'
+    | '/zones/$id/active'
     | '/admin/dealers/'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
@@ -752,7 +812,10 @@ export interface RootRouteChildren {
   OrderConfirmationOrderIdRoute: typeof OrderConfirmationOrderIdRoute
   TrackCodeRoute: typeof TrackCodeRoute
   VoucherSlugRoute: typeof VoucherSlugRoute
+  ZonesIdRoute: typeof ZonesIdRouteWithChildren
+  ZonesActiveRoute: typeof ZonesActiveRoute
   TrackIndexRoute: typeof TrackIndexRoute
+  ZonesIndexRoute: typeof ZonesIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiWebhooksNepalotpRoute: typeof ApiWebhooksNepalotpRoute
   ApiWebhooksOtpRoute: typeof ApiWebhooksOtpRoute
@@ -998,6 +1061,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRidersRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/service-zones': {
+      id: '/admin/service-zones'
+      path: '/service-zones'
+      fullPath: '/admin/service-zones'
+      preLoaderRoute: typeof AdminServiceZonesRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/settings': {
       id: '/admin/settings'
       path: '/settings'
@@ -1117,6 +1187,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VoucherSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/zones/': {
+      id: '/zones/'
+      path: '/zones'
+      fullPath: '/zones/'
+      preLoaderRoute: typeof ZonesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zones/$id': {
+      id: '/zones/$id'
+      path: '/zones/$id'
+      fullPath: '/zones/$id'
+      preLoaderRoute: typeof ZonesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zones/active': {
+      id: '/zones/active'
+      path: '/zones/active'
+      fullPath: '/zones/active'
+      preLoaderRoute: typeof ZonesActiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/dealers/': {
       id: '/admin/dealers/'
       path: '/'
@@ -1158,6 +1249,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/webhooks/otp'
       preLoaderRoute: typeof ApiWebhooksOtpRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/zones/$id/active': {
+      id: '/zones/$id/active'
+      path: '/active'
+      fullPath: '/zones/$id/active'
+      preLoaderRoute: typeof ZonesIdActiveRouteImport
+      parentRoute: typeof ZonesIdRoute
     }
     '/checkout/payment/esewa/failure': {
       id: '/checkout/payment/esewa/failure'
@@ -1210,6 +1308,7 @@ interface AdminRouteRouteChildren {
   AdminRecycleBinRoute: typeof AdminRecycleBinRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminRidersRoute: typeof AdminRidersRoute
+  AdminServiceZonesRoute: typeof AdminServiceZonesRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminShippingRoute: typeof AdminShippingRoute
   AdminStaffRoute: typeof AdminStaffRoute
@@ -1237,6 +1336,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminRecycleBinRoute: AdminRecycleBinRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminRidersRoute: AdminRidersRoute,
+  AdminServiceZonesRoute: AdminServiceZonesRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminShippingRoute: AdminShippingRoute,
   AdminStaffRoute: AdminStaffRoute,
@@ -1294,6 +1394,17 @@ const CheckoutRouteWithChildren = CheckoutRoute._addFileChildren(
   CheckoutRouteChildren,
 )
 
+interface ZonesIdRouteChildren {
+  ZonesIdActiveRoute: typeof ZonesIdActiveRoute
+}
+
+const ZonesIdRouteChildren: ZonesIdRouteChildren = {
+  ZonesIdActiveRoute: ZonesIdActiveRoute,
+}
+
+const ZonesIdRouteWithChildren =
+  ZonesIdRoute._addFileChildren(ZonesIdRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRouteRoute: AdminRouteRouteWithChildren,
@@ -1316,7 +1427,10 @@ const rootRouteChildren: RootRouteChildren = {
   OrderConfirmationOrderIdRoute: OrderConfirmationOrderIdRoute,
   TrackCodeRoute: TrackCodeRoute,
   VoucherSlugRoute: VoucherSlugRoute,
+  ZonesIdRoute: ZonesIdRouteWithChildren,
+  ZonesActiveRoute: ZonesActiveRoute,
   TrackIndexRoute: TrackIndexRoute,
+  ZonesIndexRoute: ZonesIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiWebhooksNepalotpRoute: ApiWebhooksNepalotpRoute,
   ApiWebhooksOtpRoute: ApiWebhooksOtpRoute,

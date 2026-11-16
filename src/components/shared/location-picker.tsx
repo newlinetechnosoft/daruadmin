@@ -16,11 +16,10 @@ import {
 } from '#/lib/map-config'
 import type { GeoPoint } from '#/lib/map-config'
 import {
-  ZONE_POLYGON,
   ZONE_CONFIG,
-  isInsideZone,
 } from '#/lib/zone'
 import { ZoneRestriction } from '#/components/shared/zone-restriction'
+import { useActiveServiceZones } from '#/queries/zones'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -75,11 +74,13 @@ export interface LocationPickerProps {
 function MapEventsHandler({
   onSelect,
   restrictToZone = true,
+  isInsideZoneFn,
   boundsWarningMessage,
   disabled,
 }: {
   onSelect?: (point: GeoPoint) => void
   restrictToZone?: boolean
+  isInsideZoneFn?: (lat: number, lng: number) => boolean
   boundsWarningMessage?: string
   disabled?: boolean
 }) {
@@ -91,7 +92,8 @@ function MapEventsHandler({
       const lng = e.latlng.lng
 
       if (restrictToZone) {
-        if (!isInsideZone(lat, lng)) {
+        const allowed = isInsideZoneFn ? isInsideZoneFn(lat, lng) : true
+        if (!allowed) {
           toast.warning(
             boundsWarningMessage || ZONE_CONFIG.outsideWarningMessage,
           )
@@ -156,6 +158,8 @@ export function LocationPicker({
 
   // Support restrictToButwal alias if explicitly passed
   const isRestricted = restrictToButwal !== undefined ? restrictToButwal : restrictToZone
+  const { activePolygonRings, unionBounds, isInside, isLoading } =
+    useActiveServiceZones()
 
   useEffect(() => {
     setMounted(true)
@@ -163,8 +167,10 @@ export function LocationPicker({
 
   const isInteractive = !disabled && !readOnly
 
-  // Calculate zone bounds for tile restricting
-  const zoneBounds = useMemo(() => L.latLngBounds(ZONE_POLYGON), [])
+  // Calculate dynamic zone bounds for tile restricting
+  const zoneBounds = useMemo(() => {
+    return L.latLngBounds(unionBounds[0], unionBounds[1])
+  }, [unionBounds])
 
   const hasValidValue = useMemo(() => {
     if (!value) return false
@@ -175,9 +181,9 @@ export function LocationPicker({
       !Number.isNaN(lng) &&
       lat !== 0 &&
       lng !== 0 &&
-      (!isRestricted || isInsideZone(lat, lng))
+      (!isRestricted || isInside(lat, lng))
     )
-  }, [value, isRestricted])
+  }, [value, isRestricted, isInside])
 
   const mapCenter: [number, number] = useMemo(() => {
     if (hasValidValue && value) {
@@ -208,7 +214,7 @@ export function LocationPicker({
           lng: pos.coords.longitude,
         }
 
-        if (isRestricted && !isInsideZone(point.lat, point.lng)) {
+        if (isRestricted && !isInside(point.lat, point.lng)) {
           toast.warning(
             'Your device location is outside our service area. Please tap inside the highlighted zone.',
           )
@@ -228,7 +234,7 @@ export function LocationPicker({
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     )
-  }, [isRestricted, onChange])
+  }, [isRestricted, isInside, onChange])
 
   // SSR Skeleton Placeholder
   if (!mounted) {
@@ -301,6 +307,7 @@ export function LocationPicker({
           {/* Service Zone Mask, Bounds Lock, and Outline */}
           {isRestricted && (
             <ZoneRestriction
+              activeRings={activePolygonRings}
               maskColor={maskColor}
               padding={maskPadding}
               fitInitial={!hasValidValue}
@@ -310,6 +317,7 @@ export function LocationPicker({
           <MapEventsHandler
             onSelect={isInteractive ? onChange : undefined}
             restrictToZone={isRestricted}
+            isInsideZoneFn={isInside}
             boundsWarningMessage={boundsWarningMessage}
             disabled={!isInteractive}
           />
@@ -331,7 +339,7 @@ export function LocationPicker({
                   const marker = markerRef.current
                   if (marker) {
                     const latlng = marker.getLatLng()
-                    if (isRestricted && !isInsideZone(latlng.lat, latlng.lng)) {
+                    if (isRestricted && !isInside(latlng.lat, latlng.lng)) {
                       toast.warning(
                         boundsWarningMessage || ZONE_CONFIG.outsideWarningMessage,
                       )
@@ -346,6 +354,13 @@ export function LocationPicker({
             />
           )}
         </MapContainer>
+
+        {/* Dynamic Zone Loading State Indicator */}
+        {isLoading && (
+          <div className="absolute top-3 right-3 z-[1000] rounded border border-border bg-background/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground shadow-xs backdrop-blur-xs">
+            Syncing service zone...
+          </div>
+        )}
       </div>
 
       {/* Coordinate Display / Inputs */}

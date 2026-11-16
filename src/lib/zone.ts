@@ -3,6 +3,8 @@
  * Everything outside this polygon is masked, and map navigation is locked to this area.
  */
 
+export * from './geo-utils'
+
 /**
  * Service zone boundary polygon: [latitude, longitude] pairs.
  * The ring is closed (first point equals last point).

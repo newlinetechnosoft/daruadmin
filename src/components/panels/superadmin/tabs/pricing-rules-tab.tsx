@@ -6,7 +6,9 @@ import {
   CheckCircle2,
   RefreshCw,
   RotateCcw,
+  MapPin,
 } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import {
   saveSuperAdminPricingRulesFn,
@@ -65,16 +67,30 @@ export function PricingRulesTab({
         title="Pricing & Delivery Rules"
         description="Delivery fee formulas, late-night surge amounts, and statutory VAT rates."
         actions={
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleReset}
-            className="h-8 text-xs text-muted-foreground gap-1.5"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            <span>Reset Defaults</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              asChild
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs gap-1.5"
+            >
+              <Link to="/admin/service-zones">
+                <MapPin className="h-3.5 w-3.5 text-primary" />
+                <span>Manage Service Zones</span>
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              className="h-8 text-xs text-muted-foreground gap-1.5"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>Reset Defaults</span>
+            </Button>
+          </div>
         }
       />
 

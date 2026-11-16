@@ -1,6 +1,6 @@
 import { LocationPicker } from '#/components/shared/location-picker'
 import type { GeoPoint } from '#/lib/map-config'
-import { DEFAULT_MAP_CENTER, isWithinButwalArea } from '#/lib/map-config'
+import { isWithinButwalArea } from '#/lib/map-config'
 import { MapPin } from 'lucide-react'
 
 export interface DeliveryMapProps {

@@ -10,8 +10,9 @@ import {
 import 'leaflet/dist/leaflet.css'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
-import { ZONE_POLYGON, ZONE_CONFIG } from '#/lib/zone'
+import { ZONE_CONFIG } from '#/lib/zone'
 import { ZoneRestriction } from '#/components/shared/zone-restriction'
+import { useActiveServiceZones } from '#/queries/zones'
 import type { Rider } from '#/server/operations/types'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -111,7 +112,11 @@ export function RiderTelemetryMap({
   const [fitBoundsTarget, setFitBoundsTarget] =
     useState<L.LatLngBoundsExpression | null>(null)
 
-  const zoneBounds = useMemo(() => L.latLngBounds(ZONE_POLYGON), [])
+  const { activePolygonRings, unionBounds } = useActiveServiceZones()
+  const zoneBounds = useMemo(
+    () => L.latLngBounds(unionBounds[0], unionBounds[1]),
+    [unionBounds],
+  )
 
   // 2-minute countdown timer (120 seconds) for next telemetry poll
   const [countdown, setCountdown] = useState(120)
@@ -413,7 +418,10 @@ export function RiderTelemetryMap({
               bounds={zoneBounds}
             />
 
-            <ZoneRestriction fitInitial={false} />
+            <ZoneRestriction
+              activeRings={activePolygonRings}
+              fitInitial={false}
+            />
             <MapController />
             <FlyToHandler target={flyTarget} />
             <FitBoundsHandler bounds={fitBoundsTarget} />

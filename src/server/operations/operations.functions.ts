@@ -46,6 +46,7 @@ import {
 import { calculateOrderTotals } from '#/lib/pricing'
 import { toPaisa } from '#/lib/money'
 import { getAllDealersQuery } from '#/server/inventory/inventory.queries'
+import { isLocationInActiveZones } from '#/server/zones/zones.queries'
 import {
   getAllRidersQuery,
   getRiderByIdQuery,
@@ -3898,6 +3899,20 @@ export const upsertCustomerAddressFn = createServerFn({ method: 'POST' })
     const user = await getSessionUser()
     if (!user.isActive || user.banned) {
       throw new Error('Forbidden: Account suspended')
+    }
+
+    if (
+      data.lat !== null &&
+      data.lat !== undefined &&
+      data.lng !== null &&
+      data.lng !== undefined
+    ) {
+      const isInServiceZone = await isLocationInActiveZones(data.lat, data.lng)
+      if (!isInServiceZone) {
+        throw new Error(
+          'Selected address coordinates fall outside our verified service zones.',
+        )
+      }
     }
 
     const id = await upsertCustomerAddressQuery({

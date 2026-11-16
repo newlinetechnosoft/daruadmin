@@ -46,6 +46,7 @@ import {
   ShoppingBasket,
   Milk,
   KeyRound,
+  MapPin,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { ChangePasswordDialog } from '#/components/auth/change-password-dialog'
@@ -203,6 +204,12 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         label: 'Shipping',
         to: '/admin/shipping',
         icon: Truck,
+        module: 'shipping',
+      },
+      {
+        label: 'Service Zones',
+        to: '/admin/service-zones',
+        icon: MapPin,
         module: 'shipping',
       },
     ],

@@ -42,6 +42,7 @@ import {
   transitionOrderTx,
 } from '#/server/orders/order.transitions'
 import { getPublicStoreOperatingStatusFn } from '#/server/superadmin/superadmin.functions'
+import { isLocationInActiveZones } from '#/server/zones/zones.queries'
 
 // eSewa configuration & guard
 export interface EsewaConfig {
@@ -208,6 +209,14 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
           `Express immediate delivery is unavailable because our store is currently closed. Please select a scheduled delivery time after our reopening (${storeStatus.nextOpeningFormatted || 'our next shift'}).`,
         )
       }
+    }
+
+    // Enforce Active Service Zone Validation
+    const isInServiceZone = await isLocationInActiveZones(data.lat, data.lng)
+    if (!isInServiceZone) {
+      throw new Error(
+        'Delivery location is outside our service area. We currently only serve locations within our verified service zones.',
+      )
     }
 
     // Idempotency check: if an order with this idempotency key already exists, return it

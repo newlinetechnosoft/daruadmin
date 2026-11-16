@@ -68,7 +68,6 @@ function calculateTimeLeft(targetTimestamp: number): TimeLeft {
 
 export function StoreCountdownTimer({
   targetDateTime,
-  fallbackFormatted,
   variant = 'boxes',
   className,
   onComplete,
@@ -76,7 +75,6 @@ export function StoreCountdownTimer({
   const queryClient = useQueryClient()
   const [targetMs, setTargetMs] = useState<number>(() => resolveTargetTimestamp(targetDateTime))
   const [timeLeft, setTimeLeft] = useState<TimeLeft>(() => calculateTimeLeft(targetMs))
-  const [isClient, setIsClient] = useState(false)
 
   // Sync target when prop changes
   useEffect(() => {
@@ -84,7 +82,6 @@ export function StoreCountdownTimer({
   }, [targetDateTime])
 
   useEffect(() => {
-    setIsClient(true)
     const tick = () => {
       const remaining = calculateTimeLeft(targetMs)
       setTimeLeft(remaining)

@@ -4,6 +4,7 @@
 @plugin '@tailwindcss/typography';
 
 @import 'tw-animate-css';
+@import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -439,5 +440,12 @@
     stroke-width: 2px !important;
     stroke-opacity: 0.8 !important;
     fill: none !important;
+  }
+
+  /* Service Zone Interactive Editor Handles */
+  .zone-vertex-marker,
+  .zone-midpoint-marker {
+    background: transparent !important;
+    border: none !important;
   }
 }

@@ -13,7 +13,7 @@ const isAnalyze = process.env.ANALYZE === 'true'
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
   build: {
-    cssMinify: true,
+    cssMinify: 'esbuild',
     reportCompressedSize: false,
   },
   plugins: [

@@ -3,7 +3,6 @@ import { useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Clock, X, ChevronUp, ArrowRight, Timer } from 'lucide-react'
 import { Button } from '#/components/ui/button'
-import { Badge } from '#/components/ui/badge'
 import { storeQueries } from '#/queries/admin'
 import { StoreCountdownTimer } from '#/components/store/countdown-timer'
 

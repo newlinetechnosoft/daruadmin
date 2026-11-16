@@ -5,6 +5,7 @@ import { cn } from '#/lib/utils'
 export function KpiCard({
   label,
   value,
+  note,
   delta,
   icon: Icon,
   tone = 'default',
@@ -12,6 +13,7 @@ export function KpiCard({
 }: {
   label: string
   value: string | number
+  note?: string
   delta?: string
   icon?: LucideIcon
   tone?: 'default' | 'success' | 'warning' | 'danger'
@@ -38,6 +40,23 @@ export function KpiCard({
         <div className="mt-3 text-2xl sm:text-3xl font-bold tracking-tight tabular-nums text-foreground">
           {value}
         </div>
+        {(note || delta) && (
+          <div className="mt-2 flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
+            {delta && (
+              <span
+                className={cn(
+                  'font-semibold',
+                  tone === 'success' && 'text-emerald-600 dark:text-emerald-400',
+                  tone === 'warning' && 'text-amber-600 dark:text-amber-400',
+                  tone === 'danger' && 'text-destructive',
+                )}
+              >
+                {delta}
+              </span>
+            )}
+            {note && <span>{note}</span>}
+          </div>
+        )}
       </CardContent>
     </Card>
   )
