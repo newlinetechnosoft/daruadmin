@@ -149,7 +149,7 @@ export function StoreClosedPopup() {
 
           {/* Stylish Countdown Timer Display */}
           <div className="pt-2.5 border-t border-amber-200/70 dark:border-amber-500/20">
-            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 mb-2 font-mono">
+            <div className="flex items-center justify-center text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 mb-2 font-mono">
               <span className="flex items-center gap-1.5">
                 <Timer className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 animate-pulse" />
                 <span>Live Countdown to Reopen</span>
@@ -164,32 +164,25 @@ export function StoreClosedPopup() {
         </div>
 
         {/* Footer Actions */}
-        <div className="mt-4 flex items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
-          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-            {allowAdvanceOrders
-              ? 'Orders dispatch promptly upon opening.'
-              : 'Reopening at scheduled time.'}
-          </p>
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleDismiss}
-              className="h-8 text-xs text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white px-2.5"
-            >
-              Dismiss
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleDismiss}
-              className="h-8 text-xs font-semibold gap-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-3 shadow-xs"
-            >
-              <span>Advance Order Now</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+        <div className="mt-4 flex items-center justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleDismiss}
+            className="h-8 text-xs text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white px-2.5"
+          >
+            Dismiss
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleDismiss}
+            className="h-8 text-xs font-semibold gap-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-3 shadow-xs"
+          >
+            <span>Advance Order Now</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
     </div>
