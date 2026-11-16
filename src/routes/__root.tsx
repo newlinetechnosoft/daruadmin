@@ -13,6 +13,7 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import { CartProvider } from '#/lib/cart-context'
 import { CartSheet } from '#/components/store/cart-sheet'
 import { AgeGate } from '#/components/store/age-gate'
+import { StoreClosedPopup } from '#/components/store/store-closed-popup'
 import { Toaster } from '#/components/ui/sonner'
 import { adminQueries } from '#/queries/admin'
 
@@ -114,6 +115,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
             <CartSheet />
             <AgeGate />
+            <StoreClosedPopup />
             <Toaster position="bottom-right" richColors />
           </CartProvider>
         </ThemeProvider>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useRouter } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { StoreCountdownTimer } from '#/components/store/countdown-timer'
 import {
   Bike,
   Clock,
@@ -97,14 +98,29 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur-xl">
       {storeStatus?.showNotice && !storeStatus?.isOpen && (
-        <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-950 dark:text-amber-200 px-4 py-2 text-xs font-medium flex items-center justify-center gap-2 text-center transition-colors">
-          <Clock className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-          <span>{storeStatus.noticeMessage}</span>
-          {storeStatus.nextOpeningFormatted && (
-            <Badge variant="outline" className="text-[10px] bg-amber-500/20 border-amber-500/40 text-amber-800 dark:text-amber-300 font-mono font-bold">
-              Opens: {storeStatus.nextOpeningFormatted}
-            </Badge>
-          )}
+        <div className="w-full bg-amber-500/15 border-b border-amber-500/30 px-3 sm:px-6 py-2 text-xs text-amber-950 dark:text-amber-200 transition-colors">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2 text-center md:text-left">
+            <div className="flex items-center gap-2 justify-center md:justify-start flex-wrap">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
+              </span>
+              <span className="font-medium text-xs sm:text-sm">
+                Mezmani is currently closed for immediate delivery. Place your order now and it will be delivered after reopening!
+              </span>
+            </div>
+            <div className="shrink-0 flex items-center justify-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/25 border border-amber-500/40 text-amber-950 dark:text-amber-200 font-mono shadow-xs">
+                <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>Opens: {storeStatus.nextOpeningFormatted || 'Tomorrow at 10:00 AM'}</span>
+              </span>
+              <StoreCountdownTimer
+                targetDateTime={storeStatus.nextOpeningDateTime}
+                fallbackFormatted={storeStatus.nextOpeningFormatted}
+                variant="header-badge"
+              />
+            </div>
+          </div>
         </div>
       )}
       <div className="mx-auto flex h-14 sm:h-16 lg:h-[4.25rem] max-w-7xl items-center justify-between gap-3 sm:gap-4 px-3 sm:px-6 lg:px-8">

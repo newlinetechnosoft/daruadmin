@@ -17,6 +17,7 @@ import { formatNPR } from '#/lib/money'
 import { storeQueries } from '#/queries/admin'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { formatAbv } from '#/components/store/product-card'
+import { StoreCountdownTimer } from '#/components/store/countdown-timer'
 import {
   ShoppingBag,
   Clock,
@@ -347,6 +348,16 @@ export function CartSheet() {
                         ? `You can place your order now! Delivery will take place once our system reopens (${storeStatus.nextOpeningFormatted || 'our next shift'}).`
                         : `Orders cannot be placed right now. Reopening on ${storeStatus.nextOpeningFormatted || 'soon'}.`}
                     </p>
+                    <div className="pt-1.5 flex items-center justify-between gap-2 border-t border-amber-500/20 mt-1">
+                      <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-400 font-mono">
+                        Reopening In:
+                      </span>
+                      <StoreCountdownTimer
+                        targetDateTime={storeStatus.nextOpeningDateTime}
+                        fallbackFormatted={storeStatus.nextOpeningFormatted}
+                        variant="compact"
+                      />
+                    </div>
                   </div>
                 </div>
               )}

@@ -370,8 +370,7 @@ function SuperAdminLayout() {
                   >
                     DB: {telemetry.dbLatencyMs}ms
                   </span>
-                  <span className="text-border">|</span>
-                  <span className="uppercase text-[11px] font-bold">{telemetry.environment}</span>
+                                   
                 </div>
               )}
 
@@ -383,29 +382,8 @@ function SuperAdminLayout() {
                 className="h-8 text-xs font-mono gap-1.5"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-primary' : ''}`} />
-                <span className="hidden sm:inline">Sync</span>
               </Button>
-
-              <Link
-                to="/"
-                target="_blank"
-                rel="noreferrer"
-                className="hidden md:inline-flex items-center gap-1 text-xs font-mono px-2.5 py-1 rounded border border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/50 transition"
-                title="Open customer storefront"
-              >
-                <Store className="h-3.5 w-3.5" />
-                <span>Storefront</span>
-                <ExternalLink className="h-3 w-3 text-muted-foreground" />
-              </Link>
-
-              <Link
-                to="/admin/orders"
-                className="hidden sm:inline-flex items-center gap-1 text-xs font-mono px-2.5 py-1 rounded border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition"
-                title="Jump to Store Operations (/admin)"
-              >
-                <LayoutDashboard className="h-3.5 w-3.5" />
-                <span>Store Admin</span>
-              </Link>
+           
 
               <ThemeToggle />
 

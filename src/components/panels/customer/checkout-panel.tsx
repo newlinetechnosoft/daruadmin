@@ -23,6 +23,7 @@ import {
 import type { CustomerAddress } from '#/server/operations/types'
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
+import { StoreCountdownTimer } from '#/components/store/countdown-timer'
 import { DeliveryMap } from './delivery-map'
 import { DEFAULT_MAP_CENTER, isWithinButwalArea } from '#/lib/map-config'
 import { Button } from '#/components/ui/button'
@@ -451,6 +452,11 @@ export function CheckoutPanel() {
                           Reopens: {storeStatus.nextOpeningFormatted}
                         </Badge>
                       )}
+                      <StoreCountdownTimer
+                        targetDateTime={storeStatus.nextOpeningDateTime}
+                        fallbackFormatted={storeStatus.nextOpeningFormatted}
+                        variant="header-badge"
+                      />
                     </div>
                     <p className="text-xs leading-relaxed text-muted-foreground">
                       {storeStatus.allowAdvanceOrders

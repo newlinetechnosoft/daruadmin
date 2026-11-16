@@ -1250,37 +1250,36 @@ export function SuperAdminPanel() {
       <DataSection isRefreshing={isFetching}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <KpiCard
-            label="Total Customers"
+            
             value={overview?.totalCustomers ?? 0}
-            note="Active retail accounts"
+            label="Total Customers"
             icon={Users}
             tone="default"
           />
           <KpiCard
             label="Total Dealers"
             value={overview?.totalDealers ?? 0}
-            note="Vendors & wholesale"
+           
             icon={Store}
             tone="default"
           />
           <KpiCard
             label="Delivery Fleet"
             value={overview?.totalRiders ?? 0}
-            note="Couriers & riders"
+            
             icon={Bike}
             tone="default"
           />
           <KpiCard
             label="Catalog Products"
             value={overview?.totalProducts ?? 0}
-            note="Liquor & Grocery"
+            
             icon={Package}
             tone="default"
           />
           <KpiCard
             label="Variant SKUs"
             value={overview?.totalVariants ?? 0}
-            note="Active price points"
             icon={Layers}
             tone="default"
           />
@@ -1341,8 +1340,7 @@ export function SuperAdminPanel() {
             {/* Column Specification Guide */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-0.5 text-xs font-semibold text-foreground">
                   <span>Column Schema & Field Requirements</span>
                 </div>
                 <p className="text-[11px] text-muted-foreground">

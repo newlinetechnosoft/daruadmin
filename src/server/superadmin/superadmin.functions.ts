@@ -1596,10 +1596,11 @@ export function calculateSystemStatus(
         if (offset === 0) {
           if (local.timeStr < openTime) {
             nextOpeningFormatted = `Today at ${format12HourTime(openTime)}`
-            const target = new Date(now)
-            const [h, m] = openTime.split(':').map(Number)
-            target.setHours(h, m, 0, 0)
-            nextOpeningDateTime = target.toISOString()
+            const targetDate = new Date(Date.UTC(local.year, local.month - 1, local.day))
+            const y = targetDate.getUTCFullYear()
+            const mo = String(targetDate.getUTCMonth() + 1).padStart(2, '0')
+            const d = String(targetDate.getUTCDate()).padStart(2, '0')
+            nextOpeningDateTime = new Date(`${y}-${mo}-${d}T${openTime}:00+05:45`).toISOString()
             break
           }
           continue
@@ -1607,12 +1608,23 @@ export function calculateSystemStatus(
 
         const dayLabel = offset === 1 ? 'Tomorrow' : capitalize(nextDayKey)
         nextOpeningFormatted = `${dayLabel} at ${format12HourTime(openTime)}`
-        const target = new Date(now)
-        target.setDate(target.getDate() + offset)
-        const [h, m] = openTime.split(':').map(Number)
-        target.setHours(h, m, 0, 0)
-        nextOpeningDateTime = target.toISOString()
+        const targetDate = new Date(Date.UTC(local.year, local.month - 1, local.day + offset))
+        const y = targetDate.getUTCFullYear()
+        const mo = String(targetDate.getUTCMonth() + 1).padStart(2, '0')
+        const d = String(targetDate.getUTCDate()).padStart(2, '0')
+        nextOpeningDateTime = new Date(`${y}-${mo}-${d}T${openTime}:00+05:45`).toISOString()
         break
+      }
+    }
+
+    if (!nextOpeningDateTime) {
+      const targetDate = new Date(Date.UTC(local.year, local.month - 1, local.day + 1))
+      const y = targetDate.getUTCFullYear()
+      const mo = String(targetDate.getUTCMonth() + 1).padStart(2, '0')
+      const d = String(targetDate.getUTCDate()).padStart(2, '0')
+      nextOpeningDateTime = new Date(`${y}-${mo}-${d}T10:00:00+05:45`).toISOString()
+      if (!nextOpeningFormatted) {
+        nextOpeningFormatted = 'Tomorrow at 10:00 AM'
       }
     }
   }
@@ -1643,7 +1655,7 @@ export function calculateSystemStatus(
       noticeMessage =
         settings.offlineNoticeMessage ||
         (allowAdvanceOrders
-          ? `We are currently closed for immediate delivery. Place your order now and it will be delivered after reopening${nextOpeningFormatted ? ` (${nextOpeningFormatted})` : ''}!`
+          ? 'Mezmani is currently closed for immediate delivery. Place your order now and it will be delivered after reopening!'
           : `We are currently closed. Operating hours resume${nextOpeningFormatted ? ` on ${nextOpeningFormatted}` : ''}.`)
     }
   }
