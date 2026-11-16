@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
+import { isSuperAdmin } from '#/server/auth/permissions-shared'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
 import { updateUserRoleFn } from '#/server/catalog/catalog.functions'
@@ -72,6 +73,7 @@ export function UsersPanel() {
 
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
+      if (isSuperAdmin(u)) return false
       const userRole = u.role || 'customer'
       if (roleFilter !== 'all' && userRole !== roleFilter) return false
 

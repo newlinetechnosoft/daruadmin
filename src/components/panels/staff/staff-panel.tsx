@@ -50,7 +50,6 @@ import {
   Eye,
   Award,
   Store,
-  Terminal,
   CheckCircle2,
   Info,
   Copy,
@@ -185,29 +184,33 @@ export function StaffPanel() {
   )
   const [searchQuery, setSearchQuery] = useState('')
   const [userScopeFilter, setUserScopeFilter] = useState<
-    'all' | 'staff' | 'superadmin' | 'admin' | 'manager' | 'rider' | 'customer'
+    'all' | 'staff' | 'admin' | 'manager' | 'rider' | 'customer'
   >('all')
   const [inspectingUser, setInspectingUser] = useState<StaffUser | null>(null)
 
+  const visibleUsers = useMemo(() => {
+    return users.filter((u) => !isSuperAdmin(u))
+  }, [users])
+
   const currentUser = useMemo(
-    () => users.find((u) => u.id === currentUserId),
-    [users, currentUserId],
+    () => visibleUsers.find((u) => u.id === currentUserId) || users.find((u) => u.id === currentUserId),
+    [visibleUsers, users, currentUserId],
   )
   const isSuperAdminUser = isSuperAdmin(currentUser)
 
-  // Filter staff users (admin, manager, rider, or superadmin)
+  // Filter staff users (admin, manager, or rider)
   const staffUsers = useMemo(() => {
-    return users.filter(
-      (u) => u.role === 'admin' || u.role === 'manager' || u.role === 'rider' || isSuperAdmin(u),
+    return visibleUsers.filter(
+      (u) => u.role === 'admin' || u.role === 'manager' || u.role === 'rider',
     )
-  }, [users])
+  }, [visibleUsers])
 
-  // Matrix-eligible users: HIDE super admin completely from permission matrix
+  // Matrix-eligible users: staff members
   const matrixEligibleUsers = useMemo(() => {
-    return users.filter(
-      (u) => !isSuperAdmin(u) && (u.role === 'admin' || u.role === 'manager' || u.role === 'rider'),
+    return visibleUsers.filter(
+      (u) => u.role === 'admin' || u.role === 'manager' || u.role === 'rider',
     )
-  }, [users])
+  }, [visibleUsers])
 
   // Track selected staff id initialized from matrixEligibleUsers
   const [selectedStaffId, setSelectedStaffId] = useState<string>(
@@ -222,7 +225,6 @@ export function StaffPanel() {
   }, [matrixEligibleUsers, selectedStaffId])
 
   // Whether current viewer can customize permissions for selected staff:
-  // Super Admin can customize Admin, Manager, and Rider. Regular Admin can customize Manager and Rider.
   const isTargetAdmin = selectedStaff?.role === 'admin'
   const canEditSelected = Boolean(
     selectedStaff &&
@@ -253,15 +255,13 @@ export function StaffPanel() {
 
   // All Users / Directory filter
   const displayedUsers = useMemo(() => {
-    let list = users
+    let list = visibleUsers
     if (userScopeFilter === 'staff') {
-      list = users.filter(
-        (u) => u.role === 'admin' || u.role === 'manager' || u.role === 'rider' || isSuperAdmin(u),
+      list = visibleUsers.filter(
+        (u) => u.role === 'admin' || u.role === 'manager' || u.role === 'rider',
       )
-    } else if (userScopeFilter === 'superadmin') {
-      list = users.filter((u) => isSuperAdmin(u))
     } else if (userScopeFilter !== 'all') {
-      list = users.filter((u) => !isSuperAdmin(u) && u.role === userScopeFilter)
+      list = visibleUsers.filter((u) => u.role === userScopeFilter)
     }
 
     if (!searchQuery.trim()) return list
@@ -275,10 +275,24 @@ export function StaffPanel() {
         u.id.toLowerCase().includes(q)
       )
     })
-  }, [users, userScopeFilter, searchQuery])
+  }, [visibleUsers, userScopeFilter, searchQuery])
 
   const filteredAudit = useMemo(() => {
     return ops.audit.filter((a) => {
+      const actor = (a.actor || '').toLowerCase()
+      const detail = (a.detail || '').toLowerCase()
+      if (
+        actor.includes('superadmin') ||
+        actor.includes('super admin') ||
+        actor.includes('admin@newline.com') ||
+        actor.includes('usr_superadmin') ||
+        detail.includes('superadmin') ||
+        detail.includes('super admin') ||
+        detail.includes('admin@newline.com') ||
+        detail.includes('usr_superadmin')
+      ) {
+        return false
+      }
       if (!searchQuery.trim()) return true
       const q = searchQuery.toLowerCase()
       return (
@@ -811,7 +825,7 @@ export function StaffPanel() {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard
             label="Total Registered Users"
-            value={users.length}
+            value={visibleUsers.length}
             note="All user accounts & directory"
             icon={Users}
           />
@@ -830,7 +844,7 @@ export function StaffPanel() {
           />
           <KpiCard
             label="Audit Log Entries"
-            value={ops.audit.length}
+            value={filteredAudit.length}
             note="Recorded system events"
             icon={History}
           />
@@ -846,7 +860,7 @@ export function StaffPanel() {
           <TabsList className="h-9">
             <TabsTrigger value="users" className="gap-2 text-xs">
               <Users className="h-3.5 w-3.5" />
-              <span>User Directory & Details ({users.length})</span>
+              <span>User Directory & Details ({visibleUsers.length})</span>
             </TabsTrigger>
             <TabsTrigger value="matrix" className="gap-2 text-xs">
               <KeyRound className="h-3.5 w-3.5" />
@@ -854,7 +868,7 @@ export function StaffPanel() {
             </TabsTrigger>
             <TabsTrigger value="audit" className="gap-2 text-xs">
               <History className="h-3.5 w-3.5" />
-              <span>Audit Trail ({ops.audit.length})</span>
+              <span>Audit Trail ({filteredAudit.length})</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -881,13 +895,12 @@ export function StaffPanel() {
                 <span className="text-muted-foreground text-[11px] font-medium mr-1">Filter:</span>
                 {(
                   [
-                    { id: 'all', label: `All (${users.length})` },
+                    { id: 'all', label: `All (${visibleUsers.length})` },
                     { id: 'staff', label: `Staff (${staffUsers.length})` },
-                    { id: 'superadmin', label: `Super Admin (${users.filter((u) => isSuperAdmin(u)).length})` },
-                    { id: 'admin', label: `Admin (${users.filter((u) => u.role === 'admin').length})` },
-                    { id: 'manager', label: `Manager (${users.filter((u) => u.role === 'manager').length})` },
-                    { id: 'rider', label: `Rider (${users.filter((u) => u.role === 'rider').length})` },
-                    { id: 'customer', label: `Customer (${users.filter((u) => u.role === 'customer').length})` },
+                    { id: 'admin', label: `Admin (${visibleUsers.filter((u) => u.role === 'admin').length})` },
+                    { id: 'manager', label: `Manager (${visibleUsers.filter((u) => u.role === 'manager').length})` },
+                    { id: 'rider', label: `Rider (${visibleUsers.filter((u) => u.role === 'rider').length})` },
+                    { id: 'customer', label: `Customer (${visibleUsers.filter((u) => u.role === 'customer').length})` },
                   ] as const
                 ).map((scope) => (
                   <Button
@@ -935,9 +948,9 @@ export function StaffPanel() {
                     displayedUsers.map((u) => {
                       const isSelf = u.id === currentUserId
                       const isUpdatingThisRow = updatingRoleUserIds.has(u.id)
-                      const isSuper = isSuperAdmin(u)
-                      const isEligibleForMatrix = !isSuper && (u.role === 'admin' || u.role === 'manager' || u.role === 'rider')
-                      const canChangeRole = !isSelf && !isSuper && (!isTargetAdmin || isSuperAdminUser)
+                      const isEligibleForMatrix = u.role === 'admin' || u.role === 'manager' || u.role === 'rider'
+                      const isTargetUserAdmin = u.role === 'admin'
+                      const canChangeRole = !isSelf && (!isTargetUserAdmin || isSuperAdminUser)
 
                       return (
                         <TableRow key={u.id} className="hover:bg-muted/20">
@@ -964,15 +977,6 @@ export function StaffPanel() {
                                       className="text-[10px] py-0 px-1 font-mono text-muted-foreground"
                                     >
                                       You
-                                    </Badge>
-                                  )}
-                                  {isSuper && (
-                                    <Badge
-                                      variant="default"
-                                      className="text-[10px] py-0 px-1.5 gap-1 bg-primary text-primary-foreground font-semibold"
-                                    >
-                                      <Terminal className="h-2.5 w-2.5" />
-                                      Developer Team
                                     </Badge>
                                   )}
                                 </div>
@@ -1014,15 +1018,7 @@ export function StaffPanel() {
                           </TableCell>
 
                           <TableCell>
-                            {isSuper ? (
-                              <Badge
-                                variant="default"
-                                className="text-xs font-semibold py-0.5 px-2 bg-primary text-primary-foreground gap-1"
-                              >
-                                <Terminal className="h-3 w-3" />
-                                Super Admin
-                              </Badge>
-                            ) : u.role === 'admin' ? (
+                            {u.role === 'admin' ? (
                               <Badge variant="default" className="text-xs font-medium py-0.5 px-2">
                                 Admin
                               </Badge>
@@ -1083,10 +1079,6 @@ export function StaffPanel() {
                                 >
                                   Matrix →
                                 </Button>
-                              ) : isSuper ? (
-                                <span className="text-[11px] text-muted-foreground font-mono">
-                                  Root Bypass
-                                </span>
                               ) : (
                                 <span className="text-[11px] text-muted-foreground">
                                   Storefront only
@@ -1100,27 +1092,22 @@ export function StaffPanel() {
                               {isUpdatingThisRow && (
                                 <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                               )}
-                              {isSuper ? (
-                                <span className="text-[11px] font-mono text-muted-foreground bg-muted/40 px-2 py-1 rounded">
-                                  Root Protected
-                                </span>
-                              ) : (
-                                <NativeSelect
-                                  value={u.role || 'customer'}
-                                  onChange={(e) =>
-                                    handleRoleSelectChange(u.id, e.target.value)
-                                  }
-                                  disabled={isUpdatingThisRow || !canChangeRole}
-                                  title={
-                                    !canChangeRole
-                                      ? 'You cannot modify this role'
-                                      : 'Change account role'
-                                  }
-                                  size="sm"
-                                  className={`h-7 text-xs ${
-                                    !canChangeRole ? 'opacity-60 cursor-not-allowed' : ''
-                                  }`}
-                                >
+                              <NativeSelect
+                                value={u.role || 'customer'}
+                                onChange={(e) =>
+                                  handleRoleSelectChange(u.id, e.target.value)
+                                }
+                                disabled={isUpdatingThisRow || !canChangeRole}
+                                title={
+                                  !canChangeRole
+                                    ? 'You cannot modify this role'
+                                    : 'Change account role'
+                                }
+                                size="sm"
+                                className={`h-7 text-xs ${
+                                  !canChangeRole ? 'opacity-60 cursor-not-allowed' : ''
+                                }`}
+                              >
                                   <NativeSelectOption value="admin">
                                     Admin
                                   </NativeSelectOption>
@@ -1134,7 +1121,6 @@ export function StaffPanel() {
                                     Customer
                                   </NativeSelectOption>
                                 </NativeSelect>
-                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1188,7 +1174,7 @@ export function StaffPanel() {
                               variant="default"
                               className="text-xs py-0 px-1.5"
                             >
-                              Super Admin
+                              Full Admin Access
                             </Badge>
                           ) : hasCustomPermissions ? (
                             <Badge
@@ -1376,37 +1362,15 @@ export function StaffPanel() {
                   </div>
                 </Card>
 
-                {/* Admin Matrix Customization Notice */}
+                {/* Admin Matrix Notice */}
                 {selectedStaff.role === 'admin' && (
-                  <div
-                    className={`p-3.5 rounded-lg border text-xs flex items-center gap-3 ${
-                      isSuperAdminUser
-                        ? 'bg-primary/10 border-primary/20 text-foreground'
-                        : 'bg-muted/40 border-border text-muted-foreground'
-                    }`}
-                  >
-                    <ShieldCheck
-                      className={`h-4 w-4 shrink-0 ${
-                        isSuperAdminUser ? 'text-primary' : 'text-foreground'
-                      }`}
-                    />
+                  <div className="p-3.5 rounded-lg border text-xs flex items-center gap-3 bg-muted/40 border-border text-muted-foreground">
+                    <ShieldCheck className="h-4 w-4 shrink-0 text-foreground" />
                     <div className="leading-relaxed">
-                      {isSuperAdminUser ? (
-                        <>
-                          <strong className="text-foreground font-semibold">
-                            Super Admin Governance Active:
-                          </strong>{' '}
-                          You are customizing granular matrix access for Administrator{' '}
-                          <span className="font-semibold text-foreground">{selectedStaff.name}</span>. Overrides saved here take precedence over standard administrator defaults.
-                        </>
-                      ) : (
-                        <>
-                          <strong className="text-foreground font-semibold">
-                            Administrator Account:
-                          </strong>{' '}
-                          Administrator permissions can only be reconfigured or customized by the Super Admin (Developer Team: admin@newline.com).
-                        </>
-                      )}
+                      <strong className="text-foreground font-semibold">
+                        Administrator Account:
+                      </strong>{' '}
+                      Administrator permissions are fixed by system policy with full privileges across all modules and actions.
                     </div>
                   </div>
                 )}
@@ -1839,11 +1803,6 @@ export function StaffPanel() {
               <div>
                 <DialogTitle className="text-base font-semibold flex items-center gap-2">
                   <span>{inspectingUser?.name}</span>
-                  {inspectingUser && isSuperAdmin(inspectingUser) && (
-                    <Badge variant="default" className="text-[10px] py-0 px-1.5 gap-1">
-                      <Terminal className="h-3 w-3" /> Super Admin
-                    </Badge>
-                  )}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                   Account profile, verification status, and permissions.
@@ -1858,7 +1817,7 @@ export function StaffPanel() {
                 <div>
                   <span className="text-muted-foreground text-[11px]">System Role</span>
                   <div className="font-semibold text-foreground capitalize mt-0.5">
-                    {isSuperAdmin(inspectingUser) ? 'Super Admin (Developer Team)' : inspectingUser.role}
+                    {inspectingUser.role}
                   </div>
                 </div>
                 <div>
@@ -1925,19 +1884,11 @@ export function StaffPanel() {
                   </div>
                 )}
               </div>
-
-              {isSuperAdmin(inspectingUser) && (
-                <div className="p-3 bg-primary/10 rounded-lg border border-primary/20 text-xs">
-                  <strong className="text-foreground">Developer Root Access:</strong>{' '}
-                  This account possesses immutable root authority across all database modules, double-entry ledgers, and system settings.
-                </div>
-              )}
             </div>
           )}
 
           <DialogFooter className="p-4 border-t border-border/70 bg-muted/20 flex sm:justify-between items-center gap-2">
             {inspectingUser &&
-              !isSuperAdmin(inspectingUser) &&
               (inspectingUser.role === 'admin' ||
                 inspectingUser.role === 'manager' ||
                 inspectingUser.role === 'rider') && (
@@ -1984,7 +1935,7 @@ export function StaffPanel() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {roleChangeConfirm?.newRole === 'admin'
-                ? `Are you sure you want to promote ${roleChangeConfirm.userName} to Admin? Administrators have unrestricted super admin access across all modules and actions.`
+                ? `Are you sure you want to promote ${roleChangeConfirm.userName} to Admin? Administrators have full administrative access across all modules and actions.`
                 : `Are you sure you want to demote ${roleChangeConfirm?.userName} to Customer? They will immediately lose all staff panel access.`}
             </AlertDialogDescription>
           </AlertDialogHeader>

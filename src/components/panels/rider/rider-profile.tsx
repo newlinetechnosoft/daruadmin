@@ -6,6 +6,7 @@ import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
+import { ChangePasswordCard } from '#/components/auth/change-password-dialog'
 import { authClient } from '#/lib/auth-client'
 import { clearAllLocalData } from '#/lib/idb'
 import {
@@ -154,6 +155,9 @@ export function RiderProfile({ rider }: RiderProfileProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Password & Security */}
+      <ChangePasswordCard userName={rider.name} userEmail={rider.email} />
 
       {/* Shift & Actions */}
       <Card className="border-border bg-card">

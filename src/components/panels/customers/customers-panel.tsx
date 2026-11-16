@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
+import { isSuperAdmin } from '#/server/auth/permissions-shared'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
 import { updateComplaintFn } from '#/server/operations/operations.functions'
@@ -72,7 +73,7 @@ export function CustomersPanel() {
   // Aggregate customer metrics from orders
   const customerList = useMemo(() => {
     return users
-      .filter((u) => u.role !== 'admin')
+      .filter((u) => u.role !== 'admin' && !isSuperAdmin(u))
       .map((u) => {
         const customerOrders = ops.orders.filter(
           (o) =>

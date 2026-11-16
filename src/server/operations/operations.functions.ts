@@ -28,6 +28,7 @@ import {
   can,
   isSuperAdmin,
 } from '#/server/auth/permissions'
+import { storeUserCredentialHelper } from '#/server/superadmin/superadmin.functions'
 import {
   getAdminFoodProductsQuery,
   getAdminLiquorProductsQuery,
@@ -2357,6 +2358,13 @@ export const createStaffUserFn = createServerFn({ method: 'POST' })
       throw new Error('Failed to create staff account')
     }
 
+    await storeUserCredentialHelper(
+      newUserId,
+      normalizedEmail,
+      data.password,
+      actor.email || actor.name || 'Admin',
+    )
+
     // 3. If role is 'rider', also create rider profile
     if (data.role === 'rider') {
       const riderId = nid('rid')
@@ -2619,14 +2627,14 @@ export const savePermissionsFn = createServerFn({ method: 'POST' })
       throw new Error('User not found')
     }
 
-    // Guard 2: Superadmin permissions are immutable and cannot be altered via matrix
+    // Guard 2: Root permissions are immutable and cannot be altered via matrix
     if (isSuperAdmin(targetUser)) {
-      throw new Error('Forbidden: Superadmin permissions cannot be modified via matrix')
+      throw new Error('User not found')
     }
 
-    // Guard 3: Only Super Admin (Developer Team) can modify administrator permissions
+    // Guard 3: Administrator permissions are fixed by system policy
     if (targetUser.role === 'admin' && !actorIsSuperAdmin) {
-      throw new Error('Forbidden: Only Super Admin (Developer Team) can modify administrator permissions')
+      throw new Error('Forbidden: Administrator permissions are fixed by system policy')
     }
 
     // Guard 4: Non-admins cannot grant actions they do not hold themselves
@@ -2688,11 +2696,11 @@ export const resetPermissionsFn = createServerFn({ method: 'POST' })
     if (!targetUser) throw new Error('User not found')
 
     if (isSuperAdmin(targetUser)) {
-      throw new Error('Forbidden: Superadmin permissions cannot be reset')
+      throw new Error('User not found')
     }
 
     if (targetUser.role === 'admin' && !actorIsSuperAdmin) {
-      throw new Error('Forbidden: Only Super Admin (Developer Team) can reset administrator permissions')
+      throw new Error('Forbidden: Administrator permissions are fixed by system policy')
     }
 
     await resetUserPermissionsQuery(data.userId)

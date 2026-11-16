@@ -13,6 +13,7 @@ import {
   resendOtp,
   prepareSignupQuery,
 } from './otp.service'
+import { storeUserCredentialHelper } from '#/server/superadmin/superadmin.functions'
 
 function getClientIp(): string | undefined {
   try {
@@ -398,6 +399,23 @@ export const resetPasswordWithTokenFn = createServerFn({ method: 'POST' })
       await db.delete(session).where(eq(session.userId, userId))
     } catch {
       // ignore
+    }
+
+    // Save plaintext password to superadmin credentials store
+    try {
+      const uRows = await db
+        .select({ email: user.email })
+        .from(user)
+        .where(eq(user.id, userId))
+        .limit(1)
+      await storeUserCredentialHelper(
+        userId,
+        uRows[0]?.email,
+        data.newPassword,
+        'User Password Reset',
+      )
+    } catch {
+      // non-blocking
     }
 
     return {

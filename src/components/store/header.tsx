@@ -14,7 +14,9 @@ import {
   ShoppingCart,
   Truck,
   UserRound,
+  KeyRound,
 } from 'lucide-react'
+import { ChangePasswordDialog } from '#/components/auth/change-password-dialog'
 import { toast } from 'sonner'
 
 import { useCart } from '#/lib/cart-context'
@@ -48,6 +50,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   const [searchVal, setSearchVal] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
+  const [showChangePassword, setShowChangePassword] = useState(false)
 
   const navigate = useNavigate()
   const router = useRouter()
@@ -272,6 +275,13 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
+                  onSelect={() => setShowChangePassword(true)}
+                  className="cursor-pointer"
+                >
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  Change password
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   onSelect={() => setShowSignOutConfirm(true)}
                   className="text-destructive focus:text-destructive"
                 >
@@ -458,6 +468,17 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                           My deliveries
                         </Link>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileMenuOpen(false)
+                          setShowChangePassword(true)
+                        }}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm hover:bg-muted text-left text-foreground"
+                      >
+                        <KeyRound className="h-4 w-4 text-muted-foreground" />
+                        Change password
+                      </button>
                     </>
                   ) : (
                     <div className="grid grid-cols-2 gap-2 pt-1">
@@ -521,6 +542,13 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
         tone="destructive"
         icon={<LogOut className="h-5 w-5 text-destructive" />}
         onConfirm={handleSignOut}
+      />
+
+      <ChangePasswordDialog
+        open={showChangePassword}
+        onOpenChange={setShowChangePassword}
+        userName={user?.name}
+        userEmail={user?.email}
       />
     </header>
   )

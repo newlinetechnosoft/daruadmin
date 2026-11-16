@@ -19,7 +19,6 @@ import { Awesomebar } from '#/components/shared/awesomebar'
 import { ShortcutsHelp } from '#/components/shared/shortcuts-help'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import {
-  Terminal,
   AlertCircle,
   X,
   LayoutDashboard,
@@ -46,8 +45,10 @@ import {
   Trash2,
   ShoppingBasket,
   Milk,
+  KeyRound,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { ChangePasswordDialog } from '#/components/auth/change-password-dialog'
 import { toast } from 'sonner'
 import {
   DropdownMenu,
@@ -336,89 +337,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       },
     ],
   },
-  {
-    label: 'Developer',
-    items: [
-      {
-        label: 'Super Admin Panel',
-        to: '/superadmin',
-        icon: Terminal,
-        module: 'staff',
-        subItems: [
-          {
-            label: 'Customers Management',
-            to: '/superadmin',
-            search: { tab: 'customers' },
-          },
-          {
-            label: 'Catalog Items Management',
-            to: '/superadmin',
-            search: { tab: 'items' },
-          },
-          {
-            label: 'Dealers & Suppliers',
-            to: '/superadmin',
-            search: { tab: 'dealers' },
-          },
-          {
-            label: 'Delivery Riders',
-            to: '/superadmin',
-            search: { tab: 'riders' },
-          },
-          {
-            label: 'Categories Management',
-            to: '/superadmin',
-            search: { tab: 'categories' },
-          },
-          {
-            label: 'Brands Management',
-            to: '/superadmin',
-            search: { tab: 'brands' },
-          },
-          {
-            label: 'Dynamic Feature Flags',
-            to: '/superadmin',
-            search: { tab: 'features' },
-          },
-          {
-            label: 'Pricing & Delivery Rules',
-            to: '/superadmin',
-            search: { tab: 'pricing' },
-          },
-          {
-            label: 'Admin Panel Management',
-            to: '/superadmin',
-            search: { tab: 'admin-panel' },
-          },
-          {
-            label: 'System Management',
-            to: '/superadmin',
-            search: { tab: 'system' },
-          },
-          {
-            label: 'Website Management',
-            to: '/superadmin',
-            search: { tab: 'website' },
-          },
-          {
-            label: 'User & Role Engine',
-            to: '/superadmin',
-            search: { tab: 'users' },
-          },
-          {
-            label: 'Live Audit Trail',
-            to: '/superadmin',
-            search: { tab: 'audit' },
-          },
-          {
-            label: 'Telemetry & Sandbox',
-            to: '/superadmin',
-            search: { tab: 'console' },
-          },
-        ],
-      },
-    ],
-  },
 ]
 
 const ALL_NAV = NAV_GROUPS.flatMap((g) => g.items)
@@ -459,6 +377,7 @@ function AdminLayout() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
+  const [showChangePassword, setShowChangePassword] = useState(false)
   const [notificationsRead, setNotificationsRead] = useState(false)
   const liveUnread =
     chromeQuery.data?.unread ?? liveNotifications.filter((n) => !n.read).length
@@ -544,13 +463,10 @@ function AdminLayout() {
     return NAV_GROUPS.map((group) => ({
       ...group,
       items: group.items.filter((item) => {
-        if (group.label === 'Developer') {
-          return isSuperAdmin(adminUser)
-        }
         return can(grants, item.module, 'view')
       }),
     })).filter((group) => group.items.length > 0)
-  }, [grants, adminUser])
+  }, [grants])
 
   return (
     <SidebarProvider>
@@ -597,9 +513,7 @@ function AdminLayout() {
                       <span className="text-xs text-sidebar-foreground/60 font-medium">
                         {adminUser.role === 'manager'
                           ? 'Manager Console'
-                          : isSuperAdmin(adminUser)
-                            ? 'Super Admin Console'
-                            : 'Admin Console'}
+                          : 'Admin Console'}
                       </span>
                     </div>
                   </Link>
@@ -701,7 +615,7 @@ function AdminLayout() {
                 <BreadcrumbItem>
                   <BreadcrumbLink asChild>
                     <Link to="/admin">
-                      {adminUser.role === 'manager' ? 'Manager' : isSuperAdmin(adminUser) ? 'Super Admin' : 'Admin'}
+                      {adminUser.role === 'manager' ? 'Manager' : 'Admin'}
                     </Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
@@ -726,9 +640,7 @@ function AdminLayout() {
                   <span className="hidden sm:inline">
                     {adminUser.role === 'manager'
                       ? 'Search console...'
-                      : isSuperAdmin(adminUser)
-                        ? 'Search superadmin...'
-                        : 'Search admin...'}
+                      : 'Search admin...'}
                   </span>
                   <span className="sm:hidden">Search...</span>
                 </span>
@@ -819,10 +731,10 @@ function AdminLayout() {
                       </p>
                       <div className="pt-1">
                         <Badge
-                          variant={isSuperAdmin(adminUser) ? 'default' : 'outline'}
+                          variant="outline"
                           className="text-xs font-semibold capitalize px-2 py-0.5"
                         >
-                          {isSuperAdmin(adminUser) ? 'Super Admin (Dev)' : adminUser.role}
+                          {adminUser.role}
                         </Badge>
                       </div>
                     </div>
@@ -837,6 +749,13 @@ function AdminLayout() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => setShowChangePassword(true)}
+                    className="cursor-pointer gap-2"
+                  >
+                    <KeyRound className="h-4 w-4" />
+                    <span>Change password</span>
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={() => setShowSignOutConfirm(true)}
                     disabled={isLoggingOut}
@@ -923,6 +842,13 @@ function AdminLayout() {
           isLoading={isLoggingOut}
           icon={<LogOut className="h-5 w-5 text-destructive" />}
           onConfirm={handleSignOut}
+        />
+
+        <ChangePasswordDialog
+          open={showChangePassword}
+          onOpenChange={setShowChangePassword}
+          userName={adminUser.name}
+          userEmail={adminUser.email}
         />
       </div>
     </SidebarProvider>

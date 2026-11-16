@@ -433,8 +433,8 @@ export const deleteItemFn = createServerFn({ method: 'POST' })
 
 export const getAdminUsersFn = createServerFn({ method: 'GET' }).handler(
   async () => {
-    await requirePermission('users', 'view')
-    return getAdminUsersQuery()
+    const { user: actor } = await requirePermission('users', 'view')
+    return getAdminUsersQuery(isSuperAdmin(actor))
   },
 )
 
@@ -466,7 +466,7 @@ export const updateUserRoleFn = createServerFn({ method: 'POST' })
     const targetUser = allUsers.find((u) => u.id === data.userId)
 
     if (targetUser && isSuperAdmin(targetUser)) {
-      throw new Error('Forbidden: Superadmin role and status cannot be altered')
+      throw new Error('User not found')
     }
 
     if (
@@ -475,7 +475,7 @@ export const updateUserRoleFn = createServerFn({ method: 'POST' })
       !actorIsSuperAdmin
     ) {
       const activeAdmins = allUsers.filter(
-        (u) => (u.role === 'admin' || isSuperAdmin(u)) && u.isActive !== false && !u.banned,
+        (u) => u.role === 'admin' && u.isActive !== false && !u.banned,
       )
       if (activeAdmins.length <= 1) {
         throw new Error(

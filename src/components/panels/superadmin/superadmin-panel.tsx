@@ -15,6 +15,8 @@ import {
   saveSuperAdminFeatureFlagsFn,
   saveSuperAdminPricingRulesFn,
   exportSuperAdminAuditLogsFn,
+  getSuperAdminUserPasswordFn,
+  updateSuperAdminUserPasswordFn,
   DEFAULT_FEATURE_FLAGS,
   DEFAULT_PRICING_RULES,
   DEFAULT_SYSTEM_SETTINGS,
@@ -114,6 +116,13 @@ import {
   ShieldAlert,
   UserX,
   UserCheck,
+  Lock,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -160,9 +169,6 @@ const ENTITY_CONFIGS: Record<BulkEntityKey, EntityConfig> = {
     key: 'customers',
     label: 'Customers Management',
     singularLabel: 'Customer',
-    description:
-      'Manage user accounts with the customer role. Ideal for migrating retail customer records, web accounts, and phone databases.',
-    primaryKeyDesc: 'Upsert matches on email. If missing, creates a new usr_ account.',
     icon: Users,
     columns: [
       { name: 'name', required: true, type: 'string', desc: 'Customer full name', sample: 'Aarav Sharma' },
@@ -776,6 +782,24 @@ export function SuperAdminPanel() {
   const [banReasonInput, setBanReasonInput] = useState('')
   const [isUpdatingUser, setIsUpdatingUser] = useState(false)
 
+  // Super Admin Password Vault State
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
+  const [passwordTargetUser, setPasswordTargetUser] = useState<any>(null)
+  const [pinInput, setPinInput] = useState('')
+  const [isPinVerified, setIsPinVerified] = useState(false)
+  const [pinError, setPinError] = useState('')
+  const [isCheckingPassword, setIsCheckingPassword] = useState(false)
+  const [revealedPasswordData, setRevealedPasswordData] = useState<{
+    password: string | null
+    updatedAt: string | null
+    hasPasswordHash: boolean
+  } | null>(null)
+  const [showRevealedPassword, setShowRevealedPassword] = useState(false)
+  const [newPasswordInput, setNewPasswordInput] = useState('')
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
+  const [copied, setCopied] = useState(false)
+
   const filteredUsers = useMemo(() => {
     if (!usersData) return []
     return usersData.filter((u) => {
@@ -882,6 +906,110 @@ export function SuperAdminPanel() {
       toast.error(err instanceof Error ? err.message : 'Failed to lift suspension')
     } finally {
       setIsUpdatingUser(false)
+    }
+  }
+
+  const handleOpenPasswordModal = (u: any) => {
+    setPasswordTargetUser(u)
+    setPinInput('')
+    setIsPinVerified(false)
+    setPinError('')
+    setRevealedPasswordData(null)
+    setShowRevealedPassword(false)
+    setNewPasswordInput('')
+    setShowNewPassword(false)
+    setCopied(false)
+    setPasswordDialogOpen(true)
+  }
+
+  const handleClosePasswordModal = () => {
+    setPasswordDialogOpen(false)
+    setPasswordTargetUser(null)
+    setPinInput('')
+    setIsPinVerified(false)
+    setPinError('')
+    setRevealedPasswordData(null)
+    setNewPasswordInput('')
+    setCopied(false)
+  }
+
+  const handleVerifyPin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!passwordTargetUser) return
+    if (!pinInput.trim()) {
+      setPinError('Please enter the 4-digit Master Security PIN')
+      return
+    }
+    setPinError('')
+    setIsCheckingPassword(true)
+    try {
+      const res = await getSuperAdminUserPasswordFn({
+        data: {
+          userId: passwordTargetUser.id,
+          pin: pinInput.trim(),
+        },
+      })
+      setIsPinVerified(true)
+      setRevealedPasswordData({
+        password: res.password,
+        updatedAt: res.updatedAt,
+        hasPasswordHash: res.hasPasswordHash,
+      })
+      toast.success('Security PIN verified')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Invalid Security PIN'
+      setPinError(msg)
+      toast.error(msg)
+    } finally {
+      setIsCheckingPassword(false)
+    }
+  }
+
+  const handleGenerateRandomPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*'
+    let pwd = ''
+    for (let i = 0; i < 12; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    setNewPasswordInput(pwd)
+    setShowNewPassword(true)
+  }
+
+  const handleCopyPassword = (text: string) => {
+    if (!text) return
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    toast.success('Password copied to clipboard')
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleSaveNewPassword = async () => {
+    if (!passwordTargetUser) return
+    if (!newPasswordInput || newPasswordInput.length < 6) {
+      toast.error('Password must be at least 6 characters long')
+      return
+    }
+    setIsSavingPassword(true)
+    try {
+      const res = await updateSuperAdminUserPasswordFn({
+        data: {
+          userId: passwordTargetUser.id,
+          newPassword: newPasswordInput,
+          pin: pinInput.trim(),
+        },
+      })
+      toast.success(res.message || 'Password successfully updated')
+      setRevealedPasswordData({
+        password: res.password,
+        updatedAt: new Date().toISOString(),
+        hasPasswordHash: true,
+      })
+      setNewPasswordInput('')
+      setShowRevealedPassword(true)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update password')
+    } finally {
+      setIsSavingPassword(false)
     }
   }
 
@@ -1071,8 +1199,6 @@ export function SuperAdminPanel() {
       <PageHeader
         kicker="Developer Operations"
         title="Super Admin Panel"
-        description="Root developer console: granular entity bulk mobility, live notices broadcast, dynamic payment & support governance."
-        count="Developer Root Active"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -1118,32 +1244,7 @@ export function SuperAdminPanel() {
       />
 
       {/* Developer Root Status Alert */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl border border-primary/25 bg-primary/5 text-foreground">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
-            <Terminal className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-sm">Root Developer Access</span>
-              <Badge variant="default" className="text-[11px] px-2 py-0.5">
-                admin@newline.com
-              </Badge>
-              <Badge variant="outline" className="text-[11px] px-2 py-0.5 border-primary/40 text-primary font-mono">
-                Full DB & Broadcast Authority
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Super Admin bypasses all checks, controls customer/catalog/fleet bulk data, and can broadcast dynamic payment & support alerts across the admin console.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-xs px-3 py-1 font-mono shrink-0">
-            Active Tab: {currentTab}
-          </Badge>
-        </div>
-      </div>
+      
 
       {/* Live System Overview KPIs */}
       <DataSection isRefreshing={isFetching}>
@@ -3410,6 +3511,16 @@ export function SuperAdminPanel() {
                               <div className="flex items-center justify-end gap-1.5">
                                 <Button
                                   size="sm"
+                                  variant="outline"
+                                  onClick={() => handleOpenPasswordModal(u)}
+                                  className="h-7 text-xs px-2 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/10 gap-1"
+                                  title="View & Edit Password"
+                                >
+                                  <KeyRound className="h-3 w-3" />
+                                  <span>Password</span>
+                                </Button>
+                                <Button
+                                  size="sm"
                                   variant="ghost"
                                   disabled={isUpdatingUser || isSuper}
                                   onClick={() => handleToggleUserActive(u.id, u.isActive !== false)}
@@ -3753,6 +3864,213 @@ export function SuperAdminPanel() {
               <span>Confirm Suspension</span>
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Super Admin Password Vault Dialog */}
+      <Dialog
+        open={passwordDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) handleClosePasswordModal()
+          else setPasswordDialogOpen(true)
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                <Lock className="h-4 w-4" />
+              </div>
+              <span>User Password Security Vault</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Master credential inspection & reset for{' '}
+              <strong className="text-foreground">{passwordTargetUser?.name || 'User'}</strong> ({passwordTargetUser?.email || ''}).
+            </DialogDescription>
+          </DialogHeader>
+
+          {!isPinVerified ? (
+            <form onSubmit={handleVerifyPin} className="space-y-4 py-2">
+             
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Security PIN</Label>
+                <div className="relative">
+                  <Input
+                    type="password"
+                    autoFocus
+                    maxLength={10}
+                    value={pinInput}
+                    onChange={(e) => {
+                      setPinInput(e.target.value)
+                      if (pinError) setPinError('')
+                    }}
+                    placeholder="Enter PIN"
+                    className="text-xs h-9 tracking-widest pl-8"
+                  />
+                  <Lock className="h-3.5 w-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+                </div>
+                {pinError && (
+                  <p className="text-[11px] text-rose-500 font-medium flex items-center gap-1 mt-1">
+                    <AlertCircle className="h-3 w-3" />
+                    <span>{pinError}</span>
+                  </p>
+                )}
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClosePasswordModal}
+                  className="text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isCheckingPassword || !pinInput.trim()}
+                  className="text-xs gap-1.5 bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
+                >
+                  {isCheckingPassword ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <KeyRound className="h-3 w-3" />
+                  )}
+                  <span>Verify PIN & Unlock</span>
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : (
+            <div className="space-y-4 py-2">
+              {/* Current Password View */}
+              <div className="rounded-lg border border-border bg-muted/30 p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <KeyRound className="h-3.5 w-3.5 text-primary" />
+                    Current Plaintext Password
+                  </span>
+                  {revealedPasswordData?.updatedAt && (
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      Updated: {new Date(revealedPasswordData.updatedAt).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+
+                {revealedPasswordData?.password ? (
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        readOnly
+                        type={showRevealedPassword ? 'text' : 'password'}
+                        value={revealedPasswordData.password}
+                        className="font-mono text-xs h-9 bg-background pr-10 select-all"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowRevealedPassword((v) => !v)}
+                        className="h-7 w-7 absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        title={showRevealedPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showRevealedPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      </Button>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCopyPassword(revealedPasswordData.password!)}
+                      className="h-9 text-xs px-2.5 gap-1 shrink-0"
+                    >
+                      {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      <span>{copied ? 'Copied' : 'Copy'}</span>
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="rounded border border-amber-500/20 bg-amber-500/5 p-2.5 text-xs text-muted-foreground space-y-1">
+                    <p className="text-[11px] font-medium text-foreground">
+                      One-Way Hashed in Database
+                    </p>
+                    <p className="text-[10px] leading-relaxed">
+                      This user account has an active one-way cryptographic hash. Set a new password below to make it visible and manageable in this Super Admin vault.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Change / Set New Password */}
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold">Set New Password</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleGenerateRandomPassword}
+                    className="h-6 text-[11px] px-2 text-primary gap-1 hover:bg-primary/10"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    <span>Generate Random</span>
+                  </Button>
+                </div>
+
+                <div className="relative">
+                  <Input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPasswordInput}
+                    onChange={(e) => setNewPasswordInput(e.target.value)}
+                    placeholder="Enter at least 6 characters..."
+                    className="text-xs h-9 pr-10 font-mono"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowNewPassword((v) => !v)}
+                    className="h-7 w-7 absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    title={showNewPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showNewPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
+
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  Changing the password immediately updates the credential hash in the database, terminates existing active user sessions, and stores the visible value in the Super Admin vault.
+                </p>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={isSavingPassword || !newPasswordInput || newPasswordInput.length < 6}
+                  onClick={handleSaveNewPassword}
+                  className="w-full text-xs gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs h-9"
+                >
+                  {isSavingPassword ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <KeyRound className="h-3 w-3" />
+                  )}
+                  <span>Save & Apply New Password</span>
+                </Button>
+              </div>
+
+              <DialogFooter className="pt-2 border-t border-border">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClosePasswordModal}
+                  className="text-xs"
+                >
+                  Done
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

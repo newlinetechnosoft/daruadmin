@@ -53,6 +53,7 @@ import {
   Truck,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ChangePasswordCard } from '#/components/auth/change-password-dialog'
 
 const GATEWAY_NAMES: Record<
   PaymentMethod,
@@ -538,6 +539,9 @@ export function SettingsPanel() {
                     </p>
                   </CardContent>
                 </Card>
+
+                {/* Password & Security Card */}
+                <ChangePasswordCard />
               </div>
             </div>
           </TabsContent>

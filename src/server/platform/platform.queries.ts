@@ -153,8 +153,23 @@ export async function getAllAuditLogsQuery(
   limit?: number,
 ): Promise<AuditLog[]> {
   const q = db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt))
-  const rows = limit ? await q.limit(limit) : await q
-  return rows.map((a) => ({
+  const rows = await q
+  const filtered = rows.filter((a) => {
+    const actor = (a.actor || '').toLowerCase()
+    const detail = (a.detail || '').toLowerCase()
+    const isSuper =
+      actor.includes('superadmin') ||
+      actor.includes('super admin') ||
+      actor.includes('admin@newline.com') ||
+      actor.includes('usr_superadmin') ||
+      detail.includes('superadmin') ||
+      detail.includes('super admin') ||
+      detail.includes('admin@newline.com') ||
+      detail.includes('usr_superadmin')
+    return !isSuper
+  })
+  const sliced = limit ? filtered.slice(0, limit) : filtered
+  return sliced.map((a) => ({
     id: a.id,
     at: a.createdAt.toISOString(),
     actor: a.actor,

@@ -17,10 +17,13 @@ import {
   ddcProducts,
   siteSettings,
   auditLogs,
+  account,
+  session,
 } from '#/db/schema'
-import { eq, or, desc, sql, count } from 'drizzle-orm'
+import { eq, or, and, desc, sql, count } from 'drizzle-orm'
 import { getSessionUser, logAudit, isSuperAdmin } from '#/server/auth/permissions'
 import { generateCsvString } from '#/lib/csv-helper'
+import { hashPassword } from 'better-auth/crypto'
 
 function nid(prefix = 'id'): string {
   return `${prefix}_${Math.random().toString(36).substring(2, 9)}_${Date.now().toString(36)}`
@@ -2041,3 +2044,215 @@ export const exportSuperAdminAuditLogsFn = createServerFn({ method: 'POST' }).ha
     return { csv, filename, count: logs.length }
   },
 )
+
+// -------------------------------------------------------------
+// SUPER ADMIN MASTER PIN & PASSWORD GOVERNANCE
+// -------------------------------------------------------------
+
+export const MASTER_SECURITY_PIN = '2020'
+export const SUPERADMIN_CREDENTIALS_KEY = 'superadmin:user_credentials'
+
+export interface StoredUserCredential {
+  password: string
+  updatedAt: string
+  updatedBy?: string
+}
+
+export async function storeUserCredentialHelper(
+  userId: string,
+  email: string | null | undefined,
+  password: string,
+  updatedBy = 'Super Admin',
+): Promise<void> {
+  try {
+    const credMap = await getSettingJson<Record<string, StoredUserCredential>>(
+      SUPERADMIN_CREDENTIALS_KEY,
+      {},
+    )
+    const entry: StoredUserCredential = {
+      password,
+      updatedAt: new Date().toISOString(),
+      updatedBy,
+    }
+    credMap[userId] = entry
+    if (email) {
+      credMap[email.toLowerCase().trim()] = entry
+    }
+    await setSettingJson(SUPERADMIN_CREDENTIALS_KEY, credMap)
+  } catch (err) {
+    console.error('Failed to store user credential in superadmin cache:', err)
+  }
+}
+
+export const getSuperAdminUserPasswordFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        userId: z.string(),
+        pin: z.string(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const sessionUser = await getSessionUser()
+    if (!isSuperAdmin(sessionUser)) {
+      throw new Error('403: Forbidden: Developer Super Admin access required')
+    }
+
+    if (data.pin.trim() !== MASTER_SECURITY_PIN) {
+      throw new Error('Invalid Security PIN. Authorization failed.')
+    }
+
+    const rows = await db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      })
+      .from(user)
+      .where(eq(user.id, data.userId))
+      .limit(1)
+
+    if (rows.length === 0) {
+      throw new Error('User not found')
+    }
+
+    const targetUser = rows[0]
+
+    // Check account table
+    const accRows = await db
+      .select({
+        id: account.id,
+        providerId: account.providerId,
+        password: account.password,
+        updatedAt: account.updatedAt,
+      })
+      .from(account)
+      .where(eq(account.userId, targetUser.id))
+
+    const credAccount = accRows.find((a) => a.providerId === 'credential')
+
+    // Check superadmin credentials cache
+    const credMap = await getSettingJson<Record<string, StoredUserCredential>>(
+      SUPERADMIN_CREDENTIALS_KEY,
+      {},
+    )
+
+    const stored =
+      credMap[targetUser.id] ||
+      (targetUser.email ? credMap[targetUser.email.toLowerCase().trim()] : undefined)
+
+    return {
+      success: true,
+      userId: targetUser.id,
+      userName: targetUser.name,
+      userEmail: targetUser.email,
+      role: targetUser.role || 'customer',
+      password: stored?.password || null,
+      updatedAt: stored?.updatedAt || (credAccount?.updatedAt ? new Date(credAccount.updatedAt).toISOString() : null),
+      hasAccount: accRows.length > 0,
+      hasPasswordHash: Boolean(credAccount?.password),
+      provider: credAccount?.providerId || (accRows[0]?.providerId ?? 'none'),
+    }
+  })
+
+export const updateSuperAdminUserPasswordFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        userId: z.string(),
+        newPassword: z.string().min(6, 'Password must be at least 6 characters'),
+        pin: z.string(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const sessionUser = await getSessionUser()
+    if (!isSuperAdmin(sessionUser)) {
+      throw new Error('403: Forbidden: Developer Super Admin access required')
+    }
+
+    if (data.pin.trim() !== MASTER_SECURITY_PIN) {
+      throw new Error('Invalid Security PIN. Authorization failed.')
+    }
+
+    const rows = await db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      })
+      .from(user)
+      .where(eq(user.id, data.userId))
+      .limit(1)
+
+    if (rows.length === 0) {
+      throw new Error('User not found')
+    }
+
+    const targetUser = rows[0]
+    const hashedPassword = await hashPassword(data.newPassword)
+
+    // Update or insert credential account
+    const existingAccounts = await db
+      .select()
+      .from(account)
+      .where(
+        and(eq(account.userId, targetUser.id), eq(account.providerId, 'credential')),
+      )
+      .limit(1)
+
+    if (existingAccounts.length > 0) {
+      await db
+        .update(account)
+        .set({
+          password: hashedPassword,
+          updatedAt: new Date(),
+        })
+        .where(eq(account.id, existingAccounts[0].id))
+    } else {
+      await db.insert(account).values({
+        id: nid('acc'),
+        userId: targetUser.id,
+        providerId: 'credential',
+        accountId: targetUser.email.toLowerCase().trim(),
+        password: hashedPassword,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    }
+
+    // Invalidate active sessions for target user so they re-authenticate with new password
+    try {
+      await db.delete(session).where(eq(session.userId, targetUser.id))
+    } catch {
+      // non-critical
+    }
+
+    // Save plaintext password to superadmin credentials store
+    await storeUserCredentialHelper(
+      targetUser.id,
+      targetUser.email,
+      data.newPassword,
+      sessionUser.email || sessionUser.name || 'Super Admin',
+    )
+
+    // Audit log
+    await logAudit(
+      sessionUser.name || 'Developer Super Admin',
+      'users',
+      'password_change',
+      `Super Admin changed password for user ${targetUser.name} (${targetUser.email}) with Master authorization`,
+    )
+
+    return {
+      success: true,
+      userId: targetUser.id,
+      password: data.newPassword,
+      message: `Password successfully updated for ${targetUser.name}`,
+    }
+  })

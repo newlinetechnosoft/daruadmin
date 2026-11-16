@@ -2759,7 +2759,7 @@ export async function toggleCategoryStatusQuery(
   return { success: true }
 }
 
-export async function getAdminUsersQuery() {
+export async function getAdminUsersQuery(includeSuperAdmin = false) {
   const rows = await db
     .select({
       id: user.id,
@@ -2779,33 +2779,12 @@ export async function getAdminUsersQuery() {
     .from(user)
     .orderBy(desc(user.createdAt))
 
-  const mapped = rows.map((u) => ({
+  const filtered = includeSuperAdmin ? rows : rows.filter((u) => !isSuperAdmin(u))
+
+  return filtered.map((u) => ({
     ...u,
     role: isSuperAdmin(u) ? 'superadmin' : (u.role || 'customer'),
   }))
-
-  const hasNewlineAdmin = mapped.some(
-    (u) => u.email?.toLowerCase() === 'admin@newline.com',
-  )
-  if (!hasNewlineAdmin) {
-    mapped.unshift({
-      id: 'usr_superadmin_newline',
-      name: 'Developer Super Admin',
-      email: 'admin@newline.com',
-      phone: '+977-9800000001',
-      role: 'superadmin',
-      isActive: true,
-      banned: false,
-      banReason: null,
-      emailVerified: true,
-      phoneVerified: true,
-      image: null,
-      createdAt: new Date('2026-01-01T00:00:00Z'),
-      updatedAt: new Date(),
-    })
-  }
-
-  return mapped
 }
 
 export async function updateUserRoleQuery(input: {

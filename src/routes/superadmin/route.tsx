@@ -61,9 +61,11 @@ import {
   Globe,
   Shield,
   FileText,
+  KeyRound,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
+import { ChangePasswordDialog } from '#/components/auth/change-password-dialog'
 import type { SuperAdminTabKey } from '#/components/panels/superadmin'
 
 interface SuperAdminNavItem {
@@ -156,6 +158,7 @@ function SuperAdminLayout() {
   const routerState = useRouterState()
   const queryClient = useQueryClient()
   const [logoutOpen, setLogoutOpen] = useState(false)
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const { data: access } = useQuery(adminQueries.access())
@@ -424,6 +427,15 @@ function SuperAdminLayout() {
                 <Button
                   variant="ghost"
                   size="icon"
+                  onClick={() => setChangePasswordOpen(true)}
+                  className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 w-8"
+                  title="Change Super Admin password"
+                >
+                  <KeyRound className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setLogoutOpen(true)}
                   className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8"
                   title="Sign out of developer command center"
@@ -460,6 +472,14 @@ function SuperAdminLayout() {
           confirmLabel="Sign Out"
           tone="destructive"
           onConfirm={handleLogout}
+        />
+
+        {/* Change password dialog */}
+        <ChangePasswordDialog
+          open={changePasswordOpen}
+          onOpenChange={setChangePasswordOpen}
+          userName={currentUser?.name || 'Developer Super Admin'}
+          userEmail={currentUser?.email || 'admin@newline.com'}
         />
       </div>
     </SidebarProvider>
