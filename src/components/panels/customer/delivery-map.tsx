@@ -20,9 +20,9 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
         value={value}
         onChange={onChange}
         disabled={disabled}
-        restrictToButwal={true}
-        boundsWarningMessage="Please select a location within the Butwal & Tilottama delivery zone."
-        helperText="Tap map or drag pin to your address in Butwal"
+        restrictToZone={true}
+        boundsWarningMessage="This location is outside our service area."
+        helperText="Tap map or drag pin to your delivery address"
         showCoordinatesInputs={false}
       />
 
@@ -30,7 +30,7 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
       <div className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-1.5 text-xs font-mono text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <MapPin className="h-3.5 w-3.5 text-primary" />
-          <span>Coordinates (Butwal):</span>
+          <span>Coordinates:</span>
         </span>
         {value && isWithinButwalArea(value.lat, value.lng) ? (
           <span className="text-foreground font-semibold">
@@ -38,8 +38,7 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
           </span>
         ) : (
           <span className="text-primary font-semibold">
-            {DEFAULT_MAP_CENTER[0].toFixed(6)}° N,{' '}
-            {DEFAULT_MAP_CENTER[1].toFixed(6)}° E (Traffic Chowk)
+            Service Zone (Butwal – Bhairahawa)
           </span>
         )}
       </div>

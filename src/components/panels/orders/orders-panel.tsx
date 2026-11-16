@@ -646,26 +646,22 @@ export function OrdersPanel() {
         <KpiCard
           label="Total Orders"
           value={totalOrdersCount}
-          note="All recorded customer purchases"
           icon={ClipboardList}
         />
         <KpiCard
           label="Pending Dispatch"
           value={pendingCount}
-          note="Needs warehouse confirmation"
           icon={Clock}
           tone={pendingCount > 0 ? 'danger' : 'default'}
         />
         <KpiCard
           label="Out For Delivery"
           value={outForDeliveryCount}
-          note="Assigned to active couriers"
           icon={Bike}
         />
         <KpiCard
           label="Delivered Revenue"
           value={formatNPR(deliveredRevenue)}
-          note="Realized turnover in NPR"
           icon={CreditCard}
           tone="success"
         />

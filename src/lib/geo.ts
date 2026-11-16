@@ -3,6 +3,10 @@
  * zone verification, and courier/dealer routing in Nepal (defaulting to Butwal/Rupandehi).
  */
 
+import { isInsideZone, ZONE_BOUNDS } from './zone'
+
+export { isInsideZone, ZONE_POLYGON, ZONE_CONFIG, ZONE_BOUNDS } from './zone'
+
 export interface GeoPoint {
   lat: number
   lng: number
@@ -15,26 +19,20 @@ export const DEFAULT_MAP_CENTER: [number, number] = [27.7006, 83.4484]
 export const DEFAULT_MAP_ZOOM = 14
 
 /**
- * Bounding box for Butwal Metropolitan & Tilottama / Rupandehi delivery zone.
- * Southwest: [27.5500, 83.3500] (Tilottama / Bhairahawa boundary)
- * Northeast: [27.8000, 83.5500] (Tinau / Golpark / Hill Park)
+ * Bounding box for Butwal, Tilottama & Bhairahawa delivery service zone.
+ * Southwest: [27.505727, 83.385857]
+ * Northeast: [27.737863, 83.527641]
  */
-export const BUTWAL_MAP_BOUNDS: [[number, number], [number, number]] = [
-  [27.55, 83.35],
-  [27.8, 83.55],
-]
+export const BUTWAL_MAP_BOUNDS: [[number, number], [number, number]] = ZONE_BOUNDS
 
 /**
- * Checks if coordinates fall within the Butwal & Tilottama delivery service corridor.
+ * Checks if coordinates fall strictly within the Butwal, Tilottama & Bhairahawa service zone.
  */
 export function isWithinButwalArea(
   lat: number | null | undefined,
   lng: number | null | undefined,
 ): boolean {
-  if (lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng)) {
-    return false
-  }
-  return lat >= 27.55 && lat <= 27.8 && lng >= 83.35 && lng <= 83.55
+  return isInsideZone(lat, lng)
 }
 
 /**

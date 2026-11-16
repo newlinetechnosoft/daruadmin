@@ -10,6 +10,8 @@ import {
 import 'leaflet/dist/leaflet.css'
 import markerIcon from 'leaflet/dist/images/marker-icon.png'
 import markerShadow from 'leaflet/dist/images/marker-shadow.png'
+import { ZONE_POLYGON, ZONE_CONFIG } from '#/lib/zone'
+import { ZoneRestriction } from '#/components/shared/zone-restriction'
 import type { Rider } from '#/server/operations/types'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -108,6 +110,8 @@ export function RiderTelemetryMap({
   const [flyTarget, setFlyTarget] = useState<[number, number] | null>(null)
   const [fitBoundsTarget, setFitBoundsTarget] =
     useState<L.LatLngBoundsExpression | null>(null)
+
+  const zoneBounds = useMemo(() => L.latLngBounds(ZONE_POLYGON), [])
 
   // 2-minute countdown timer (120 seconds) for next telemetry poll
   const [countdown, setCountdown] = useState(120)
@@ -397,15 +401,19 @@ export function RiderTelemetryMap({
             center={BUTWAL_HUB_COORDS}
             zoom={13}
             minZoom={10}
-            maxZoom={18}
+            maxZoom={19}
+            maxBounds={zoneBounds.pad(ZONE_CONFIG.padding)}
+            maxBoundsViscosity={ZONE_CONFIG.maxBoundsViscosity}
             scrollWheelZoom={true}
             className="h-full w-full"
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              bounds={zoneBounds}
             />
 
+            <ZoneRestriction fitInitial={false} />
             <MapController />
             <FlyToHandler target={flyTarget} />
             <FitBoundsHandler bounds={fitBoundsTarget} />

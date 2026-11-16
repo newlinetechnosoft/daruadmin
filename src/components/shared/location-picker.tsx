@@ -13,9 +13,14 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import {
   DEFAULT_MAP_CENTER,
   DEFAULT_MAP_ZOOM,
-  isWithinButwalArea,
 } from '#/lib/map-config'
 import type { GeoPoint } from '#/lib/map-config'
+import {
+  ZONE_POLYGON,
+  ZONE_CONFIG,
+  isInsideZone,
+} from '#/lib/zone'
+import { ZoneRestriction } from '#/components/shared/zone-restriction'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -33,20 +38,6 @@ const DefaultMarkerIcon = L.icon({
 })
 L.Marker.prototype.options.icon = DefaultMarkerIcon
 
-/**
- * Nepal approximate geographical bounding box:
- * Southwest: [26.3, 80.0]
- * Northeast: [30.5, 88.2]
- */
-export const NEPAL_MAP_BOUNDS: [[number, number], [number, number]] = [
-  [26.3, 80.0],
-  [30.5, 88.2],
-]
-
-export function isWithinNepal(lat: number, lng: number): boolean {
-  return lat >= 26.0 && lat <= 30.8 && lng >= 79.8 && lng <= 88.5
-}
-
 export interface LocationPickerProps {
   /** Selected coordinate point, or null if unassigned */
   value: GeoPoint | null
@@ -62,7 +53,9 @@ export interface LocationPickerProps {
   disabled?: boolean
   /** Read-only display mode without editing capabilities */
   readOnly?: boolean
-  /** If true, strictly constrains selection to the Butwal customer delivery corridor */
+  /** If true, strictly constrains selection and view to the service zone (defaults to true) */
+  restrictToZone?: boolean
+  /** Backward-compatible alias for restrictToZone */
   restrictToButwal?: boolean
   /** Warning message displayed if coordinates fall outside the selected zone */
   boundsWarningMessage?: string
@@ -72,17 +65,21 @@ export interface LocationPickerProps {
   showCoordinatesInputs?: boolean
   /** Custom test ID or container class name */
   className?: string
+  /** Custom mask fill color */
+  maskColor?: string
+  /** Custom mask boundary padding (defaults to 0.05) */
+  maskPadding?: number
 }
 
 // Sub-component to handle map clicks
 function MapEventsHandler({
   onSelect,
-  restrictToButwal,
+  restrictToZone = true,
   boundsWarningMessage,
   disabled,
 }: {
   onSelect?: (point: GeoPoint) => void
-  restrictToButwal?: boolean
+  restrictToZone?: boolean
   boundsWarningMessage?: string
   disabled?: boolean
 }) {
@@ -93,24 +90,15 @@ function MapEventsHandler({
       const lat = e.latlng.lat
       const lng = e.latlng.lng
 
-      if (restrictToButwal) {
-        if (isWithinButwalArea(lat, lng)) {
-          onSelect({ lat, lng })
-        } else {
+      if (restrictToZone) {
+        if (!isInsideZone(lat, lng)) {
           toast.warning(
-            boundsWarningMessage ||
-              'Please select a location within the Butwal & Tilottama delivery zone.',
+            boundsWarningMessage || ZONE_CONFIG.outsideWarningMessage,
           )
+          return
         }
-        return
       }
 
-      // Admin / general mode: warn if point is outside Nepal
-      if (!isWithinNepal(lat, lng)) {
-        toast.info(
-          'Note: The selected coordinates appear to be outside Nepal territory.',
-        )
-      }
       onSelect({ lat, lng })
     },
   })
@@ -118,7 +106,13 @@ function MapEventsHandler({
 }
 
 // Sub-component to fly to marker and invalidate size when container layout shifts
-function MapLifecycleHandler({ position }: { position: [number, number] }) {
+function MapLifecycleHandler({
+  position,
+  hasPosition,
+}: {
+  position: [number, number]
+  hasPosition: boolean
+}) {
   const map = useMap()
 
   // Invalidate size on mount & animation frames to avoid Leaflet gray-tile issue
@@ -129,10 +123,12 @@ function MapLifecycleHandler({ position }: { position: [number, number] }) {
     return () => clearTimeout(timer)
   }, [map])
 
-  // Center smoothly on position change
+  // Center smoothly on position change when a position is actively selected
   useEffect(() => {
-    map.flyTo(position, map.getZoom(), { animate: true, duration: 0.6 })
-  }, [position, map])
+    if (hasPosition) {
+      map.flyTo(position, map.getZoom(), { animate: true, duration: 0.6 })
+    }
+  }, [position, hasPosition, map])
 
   return null
 }
@@ -145,15 +141,21 @@ export function LocationPicker({
   height = 'h-64 sm:h-72',
   disabled = false,
   readOnly = false,
-  restrictToButwal = false,
+  restrictToZone = true,
+  restrictToButwal,
   boundsWarningMessage,
   helperText,
   showCoordinatesInputs = true,
   className,
+  maskColor,
+  maskPadding,
 }: LocationPickerProps) {
   const [mounted, setMounted] = useState(false)
   const [isLocating, setIsLocating] = useState(false)
   const markerRef = useRef<L.Marker | null>(null)
+
+  // Support restrictToButwal alias if explicitly passed
+  const isRestricted = restrictToButwal !== undefined ? restrictToButwal : restrictToZone
 
   useEffect(() => {
     setMounted(true)
@@ -161,12 +163,21 @@ export function LocationPicker({
 
   const isInteractive = !disabled && !readOnly
 
+  // Calculate zone bounds for tile restricting
+  const zoneBounds = useMemo(() => L.latLngBounds(ZONE_POLYGON), [])
+
   const hasValidValue = useMemo(() => {
     if (!value) return false
     const lat = Number(value.lat)
     const lng = Number(value.lng)
-    return !Number.isNaN(lat) && !Number.isNaN(lng) && lat !== 0 && lng !== 0
-  }, [value])
+    return (
+      !Number.isNaN(lat) &&
+      !Number.isNaN(lng) &&
+      lat !== 0 &&
+      lng !== 0 &&
+      (!isRestricted || isInsideZone(lat, lng))
+    )
+  }, [value, isRestricted])
 
   const mapCenter: [number, number] = useMemo(() => {
     if (hasValidValue && value) {
@@ -197,25 +208,11 @@ export function LocationPicker({
           lng: pos.coords.longitude,
         }
 
-        if (restrictToButwal && !isWithinButwalArea(point.lat, point.lng)) {
+        if (isRestricted && !isInsideZone(point.lat, point.lng)) {
           toast.warning(
-            'Your device location is outside Butwal. Centering on Butwal — please tap the map to place your pin.',
+            'Your device location is outside our service area. Please tap inside the highlighted zone.',
           )
-          onChange?.({
-            lat: defaultCenter[0],
-            lng: defaultCenter[1],
-          })
-          return
-        }
-
-        if (!isWithinNepal(point.lat, point.lng)) {
-          toast.warning(
-            'Your device location is outside Nepal. Centering on default location.',
-          )
-          onChange?.({
-            lat: defaultCenter[0],
-            lng: defaultCenter[1],
-          })
+          // As required: Keep map on zone, do NOT move marker
           return
         }
 
@@ -231,7 +228,7 @@ export function LocationPicker({
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     )
-  }, [restrictToButwal, onChange, defaultCenter])
+  }, [isRestricted, onChange])
 
   // SSR Skeleton Placeholder
   if (!mounted) {
@@ -258,8 +255,8 @@ export function LocationPicker({
           <span className="truncate">
             {helperText ||
               (isInteractive
-                ? 'Click map or drag pin to position location'
-                : 'Selected shop location')}
+                ? 'Click map or drag pin within service zone'
+                : 'Selected location')}
           </span>
         </span>
 
@@ -287,55 +284,67 @@ export function LocationPicker({
         <MapContainer
           center={mapCenter}
           zoom={defaultZoom}
-          minZoom={6}
-          maxZoom={18}
-          scrollWheelZoom={false}
+          minZoom={10}
+          maxZoom={19}
+          maxBounds={isRestricted ? zoneBounds.pad(maskPadding ?? ZONE_CONFIG.padding) : undefined}
+          maxBoundsViscosity={isRestricted ? ZONE_CONFIG.maxBoundsViscosity : undefined}
+          scrollWheelZoom={true}
           className="h-full w-full"
         >
+          {/* TileLayer restricted to zoneBounds so outer tiles are not fetched */}
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            bounds={isRestricted ? zoneBounds : undefined}
           />
+
+          {/* Service Zone Mask, Bounds Lock, and Outline */}
+          {isRestricted && (
+            <ZoneRestriction
+              maskColor={maskColor}
+              padding={maskPadding}
+              fitInitial={!hasValidValue}
+            />
+          )}
 
           <MapEventsHandler
             onSelect={isInteractive ? onChange : undefined}
-            restrictToButwal={restrictToButwal}
+            restrictToZone={isRestricted}
             boundsWarningMessage={boundsWarningMessage}
             disabled={!isInteractive}
           />
-          <MapLifecycleHandler position={markerPosition} />
 
-          {/* Marker rendered when coordinates are selected or active */}
-          <Marker
+          <MapLifecycleHandler
             position={markerPosition}
-            draggable={isInteractive}
-            ref={markerRef}
-            eventHandlers={{
-              dragend() {
-                if (!isInteractive || !onChange) return
-                const marker = markerRef.current
-                if (marker) {
-                  const latlng = marker.getLatLng()
-                  if (
-                    restrictToButwal &&
-                    !isWithinButwalArea(latlng.lat, latlng.lng)
-                  ) {
-                    toast.warning(
-                      boundsWarningMessage ||
-                        'Pin dragged outside delivery corridor. Resetting to center.',
-                    )
-                    marker.setLatLng(defaultCenter)
-                    onChange({
-                      lat: defaultCenter[0],
-                      lng: defaultCenter[1],
-                    })
-                    return
-                  }
-                  onChange({ lat: latlng.lat, lng: latlng.lng })
-                }
-              },
-            }}
+            hasPosition={hasValidValue}
           />
+
+          {/* Marker rendered when coordinates are set or active */}
+          {(hasValidValue || !isRestricted) && (
+            <Marker
+              position={markerPosition}
+              draggable={isInteractive}
+              ref={markerRef}
+              eventHandlers={{
+                dragend() {
+                  if (!isInteractive || !onChange) return
+                  const marker = markerRef.current
+                  if (marker) {
+                    const latlng = marker.getLatLng()
+                    if (isRestricted && !isInsideZone(latlng.lat, latlng.lng)) {
+                      toast.warning(
+                        boundsWarningMessage || ZONE_CONFIG.outsideWarningMessage,
+                      )
+                      // Reset marker to previous valid position
+                      marker.setLatLng(markerPosition)
+                      return
+                    }
+                    onChange({ lat: latlng.lat, lng: latlng.lng })
+                  }
+                },
+              }}
+            />
+          )}
         </MapContainer>
       </div>
 

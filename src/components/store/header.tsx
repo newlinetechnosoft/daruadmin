@@ -172,9 +172,6 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
             <Link to="/food" className={navLinkClass}>
               Food
             </Link>
-            <Link to="/track" className={navLinkClass}>
-              Track order
-            </Link>
           </nav>
         </div>
 
@@ -258,7 +255,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                 <DropdownMenuItem asChild>
                   <Link to="/track">
                     <Truck className="mr-2 h-4 w-4" />
-                    Track my order
+                    Track by code
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>

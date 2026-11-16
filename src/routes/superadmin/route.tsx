@@ -13,11 +13,18 @@ import { adminQueries } from '#/queries/admin'
 import { isSuperAdmin } from '#/server/auth/permissions-shared'
 import { authClient } from '#/lib/auth-client'
 import { clearAllLocalData } from '#/lib/idb'
+import { cn } from '#/lib/utils'
 import { ThemeToggle } from '#/components/shared/theme-toggle'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { Button } from '#/components/ui/button'
 import { Avatar, AvatarFallback } from '#/components/ui/avatar'
 import { Separator } from '#/components/ui/separator'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '#/components/ui/tooltip'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -49,7 +56,6 @@ import {
   LogOut,
   Cpu,
   RefreshCw,
-  ExternalLink,
   Users,
   Wine,
   Bike,
@@ -164,8 +170,8 @@ function SuperAdminLayout() {
   const { data: access } = useQuery(adminQueries.access())
   const { data: telemetry } = useQuery(adminQueries.superAdminTelemetry())
 
-  const currentTab =
-    ((routerState.location.search as any)?.tab as SuperAdminTabKey) || 'customers'
+  const search = routerState.location.search as Record<string, unknown>
+  const currentTab = (typeof search.tab === 'string' ? search.tab : 'customers') as SuperAdminTabKey
 
   const currentItem = useMemo(() => {
     for (const group of SUPERADMIN_NAV_GROUPS) {
@@ -357,21 +363,37 @@ function SuperAdminLayout() {
             {/* Right actions */}
             <div className="ml-auto flex items-center gap-2">
               {telemetry && (
-                <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded bg-muted/40 border border-border text-xs font-mono text-muted-foreground">
-                  <Cpu className="h-3.5 w-3.5 text-primary" />
-                  <span>Node {telemetry.nodeVersion}</span>
-                  <span className="text-border">|</span>
-                  <span
-                    className={
-                      telemetry.dbStatus === 'connected'
-                        ? 'text-emerald-500 flex items-center gap-1 font-semibold'
-                        : 'text-amber-500 flex items-center gap-1 font-semibold'
-                    }
-                  >
-                    DB: {telemetry.dbLatencyMs}ms
-                  </span>
-                                   
-                </div>
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="hidden sm:inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted/40 hover:bg-muted border border-border text-xs font-mono text-muted-foreground transition-colors cursor-help"
+                      >
+                        <span
+                          className={cn(
+                            'h-2 w-2 rounded-full',
+                            telemetry.dbStatus === 'connected' ? 'bg-emerald-500' : 'bg-amber-500',
+                          )}
+                        />
+                        <span className="font-semibold text-foreground">
+                          {telemetry.dbLatencyMs}ms
+                        </span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" align="end" className="text-xs font-mono space-y-1">
+                      <p className="font-semibold">
+                        DB: {telemetry.dbStatus} ({telemetry.dbLatencyMs}ms)
+                      </p>
+                      <p className="opacity-80">
+                        Node {telemetry.nodeVersion} • {telemetry.environment}
+                      </p>
+                      <p className="opacity-70 text-[10px]">
+                        Uptime: {Math.floor(telemetry.uptimeSeconds / 3600)}h {Math.floor((telemetry.uptimeSeconds % 3600) / 60)}m
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
 
               <Button

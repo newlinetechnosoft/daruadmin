@@ -425,4 +425,19 @@
   .animate-data-glow {
     animation: data-update-glow 1.5s ease-out forwards;
   }
+
+  /* Service Zone Map Mask and Boundary Outline */
+  .leaflet-pane.leaflet-mask-pane path,
+  .leaflet-zone-mask {
+    fill: var(--background, #09090b) !important;
+    fill-opacity: 1 !important;
+    stroke: none !important;
+  }
+
+  .leaflet-zone-outline {
+    stroke: var(--primary, #f59e0b) !important;
+    stroke-width: 2px !important;
+    stroke-opacity: 0.8 !important;
+    fill: none !important;
+  }
 }
