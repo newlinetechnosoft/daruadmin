@@ -145,14 +145,6 @@ export function StoreClosedPopup() {
                 </strong>
               </div>
             </div>
-            {allowAdvanceOrders && (
-              <Badge
-                variant="outline"
-                className="shrink-0 text-[10px] font-bold border-emerald-500/40 text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 uppercase px-2 py-0.5"
-              >
-                Advance Order
-              </Badge>
-            )}
           </div>
 
           {/* Stylish Countdown Timer Display */}
@@ -160,10 +152,7 @@ export function StoreClosedPopup() {
             <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 mb-2 font-mono">
               <span className="flex items-center gap-1.5">
                 <Timer className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 animate-pulse" />
-                <span>Countdown to Reopen</span>
-              </span>
-              <span className="text-[10px] normal-case font-sans font-medium text-zinc-500 dark:text-zinc-400">
-                Live countdown
+                <span>Live Countdown to Reopen</span>
               </span>
             </div>
             <StoreCountdownTimer
@@ -197,7 +186,7 @@ export function StoreClosedPopup() {
               onClick={handleDismiss}
               className="h-8 text-xs font-semibold gap-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-3 shadow-xs"
             >
-              <span>Order Now</span>
+              <span>Advance Order Now</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </div>

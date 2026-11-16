@@ -98,7 +98,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur-xl">
       {storeStatus?.showNotice && !storeStatus?.isOpen && (
-        <div className="w-full bg-amber-500/15 border-b border-amber-500/30 px-3 sm:px-6 py-2 text-xs text-amber-950 dark:text-amber-200 transition-colors">
+        <div className="hidden md:block w-full bg-amber-500/15 border-b border-amber-500/30 px-3 sm:px-6 py-2 text-xs text-amber-950 dark:text-amber-200 transition-colors">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2 text-center md:text-left">
             <div className="flex items-center gap-2 justify-center md:justify-start flex-wrap">
               <span className="relative flex h-2 w-2 shrink-0">
