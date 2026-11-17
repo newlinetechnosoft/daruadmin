@@ -616,7 +616,6 @@ export function OrdersPanel() {
       <PageHeader
         kicker="Commerce"
         title="Order Management"
-        description="Monitor lifecycle transitions, assign Butwal & Tilottama fleet couriers, and generate government-compliant VAT invoices or thermal dispatch slips."
         actions={
           <div className="flex items-center gap-2">
             <DataRefreshButton

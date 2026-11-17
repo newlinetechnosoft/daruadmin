@@ -245,7 +245,7 @@ export function GeneralLedgerTab() {
       },
       {
         accessorKey: 'debit',
-        header: 'Debit',
+        header: 'Debit (Dr)',
         cell: ({ row }) =>
           row.original.debit > 0 ? (
             <MoneyText
@@ -258,7 +258,7 @@ export function GeneralLedgerTab() {
       },
       {
         accessorKey: 'credit',
-        header: 'Credit',
+        header: 'Credit (Cr)',
         cell: ({ row }) =>
           row.original.credit > 0 ? (
             <MoneyText
@@ -271,17 +271,35 @@ export function GeneralLedgerTab() {
       },
       {
         accessorKey: 'runningBalance',
-        header: 'Balance',
-        cell: ({ row }) => (
-          <MoneyText
-            paisa={row.original.runningBalance}
-            className={`text-xs font-bold ${
-              row.original.runningBalance < 0
-                ? 'text-rose-600 dark:text-rose-400'
-                : 'text-foreground'
-            }`}
-          />
-        ),
+        header: 'Running Balance',
+        cell: ({ row }) => {
+          const bal = row.original.runningBalance
+          const absBal = Math.abs(bal)
+          const side = bal > 0 ? 'Dr' : bal < 0 ? 'Cr' : ''
+          return (
+            <div className="flex items-center gap-1.5 font-mono">
+              <MoneyText
+                paisa={absBal}
+                className={`text-xs font-bold ${
+                  bal < 0
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : 'text-foreground'
+                }`}
+              />
+              {side && (
+                <span
+                  className={`text-[9px] font-bold uppercase px-1 py-0.2 rounded border ${
+                    side === 'Dr'
+                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                      : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                  }`}
+                >
+                  {side}
+                </span>
+              )}
+            </div>
+          )
+        },
       },
       {
         accessorKey: 'postingStatus',
@@ -561,10 +579,23 @@ export function GeneralLedgerTab() {
                 />
               </TableCell>
               <TableCell className="px-3 py-2 text-right">
-                <MoneyText
-                  paisa={netMovement}
-                  className="text-xs font-bold text-foreground"
-                />
+                <div className="flex items-center justify-end gap-1.5 font-mono">
+                  <MoneyText
+                    paisa={Math.abs(netMovement)}
+                    className="text-xs font-bold text-foreground"
+                  />
+                  {netMovement !== 0 && (
+                    <span
+                      className={`text-[9px] font-bold uppercase px-1 py-0.2 rounded border ${
+                        netMovement > 0
+                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                          : 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                      }`}
+                    >
+                      {netMovement > 0 ? 'Dr' : 'Cr'}
+                    </span>
+                  )}
+                </div>
               </TableCell>
               <TableCell />
             </TableRow>

@@ -1,5 +1,6 @@
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import {
+  accountingPeriods,
   fiscalYears,
   voucherSequences,
   journalEntries,
@@ -16,12 +17,19 @@ import type {
   JournalLineInput,
   PartyType,
   PostCashHandoverParams,
+  PostCustomerPaymentParams,
+  PostDealerAdvanceParams,
+  PostDealerPurchaseReturnParams,
   PostDealerSettlementParams,
+  PostGatewaySettlementParams,
+  PostInterBranchTransferParams,
   PostJournalParams,
   PostJournalResult,
   PostOrderDeliveredParams,
+  PostRiderAdvanceParams,
   PostRiderPayoutParams,
   PostRiderSalaryAccrualParams,
+  PostSalesReturnParams,
   ReverseJournalParams,
   VoucherType,
 } from './types'
@@ -33,12 +41,19 @@ export type {
   JournalLineInput,
   PartyType,
   PostCashHandoverParams,
+  PostCustomerPaymentParams,
+  PostDealerAdvanceParams,
+  PostDealerPurchaseReturnParams,
   PostDealerSettlementParams,
+  PostGatewaySettlementParams,
+  PostInterBranchTransferParams,
   PostJournalParams,
   PostJournalResult,
   PostOrderDeliveredParams,
+  PostRiderAdvanceParams,
   PostRiderPayoutParams,
   PostRiderSalaryAccrualParams,
+  PostSalesReturnParams,
   ReverseJournalParams,
   VoucherType,
 }
@@ -210,8 +225,176 @@ export async function postJournalTx(
       .onConflictDoNothing()
   }
 
-  // Gapless sequential numbering with row lock
+  const postingStatus = params.postingStatus || 'submitted'
   const voucherType = params.voucherType || 'JV'
+
+  // Verify BS Accounting Period Lock: Prohibit postings in locked/closed monthly periods (unless period closing voucher PC)
+  if (voucherType !== 'PC') {
+    const lockedPeriod = await tx
+      .select({
+        id: accountingPeriods.id,
+        name: accountingPeriods.name,
+        status: accountingPeriods.status,
+      })
+      .from(accountingPeriods)
+      .where(
+        and(
+          lte(accountingPeriods.startDate, postingDate),
+          gte(accountingPeriods.endDate, postingDate),
+          eq(accountingPeriods.status, 'closed'),
+        ),
+      )
+      .limit(1)
+
+    if (lockedPeriod[0]) {
+      throw new Error(
+        `Accounting period "${lockedPeriod[0].name}" is locked. Retro-dated postings in locked periods are prohibited.`,
+      )
+    }
+  }
+
+  let voucherNo: string | null = null
+
+  if (postingStatus !== 'draft') {
+    // Gapless sequential numbering with row lock
+    const seqRes = await tx.execute(sql`
+      SELECT * FROM voucher_sequences
+      WHERE fiscal_year_id = ${fyInfo.id} AND voucher_type = ${voucherType}
+      FOR UPDATE
+    `)
+
+    let nextNo = 1
+    let prefix: string = voucherType
+
+    if (seqRes.rows[0]) {
+      const currentNo = Number(seqRes.rows[0].last_no) || 0
+      nextNo = currentNo + 1
+      prefix = String(seqRes.rows[0].prefix || voucherType)
+      await tx.execute(sql`
+        UPDATE voucher_sequences
+        SET last_no = ${nextNo}, updated_at = NOW()
+        WHERE fiscal_year_id = ${fyInfo.id} AND voucher_type = ${voucherType}
+      `)
+    } else {
+      await tx.insert(voucherSequences).values({
+        id: `seq_${fyInfo.id}_${voucherType}`,
+        fiscalYearId: fyInfo.id,
+        voucherType,
+        prefix,
+        lastNo: nextNo,
+      })
+    }
+
+    const fyYearOnly = fyInfo.name.split('/')[0]
+    voucherNo = `${prefix}-${fyYearOnly}-${String(nextNo).padStart(5, '0')}`
+  }
+
+  const journalEntryId = nid('je')
+
+  // Insert header
+  await tx.insert(journalEntries).values({
+    id: journalEntryId,
+    voucherNo,
+    voucherType,
+    fiscalYearId: fyInfo.id,
+    branchId: params.branchId || null,
+    postingDate,
+    narration: params.narration,
+    refType: params.refType || null,
+    refId: params.refId || null,
+    event: params.event || null,
+    postingStatus,
+    metadata: params.metadata || null,
+    createdBy: params.createdBy,
+  })
+
+  // Insert lines
+  for (const line of lines) {
+    await tx.insert(journalLines).values({
+      id: nid('jl'),
+      journalEntryId,
+      branchId: line.branchId || params.branchId || null,
+      accountId: line.accountId,
+      debit: line.debit ?? 0,
+      credit: line.credit ?? 0,
+      partyType: line.partyType || null,
+      partyId: line.partyId || null,
+      costCenter: line.costCenter || null,
+      costCenterId: line.costCenterId || null,
+      narration: line.narration || null,
+    })
+  }
+
+  return { journalEntryId, voucherNo }
+}
+
+/**
+ * Promotes a draft voucher to submitted with gapless sequential voucher number (Phase 3 & 6).
+ */
+export async function submitDraftJournalTx(
+  tx: DbTx,
+  params: {
+    journalEntryId: string
+    actor: FinanceActor
+    approvedBy?: string
+  },
+): Promise<{ journalEntryId: string; voucherNo: string }> {
+  const entry = await tx
+    .select()
+    .from(journalEntries)
+    .where(eq(journalEntries.id, params.journalEntryId))
+    .limit(1)
+
+  if (!entry[0]) {
+    throw new Error(`Journal voucher ${params.journalEntryId} not found.`)
+  }
+
+  if (entry[0].postingStatus !== 'draft') {
+    throw new Error(
+      `Cannot submit voucher in "${entry[0].postingStatus}" status. Only drafts can be submitted.`,
+    )
+  }
+
+  // Check lines balance
+  const lines = await tx
+    .select({
+      debit: journalLines.debit,
+      credit: journalLines.credit,
+    })
+    .from(journalLines)
+    .where(eq(journalLines.journalEntryId, params.journalEntryId))
+
+  if (lines.length < 2) {
+    throw new Error('A double-entry voucher requires at least 2 lines.')
+  }
+
+  let totalDebit = 0
+  let totalCredit = 0
+  for (const l of lines) {
+    totalDebit += l.debit
+    totalCredit += l.credit
+  }
+
+  if (totalDebit !== totalCredit || totalDebit <= 0) {
+    throw new Error(
+      `Unbalanced entry! Debit (${totalDebit} paisa) must equal Credit (${totalCredit} paisa) > 0.`,
+    )
+  }
+
+  // Fiscal Year check
+  const fyInfo = getNepalFiscalYear(entry[0].postingDate)
+  const fyRows = await tx
+    .select()
+    .from(fiscalYears)
+    .where(eq(fiscalYears.id, fyInfo.id))
+    .limit(1)
+
+  if (fyRows[0]?.isClosed) {
+    throw new Error(`Nepal Fiscal Year ${fyRows[0].name} is closed.`)
+  }
+
+  // Lock and allocate voucher number
+  const voucherType = entry[0].voucherType || 'JV'
   const seqRes = await tx.execute(sql`
     SELECT * FROM voucher_sequences
     WHERE fiscal_year_id = ${fyInfo.id} AND voucher_type = ${voucherType}
@@ -242,40 +425,21 @@ export async function postJournalTx(
 
   const fyYearOnly = fyInfo.name.split('/')[0]
   const voucherNo = `${prefix}-${fyYearOnly}-${String(nextNo).padStart(5, '0')}`
-  const journalEntryId = nid('je')
 
-  // Insert header
-  await tx.insert(journalEntries).values({
-    id: journalEntryId,
-    voucherNo,
-    voucherType,
-    fiscalYearId: fyInfo.id,
-    postingDate,
-    narration: params.narration,
-    refType: params.refType || null,
-    refId: params.refId || null,
-    event: params.event || null,
-    postingStatus: 'submitted',
-    metadata: params.metadata || null,
-    createdBy: params.createdBy,
-  })
-
-  // Insert lines
-  for (const line of lines) {
-    await tx.insert(journalLines).values({
-      id: nid('jl'),
-      journalEntryId,
-      accountId: line.accountId,
-      debit: line.debit ?? 0,
-      credit: line.credit ?? 0,
-      partyType: line.partyType || null,
-      partyId: line.partyId || null,
-      costCenter: line.costCenter || null,
-      narration: line.narration || null,
+  const now = new Date()
+  await tx
+    .update(journalEntries)
+    .set({
+      voucherNo,
+      postingStatus: params.approvedBy ? 'approved' : 'submitted',
+      submittedBy: params.actor.name,
+      submittedAt: now,
+      approvedBy: params.approvedBy || null,
+      approvedAt: params.approvedBy ? now : null,
     })
-  }
+    .where(eq(journalEntries.id, params.journalEntryId))
 
-  return { journalEntryId, voucherNo }
+  return { journalEntryId: params.journalEntryId, voucherNo }
 }
 
 /**
@@ -330,8 +494,21 @@ export async function reverseJournalTx(
       .where(eq(fiscalYears.id, origFy.id))
       .limit(1)
 
-    // If original fiscal year is closed, default to current date; otherwise retain original posting date
-    if (fyRows[0]?.isClosed) {
+    // Check if original period is locked
+    const origLocked = await tx
+      .select({ id: accountingPeriods.id })
+      .from(accountingPeriods)
+      .where(
+        and(
+          lte(accountingPeriods.startDate, new Date(original[0].postingDate)),
+          gte(accountingPeriods.endDate, new Date(original[0].postingDate)),
+          eq(accountingPeriods.status, 'closed'),
+        ),
+      )
+      .limit(1)
+
+    // If original fiscal year or accounting period is closed, default to current date; otherwise retain original posting date
+    if (fyRows[0]?.isClosed || origLocked[0]) {
       targetPostingDate = new Date()
     } else {
       targetPostingDate = new Date(original[0].postingDate)
@@ -844,5 +1021,740 @@ export async function postRiderPayoutTx(
       paymentAccount,
     },
     lines,
+  })
+}
+
+/**
+ * Standard Posting 5: Contra Voucher (Phase 7 / ACC-3.3).
+ * Internal cash and bank transfers (Cash to Bank, Bank to Cash, Bank to Bank).
+ * Dr. Destination Account (Bank/Cash)
+ * Cr. Source Account (Bank/Cash)
+ */
+export async function postContraVoucherTx(
+  tx: DbTx,
+  params: {
+    fromAccountId: string
+    toAccountId: string
+    amount: number // paisa
+    narration: string
+    branchId?: string | null
+    postingDate?: Date
+    actor: FinanceActor
+  },
+): Promise<PostJournalResult> {
+  const { fromAccountId, toAccountId, amount, narration, branchId, postingDate, actor } = params
+
+  if (amount <= 0) {
+    throw new Error('Contra voucher amount must be greater than zero.')
+  }
+  if (fromAccountId === toAccountId) {
+    throw new Error('Source and destination accounts in a contra voucher must be different.')
+  }
+
+  return postJournalTx(tx, {
+    voucherType: 'CV',
+    postingDate: postingDate || new Date(),
+    narration,
+    refType: 'contra',
+    refId: nid('con'),
+    event: 'internal_transfer',
+    branchId: branchId || null,
+    createdBy: actor.name,
+    metadata: { fromAccountId, toAccountId, amount },
+    lines: [
+      {
+        accountId: toAccountId,
+        debit: amount,
+        branchId: branchId || null,
+        costCenter: 'general',
+        narration: `Deposit/Transfer into destination account`,
+      },
+      {
+        accountId: fromAccountId,
+        credit: amount,
+        branchId: branchId || null,
+        costCenter: 'general',
+        narration: `Withdrawal/Transfer from source account`,
+      },
+    ],
+  })
+}
+
+/**
+ * Standard Posting 6: Expense Payment (Phase 8 / ACC-3.4).
+ * Dr. Expense Category Account (Net Expense)
+ * Dr. VAT Input Account (if tax amount > 0)
+ * Cr. Payment Account (Cash / Bank / Payable)
+ */
+export async function postExpensePaymentTx(
+  tx: DbTx,
+  params: {
+    expenseId: string
+    expenseNumber: string
+    categoryAccountId: string
+    paymentAccountId: string
+    amount: number // total paisa (gross)
+    taxAmount?: number // tax paisa (VAT input)
+    tdsAmount?: number // TDS deduction paisa
+    vendorName?: string | null
+    branchId?: string | null
+    costCenterId?: string | null
+    narration: string
+    postingDate?: Date
+    actor: FinanceActor
+  },
+): Promise<PostJournalResult> {
+  const {
+    expenseId,
+    expenseNumber,
+    categoryAccountId,
+    paymentAccountId,
+    amount,
+    taxAmount = 0,
+    tdsAmount = 0,
+    vendorName,
+    branchId,
+    costCenterId,
+    narration,
+    postingDate,
+    actor,
+  } = params
+
+  if (amount <= 0) {
+    throw new Error('Expense amount must be greater than zero.')
+  }
+
+  const accounts = await resolveAllAccounts(tx)
+  const netExpense = amount - (taxAmount || 0)
+  if (netExpense < 0) {
+    throw new Error('Tax amount cannot exceed total expense amount.')
+  }
+  if (tdsAmount < 0 || tdsAmount > amount) {
+    throw new Error('TDS withholding cannot be negative or exceed total expense amount.')
+  }
+
+  const lines: JournalLineInput[] = []
+
+  // Dr. Expense Category Account (Net Expense)
+  lines.push({
+    accountId: categoryAccountId,
+    debit: netExpense,
+    branchId: branchId || null,
+    costCenterId: costCenterId || null,
+    narration: `Expense: ${narration}${vendorName ? ` (${vendorName})` : ''}`,
+  })
+
+  // Dr. VAT Input (if applicable)
+  if (taxAmount > 0) {
+    lines.push({
+      accountId: accounts.VAT_INPUT,
+      debit: taxAmount,
+      branchId: branchId || null,
+      costCenterId: costCenterId || null,
+      narration: `Input tax on expense ${expenseNumber}`,
+    })
+  }
+
+  // Cr. TDS Withholding Tax Payable (if TDS is deducted)
+  if (tdsAmount > 0) {
+    lines.push({
+      accountId: accounts.TDS_PAYABLE,
+      credit: tdsAmount,
+      branchId: branchId || null,
+      costCenterId: costCenterId || null,
+      narration: `TDS withheld on expense ${expenseNumber}${vendorName ? ` (${vendorName})` : ''}`,
+    })
+  }
+
+  // Cr. Payment Account (Cash/Bank) for Net Disbursed: (amount - tdsAmount)
+  const netDisbursed = amount - tdsAmount
+  if (netDisbursed > 0) {
+    lines.push({
+      accountId: paymentAccountId,
+      credit: netDisbursed,
+      branchId: branchId || null,
+      costCenterId: costCenterId || null,
+      narration: `Payment for expense ${expenseNumber}`,
+    })
+  }
+
+  return postJournalTx(tx, {
+    voucherType: 'PV',
+    postingDate: postingDate || new Date(),
+    narration: `Expense ${expenseNumber}: ${narration}`,
+    refType: 'expense',
+    refId: expenseId,
+    event: 'expense_paid',
+    branchId: branchId || null,
+    createdBy: actor.name,
+    metadata: {
+      expenseId,
+      expenseNumber,
+      amount,
+      taxAmount,
+      tdsAmount,
+      netDisbursed,
+      vendorName: vendorName || null,
+    },
+    lines,
+  })
+}
+
+/**
+ * Standard Posting 7: Period Closing Voucher (Phase 13 / ACC-5.1).
+ * Transfers all P&L income and expense balances for a Fiscal Year into Retained Earnings.
+ */
+export async function postPeriodClosingTx(
+  tx: DbTx,
+  params: {
+    fiscalYearId: string
+    fiscalYearName: string
+    lines: JournalLineInput[]
+    retainedEarningsAccountId: string
+    netProfitOrLoss: number // paisa
+    narration: string
+    postingDate: Date
+    actor: FinanceActor
+  },
+): Promise<PostJournalResult> {
+  const { fiscalYearId, fiscalYearName, lines, retainedEarningsAccountId, netProfitOrLoss, narration, postingDate, actor } = params
+
+  return postJournalTx(tx, {
+    voucherType: 'PC',
+    postingDate,
+    narration: narration || `Year-end closing voucher for FY ${fiscalYearName}`,
+    refType: 'closing',
+    refId: fiscalYearId,
+    event: 'period_closing',
+    createdBy: actor.name,
+    metadata: {
+      fiscalYearId,
+      fiscalYearName,
+      netProfitOrLoss,
+      retainedEarningsAccountId,
+    },
+    lines,
+  })
+}
+
+/**
+ * Standard Posting 8: Sales Return / Credit Note (Phase 3).
+ * Dr. Sales Revenue (SALES) [Subtotal - Tax]
+ * Dr. Output VAT Payable 13% (VAT_OUTPUT) [Tax]
+ * Cr. Discounts Allowed (DISCOUNTS) [Discount, if any]
+ * Cr. Customer Payment Asset / Customer Receivable [Refund Amount]
+ * Optional: Reverses dealer payable and COGS for returned inventory.
+ */
+export async function postSalesReturnTx(
+  tx: DbTx,
+  params: PostSalesReturnParams,
+): Promise<PostJournalResult> {
+  const {
+    returnId,
+    orderId,
+    orderNumber,
+    customerId,
+    customerName,
+    subtotal,
+    tax = 0,
+    discount = 0,
+    refundAmount,
+    refundMethod,
+    dealerCostToReverse = [],
+    branchId,
+    actor,
+  } = params
+
+  if (refundAmount <= 0) {
+    throw new Error('Refund amount must be greater than zero.')
+  }
+
+  const accounts = await resolveAllAccounts(tx)
+  const netSales = subtotal - tax
+  const lines: JournalLineInput[] = []
+
+  // 1. Dr. Sales Revenue (reversal)
+  if (netSales > 0) {
+    lines.push({
+      accountId: accounts.SALES,
+      debit: netSales,
+      branchId: branchId || null,
+      costCenter: 'general',
+      narration: `Sales return on order ${orderNumber}`,
+    })
+  }
+
+  // 2. Dr. VAT Output (reversal of tax liability)
+  if (tax > 0) {
+    lines.push({
+      accountId: accounts.VAT_OUTPUT,
+      debit: tax,
+      branchId: branchId || null,
+      costCenter: 'general',
+      narration: `Output VAT reversal on return for order ${orderNumber}`,
+    })
+  }
+
+  // 3. Cr. Discounts (reversal of discount)
+  if (discount > 0) {
+    lines.push({
+      accountId: accounts.DISCOUNTS,
+      credit: discount,
+      branchId: branchId || null,
+      costCenter: 'general',
+      narration: `Discount reversal on return for order ${orderNumber}`,
+    })
+  }
+
+  // 4. Cr. Refund method (Cash / Bank / Customer Credit)
+  let refundAccountId = accounts.CASH_IN_HAND
+  let refundPartyType: PartyType | null = null
+  let refundPartyId: string | null = null
+
+  if (refundMethod === 'bank') {
+    refundAccountId = accounts.BANK_MAIN
+  } else if (refundMethod === 'customer_credit') {
+    refundAccountId = accounts.CUSTOMER_RECEIVABLE
+    refundPartyType = 'customer'
+    refundPartyId = customerId || 'cust_walkin'
+  }
+
+  lines.push({
+    accountId: refundAccountId,
+    credit: refundAmount,
+    partyType: refundPartyType,
+    partyId: refundPartyId,
+    branchId: branchId || null,
+    costCenter: 'general',
+    narration: `Refund disbursed for return on order ${orderNumber} via ${refundMethod}`,
+  })
+
+  // 5. Dealer sourcing reversal if returned to dealer
+  for (const item of dealerCostToReverse) {
+    if (item.amount > 0) {
+      lines.push({
+        accountId: accounts.DEALER_PAYABLE,
+        debit: item.amount,
+        partyType: 'dealer',
+        partyId: item.dealerId,
+        branchId: branchId || null,
+        costCenter: 'general',
+        narration: `Dealer procurement payable reversal on return for order ${orderNumber}`,
+      })
+      lines.push({
+        accountId: item.catalogType === 'liquor' ? accounts.COGS_LIQUOR : accounts.COGS_FOOD,
+        credit: item.amount,
+        branchId: branchId || null,
+        costCenter: item.catalogType === 'liquor' ? 'liquor' : 'food',
+        narration: `COGS reversal on return for order ${orderNumber}`,
+      })
+    }
+  }
+
+  return postJournalTx(tx, {
+    voucherType: 'CN', // Credit Note
+    postingDate: new Date(),
+    narration: `Credit Note / Sales Return for order ${orderNumber}${customerName ? ` (${customerName})` : ''}`,
+    refType: 'sales_return',
+    refId: returnId,
+    event: 'sales_returned',
+    branchId: branchId || null,
+    createdBy: actor.name,
+    metadata: {
+      returnId,
+      orderId,
+      orderNumber,
+      customerId: customerId || null,
+      customerName: customerName || null,
+      refundAmount,
+      refundMethod,
+    },
+    lines,
+  })
+}
+
+/**
+ * Standard Posting 9: Customer Trade Payment / Credit Receipt (Phase 3 & 4).
+ * Dr. Payment Account (Cash / Bank / eSewa / Khalti)
+ * Cr. Customer Trade Receivables (CUSTOMER_RECEIVABLE)
+ */
+export async function postCustomerPaymentTx(
+  tx: DbTx,
+  params: PostCustomerPaymentParams,
+): Promise<PostJournalResult> {
+  const {
+    paymentId,
+    customerId,
+    customerName,
+    amount,
+    paymentMethod,
+    branchId,
+    narration,
+    actor,
+  } = params
+
+  if (amount <= 0) {
+    throw new Error('Payment amount must be greater than zero.')
+  }
+
+  const accounts = await resolveAllAccounts(tx)
+  let receivingAccountId = accounts.CASH_IN_HAND
+  if (paymentMethod === 'bank') receivingAccountId = accounts.BANK_MAIN
+  else if (paymentMethod === 'esewa') receivingAccountId = accounts.ESEWA_CLEARING
+  else if (paymentMethod === 'khalti') receivingAccountId = accounts.KHALTI_CLEARING
+
+  return postJournalTx(tx, {
+    voucherType: 'RV',
+    postingDate: new Date(),
+    narration: narration || `Customer payment received from ${customerName}`,
+    refType: 'customer_payment',
+    refId: paymentId,
+    event: 'customer_payment_received',
+    branchId: branchId || null,
+    createdBy: actor.name,
+    metadata: { paymentId, customerId, customerName, amount, paymentMethod },
+    lines: [
+      {
+        accountId: receivingAccountId,
+        debit: amount,
+        branchId: branchId || null,
+        costCenter: 'general',
+        narration: `Payment received via ${paymentMethod} from ${customerName}`,
+      },
+      {
+        accountId: accounts.CUSTOMER_RECEIVABLE,
+        credit: amount,
+        partyType: 'customer',
+        partyId: customerId,
+        branchId: branchId || null,
+        costCenter: 'general',
+        narration: `Receivable balance cleared by ${customerName}`,
+      },
+    ],
+  })
+}
+
+/**
+ * Standard Posting 10: Dealer Advance Payment (Phase 3 & 4).
+ * Dr. Staff & Dealer Advances (STAFF_RIDER_ADVANCES)
+ * Cr. Cash / Bank
+ */
+export async function postDealerAdvanceTx(
+  tx: DbTx,
+  params: PostDealerAdvanceParams,
+): Promise<PostJournalResult> {
+  const {
+    advanceId,
+    dealerId,
+    dealerName,
+    amount,
+    paymentMethod = 'bank',
+    branchId,
+    narration,
+    actor,
+  } = params
+
+  if (amount <= 0) {
+    throw new Error('Advance amount must be greater than zero.')
+  }
+
+  const accounts = await resolveAllAccounts(tx)
+  const disbursingAccount =
+    paymentMethod === 'cash' ? accounts.CASH_IN_HAND : accounts.BANK_MAIN
+
+  return postJournalTx(tx, {
+    voucherType: 'PV',
+    postingDate: new Date(),
+    narration: narration || `Advance disbursement to dealer ${dealerName}`,
+    refType: 'dealer_advance',
+    refId: advanceId,
+    event: 'dealer_advance_paid',
+    branchId: branchId || null,
+    createdBy: actor.name,
+    metadata: { advanceId, dealerId, dealerName, amount, paymentMethod },
+    lines: [
+      {
+        accountId: accounts.STAFF_RIDER_ADVANCES,
+        debit: amount,
+        partyType: 'dealer',
+        partyId: dealerId,
+        branchId: branchId || null,
+        costCenter: 'general',
+        narration: `Procurement advance issued to dealer ${dealerName}`,
+      },
+      {
+        accountId: disbursingAccount,
+        credit: amount,
+        branchId: branchId || null,
+        costCenter: 'general',
+        narration: `Advance disbursed via ${paymentMethod} to ${dealerName}`,
+      },
+    ],
+  })
+}
+
+/**
+ * Standard Posting 11: Rider Advance Payment (Phase 3 & 4).
+ * Dr. Staff & Rider Advances (STAFF_RIDER_ADVANCES)
+ * Cr. Cash / Bank
+ */
+export async function postRiderAdvanceTx(
+  tx: DbTx,
+  params: PostRiderAdvanceParams,
+): Promise<PostJournalResult> {
+  const {
+    advanceId,
+    riderId,
+    riderName,
+    amount,
+    paymentMethod = 'cash',
+    branchId,
+    narration,
+    actor,
+  } = params
+
+  if (amount <= 0) {
+    throw new Error('Advance amount must be greater than zero.')
+  }
+
+  const accounts = await resolveAllAccounts(tx)
+  const disbursingAccount =
+    paymentMethod === 'bank' ? accounts.BANK_MAIN : accounts.CASH_IN_HAND
+
+  return postJournalTx(tx, {
+    voucherType: 'PV',
+    postingDate: new Date(),
+    narration: narration || `Advance disbursement to courier ${riderName}`,
+    refType: 'rider_advance',
+    refId: advanceId,
+    event: 'rider_advance_paid',
+    branchId: branchId || null,
+    createdBy: actor.name,
+    metadata: { advanceId, riderId, riderName, amount, paymentMethod },
+    lines: [
+      {
+        accountId: accounts.STAFF_RIDER_ADVANCES,
+        debit: amount,
+        partyType: 'rider',
+        partyId: riderId,
+        branchId: branchId || null,
+        costCenter: 'delivery',
+        narration: `Staff advance issued to courier ${riderName}`,
+      },
+      {
+        accountId: disbursingAccount,
+        credit: amount,
+        branchId: branchId || null,
+        costCenter: 'delivery',
+        narration: `Advance disbursed via ${paymentMethod} to courier ${riderName}`,
+      },
+    ],
+  })
+}
+
+/**
+ * Standard Posting 12: Gateway Settlement into Bank (Phase 3).
+ * Dr. Main Bank Account (BANK_MAIN) [Net Amount]
+ * Dr. Payment Gateway Commission (GATEWAY_FEES) [Fee Amount]
+ * Cr. Gateway Clearing Account (ESEWA_CLEARING / KHALTI_CLEARING) [Gross Amount]
+ */
+export async function postGatewaySettlementTx(
+  tx: DbTx,
+  params: PostGatewaySettlementParams,
+): Promise<PostJournalResult> {
+  const {
+    settlementId,
+    gateway,
+    grossAmount,
+    feeAmount,
+    netBankAmount,
+    referenceNo,
+    branchId,
+    actor,
+  } = params
+
+  if (grossAmount <= 0) {
+    throw new Error('Gateway settlement gross amount must be greater than zero.')
+  }
+  if (netBankAmount + feeAmount !== grossAmount) {
+    throw new Error(
+      `Gateway settlement unbalanced: net amount (${netBankAmount}) + fee (${feeAmount}) must equal gross amount (${grossAmount}).`,
+    )
+  }
+
+  const accounts = await resolveAllAccounts(tx)
+  const clearingAccountId =
+    gateway === 'khalti' ? accounts.KHALTI_CLEARING : accounts.ESEWA_CLEARING
+  const gatewayLabel = gateway === 'khalti' ? 'Khalti' : 'eSewa'
+
+  const lines: JournalLineInput[] = [
+    {
+      accountId: accounts.BANK_MAIN,
+      debit: netBankAmount,
+      branchId: branchId || null,
+      costCenter: 'general',
+      narration: `${gatewayLabel} payout deposited into main bank${referenceNo ? ` (Ref: ${referenceNo})` : ''}`,
+    },
+  ]
+
+  if (feeAmount > 0) {
+    lines.push({
+      accountId: accounts.GATEWAY_FEES,
+      debit: feeAmount,
+      branchId: branchId || null,
+      costCenter: 'general',
+      narration: `${gatewayLabel} transaction processing fee deducted`,
+    })
+  }
+
+  lines.push({
+    accountId: clearingAccountId,
+    credit: grossAmount,
+    branchId: branchId || null,
+    costCenter: 'general',
+    narration: `${gatewayLabel} clearing balance transferred to bank`,
+  })
+
+  return postJournalTx(tx, {
+    voucherType: 'CV',
+    postingDate: new Date(),
+    narration: `${gatewayLabel} settlement batch${referenceNo ? ` #${referenceNo}` : ''}`,
+    refType: 'gateway_settlement',
+    refId: settlementId,
+    event: 'gateway_funds_settled',
+    branchId: branchId || null,
+    createdBy: actor.name,
+    metadata: { settlementId, gateway, grossAmount, feeAmount, netBankAmount, referenceNo },
+    lines,
+  })
+}
+
+/**
+ * Standard Posting 13: Dealer Purchase Return / Debit Note (Phase 3 & 4).
+ * Dr. Dealer Payable (DEALER_PAYABLE)
+ * Cr. Cost of Goods Sold (COGS_LIQUOR / COGS_FOOD)
+ */
+export async function postDealerPurchaseReturnTx(
+  tx: DbTx,
+  params: PostDealerPurchaseReturnParams,
+): Promise<PostJournalResult> {
+  const {
+    returnId,
+    dealerId,
+    dealerName,
+    catalogType,
+    amount,
+    reason,
+    branchId,
+    actor,
+  } = params
+
+  if (amount <= 0) {
+    throw new Error('Purchase return amount must be greater than zero.')
+  }
+
+  const accounts = await resolveAllAccounts(tx)
+  const cogsAccount =
+    catalogType === 'liquor' ? accounts.COGS_LIQUOR : accounts.COGS_FOOD
+
+  return postJournalTx(tx, {
+    voucherType: 'DN', // Debit Note
+    postingDate: new Date(),
+    narration: `Purchase return / Debit note to ${dealerName}${reason ? `: ${reason}` : ''}`,
+    refType: 'purchase_return',
+    refId: returnId,
+    event: 'purchase_return_debited',
+    branchId: branchId || null,
+    createdBy: actor.name,
+    metadata: { returnId, dealerId, dealerName, catalogType, amount, reason },
+    lines: [
+      {
+        accountId: accounts.DEALER_PAYABLE,
+        debit: amount,
+        partyType: 'dealer',
+        partyId: dealerId,
+        branchId: branchId || null,
+        costCenter: 'general',
+        narration: `Debit note issued to dealer ${dealerName}`,
+      },
+      {
+        accountId: cogsAccount,
+        credit: amount,
+        branchId: branchId || null,
+        costCenter: catalogType,
+        narration: `Procurement COGS reversed for returned items from ${dealerName}`,
+      },
+    ],
+  })
+}
+
+/**
+ * Standard Posting 14: Inter-Branch Fund Transfer (Phase 5).
+ * Transfers funds between two company branches.
+ * Dr. Destination Branch Account (Bank/Cash with toBranchId)
+ * Cr. Source Branch Account (Bank/Cash with fromBranchId)
+ */
+export async function postInterBranchTransferTx(
+  tx: DbTx,
+  params: PostInterBranchTransferParams,
+): Promise<PostJournalResult> {
+  const {
+    fromBranchId,
+    fromBranchName,
+    toBranchId,
+    toBranchName,
+    fromAccountId,
+    toAccountId,
+    amount,
+    narration,
+    postingDate,
+    actor,
+  } = params
+
+  if (amount <= 0) {
+    throw new Error('Inter-branch transfer amount must be greater than zero.')
+  }
+  if (fromBranchId === toBranchId && fromAccountId === toAccountId) {
+    throw new Error('Source and destination account cannot be identical in the same branch.')
+  }
+
+  const memo =
+    narration?.trim() ||
+    `Inter-branch fund transfer: ${fromBranchName} -> ${toBranchName}`
+
+  return postJournalTx(tx, {
+    voucherType: 'CV',
+    postingDate: postingDate || new Date(),
+    narration: memo,
+    refType: 'inter_branch_transfer',
+    refId: nid('ibt'),
+    event: 'inter_branch_transferred',
+    branchId: fromBranchId,
+    createdBy: actor.name,
+    metadata: {
+      fromBranchId,
+      fromBranchName,
+      toBranchId,
+      toBranchName,
+      fromAccountId,
+      toAccountId,
+      amount,
+    },
+    lines: [
+      {
+        accountId: toAccountId,
+        debit: amount,
+        branchId: toBranchId,
+        costCenter: 'general',
+        narration: `Transfer received at ${toBranchName} from ${fromBranchName}`,
+      },
+      {
+        accountId: fromAccountId,
+        credit: amount,
+        branchId: fromBranchId,
+        costCenter: 'general',
+        narration: `Transfer disbursed from ${fromBranchName} to ${toBranchName}`,
+      },
+    ],
   })
 }

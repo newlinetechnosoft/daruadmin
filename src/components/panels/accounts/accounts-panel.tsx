@@ -29,15 +29,24 @@ import {
   Banknote,
   Bike,
   Building2,
+  Calendar,
   Coins,
   CreditCard,
   FileSpreadsheet,
+  FolderTree,
   Plus,
   Receipt,
+  ShieldCheck,
   SlidersHorizontal,
   Store,
   TrendingUp,
   Wallet,
+  Download,
+  Landmark,
+  Scale,
+  Tag,
+  UserCheck,
+  Users,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { BatchDealerSettlementDialog } from './batch-dealer-settlement-dialog'
@@ -54,6 +63,16 @@ import { TransactionsTab } from './tabs/transactions-tab'
 import { SalesAccountTab } from './tabs/sales-account-tab'
 import { SalaryAccountTab } from './tabs/salary-account-tab'
 import { ChartOfAccountsTab } from './tabs/chart-of-accounts-tab'
+import { BranchesTab } from './tabs/branches-tab'
+import { VouchersTab } from './tabs/vouchers-tab'
+import { PartyAccountsTab } from './tabs/party-accounts-tab'
+import { BankCashTab } from './tabs/bank-cash-tab'
+import { ExpensesTab } from './tabs/expenses-tab'
+import { ReconciliationTab } from './tabs/reconciliation-tab'
+import { ExportCenterTab } from './tabs/export-center-tab'
+import { PeriodCloseTab } from './tabs/period-close-tab'
+import { AuditTrailTab } from './tabs/audit-trail-tab'
+import { AccountingSettingsTab } from './tabs/accounting-settings-tab'
 import { accountsRouteApi, normalizeAccountsTab } from './accounts-route'
 import type { AccountsTab } from './accounts-route'
 import type { Settlement } from '#/server/operations/types'
@@ -63,7 +82,7 @@ type DealerPaymentMethod =
   'cash' | 'bank_transfer' | 'esewa' | 'khalti' | 'cheque'
 
 const TAB_TRIGGER_CLASS =
-  'relative h-10 shrink-0 cursor-pointer gap-2 rounded-none border-b-2 border-transparent bg-transparent px-3 pb-2.5 pt-2 text-xs font-medium text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-none'
+  'relative h-9 shrink-0 cursor-pointer gap-1.5 rounded-none border-b-2 border-transparent bg-transparent px-2.5 pb-2 pt-1.5 text-xs font-medium text-muted-foreground whitespace-nowrap shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-none'
 
 const DEALER_PAYMENT_METHODS: Array<{
   value: DealerPaymentMethod
@@ -444,28 +463,98 @@ export function AccountsPanel() {
   }> = [
     { value: 'overview', label: 'Overview', icon: Wallet },
     {
+      value: 'chart-of-accounts',
+      label: 'Chart of Accounts',
+      icon: FolderTree,
+      count: chartOfAccounts.length,
+    },
+    {
+      value: 'branches',
+      label: 'Branches',
+      icon: Building2,
+    },
+    {
       value: 'ledger',
       label: 'General Ledger',
       icon: Receipt,
       count: ops.generalLedger.length,
     },
     {
-      value: 'transactions',
-      label: 'Transactions',
+      value: 'vouchers',
+      label: 'Vouchers',
       icon: CreditCard,
-      count: ops.journalEntries.length,
+    },
+    {
+      value: 'party-accounts',
+      label: 'Party Accounts',
+      icon: Users,
     },
     {
       value: 'dealer-ledger',
-      label: 'Dealer Report',
+      label: 'Dealer Ledger',
       icon: Store,
       count: dealerPayables.length,
     },
     {
       value: 'rider-ledger',
-      label: 'Rider Report',
+      label: 'Rider Ledger',
       icon: Bike,
       count: ops.riderAccounts.length,
+    },
+    {
+      value: 'customer-ledger',
+      label: 'Customer Ledger',
+      icon: Users,
+    },
+    {
+      value: 'supplier-ledger',
+      label: 'Supplier Ledger',
+      icon: Building2,
+    },
+    {
+      value: 'employee-ledger',
+      label: 'Employee Ledger',
+      icon: UserCheck,
+    },
+    {
+      value: 'bank-cash',
+      label: 'Bank & Cash',
+      icon: Landmark,
+    },
+    {
+      value: 'expenses',
+      label: 'Expenses',
+      icon: Tag,
+    },
+    {
+      value: 'reconciliation',
+      label: 'Reconciliation',
+      icon: Scale,
+    },
+    {
+      value: 'financial-reports',
+      label: 'Financial Reports',
+      icon: FileSpreadsheet,
+    },
+    {
+      value: 'export-center',
+      label: 'Export Center',
+      icon: Download,
+    },
+    {
+      value: 'period-close',
+      label: 'Period Close',
+      icon: Calendar,
+    },
+    {
+      value: 'audit-trail',
+      label: 'Audit Trail',
+      icon: ShieldCheck,
+    },
+    {
+      value: 'settings',
+      label: 'Accounting Settings',
+      icon: SlidersHorizontal,
     },
     {
       value: 'sales-account',
@@ -479,30 +568,13 @@ export function AccountsPanel() {
       icon: Coins,
       count: ops.settlements.length,
     },
-    {
-      value: 'chart-of-accounts',
-      label: 'Chart of Accounts',
-      icon: Building2,
-      count: chartOfAccounts.length,
-    },
-    {
-      value: 'financial-reports',
-      label: 'Financial Reports',
-      icon: FileSpreadsheet,
-    },
-    {
-      value: 'account-defaults',
-      label: 'Account Defaults',
-      icon: SlidersHorizontal,
-    },
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3.5">
       <PageHeader
         kicker="Finance & Accounts"
         title="Accounts & Financial Ledger"
-        description="Double-entry accounting workspace: general ledger, dealer and rider reports, sales and salary accounts, chart of accounts, and financial statements."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <DataRefreshButton
@@ -538,7 +610,7 @@ export function AccountsPanel() {
           onValueChange={(value) => setActiveTab(normalizeAccountsTab(value))}
         >
           <div className="border-b border-border">
-            <TabsList className="click-scroll flex h-10 w-full items-center justify-start gap-1 overflow-x-auto border-none bg-transparent p-0">
+            <TabsList className="click-scroll flex h-9 w-full items-center justify-start gap-0.5 overflow-x-auto border-none bg-transparent p-0">
               {tabItems.map((item) => {
                 const Icon = item.icon
                 return (
@@ -576,6 +648,36 @@ export function AccountsPanel() {
 
           {activeTab === 'transactions' && <TransactionsTab />}
 
+          {activeTab === 'vouchers' && <VouchersTab />}
+
+          {activeTab === 'party-accounts' && <PartyAccountsTab />}
+
+          {activeTab === 'customer-ledger' && (
+            <PartyAccountsTab initialPartyType="customer" />
+          )}
+
+          {activeTab === 'supplier-ledger' && (
+            <PartyAccountsTab initialPartyType="supplier" />
+          )}
+
+          {activeTab === 'employee-ledger' && (
+            <PartyAccountsTab initialPartyType="employee" />
+          )}
+
+          {activeTab === 'bank-cash' && <BankCashTab />}
+
+          {activeTab === 'expenses' && <ExpensesTab />}
+
+          {activeTab === 'reconciliation' && <ReconciliationTab />}
+
+          {activeTab === 'export-center' && <ExportCenterTab />}
+
+          {activeTab === 'period-close' && <PeriodCloseTab />}
+
+          {activeTab === 'audit-trail' && <AuditTrailTab />}
+
+          {activeTab === 'settings' && <AccountingSettingsTab />}
+
           {activeTab === 'dealer-ledger' && (
             <DealerReportTab
               onPayoutDealer={handleOpenDealerPayout}
@@ -600,6 +702,8 @@ export function AccountsPanel() {
           )}
 
           {activeTab === 'chart-of-accounts' && <ChartOfAccountsTab />}
+
+          {activeTab === 'branches' && <BranchesTab />}
 
           {activeTab === 'financial-reports' && (
             <FinancialReportsTab

@@ -10,6 +10,18 @@ function isWhitelistedKey(queryKey: readonly unknown[]): boolean {
   // catalog (categories, brands, products), storefront (frontpage), rider portal (assigned deliveries)
   if (root === 'catalog' || root === 'storefront') return true
   if (root === 'rider' && queryKey[1] === 'portal') return true
+  if (root === 'admin' && queryKey[1] === 'finance') {
+    const sub = queryKey[2]
+    if (
+      sub === 'coa-tree' ||
+      sub === 'branches' ||
+      sub === 'expense-categories' ||
+      sub === 'accounting-config' ||
+      sub === 'accounting-periods'
+    ) {
+      return true
+    }
+  }
   return false
 }
 

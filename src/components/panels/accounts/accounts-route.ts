@@ -10,16 +10,28 @@ export const accountsRouteApi = getRouteApi('/admin/accounts')
 
 export const ACCOUNT_TABS = [
   'overview',
+  'chart-of-accounts',
+  'branches',
   'ledger',
-  'transactions',
+  'vouchers',
+  'party-accounts',
   'dealer-ledger',
   'rider-ledger',
+  'customer-ledger',
+  'supplier-ledger',
+  'employee-ledger',
+  'bank-cash',
+  'expenses',
+  'reconciliation',
+  'financial-reports',
+  'export-center',
+  'period-close',
+  'audit-trail',
+  'settings',
+  'transactions',
   'sales-account',
   'salary-account',
-  'chart-of-accounts',
-  'financial-reports',
   'account-defaults',
-  'settings',
 ] as const
 
 export type AccountsTab = (typeof ACCOUNT_TABS)[number]
@@ -40,6 +52,10 @@ export const VOUCHER_TYPE_OPTIONS = [
   { value: 'RV', label: 'Receipt Voucher (RV)' },
   { value: 'CV', label: 'Contra Voucher (CV)' },
   { value: 'SV', label: 'Sales Voucher (SV)' },
+  { value: 'CN', label: 'Credit Note (CN)' },
+  { value: 'DN', label: 'Debit Note (DN)' },
+  { value: 'OB', label: 'Opening Balance (OB)' },
+  { value: 'PC', label: 'Period Closing (PC)' },
 ] as const
 
 export const PARTY_TYPE_OPTIONS = [
@@ -48,17 +64,21 @@ export const PARTY_TYPE_OPTIONS = [
   { value: 'rider', label: 'Riders' },
   { value: 'customer', label: 'Customers' },
   { value: 'supplier', label: 'Suppliers' },
+  { value: 'employee', label: 'Employees' },
 ] as const
 
-export function partyReportTab(partyType: string | null | undefined) {
-  if (partyType === 'dealer') return 'dealer-ledger' as const
-  if (partyType === 'rider') return 'rider-ledger' as const
-  return 'ledger' as const
+export function partyReportTab(partyType: string | null | undefined): AccountsTab {
+  if (partyType === 'dealer') return 'dealer-ledger'
+  if (partyType === 'rider') return 'rider-ledger'
+  if (partyType === 'customer') return 'customer-ledger'
+  if (partyType === 'supplier') return 'supplier-ledger'
+  if (partyType === 'employee') return 'employee-ledger'
+  return 'ledger'
 }
 
 export function normalizeAccountsTab(tab: string | undefined): AccountsTab {
-  if (tab === 'settings') return 'account-defaults'
-  if (tab && (ACCOUNT_TABS as readonly string[]).includes(tab)) {
+  if (!tab) return 'overview'
+  if ((ACCOUNT_TABS as readonly string[]).includes(tab)) {
     return tab as AccountsTab
   }
   return 'overview'

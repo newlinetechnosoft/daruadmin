@@ -31,8 +31,14 @@ import {
 } from '#/server/finance/finance.queries'
 import {
   postCashHandoverTx,
+  postCustomerPaymentTx,
+  postDealerAdvanceTx,
+  postDealerPurchaseReturnTx,
   postDealerSettlementTx,
+  postGatewaySettlementTx,
   postJournalTx,
+  postRiderAdvanceTx,
+  postSalesReturnTx,
   reverseJournalTx,
 } from '#/server/finance/double-entry'
 import { createServerFn } from '@tanstack/react-start'
@@ -100,9 +106,13 @@ export const postManualJournalVoucherFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>
     z
       .object({
-        voucherType: z.enum(['JV', 'PV', 'RV', 'CV']).default('JV'),
+        voucherType: z
+          .enum(['JV', 'PV', 'RV', 'CV', 'SV', 'CN', 'DN', 'OB'])
+          .default('JV'),
         postingDate: z.string().optional(),
         narration: z.string().min(3),
+        branchId: z.string().optional(),
+        refId: z.string().optional(),
         lines: z
           .array(
             z.object({
@@ -110,12 +120,14 @@ export const postManualJournalVoucherFn = createServerFn({ method: 'POST' })
               debit: z.number().int().min(0),
               credit: z.number().int().min(0),
               partyType: z
-                .enum(['dealer', 'rider', 'customer', 'supplier'])
+                .enum(['dealer', 'rider', 'customer', 'supplier', 'employee'])
                 .optional(),
               partyId: z.string().optional(),
               costCenter: z
                 .enum(['liquor', 'food', 'delivery', 'general'])
                 .optional(),
+              costCenterId: z.string().optional(),
+              branchId: z.string().optional(),
               narration: z.string().optional(),
             }),
           )
@@ -148,11 +160,15 @@ export const postManualJournalVoucherFn = createServerFn({ method: 'POST' })
         voucherType: data.voucherType,
         postingDate,
         narration: data.narration,
-        refType: 'manual',
-        refId: nid('man'),
+        refType: data.refId ? 'manual_voucher' : 'manual',
+        refId: data.refId || nid('man'),
         event: 'manual_voucher',
+        branchId: data.branchId || null,
         createdBy: user.name,
-        lines: data.lines,
+        lines: data.lines.map((l) => ({
+          ...l,
+          branchId: l.branchId || data.branchId || null,
+        })),
       })
     })
 
@@ -218,7 +234,7 @@ export const recordDealerDisbursementFn = createServerFn({ method: 'POST' })
         id: settlementId,
         dealerId: dealerRow[0].id,
         dealerName: dealerRow[0].name,
-        voucherNo: posting.voucherNo,
+        voucherNo: posting.voucherNo!,
         slug,
         grossAmount,
         tdsRate: data.tdsRate,
@@ -336,7 +352,7 @@ export const createDealerSettlementBatchFn = createServerFn({ method: 'POST' })
         id: settlementId,
         dealerId: dealerRow[0].id,
         dealerName: dealerRow[0].name,
-        voucherNo: posting.voucherNo,
+        voucherNo: posting.voucherNo!,
         slug,
         grossAmount,
         tdsRate: data.tdsRate,
@@ -526,7 +542,7 @@ export const getPartyStatementFn = createServerFn({ method: 'GET' })
   .validator((d: unknown) =>
     z
       .object({
-        partyType: z.enum(['dealer', 'rider', 'customer', 'supplier']),
+        partyType: z.enum(['dealer', 'rider', 'customer', 'supplier', 'employee']),
         partyId: z.string().min(1),
         fromDate: z.string().optional(),
         toDate: z.string().optional(),
@@ -958,4 +974,306 @@ export const updateAccountDefaultsFn = createServerFn({ method: 'POST' })
       success: true,
       count: result.updatedCount,
     }
+  })
+
+/**
+ * Standard Posting: Sales Return / Customer Refund Credit Note (Phase 3).
+ */
+export const postSalesReturnFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        orderId: z.string().min(1),
+        orderNumber: z.string().min(1),
+        customerId: z.string().optional(),
+        customerName: z.string().optional(),
+        subtotalInRs: z.number().min(0),
+        taxInRs: z.number().min(0).default(0),
+        discountInRs: z.number().min(0).default(0),
+        refundAmountInRs: z.number().min(0),
+        refundMethod: z.enum(['cash', 'bank', 'customer_credit']).default('cash'),
+        dealerCostToReverse: z
+          .array(
+            z.object({
+              dealerId: z.string().min(1),
+              catalogType: z.enum(['liquor', 'food']),
+              amountInRs: z.number().min(0),
+            }),
+          )
+          .optional(),
+        branchId: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('accounts', 'create')
+
+    const returnId = nid('srt')
+    const subtotal = Math.round(data.subtotalInRs * 100)
+    const tax = Math.round(data.taxInRs * 100)
+    const discount = Math.round(data.discountInRs * 100)
+    const refundAmount = Math.round(data.refundAmountInRs * 100)
+
+    const dealerCosts = (data.dealerCostToReverse || []).map((c) => ({
+      dealerId: c.dealerId,
+      catalogType: c.catalogType,
+      amount: Math.round(c.amountInRs * 100),
+    }))
+
+    const result = await dbTx.transaction(async (tx) => {
+      return postSalesReturnTx(tx, {
+        returnId,
+        orderId: data.orderId,
+        orderNumber: data.orderNumber,
+        customerId: data.customerId,
+        customerName: data.customerName,
+        subtotal,
+        tax,
+        discount,
+        refundAmount,
+        refundMethod: data.refundMethod,
+        dealerCostToReverse: dealerCosts,
+        branchId: data.branchId,
+        actor: user,
+      })
+    })
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'create',
+      `Sales return ${result.voucherNo}: Refunded Rs. ${data.refundAmountInRs} for order ${data.orderNumber} via ${data.refundMethod}`,
+    )
+
+    return result
+  })
+
+/**
+ * Standard Posting: Customer Trade Payment / Credit Receipt (Phase 3 & 4).
+ */
+export const postCustomerPaymentFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        customerId: z.string().min(1),
+        customerName: z.string().min(1),
+        amountInRs: z.number().positive(),
+        paymentMethod: z.enum(['cash', 'bank', 'esewa', 'khalti']).default('cash'),
+        branchId: z.string().optional(),
+        narration: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('accounts', 'create')
+
+    const paymentId = nid('cpm')
+    const amount = Math.round(data.amountInRs * 100)
+
+    const result = await dbTx.transaction(async (tx) => {
+      return postCustomerPaymentTx(tx, {
+        paymentId,
+        customerId: data.customerId,
+        customerName: data.customerName,
+        amount,
+        paymentMethod: data.paymentMethod,
+        branchId: data.branchId,
+        narration: data.narration,
+        actor: user,
+      })
+    })
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'create',
+      `Customer payment ${result.voucherNo}: Received Rs. ${data.amountInRs} from ${data.customerName} via ${data.paymentMethod}`,
+    )
+
+    return result
+  })
+
+/**
+ * Standard Posting: Dealer Advance Disbursement (Phase 3 & 4).
+ */
+export const postDealerAdvanceFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        dealerId: z.string().min(1),
+        dealerName: z.string().min(1),
+        amountInRs: z.number().positive(),
+        paymentMethod: z.enum(['bank', 'cash']).default('bank'),
+        branchId: z.string().optional(),
+        narration: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('accounts', 'approve')
+
+    const advanceId = nid('dad')
+    const amount = Math.round(data.amountInRs * 100)
+
+    const result = await dbTx.transaction(async (tx) => {
+      return postDealerAdvanceTx(tx, {
+        advanceId,
+        dealerId: data.dealerId,
+        dealerName: data.dealerName,
+        amount,
+        paymentMethod: data.paymentMethod,
+        branchId: data.branchId,
+        narration: data.narration,
+        actor: user,
+      })
+    })
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'create',
+      `Dealer advance ${result.voucherNo}: Issued Rs. ${data.amountInRs} advance to ${data.dealerName} via ${data.paymentMethod}`,
+    )
+
+    return result
+  })
+
+/**
+ * Standard Posting: Rider / Staff Advance Disbursement (Phase 3 & 4).
+ */
+export const postRiderAdvanceFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        riderId: z.string().min(1),
+        riderName: z.string().min(1),
+        amountInRs: z.number().positive(),
+        paymentMethod: z.enum(['cash', 'bank']).default('cash'),
+        branchId: z.string().optional(),
+        narration: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('accounts', 'approve')
+
+    const advanceId = nid('rad')
+    const amount = Math.round(data.amountInRs * 100)
+
+    const result = await dbTx.transaction(async (tx) => {
+      return postRiderAdvanceTx(tx, {
+        advanceId,
+        riderId: data.riderId,
+        riderName: data.riderName,
+        amount,
+        paymentMethod: data.paymentMethod,
+        branchId: data.branchId,
+        narration: data.narration,
+        actor: user,
+      })
+    })
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'create',
+      `Rider advance ${result.voucherNo}: Issued Rs. ${data.amountInRs} advance to ${data.riderName} via ${data.paymentMethod}`,
+    )
+
+    return result
+  })
+
+/**
+ * Standard Posting: Gateway Settlement Batch into Bank (Phase 3).
+ */
+export const postGatewaySettlementFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        gateway: z.enum(['esewa', 'khalti']),
+        grossAmountInRs: z.number().positive(),
+        feeAmountInRs: z.number().min(0).default(0),
+        referenceNo: z.string().optional(),
+        branchId: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('accounts', 'create')
+
+    const settlementId = nid('gws')
+    const grossAmount = Math.round(data.grossAmountInRs * 100)
+    const feeAmount = Math.round(data.feeAmountInRs * 100)
+    const netBankAmount = grossAmount - feeAmount
+
+    if (netBankAmount <= 0) {
+      throw new Error('Net bank settlement amount must be greater than zero.')
+    }
+
+    const result = await dbTx.transaction(async (tx) => {
+      return postGatewaySettlementTx(tx, {
+        settlementId,
+        gateway: data.gateway,
+        grossAmount,
+        feeAmount,
+        netBankAmount,
+        referenceNo: data.referenceNo,
+        branchId: data.branchId,
+        actor: user,
+      })
+    })
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'create',
+      `Gateway settlement ${result.voucherNo}: Transferred Rs. ${data.grossAmountInRs} from ${data.gateway} to Bank (Fee Rs. ${data.feeAmountInRs})`,
+    )
+
+    return result
+  })
+
+/**
+ * Standard Posting: Dealer Purchase Return / Debit Note (Phase 3 & 4).
+ */
+export const postDealerPurchaseReturnFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        dealerId: z.string().min(1),
+        dealerName: z.string().min(1),
+        catalogType: z.enum(['liquor', 'food']).default('liquor'),
+        amountInRs: z.number().positive(),
+        reason: z.string().optional(),
+        branchId: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('accounts', 'create')
+
+    const returnId = nid('dpr')
+    const amount = Math.round(data.amountInRs * 100)
+
+    const result = await dbTx.transaction(async (tx) => {
+      return postDealerPurchaseReturnTx(tx, {
+        returnId,
+        dealerId: data.dealerId,
+        dealerName: data.dealerName,
+        catalogType: data.catalogType,
+        amount,
+        reason: data.reason,
+        branchId: data.branchId,
+        actor: user,
+      })
+    })
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'create',
+      `Dealer debit note ${result.voucherNo}: Returned Rs. ${data.amountInRs} items to dealer ${data.dealerName}`,
+    )
+
+    return result
   })

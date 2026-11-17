@@ -21,6 +21,7 @@
     "db:seed": "bun run src/db/seed.ts",
     "db:clean": "bun run src/db/clean.ts",
     "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/server/finance/accounting-validation.test.ts",
     "demo:nepalotp": "bun run src/server/otp/demo-nepalotp.ts",
     "analyze": "ANALYZE=true vite build"
   },

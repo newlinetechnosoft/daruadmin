@@ -9,11 +9,21 @@ export const ALLOWED_PARTY_TYPES = [
   'rider',
   'customer',
   'supplier',
+  'employee',
 ] as const
 
 export type PartyType = (typeof ALLOWED_PARTY_TYPES)[number]
 export type CostCenter = 'liquor' | 'food' | 'delivery' | 'general'
-export type VoucherType = 'JV' | 'PV' | 'RV' | 'CV' | 'SV'
+export type VoucherType =
+  | 'JV'
+  | 'PV'
+  | 'RV'
+  | 'CV'
+  | 'SV'
+  | 'CN'
+  | 'DN'
+  | 'OB'
+  | 'PC'
 
 export type SerializableValue =
   | string
@@ -34,6 +44,8 @@ export interface JournalLineInput {
   partyType?: PartyType | null
   partyId?: string | null
   costCenter?: CostCenter | null
+  costCenterId?: string | null
+  branchId?: string | null
   narration?: string | null
 }
 
@@ -44,14 +56,16 @@ export interface PostJournalParams {
   refType?: string | null
   refId?: string | null
   event?: string | null
+  branchId?: string | null
   createdBy: string
+  postingStatus?: 'draft' | 'submitted' | 'approved'
   metadata?: JournalMetadata | null
   lines: JournalLineInput[]
 }
 
 export interface PostJournalResult {
   journalEntryId: string
-  voucherNo: string
+  voucherNo: string | null
   isDuplicate?: boolean
 }
 
@@ -116,3 +130,93 @@ export interface PostRiderPayoutParams {
   paymentAccount?: 'bank' | 'cash'
   actor: FinanceActor
 }
+
+export interface PostSalesReturnParams {
+  returnId: string
+  orderId: string
+  orderNumber: string
+  customerId?: string | null
+  customerName?: string | null
+  subtotal: number // paisa
+  tax?: number // paisa
+  discount?: number // paisa
+  refundAmount: number // paisa
+  refundMethod: 'cash' | 'bank' | 'customer_credit'
+  dealerCostToReverse?: {
+    dealerId: string
+    catalogType: 'liquor' | 'food'
+    amount: number
+  }[]
+  branchId?: string | null
+  actor: FinanceActor
+}
+
+export interface PostCustomerPaymentParams {
+  paymentId: string
+  customerId: string
+  customerName: string
+  amount: number // paisa
+  paymentMethod: 'cash' | 'bank' | 'esewa' | 'khalti'
+  branchId?: string | null
+  narration?: string
+  actor: FinanceActor
+}
+
+export interface PostDealerAdvanceParams {
+  advanceId: string
+  dealerId: string
+  dealerName: string
+  amount: number // paisa
+  paymentMethod?: 'bank' | 'cash'
+  branchId?: string | null
+  narration?: string
+  actor: FinanceActor
+}
+
+export interface PostRiderAdvanceParams {
+  advanceId: string
+  riderId: string
+  riderName: string
+  amount: number // paisa
+  paymentMethod?: 'cash' | 'bank'
+  branchId?: string | null
+  narration?: string
+  actor: FinanceActor
+}
+
+export interface PostGatewaySettlementParams {
+  settlementId: string
+  gateway: 'esewa' | 'khalti'
+  grossAmount: number // paisa
+  feeAmount: number // paisa
+  netBankAmount: number // paisa
+  referenceNo?: string | null
+  branchId?: string | null
+  actor: FinanceActor
+}
+
+export interface PostDealerPurchaseReturnParams {
+  returnId: string
+  dealerId: string
+  dealerName: string
+  catalogType: 'liquor' | 'food'
+  amount: number // paisa
+  reason?: string | null
+  branchId?: string | null
+  actor: FinanceActor
+}
+
+export interface PostInterBranchTransferParams {
+  fromBranchId: string
+  fromBranchName: string
+  toBranchId: string
+  toBranchName: string
+  fromAccountId: string
+  toAccountId: string
+  amount: number // paisa
+  narration?: string
+  postingDate?: Date
+  actor: FinanceActor
+}
+
+

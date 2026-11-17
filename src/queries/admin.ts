@@ -55,6 +55,54 @@ import {
   getPartyStatementFn,
   getRiderAccountsSummaryFn,
 } from '#/server/finance/finance.functions'
+import { getChartOfAccountsTreeFn } from '#/server/finance/coa.functions'
+import {
+  getBranchesFn,
+  getBranchProfitabilityFn,
+} from '#/server/finance/branches.functions'
+import {
+  getBankAccountsFn,
+  getBankReconciliationSummaryFn,
+  getBankTransactionsFn,
+  getCashAccountsFn,
+  getCashClosingHistoryFn,
+  getCashFlowTrackingFn,
+  getUnmatchedBankJournalLinesFn,
+} from '#/server/finance/banking.functions'
+import {
+  getExpenseCategoriesFn,
+  getExpenseDetailsFn,
+  getExpensesFn,
+} from '#/server/finance/expenses.functions'
+import { getPartyAccountsSummaryFn } from '#/server/finance/parties.functions'
+import {
+  getTrialBalanceReportFn,
+  getProfitAndLossReportFn,
+  getBalanceSheetReportFn,
+  getCashFlowStatementReportFn,
+  getTaxSummaryReportFn,
+  getSubLedgerIntegrityAuditFn,
+  getDayBookReportFn,
+  getAgingReportFn,
+} from '#/server/finance/reports.functions'
+import {
+  getVoucherAttachmentsFn,
+  getVoucherDetailsFn,
+  getVouchersListFn,
+} from '#/server/finance/vouchers.functions'
+import {
+  getAccountingPeriodsFn,
+  getPeriodClosingHistoryFn,
+  verifyFiscalYearPreCloseFn,
+} from '#/server/finance/periods.functions'
+import {
+  getExportAuditLogsFn,
+  getFinancialAuditLogsFn,
+  getReversalHistoryFn,
+  getVoucherApprovalLogsFn,
+} from '#/server/finance/audit.functions'
+import { getAccountingDashboardFn } from '#/server/finance/dashboard.functions'
+import { getAccountingConfigurationFn } from '#/server/finance/settings.functions'
 
 export const adminQueries = {
   access: () =>
@@ -125,7 +173,7 @@ export const adminQueries = {
     }),
 
   partyStatement: (data: {
-    partyType: 'dealer' | 'rider' | 'customer' | 'supplier'
+    partyType: 'dealer' | 'rider' | 'customer' | 'supplier' | 'employee'
     partyId: string
     fromDate?: string
     toDate?: string
@@ -190,6 +238,265 @@ export const adminQueries = {
       queryKey: ['admin', 'rider-accounts-summary'],
       queryFn: () => getRiderAccountsSummaryFn(),
       staleTime: 1000 * 60,
+    }),
+
+  coaTree: () =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'coa-tree'],
+      queryFn: () => getChartOfAccountsTreeFn(),
+      staleTime: 1000 * 60 * 5,
+    }),
+
+  branches: () =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'branches'],
+      queryFn: () => getBranchesFn(),
+      staleTime: 1000 * 60 * 5,
+    }),
+
+  branchProfitability: (data: { branchId?: string; fromDate?: string; toDate?: string } = {}) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'branch-profitability', data],
+      queryFn: () => getBranchProfitabilityFn({ data }),
+      staleTime: 1000 * 60,
+    }),
+
+  bankAccounts: () =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'bank-accounts'],
+      queryFn: () => getBankAccountsFn(),
+      staleTime: 1000 * 30,
+    }),
+
+  cashAccounts: () =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'cash-accounts'],
+      queryFn: () => getCashAccountsFn(),
+      staleTime: 1000 * 30,
+    }),
+
+  unmatchedBankJournalLines: (bankAccountId: string) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'unmatched-bank-lines', bankAccountId],
+      queryFn: () => getUnmatchedBankJournalLinesFn({ data: { bankAccountId } }),
+      staleTime: 1000 * 15,
+    }),
+
+  bankReconciliationSummary: (bankAccountId: string) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'bank-reconciliation-summary', bankAccountId],
+      queryFn: () => getBankReconciliationSummaryFn({ data: { bankAccountId } }),
+      staleTime: 1000 * 15,
+    }),
+
+  cashFlowTracking: () =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'cash-flow-tracking'],
+      queryFn: () => getCashFlowTrackingFn(),
+      staleTime: 1000 * 30,
+    }),
+
+  cashClosingHistory: (data: { branchId?: string; limit?: number } = {}) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'cash-closings', data],
+      queryFn: () => getCashClosingHistoryFn({ data }),
+      staleTime: 1000 * 30,
+    }),
+
+  bankTransactions: (data: { bankAccountId?: string; status?: 'unmatched' | 'matched' | 'ignored'; limit?: number } = {}) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'bank-transactions', data],
+      queryFn: () => getBankTransactionsFn({ data }),
+      staleTime: 1000 * 30,
+    }),
+
+  expenseCategories: () =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'expense-categories'],
+      queryFn: () => getExpenseCategoriesFn(),
+      staleTime: 1000 * 60 * 5,
+    }),
+
+  expenses: (
+    data: {
+      branchId?: string
+      categoryId?: string
+      categoryAccountId?: string
+      status?: string
+      search?: string
+      fromDate?: string
+      toDate?: string
+      limit?: number
+      offset?: number
+    } = {},
+  ) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'expenses', data],
+      queryFn: () => getExpensesFn({ data }),
+      staleTime: 1000 * 30,
+    }),
+
+  expenseDetails: (expenseId: string) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'expense-details', expenseId],
+      queryFn: () => getExpenseDetailsFn({ data: { expenseId } }),
+      staleTime: 1000 * 30,
+      enabled: !!expenseId,
+    }),
+
+  partyAccountsSummary: (data: { partyType: 'dealer' | 'rider' | 'customer' | 'supplier' | 'employee'; search?: string } = { partyType: 'dealer' }) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'party-accounts', data],
+      queryFn: () => getPartyAccountsSummaryFn({ data }),
+      staleTime: 1000 * 30,
+    }),
+
+  vouchersList: (data: { voucherType?: string; status?: 'draft' | 'submitted' | 'approved' | 'cancelled'; branchId?: string; fromDate?: string; toDate?: string; search?: string; limit?: number; offset?: number } = {}) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'vouchers-list', data],
+      queryFn: () => getVouchersListFn({ data }),
+      staleTime: 1000 * 30,
+    }),
+
+  voucherDetails: (journalEntryId: string) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'voucher-details', journalEntryId],
+      queryFn: () => getVoucherDetailsFn({ data: { journalEntryId } }),
+      staleTime: 1000 * 30,
+    }),
+
+  voucherAttachments: (journalEntryId: string) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'voucher-attachments', journalEntryId],
+      queryFn: () => getVoucherAttachmentsFn({ data: { journalEntryId } }),
+      staleTime: 1000 * 30,
+    }),
+
+  accountingPeriods: (data: { fiscalYear?: string } = {}) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'accounting-periods', data],
+      queryFn: () => getAccountingPeriodsFn({ data }),
+      staleTime: 1000 * 60,
+    }),
+
+  accountingConfig: () =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'accounting-config'],
+      queryFn: () => getAccountingConfigurationFn(),
+      staleTime: 1000 * 60,
+    }),
+
+  periodClosingHistory: () =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'period-closing-history'],
+      queryFn: () => getPeriodClosingHistoryFn(),
+      staleTime: 1000 * 60,
+    }),
+
+  fiscalYearPreClose: (fiscalYearId: string) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'fiscal-year-pre-close', fiscalYearId],
+      queryFn: () => verifyFiscalYearPreCloseFn({ data: { fiscalYearId } }),
+      staleTime: 1000 * 30,
+    }),
+
+  financialAuditLogs: (params?: {
+    fromDate?: string
+    toDate?: string
+    action?: string
+    actor?: string
+    search?: string
+    limit?: number
+    offset?: number
+  }) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'audit-logs', params],
+      queryFn: () => getFinancialAuditLogsFn({ data: params }),
+      staleTime: 1000 * 30,
+    }),
+
+  voucherApprovalLogs: (limit?: number) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'voucher-approval-logs', limit],
+      queryFn: () => getVoucherApprovalLogsFn({ data: { limit } }),
+      staleTime: 1000 * 30,
+    }),
+
+  reversalAuditHistory: () =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'reversal-audit-history'],
+      queryFn: () => getReversalHistoryFn(),
+      staleTime: 1000 * 60,
+    }),
+
+  exportAuditLogs: () =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'export-audit-logs'],
+      queryFn: () => getExportAuditLogsFn(),
+      staleTime: 1000 * 60,
+    }),
+
+  trialBalanceReport: (data: { fromDate?: string; toDate?: string; branchId?: string; costCenterId?: string; includeZero?: boolean } = {}) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'reports', 'trial-balance', data],
+      queryFn: () => getTrialBalanceReportFn({ data }),
+      staleTime: 1000 * 60,
+    }),
+
+  profitLossReport: (data: { fromDate?: string; toDate?: string; branchId?: string; costCenterId?: string } = {}) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'reports', 'profit-loss', data],
+      queryFn: () => getProfitAndLossReportFn({ data }),
+      staleTime: 1000 * 60,
+    }),
+
+  balanceSheetReport: (data: { asOfDate?: string; branchId?: string } = {}) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'reports', 'balance-sheet', data],
+      queryFn: () => getBalanceSheetReportFn({ data }),
+      staleTime: 1000 * 60,
+    }),
+
+  cashFlowReport: (data: { fromDate?: string; toDate?: string; branchId?: string } = {}) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'reports', 'cash-flow', data],
+      queryFn: () => getCashFlowStatementReportFn({ data }),
+      staleTime: 1000 * 60,
+    }),
+
+  taxSummaryReport: (data: { fromDate?: string; toDate?: string; branchId?: string } = {}) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'reports', 'tax-summary', data],
+      queryFn: () => getTaxSummaryReportFn({ data }),
+      staleTime: 1000 * 60,
+    }),
+
+  subledgerIntegrity: () =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'reports', 'subledger-integrity'],
+      queryFn: () => getSubLedgerIntegrityAuditFn(),
+      staleTime: 1000 * 60,
+    }),
+
+  dayBookReport: (data: { date?: string; branchId?: string; voucherType?: string; limit?: number; offset?: number } = {}) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'reports', 'day-book', data],
+      queryFn: () => getDayBookReportFn({ data }),
+      staleTime: 1000 * 30,
+    }),
+
+  agingReport: (data: { type?: 'receivable' | 'payable'; asOfDate?: string; branchId?: string } = {}) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'reports', 'aging', data],
+      queryFn: () => getAgingReportFn({ data }),
+      staleTime: 1000 * 60,
+    }),
+
+  accountingDashboard: (data: { branchId?: string; fromDate?: string; toDate?: string } = {}) =>
+    queryOptions({
+      queryKey: ['admin', 'finance', 'dashboard', data],
+      queryFn: () => getAccountingDashboardFn({ data }),
+      staleTime: 1000 * 30,
     }),
 
   riders: () =>

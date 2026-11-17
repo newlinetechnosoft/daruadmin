@@ -196,7 +196,7 @@ export function BatchDealerSettlementDialog({
         },
       )
 
-      if (onSettled) onSettled(res.voucherNo, res.slug)
+      if (onSettled && res.voucherNo) onSettled(res.voucherNo, res.slug)
       onOpenChange(false)
       await queryClient.invalidateQueries({
         queryKey: adminQueries.ledger().queryKey,

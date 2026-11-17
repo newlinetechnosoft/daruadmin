@@ -71,7 +71,7 @@ export function RiderSettlementApprovalDialog({
         `Settlement voucher ${res.voucherNo} posted & disbursed successfully`,
       )
       onOpenChange(false)
-      if (onSuccess) onSuccess(res.voucherNo, res.slug)
+      if (onSuccess && res.voucherNo) onSuccess(res.voucherNo, res.slug)
       await queryClient.invalidateQueries({
         queryKey: adminQueries.ledger().queryKey,
       })

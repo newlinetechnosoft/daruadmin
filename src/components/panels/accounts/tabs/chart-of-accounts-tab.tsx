@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { useSuspenseQuery } from '@tanstack/react-query'
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import type { ColumnDef } from '@tanstack/react-table'
 import { adminQueries } from '#/queries/admin'
@@ -7,20 +7,36 @@ import { DataTable } from '#/components/shared/data-table'
 import { MoneyText } from '#/components/shared/money-text'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { TableCell, TableRow } from '#/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
 import { ROOT_TYPE_OPTIONS } from '../accounts-route'
-import { csvRupees, exportCsv } from '../export-csv'
+import { exportCsv } from '../export-csv'
 import { useDebouncedValue } from '#/hooks/use-debounced-value'
+import {
+  createAccountFn,
+  updateAccountFn,
+} from '#/server/finance/coa.functions'
+import { toast } from 'sonner'
 import {
   Building2,
   ChevronDown,
   ChevronRight,
   Download,
+  Edit2,
   ExternalLink,
-  Layers,
+  Plus,
+  Power,
   Snowflake,
-  Wallet,
 } from 'lucide-react'
 import type { AccountWithBalance } from '#/server/finance/finance.queries'
 
@@ -46,10 +62,6 @@ interface CoaTreeNode extends AccountWithBalance {
 interface CoaTreeRow extends CoaTreeNode {
   depth: number
   isExpanded: boolean
-}
-
-function isDebitNormal(rootType: string) {
-  return rootType === 'asset' || rootType === 'expense'
 }
 
 function buildTree(accounts: AccountWithBalance[]) {
@@ -91,6 +103,7 @@ function buildTree(accounts: AccountWithBalance[]) {
 }
 
 export function ChartOfAccountsTab() {
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { data: ledgerData } = useSuspenseQuery(adminQueries.ledger())
   const chartOfAccounts = ledgerData.ops.chartOfAccounts
@@ -100,14 +113,39 @@ export function ChartOfAccountsTab() {
   const [rootFilter, setRootFilter] = useState<string>('all')
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
+  // Modal states
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedAccount, setSelectedAccount] = useState<AccountWithBalance | null>(null)
+
+  // Create form state
+  const [createCode, setCreateCode] = useState('')
+  const [createName, setCreateName] = useState('')
+  const [createRootType, setCreateRootType] = useState<
+    'asset' | 'liability' | 'equity' | 'income' | 'expense'
+  >('expense')
+  const [createParentId, setCreateParentId] = useState<string>('')
+  const [createIsGroup, setCreateIsGroup] = useState(false)
+  const [createAccountType, setCreateAccountType] = useState('other')
+  const [createBalanceSide, setCreateBalanceSide] = useState<'debit' | 'credit'>('debit')
+  const [createDescription, setCreateDescription] = useState('')
+
+  // Edit form state
+  const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editAccountType, setEditAccountType] = useState('other')
+
   const { roots } = useMemo(() => buildTree(chartOfAccounts), [chartOfAccounts])
 
-  const groupIds = useMemo(
-    () =>
-      chartOfAccounts
-        .filter((account) => account.isGroup)
-        .map((account) => account.id),
+  const groupAccounts = useMemo(
+    () => chartOfAccounts.filter((account) => account.isGroup),
     [chartOfAccounts],
+  )
+
+  const groupIds = useMemo(
+    () => groupAccounts.map((account) => account.id),
+    [groupAccounts],
   )
 
   const isFiltering = debouncedQuery.trim().length > 0 || rootFilter !== 'all'
@@ -160,6 +198,9 @@ export function ChartOfAccountsTab() {
     })
   }, [])
 
+  const allCollapsed =
+    groupIds.length > 0 && groupIds.every((id) => collapsed.has(id))
+
   const openLedger = useCallback(
     (accountId: string) => {
       navigate({
@@ -176,47 +217,136 @@ export function ChartOfAccountsTab() {
     [navigate],
   )
 
-  const leafAccounts = useMemo(
-    () => chartOfAccounts.filter((account) => !account.isGroup),
-    [chartOfAccounts],
-  )
-  const totalDebit = leafAccounts.reduce(
-    (sum, account) => sum + account.totalDebit,
-    0,
-  )
-  const totalCredit = leafAccounts.reduce(
-    (sum, account) => sum + account.totalCredit,
-    0,
-  )
-  const variance = totalDebit - totalCredit
-  const frozenCount = chartOfAccounts.filter(
-    (account) => account.isFrozen,
-  ).length
+  const handleOpenEdit = (acc: AccountWithBalance) => {
+    setSelectedAccount(acc)
+    setEditName(acc.name)
+    setEditDescription(acc.description || '')
+    setEditAccountType(acc.accountType || 'other')
+    setIsEditOpen(true)
+  }
 
-  const allCollapsed =
-    groupIds.length > 0 && groupIds.every((id) => collapsed.has(id))
+  const handleToggleFreeze = async (acc: AccountWithBalance) => {
+    try {
+      setIsSubmitting(true)
+      await updateAccountFn({
+        data: { id: acc.id, isFrozen: !acc.isFrozen },
+      })
+      toast.success(
+        `Account ${acc.code} ${acc.isFrozen ? 'unfrozen' : 'frozen'} successfully`,
+      )
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'ledger'] })
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update freeze status')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleToggleActive = async (acc: AccountWithBalance) => {
+    try {
+      setIsSubmitting(true)
+      await updateAccountFn({
+        data: { id: acc.id, isActive: !acc.isActive },
+      })
+      toast.success(
+        `Account ${acc.code} ${acc.isActive ? 'deactivated' : 'activated'} successfully`,
+      )
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'ledger'] })
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update account status')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleSaveCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!createName.trim()) {
+      toast.error('Account name is required')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      const res = await createAccountFn({
+        data: {
+          code: createCode.trim() || undefined,
+          name: createName.trim(),
+          rootType: createRootType,
+          parentId: createParentId || undefined,
+          isGroup: createIsGroup,
+          accountType: createAccountType,
+          balanceMustBe: createBalanceSide,
+          description: createDescription.trim() || undefined,
+        },
+      })
+      toast.success(`Account "${res.name}" (${res.code}) created successfully`)
+      setIsCreateOpen(false)
+      setCreateName('')
+      setCreateCode('')
+      setCreateDescription('')
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'ledger'] })
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create account')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedAccount) return
+    if (!editName.trim()) {
+      toast.error('Account name is required')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      await updateAccountFn({
+        data: {
+          id: selectedAccount.id,
+          name: editName.trim(),
+          description: editDescription.trim() || null,
+          accountType: editAccountType,
+        },
+      })
+      toast.success('Account updated successfully')
+      setIsEditOpen(false)
+      setSelectedAccount(null)
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'ledger'] })
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update account')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   const columns = useMemo<ColumnDef<CoaTreeRow>[]>(
     () => [
       {
         accessorKey: 'code',
         header: 'Account',
-        enableSorting: false,
         cell: ({ row }) => {
           const account = row.original
+          const paddingLeft = `${account.depth * 18 + 4}px`
+          const hasChildren = account.children.length > 0
+
           return (
             <div
-              className="flex items-start gap-1"
-              style={{ paddingLeft: account.depth * 16 }}
+              className="flex items-center gap-2"
+              style={{ paddingLeft }}
+              onClick={(event) => {
+                if (hasChildren) {
+                  event.stopPropagation()
+                  toggleExpand(account.id)
+                }
+              }}
             >
-              {account.children.length > 0 ? (
+              {hasChildren ? (
                 <button
                   type="button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    toggleExpand(account.id)
-                  }}
-                  className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted"
                   aria-label={account.isExpanded ? 'Collapse' : 'Expand'}
                 >
                   {account.isExpanded ? (
@@ -226,7 +356,9 @@ export function ChartOfAccountsTab() {
                   )}
                 </button>
               ) : (
-                <span className="h-4 w-4 shrink-0" />
+                <span className="inline-block h-5 w-5 shrink-0 text-center text-muted-foreground/40">
+                  ·
+                </span>
               )}
               <div className="min-w-0 leading-tight">
                 <span className="flex flex-wrap items-center gap-1.5">
@@ -318,80 +450,133 @@ export function ChartOfAccountsTab() {
         header: 'Balance',
         cell: ({ row }) =>
           row.original.balanceMustBe ? (
-            <Badge variant="secondary" className="text-[10px] uppercase">
+            <span className="font-mono text-xs uppercase text-muted-foreground">
               {row.original.balanceMustBe}
-            </Badge>
+            </span>
           ) : (
             <span className="text-xs text-muted-foreground">—</span>
           ),
       },
       {
-        accessorKey: 'rollupDebit',
-        header: 'Debit',
-        cell: ({ row }) =>
-          row.original.rollupDebit > 0 ? (
-            <MoneyText
-              paisa={row.original.rollupDebit}
-              className="text-xs font-semibold text-emerald-600 dark:text-emerald-400"
-            />
-          ) : (
-            <span className="text-xs text-muted-foreground">—</span>
-          ),
-      },
-      {
-        accessorKey: 'rollupCredit',
-        header: 'Credit',
-        cell: ({ row }) =>
-          row.original.rollupCredit > 0 ? (
-            <MoneyText
-              paisa={row.original.rollupCredit}
-              className="text-xs font-semibold text-rose-600 dark:text-rose-400"
-            />
-          ) : (
-            <span className="text-xs text-muted-foreground">—</span>
-          ),
-      },
-      {
-        accessorKey: 'rollupBalance',
-        header: 'Balance',
+        id: 'totalDebit',
+        header: () => <div className="text-right">Debit (NPR)</div>,
         cell: ({ row }) => (
           <MoneyText
-            paisa={row.original.rollupBalance}
-            className={`text-xs font-bold ${
-              row.original.rollupBalance < 0
-                ? 'text-rose-600 dark:text-rose-400'
-                : isDebitNormal(row.original.rootType)
-                  ? 'text-foreground'
-                  : 'text-emerald-600 dark:text-emerald-400'
+            paisa={
+              row.original.isGroup
+                ? row.original.rollupDebit
+                : row.original.totalDebit
+            }
+            className={`block text-right text-xs font-mono ${
+              row.original.isGroup ? 'font-semibold' : ''
             }`}
           />
         ),
       },
       {
+        id: 'totalCredit',
+        header: () => <div className="text-right">Credit (NPR)</div>,
+        cell: ({ row }) => (
+          <MoneyText
+            paisa={
+              row.original.isGroup
+                ? row.original.rollupCredit
+                : row.original.totalCredit
+            }
+            className={`block text-right text-xs font-mono ${
+              row.original.isGroup ? 'font-semibold' : ''
+            }`}
+          />
+        ),
+      },
+      {
+        id: 'netBalance',
+        header: () => <div className="text-right">Net Balance</div>,
+        cell: ({ row }) => {
+          const balance = row.original.isGroup
+            ? row.original.rollupBalance
+            : row.original.netBalance
+          const isNegative = balance < 0
+          return (
+            <MoneyText
+              paisa={Math.abs(balance)}
+              className={`block text-right text-xs font-mono font-bold ${
+                isNegative
+                  ? 'text-rose-600 dark:text-rose-400'
+                  : 'text-emerald-600 dark:text-emerald-400'
+              }`}
+            />
+          )
+        },
+      },
+      {
         id: 'actions',
         header: '',
         enableSorting: false,
-        cell: ({ row }) => (
-          <div
-            className="flex justify-end"
-            onClick={(event) => event.stopPropagation()}
-          >
-            {!row.original.isGroup && (
+        cell: ({ row }) => {
+          const acc = row.original
+          return (
+            <div
+              className="flex items-center justify-end gap-1"
+              onClick={(event) => event.stopPropagation()}
+            >
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => openLedger(row.original.id)}
-                className="h-7 gap-1 px-2 text-xs"
+                title="Edit account properties"
+                onClick={() => handleOpenEdit(acc)}
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
               >
-                <ExternalLink className="h-3 w-3" />
-                Ledger
+                <Edit2 className="h-3 w-3" />
               </Button>
-            )}
-          </div>
-        ),
+
+              <Button
+                size="sm"
+                variant="ghost"
+                title={acc.isFrozen ? 'Unfreeze account' : 'Freeze account'}
+                onClick={() => handleToggleFreeze(acc)}
+                disabled={isSubmitting}
+                className={`h-7 w-7 p-0 ${
+                  acc.isFrozen
+                    ? 'text-sky-600 dark:text-sky-400'
+                    : 'text-muted-foreground hover:text-sky-600'
+                }`}
+              >
+                <Snowflake className="h-3 w-3" />
+              </Button>
+
+              <Button
+                size="sm"
+                variant="ghost"
+                title={acc.isActive ? 'Deactivate account' : 'Activate account'}
+                onClick={() => handleToggleActive(acc)}
+                disabled={isSubmitting}
+                className={`h-7 w-7 p-0 ${
+                  acc.isActive
+                    ? 'text-muted-foreground hover:text-rose-600'
+                    : 'text-rose-600'
+                }`}
+              >
+                <Power className="h-3 w-3" />
+              </Button>
+
+              {!acc.isGroup && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => openLedger(acc.id)}
+                  className="h-7 gap-1 px-2 text-xs"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  Ledger
+                </Button>
+              )}
+            </div>
+          )
+        },
       },
     ],
-    [openLedger, toggleExpand],
+    [openLedger, toggleExpand, isSubmitting],
   )
 
   const handleExport = () => {
@@ -419,84 +604,34 @@ export function ChartOfAccountsTab() {
           value: (account) => (account.isActive ? 'yes' : 'no'),
         },
         {
-          header: 'Debit (NPR)',
-          value: (account) => csvRupees(account.rollupDebit),
+          header: 'Total Debit (NPR)',
+          value: (account) => (account.totalDebit / 100).toFixed(2),
         },
         {
-          header: 'Credit (NPR)',
-          value: (account) => csvRupees(account.rollupCredit),
+          header: 'Total Credit (NPR)',
+          value: (account) => (account.totalCredit / 100).toFixed(2),
         },
         {
-          header: 'Balance (NPR)',
-          value: (account) => csvRupees(account.rollupBalance),
-        },
-        {
-          header: 'Ledger Lines',
-          value: (account) => account.rollupLines,
-        },
-        {
-          header: 'Description',
-          value: (account) => account.description ?? '',
+          header: 'Net Balance (NPR)',
+          value: (account) => (account.netBalance / 100).toFixed(2),
         },
       ],
       rows,
     )
   }
 
+  const { totalDebit, totalCredit } = useMemo(() => {
+    const leaf = chartOfAccounts.filter((a) => !a.isGroup)
+    return {
+      totalDebit: leaf.reduce((s, a) => s + a.totalDebit, 0),
+      totalCredit: leaf.reduce((s, a) => s + a.totalCredit, 0),
+    }
+  }, [chartOfAccounts])
+  const variance = totalDebit - totalCredit
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="rounded-lg border border-border bg-card p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Accounts</span>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <span className="mt-1 block text-lg font-bold font-mono tabular-nums">
-            {chartOfAccounts.length}
-          </span>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">
-              Groups / Leaves
-            </span>
-            <Layers className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <span className="mt-1 block text-lg font-bold font-mono tabular-nums">
-            {groupIds.length}
-            <span className="text-xs font-normal text-muted-foreground">
-              {' '}
-              / {leafAccounts.length}
-            </span>
-          </span>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Frozen</span>
-            <Snowflake className="h-4 w-4 text-sky-500" />
-          </div>
-          <span className="mt-1 block text-lg font-bold font-mono tabular-nums">
-            {frozenCount}
-          </span>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">
-              Debit / Credit Variance
-            </span>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <MoneyText
-            paisa={variance}
-            className={`mt-1 block text-lg font-bold ${
-              variance === 0
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : 'text-rose-600 dark:text-rose-400'
-            }`}
-          />
-        </div>
-      </div>
-
+      {/* Search and Filters */}
       <DataTable
         columns={columns}
         data={rows}
@@ -524,6 +659,14 @@ export function ChartOfAccountsTab() {
         }
         actionSlot={
           <>
+            <Button
+              size="sm"
+              onClick={() => setIsCreateOpen(true)}
+              className="h-8 gap-1.5 text-xs"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Account
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -586,10 +729,225 @@ export function ChartOfAccountsTab() {
         }
       />
 
-      <p className="text-xs text-muted-foreground">
-        Group accounts roll up every child posting. Select a leaf account to
-        open its General Ledger, or use the Ledger button on any row.
-      </p>
+      {/* Create Account Dialog */}
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm font-semibold">
+              <Building2 className="h-4 w-4 text-primary" />
+              Create Chart of Accounts Entry
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Add a new root group or postable leaf account.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveCreate} className="space-y-3 pt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Root Type</Label>
+                <NativeSelect
+                  value={createRootType}
+                  onChange={(e) =>
+                    setCreateRootType(e.target.value as any)
+                  }
+                  className="h-8 text-xs"
+                >
+                  <NativeSelectOption value="asset">Asset</NativeSelectOption>
+                  <NativeSelectOption value="liability">Liability</NativeSelectOption>
+                  <NativeSelectOption value="equity">Equity</NativeSelectOption>
+                  <NativeSelectOption value="income">Income</NativeSelectOption>
+                  <NativeSelectOption value="expense">Expense</NativeSelectOption>
+                </NativeSelect>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Parent Group</Label>
+                <NativeSelect
+                  value={createParentId}
+                  onChange={(e) => setCreateParentId(e.target.value)}
+                  className="h-8 text-xs"
+                >
+                  <NativeSelectOption value="">None (Top-Level)</NativeSelectOption>
+                  {groupAccounts
+                    .filter((g) => g.rootType === createRootType)
+                    .map((g) => (
+                      <NativeSelectOption key={g.id} value={g.id}>
+                        {g.code} - {g.name}
+                      </NativeSelectOption>
+                    ))}
+                </NativeSelect>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Account Code (Optional)</Label>
+                <Input
+                  value={createCode}
+                  onChange={(e) => setCreateCode(e.target.value)}
+                  placeholder="Auto-generated if empty"
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Sub-Type</Label>
+                <NativeSelect
+                  value={createAccountType}
+                  onChange={(e) => setCreateAccountType(e.target.value)}
+                  className="h-8 text-xs"
+                >
+                  <NativeSelectOption value="cash">Cash</NativeSelectOption>
+                  <NativeSelectOption value="bank">Bank</NativeSelectOption>
+                  <NativeSelectOption value="receivable">Receivable</NativeSelectOption>
+                  <NativeSelectOption value="payable">Payable</NativeSelectOption>
+                  <NativeSelectOption value="tax">Tax / VAT / TDS</NativeSelectOption>
+                  <NativeSelectOption value="income">Income</NativeSelectOption>
+                  <NativeSelectOption value="expense">Expense</NativeSelectOption>
+                  <NativeSelectOption value="cogs">COGS</NativeSelectOption>
+                  <NativeSelectOption value="equity">Equity</NativeSelectOption>
+                  <NativeSelectOption value="fixed_asset">Fixed Asset</NativeSelectOption>
+                  <NativeSelectOption value="other">Other</NativeSelectOption>
+                </NativeSelect>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Account Name</Label>
+              <Input
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                placeholder="e.g. Office Stationery, Delivery Fuel"
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Normal Balance Side</Label>
+                <NativeSelect
+                  value={createBalanceSide}
+                  onChange={(e) => setCreateBalanceSide(e.target.value as any)}
+                  className="h-8 text-xs"
+                >
+                  <NativeSelectOption value="debit">Debit (Dr)</NativeSelectOption>
+                  <NativeSelectOption value="credit">Credit (Cr)</NativeSelectOption>
+                </NativeSelect>
+              </div>
+
+              <div className="flex items-center gap-2 pt-5">
+                <input
+                  type="checkbox"
+                  id="isGroupAccount"
+                  checked={createIsGroup}
+                  onChange={(e) => setCreateIsGroup(e.target.checked)}
+                  className="rounded border-border text-primary"
+                />
+                <label htmlFor="isGroupAccount" className="text-xs cursor-pointer">
+                  Is Group Folder
+                </label>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Description / Notes</Label>
+              <Input
+                value={createDescription}
+                onChange={(e) => setCreateDescription(e.target.value)}
+                placeholder="Optional description"
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsCreateOpen(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={isSubmitting}>
+                {isSubmitting ? 'Creating…' : 'Create Account'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Account Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm font-semibold">
+              <Edit2 className="h-4 w-4 text-primary" />
+              Edit Account ({selectedAccount?.code})
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Update description, sub-type, or title.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveEdit} className="space-y-3 pt-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Account Name</Label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Sub-Type</Label>
+              <NativeSelect
+                value={editAccountType}
+                onChange={(e) => setEditAccountType(e.target.value)}
+                className="h-8 text-xs"
+              >
+                <NativeSelectOption value="cash">Cash</NativeSelectOption>
+                <NativeSelectOption value="bank">Bank</NativeSelectOption>
+                <NativeSelectOption value="receivable">Receivable</NativeSelectOption>
+                <NativeSelectOption value="payable">Payable</NativeSelectOption>
+                <NativeSelectOption value="tax">Tax / VAT / TDS</NativeSelectOption>
+                <NativeSelectOption value="income">Income</NativeSelectOption>
+                <NativeSelectOption value="expense">Expense</NativeSelectOption>
+                <NativeSelectOption value="cogs">COGS</NativeSelectOption>
+                <NativeSelectOption value="equity">Equity</NativeSelectOption>
+                <NativeSelectOption value="fixed_asset">Fixed Asset</NativeSelectOption>
+                <NativeSelectOption value="other">Other</NativeSelectOption>
+              </NativeSelect>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Description</Label>
+              <Input
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditOpen(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving…' : 'Save Changes'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

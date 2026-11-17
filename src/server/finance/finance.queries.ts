@@ -37,7 +37,7 @@ import {
 } from './account-keys'
 import type { AccountKey, AccountKeyMetadata } from './account-keys'
 import { computePayableAging, signedMovement } from './report-math'
-import type { DbTx, JournalMetadata } from './types'
+import type { DbTx, JournalMetadata, PartyType } from './types'
 
 // ---------------------------------------------------------
 // Legacy Single-Entry Mappers (backward compatibility)
@@ -139,9 +139,10 @@ export interface JournalLineItem {
 
 export interface DetailedJournalEntry {
   id: string
-  voucherNo: string
+  voucherNo: string | null
   voucherType: string
   fiscalYearId: string
+  branchId?: string | null
   postingDate: string
   bsDate: string
   dualDate: string
@@ -317,7 +318,7 @@ export async function getJournalEntriesQuery(params?: {
 export interface GeneralLedgerRow {
   lineId: string
   entryId: string
-  voucherNo: string
+  voucherNo: string | null
   voucherType: string
   postingDate: string
   bsDate: string
@@ -1172,7 +1173,7 @@ export interface GLEntryRow {
   createdAt: string
 }
 
-interface GLFilters {
+export interface GLFilters {
   accountId?: string | null
   accountCode?: string | null
   accountRootType?: string | null
@@ -1182,6 +1183,7 @@ interface GLFilters {
   voucherType?: string | null
   refType?: string | null
   refId?: string | null
+  branchId?: string | null
   fromDate?: Date | null
   toDate?: Date | null
   costCenterId?: string | null
@@ -1235,6 +1237,8 @@ export async function getGeneralLedgerEntriesQuery(
   if (filters.refType)
     conditions.push(eq(journalEntries.refType, filters.refType))
   if (filters.refId) conditions.push(eq(journalEntries.refId, filters.refId))
+  if (filters.branchId)
+    conditions.push(eq(journalLines.branchId, filters.branchId))
   if (filters.costCenterId)
     conditions.push(eq(journalLines.costCenterId, filters.costCenterId))
   if (filters.fromDate)
@@ -1435,7 +1439,7 @@ export interface PartyStatementRow {
 }
 
 interface PartyStatementFilters {
-  partyType: 'dealer' | 'rider' | 'customer' | 'supplier'
+  partyType: PartyType
   partyId: string
   fromDate?: Date | null
   toDate?: Date | null
