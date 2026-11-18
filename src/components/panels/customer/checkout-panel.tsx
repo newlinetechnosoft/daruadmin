@@ -6,7 +6,10 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { authClient } from '#/lib/auth-client'
 import { useCart } from '#/lib/cart-context'
 import { formatNPR } from '#/lib/money'
-import { storeQueries } from '#/queries/admin'
+import { storeQueries, adminQueries } from '#/queries/admin'
+import { useActiveServiceZones } from '#/queries/zones'
+import { isPointInsideAnyZone } from '#/lib/geo-utils'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import {
   checkoutFormSchema,
   normalizeNepaliPhone,
@@ -24,6 +27,7 @@ import type { CustomerAddress } from '#/server/operations/types'
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { StoreCountdownTimer } from '#/components/store/countdown-timer'
+import { getPaymentGatewayLogo } from '#/components/checkout/payment-icons'
 import { DeliveryMap } from './delivery-map'
 import { DEFAULT_MAP_CENTER, isWithinButwalArea } from '#/lib/map-config'
 import { Button } from '#/components/ui/button'
@@ -59,6 +63,7 @@ import {
   Clock,
   Calendar,
   Lock,
+  Navigation,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -103,6 +108,58 @@ function formatTimeTo12Hour(timeStr: string): string {
   return `${displayH}:${String(m).padStart(2, '0')} ${period}`
 }
 
+interface PaymentVisualConfig {
+  subtitle: string
+  badgeLabel?: string
+  badgeColor?: {
+    bg: string
+    text: string
+    border: string
+  }
+}
+
+const PAYMENT_VISUALS: Record<string, PaymentVisualConfig> = {
+  cod: {
+    subtitle: 'Pay the rider in cash.',
+  },
+  esewa: {
+    subtitle: 'Fast and secure checkout.',
+    badgeLabel: 'eSewa-ePay',
+    badgeColor: {
+      bg: 'bg-[#E8F8EE] dark:bg-emerald-950/60',
+      text: 'text-[#16A34A] dark:text-emerald-300',
+      border: 'border-emerald-200/80 dark:border-emerald-800/60',
+    },
+  },
+  khalti: {
+    subtitle: 'Pay with your Khalti wallet.',
+    badgeLabel: 'Khalti-ePay',
+    badgeColor: {
+      bg: 'bg-[#F3E8FF] dark:bg-purple-950/60',
+      text: 'text-[#7E22CE] dark:text-purple-300',
+      border: 'border-purple-200/80 dark:border-purple-800/60',
+    },
+  },
+  fonepay: {
+    subtitle: 'Scan & pay via Fonepay QR.',
+    badgeLabel: 'Fonepay-QR',
+    badgeColor: {
+      bg: 'bg-[#FEE2E2] dark:bg-rose-950/60',
+      text: 'text-[#DC2626] dark:text-rose-300',
+      border: 'border-rose-200/80 dark:border-rose-800/60',
+    },
+  },
+  connectips: {
+    subtitle: 'Direct bank payment via ConnectIPS.',
+    badgeLabel: 'NCHL-CIPS',
+    badgeColor: {
+      bg: 'bg-[#E0F2FE] dark:bg-sky-950/60',
+      text: 'text-[#0284C7] dark:text-sky-300',
+      border: 'border-sky-200/80 dark:border-sky-800/60',
+    },
+  },
+}
+
 export function CheckoutPanel() {
   const { data: session } = authClient.useSession()
   const { items, totalPaisa, clearCart } = useCart()
@@ -130,12 +187,34 @@ export function CheckoutPanel() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const { data: storeStatus } = useQuery(storeQueries.operatingStatus())
+  const { data: activePaymentGateways = [] } = useQuery(
+    adminQueries.activePaymentGateways(),
+  )
+  const {
+    features: serviceZoneFeatures,
+    isLoading: isZonesLoading,
+  } = useActiveServiceZones()
+  const [selectedZoneId, setSelectedZoneId] = useState<string>('')
 
   // Saved Addresses
   const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string>('custom')
   const [saveAddressForLater, setSaveAddressForLater] = useState(false)
   const [addressLabel, setAddressLabel] = useState('Home')
+
+  // Compute centroid of polygon for map centering
+  const getZoneCenter = (polygon: any): [number, number] => {
+    const ring = polygon?.coordinates?.[0] || []
+    if (ring.length === 0) return DEFAULT_MAP_CENTER
+    let sumLat = 0
+    let sumLng = 0
+    // GeoJSON coordinates are [lng, lat]
+    for (const coord of ring) {
+      sumLng += coord[0]
+      sumLat += coord[1]
+    }
+    return [sumLat / ring.length, sumLng / ring.length]
+  }
 
   // Initialize checkout form
   const {
@@ -169,6 +248,49 @@ export function CheckoutPanel() {
 
   const selectedPaymentMethod = watch('paymentMethod')
   const watchedDeliverySlot = watch('deliverySlot')
+
+  // Handle explicit Area / Service Zone selection
+  const handleAreaSelect = (zoneId: string) => {
+    setSelectedZoneId(zoneId)
+    const feat = serviceZoneFeatures.find((f) => f.id === zoneId)
+    if (!feat) return
+    const zoneName = feat.properties.name
+    setValue('city', zoneName, { shouldValidate: true })
+    const [cLat, cLng] = getZoneCenter(feat.geometry)
+    setValue('lat', cLat, { shouldValidate: true })
+    setValue('lng', cLng, { shouldValidate: true })
+  }
+
+  // Auto-select initial area when active service zones load
+  useEffect(() => {
+    if (serviceZoneFeatures.length === 0) return
+    if (!selectedZoneId) {
+      const currentCity = watch('city')
+      const matched = serviceZoneFeatures.find(
+        (f) => f.properties.name.toLowerCase() === currentCity?.toLowerCase(),
+      )
+      if (matched) {
+        setSelectedZoneId(matched.id)
+      } else if (serviceZoneFeatures[0]) {
+        setSelectedZoneId(serviceZoneFeatures[0].id)
+        setValue('city', serviceZoneFeatures[0].properties.name, {
+          shouldValidate: true,
+        })
+      }
+    }
+  }, [serviceZoneFeatures, selectedZoneId, watch, setValue])
+
+  // Sync active payment gateways with form paymentMethod
+  useEffect(() => {
+    if (activePaymentGateways.length === 0) return
+    const currentMethod = watch('paymentMethod')
+    const isCurrentActive = activePaymentGateways.some(
+      (g) => g.id === currentMethod,
+    )
+    if (!isCurrentActive && activePaymentGateways[0]) {
+      setValue('paymentMethod', activePaymentGateways[0].id)
+    }
+  }, [activePaymentGateways, watch, setValue])
 
   // When store is closed, automatically route from express to custom scheduled delivery
   useEffect(() => {
@@ -372,6 +494,13 @@ export function CheckoutPanel() {
 
         document.body.appendChild(form)
         form.submit()
+      } else {
+        // Any active online gateway (Khalti, Fonepay, ConnectIPS)
+        toast.success(`Order placed successfully! Order #${result.orderNumber}`)
+        navigate({
+          to: '/order-confirmation/$orderId',
+          params: { orderId: result.orderId },
+        })
       }
     } catch (err: unknown) {
       toast.error(
@@ -590,6 +719,49 @@ export function CheckoutPanel() {
                   </div>
                 )}
 
+                {/* Area Selection before Delivery Location map pick up */}
+                <div className="space-y-1.5 pb-1">
+                  <div className="flex items-center justify-between">
+                    <Label
+                      htmlFor="checkout-area-select"
+                      className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"
+                    >
+                      <Navigation className="h-3.5 w-3.5 text-primary" />
+                      <span>Area / Delivery Zone</span>
+                    </Label>
+                    {selectedZoneId && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] border-primary/40 text-primary bg-primary/5 px-1.5 py-0 h-4"
+                      >
+                        Verified Area
+                      </Badge>
+                    )}
+                  </div>
+
+                  <NativeSelect
+                    id="checkout-area-select"
+                    value={selectedZoneId}
+                    onChange={(e) => handleAreaSelect(e.target.value)}
+                    className="w-full text-xs sm:text-sm font-medium"
+                    disabled={isSubmitting || isZonesLoading}
+                  >
+                    <NativeSelectOption value="" disabled>
+                      {isZonesLoading
+                        ? 'Loading active areas...'
+                        : '-- Choose your delivery area / zone --'}
+                    </NativeSelectOption>
+                    {serviceZoneFeatures.map((feat) => (
+                      <NativeSelectOption key={feat.id} value={feat.id}>
+                        {feat.properties.name}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                  <p className="text-[11px] text-muted-foreground">
+                    Choose from the areas set by admin in Service Zones, then fine-tune your exact pin on the map.
+                  </p>
+                </div>
+
                 <Controller
                   name="lat"
                   control={control}
@@ -600,6 +772,18 @@ export function CheckoutPanel() {
                       onChange={(pt) => {
                         setValue('lat', pt.lat, { shouldValidate: true })
                         setValue('lng', pt.lng, { shouldValidate: true })
+                        // Check if the coordinate dropped falls within an active service zone to sync Area
+                        const matchingZone = serviceZoneFeatures.find((f) =>
+                          isPointInsideAnyZone(pt.lat, pt.lng, [
+                            { polygon: f.geometry, isActive: true },
+                          ]),
+                        )
+                        if (matchingZone && matchingZone.id !== selectedZoneId) {
+                          setSelectedZoneId(matchingZone.id)
+                          setValue('city', matchingZone.properties.name, {
+                            shouldValidate: true,
+                          })
+                        }
                       }}
                     />
                   )}
@@ -827,7 +1011,7 @@ export function CheckoutPanel() {
                         time: isClosed ? 'Unavailable (Closed)' : 'Within 30–45 mins',
                         desc: isClosed
                           ? 'Immediate dispatch paused while store is offline/closed. Please select custom advance schedule.'
-                          : 'Immediate rider dispatch from nearest dealer partner',
+                          : 'Immediate rider dispatch from nearest fulfillment hub',
                         disabled: isClosed,
                       },
                       {
@@ -1034,11 +1218,11 @@ export function CheckoutPanel() {
               </CardContent>
             </Card>
 
-            {/* 4. PAYMENT METHOD SECTION (ONLY COD & ESEWA) */}
+            {/* 4. PAYMENT METHOD SECTION */}
             <Card className="border-border shadow-xs">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-white shadow-xs">
                     <CreditCard className="h-4 w-4" />
                   </div>
                   <div>
@@ -1046,8 +1230,7 @@ export function CheckoutPanel() {
                       4. Payment Method
                     </CardTitle>
                     <CardDescription className="text-xs">
-                      Choose between instant cash at your doorstep or eSewa
-                      wallet.
+                      Select from active payment gateways configured in admin operations.
                     </CardDescription>
                   </div>
                 </div>
@@ -1061,49 +1244,87 @@ export function CheckoutPanel() {
                     <RadioGroup
                       value={field.value}
                       onValueChange={field.onChange}
-                      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                      className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4"
                     >
-                      {/* COD Option */}
-                      <Label
-                        htmlFor="pay-cod"
-                        className={`flex flex-col justify-between rounded-lg border p-4 cursor-pointer transition-all ${
-                          field.value === 'cod'
-                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                            : 'border-border bg-card hover:bg-muted/30'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-sm text-foreground">
-                            Cash on Delivery
-                          </span>
-                          <RadioGroupItem value="cod" id="pay-cod" />
-                        </div>
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          Pay the rider in cash when your order arrives at your
-                          door.
-                        </p>
-                      </Label>
+                      {activePaymentGateways.map((gw) => {
+                        const isSelected = field.value === gw.id
+                        const visual = PAYMENT_VISUALS[gw.id]
+                        const subtitle = visual?.subtitle || gw.description
+                        const badgeLabel =
+                          visual?.badgeLabel ||
+                          (gw.channel && gw.channel !== 'MANUAL-FLOAT'
+                            ? gw.channel
+                            : undefined)
 
-                      {/* eSewa Option */}
-                      <Label
-                        htmlFor="pay-esewa"
-                        className={`flex flex-col justify-between rounded-lg border p-4 cursor-pointer transition-all ${
-                          field.value === 'esewa'
-                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                            : 'border-border bg-card hover:bg-muted/30'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-sm text-foreground flex items-center gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                            eSewa Mobile Wallet
-                          </span>
-                          <RadioGroupItem value="esewa" id="pay-esewa" />
-                        </div>
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          Fast online checkout via official eSewa ePay v2.
-                        </p>
-                      </Label>
+                        return (
+                          <Label
+                            key={gw.id}
+                            htmlFor={`pay-${gw.id}`}
+                            className={cn(
+                              'relative flex items-center gap-3.5 sm:gap-4 rounded-2xl p-4 sm:p-5 cursor-pointer transition-all duration-200 select-none group',
+                              isSelected
+                                ? 'border-2 border-emerald-500 bg-[#E8F8EE]/30 dark:bg-emerald-950/20 shadow-xs ring-1 ring-emerald-500/20'
+                                : 'border border-zinc-200/90 dark:border-zinc-800 bg-card hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-muted/20',
+                            )}
+                          >
+                            {/* Left Brand Squircle / Logo */}
+                            <div className="shrink-0 transition-transform duration-200 group-hover:scale-105">
+                              {getPaymentGatewayLogo(gw.id)}
+                            </div>
+
+                            {/* Middle Details: Title, Subtitle, Channel Pill */}
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <h4 className="font-bold text-sm sm:text-base text-zinc-900 dark:text-zinc-100 tracking-tight">
+                                {gw.name}
+                              </h4>
+                              <p className="text-xs sm:text-[13px] text-zinc-500 dark:text-zinc-400 font-normal leading-snug">
+                                {subtitle}
+                              </p>
+                              {badgeLabel && (
+                                <div className="pt-0.5 flex items-center gap-2">
+                                  <span
+                                    className={cn(
+                                      'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border transition-colors',
+                                      visual?.badgeColor
+                                        ? cn(
+                                            visual.badgeColor.bg,
+                                            visual.badgeColor.text,
+                                            visual.badgeColor.border,
+                                          )
+                                        : 'bg-muted text-foreground border-border',
+                                    )}
+                                  >
+                                    {badgeLabel}
+                                  </span>
+                                  {gw.mode === 'sandbox' && (
+                                    <span className="text-[10px] text-amber-500/90 font-medium">
+                                      Test Sandbox
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Right Selection Indicator */}
+                            <div className="shrink-0 pl-1">
+                              {isSelected ? (
+                                <div className="size-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                                  <Check className="size-3.5 stroke-[3]" />
+                                </div>
+                              ) : (
+                                <div className="size-6 rounded-full border-2 border-zinc-300 dark:border-zinc-700 bg-background transition-colors group-hover:border-zinc-400 dark:group-hover:border-zinc-600" />
+                              )}
+                            </div>
+
+                            {/* Hidden native radio for accessibility & forms */}
+                            <RadioGroupItem
+                              value={gw.id}
+                              id={`pay-${gw.id}`}
+                              className="sr-only"
+                            />
+                          </Label>
+                        )
+                      })}
                     </RadioGroup>
                   )}
                 />
@@ -1337,9 +1558,12 @@ export function CheckoutPanel() {
                       variant="secondary"
                       className="font-semibold text-xs"
                     >
-                      {selectedPaymentMethod === 'cod'
-                        ? 'Cash on Delivery'
-                        : 'eSewa'}
+                      {activePaymentGateways.find(
+                        (g) => g.id === selectedPaymentMethod,
+                      )?.name ||
+                        (selectedPaymentMethod === 'cod'
+                          ? 'Cash on Delivery'
+                          : selectedPaymentMethod.toUpperCase())}
                     </Badge>
                   </div>
                 </div>
@@ -1358,10 +1582,13 @@ export function CheckoutPanel() {
                     ) : (
                       <p>
                         <strong className="text-foreground">
-                          Digital payment:
+                          Online payment:
                         </strong>{' '}
-                        You will be routed to eSewa to authorize payment
-                        securely.
+                        Secure checkout via{' '}
+                        {activePaymentGateways.find(
+                          (g) => g.id === selectedPaymentMethod,
+                        )?.name || selectedPaymentMethod}
+                        .
                       </p>
                     )}
                     <p className="mt-1 text-xs">

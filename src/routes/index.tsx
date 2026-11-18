@@ -6,6 +6,7 @@ import { storefrontQueries } from '#/queries/storefront'
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { LandingPopup } from '#/components/store/landing-popup'
+import { LandingPageSkeleton } from '#/components/shared/loading'
 import {
   ArrowRight,
   ShieldCheck,
@@ -18,17 +19,20 @@ import {
 
 export const Route = createFileRoute('/')({
   loader: async ({ context }) => {
-    const [foodCategories, liquorCategories, landingPopups] = await Promise.all(
-      [
+    const [foodCategories, liquorCategories, landingPopups, reviews] =
+      await Promise.all([
         context.queryClient.ensureQueryData(storefrontQueries.foodCategories()),
         context.queryClient.ensureQueryData(
           storefrontQueries.liquorCategories(),
         ),
         context.queryClient.ensureQueryData(storefrontQueries.landingPopups()),
-      ],
-    )
-    return { foodCategories, liquorCategories, landingPopups }
+        context.queryClient
+          .ensureQueryData(storefrontQueries.reviews())
+          .catch(() => []),
+      ])
+    return { foodCategories, liquorCategories, landingPopups, reviews }
   },
+  pendingComponent: LandingPageSkeleton,
   component: HomePage,
 })
 
@@ -231,14 +235,29 @@ const FEATURES = [
 ]
 
 const REVIEWS = [
-  { quote: 'Too polite & for sure best service.', name: 'Yogendra Dhami' },
+  {
+    quote: 'Too polite & for sure best service.',
+    name: 'Amrit Bhattrai',
+    rating: 5,
+    imageUrl:
+      'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&h=200&q=80',
+    productName: 'Express Delivery',
+  },
   {
     quote: 'One of the best service providers for late night.',
-    name: 'Ramkrishna Baruwal',
+    name: 'Sandeep Gaire',
+    rating: 5,
+    imageUrl:
+      'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&h=200&q=80',
+    productName: 'Late Night Service',
   },
   {
     quote: 'Fast delivery and very cooperative. Highly recommended.',
-    name: 'Krishant Rana',
+    name: 'Susma Tandan',
+    rating: 5,
+    imageUrl:
+      'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&h=200&q=80',
+    productName: 'Customer Support',
   },
 ]
 
@@ -474,6 +493,22 @@ function HomePage() {
     initialData: loaderData.landingPopups,
   })
 
+  const { data: dbReviews } = useQuery({
+    ...storefrontQueries.reviews(),
+    initialData: loaderData.reviews,
+  })
+
+  const reviewsList =
+    dbReviews && dbReviews.length > 0
+      ? dbReviews.map((r: any) => ({
+          name: r.customerName || r.name,
+          quote: r.body || r.quote,
+          rating: r.rating ?? 5,
+          imageUrl: r.imageUrl ?? null,
+          productName: r.productName,
+        }))
+      : REVIEWS
+
   const [searchQuery, setSearchQuery] = useState('')
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
@@ -549,6 +584,8 @@ function HomePage() {
               <img
                 src="/images/logos/grocery-transparent.png"
                 alt="Grocery Logo"
+                loading="lazy"
+                decoding="async"
                 className="h-15 w-auto sm:h-20 lg:h-30 object-contain drop-shadow-md"
               />
             </Link>
@@ -557,6 +594,8 @@ function HomePage() {
               <img
                 src="/images/logos/ddc-transparent.png"
                 alt="DDC Logo"
+                loading="lazy"
+                decoding="async"
                 className="h-15 w-auto sm:h-20 lg:h-30 object-contain drop-shadow-md"
               />
             </Link>
@@ -968,32 +1007,42 @@ function HomePage() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
-              {REVIEWS.map((review) => (
+              {reviewsList.map((review: any) => (
                 <article
-                  key={review.name}
+                  key={review.id || review.name}
                   className="flex min-h-[250px] flex-col justify-between rounded-2xl border border-border bg-card p-6 transition hover:-translate-y-1 hover:shadow-lg sm:p-7"
                 >
                   <div>
                     <div
                       className="text-sm tracking-[0.18em] text-primary"
-                      aria-label="5 out of 5 stars"
+                      aria-label={`${review.rating || 5} out of 5 stars`}
                     >
-                      ★★★★★
+                      {'★'.repeat(Math.min(5, Math.max(1, review.rating || 5)))}
                     </div>
                     <blockquote className="mt-6 text-lg font-semibold leading-7 tracking-tight text-foreground">
                       “{review.quote}”
                     </blockquote>
                   </div>
                   <div className="mt-8 flex items-center gap-3 border-t border-border pt-5">
-                    <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/15 text-sm font-black text-primary">
-                      {review.name.charAt(0)}
-                    </div>
-                    <div>
-                      <strong className="block text-sm font-bold">
+                    {review.imageUrl ? (
+                      <img
+                        src={review.imageUrl}
+                        alt={review.name}
+                        className="h-10 w-10 rounded-full object-cover border border-border shrink-0 shadow-xs"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/15 text-sm font-black text-primary shrink-0">
+                        {review.name.charAt(0)}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <strong className="block text-sm font-bold truncate">
                         {review.name}
                       </strong>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">
-                        Mezmani customer
+                      <span className="mt-0.5 block text-xs text-muted-foreground truncate">
+                        {review.productName ? `${review.productName} • Verified` : 'Mezmani customer'}
                       </span>
                     </div>
                   </div>
@@ -1017,6 +1066,7 @@ function HomePage() {
             alt=""
             aria-hidden="true"
             loading="lazy"
+            decoding="async"
             className="block h-auto w-full opacity-15 dark:invert dark:opacity-10"
           />
           {/* Fade the top so it blends into the section instead of cutting off */}

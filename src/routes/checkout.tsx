@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { adminQueries } from '#/queries/admin'
 import { CheckoutPanel } from '#/components/panels/customer/checkout-panel'
+import { CheckoutPageSkeleton } from '#/components/shared/loading'
 
 export const Route = createFileRoute('/checkout')({
   beforeLoad: async ({ location, context }) => {
@@ -29,6 +30,7 @@ export const Route = createFileRoute('/checkout')({
       })
     }
   },
+  pendingComponent: CheckoutPageSkeleton,
   component: CheckoutPage,
 })
 

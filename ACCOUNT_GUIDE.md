@@ -363,7 +363,7 @@ Split the 4,200-line panel first (ACC-2.7) so later UI tasks stay small and revi
 
 - Money in NPR paisa; prices **VAT-inclusive**, default **13%**, configurable by category and effective date (`src/lib/tax.ts`).
 - Fiscal year = Shrawan 1 → Ashadh end (`getNepalFiscalYear`); DB stores AD, UI shows BS (and dual dates where useful). Period names use BS months.
-- Mezmani Retail Pvt. Ltd. (repo seller of record, formerly referred to as Daru Gang in early notes; ask owner to confirm) is the seller of record; dealers give **no VAT bills** by default → no input VAT, COGS at full dealer cost; per-dealer `providesVatBill` flag stays OFF until the accountant confirms.
+- Mezmani Group Pvt. Ltd. (repo seller of record, formerly referred to as Mezmani in early notes; ask owner to confirm) is the seller of record; dealers give **no VAT bills** by default → no input VAT, COGS at full dealer cost; per-dealer `providesVatBill` flag stays OFF until the accountant confirms.
 - Invoices: sequential per FY, seller PAN/VAT, optional buyer PAN.
 - Gateways: COD live; eSewa live & server-side verified (INFRA-2); Khalti/Fonepay later.
 

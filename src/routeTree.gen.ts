@@ -71,6 +71,9 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiWebhooksNepalotpRouteImport } from './routes/api/webhooks/nepalotp'
 import { Route as ApiWebhooksOtpRouteImport } from './routes/api/webhooks/otp'
 import { Route as ZonesIdActiveRouteImport } from './routes/zones.$id.active'
+import { Route as ApiJobsCampaignsExpireRouteImport } from './routes/api/jobs/campaigns/expire'
+import { Route as ApiJobsCampaignsPublishRouteImport } from './routes/api/jobs/campaigns/publish'
+import { Route as ApiJobsCampaignsReconcileRouteImport } from './routes/api/jobs/campaigns/reconcile'
 import { Route as CheckoutPaymentEsewaFailureRouteImport } from './routes/checkout.payment.esewa.failure'
 import { Route as CheckoutPaymentEsewaSuccessRouteImport } from './routes/checkout.payment.esewa.success'
 
@@ -385,6 +388,22 @@ const ZonesIdActiveRoute = ZonesIdActiveRouteImport.update({
   path: '/active',
   getParentRoute: () => ZonesIdRoute,
 } as any)
+const ApiJobsCampaignsExpireRoute = ApiJobsCampaignsExpireRouteImport.update({
+  id: '/api/jobs/campaigns/expire',
+  path: '/api/jobs/campaigns/expire',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiJobsCampaignsPublishRoute = ApiJobsCampaignsPublishRouteImport.update({
+  id: '/api/jobs/campaigns/publish',
+  path: '/api/jobs/campaigns/publish',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiJobsCampaignsReconcileRoute =
+  ApiJobsCampaignsReconcileRouteImport.update({
+    id: '/api/jobs/campaigns/reconcile',
+    path: '/api/jobs/campaigns/reconcile',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CheckoutPaymentEsewaFailureRoute =
   CheckoutPaymentEsewaFailureRouteImport.update({
     id: '/payment/esewa/failure',
@@ -461,6 +480,9 @@ export interface FileRoutesByFullPath {
   '/api/webhooks/otp': typeof ApiWebhooksOtpRoute
   '/zones/$id/active': typeof ZonesIdActiveRoute
   '/admin/dealers/': typeof AdminDealersIndexRoute
+  '/api/jobs/campaigns/expire': typeof ApiJobsCampaignsExpireRoute
+  '/api/jobs/campaigns/publish': typeof ApiJobsCampaignsPublishRoute
+  '/api/jobs/campaigns/reconcile': typeof ApiJobsCampaignsReconcileRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
 }
@@ -523,6 +545,9 @@ export interface FileRoutesByTo {
   '/api/webhooks/otp': typeof ApiWebhooksOtpRoute
   '/zones/$id/active': typeof ZonesIdActiveRoute
   '/admin/dealers': typeof AdminDealersIndexRoute
+  '/api/jobs/campaigns/expire': typeof ApiJobsCampaignsExpireRoute
+  '/api/jobs/campaigns/publish': typeof ApiJobsCampaignsPublishRoute
+  '/api/jobs/campaigns/reconcile': typeof ApiJobsCampaignsReconcileRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
 }
@@ -590,6 +615,9 @@ export interface FileRoutesById {
   '/api/webhooks/otp': typeof ApiWebhooksOtpRoute
   '/zones/$id/active': typeof ZonesIdActiveRoute
   '/admin/dealers/': typeof AdminDealersIndexRoute
+  '/api/jobs/campaigns/expire': typeof ApiJobsCampaignsExpireRoute
+  '/api/jobs/campaigns/publish': typeof ApiJobsCampaignsPublishRoute
+  '/api/jobs/campaigns/reconcile': typeof ApiJobsCampaignsReconcileRoute
   '/checkout/payment/esewa/failure': typeof CheckoutPaymentEsewaFailureRoute
   '/checkout/payment/esewa/success': typeof CheckoutPaymentEsewaSuccessRoute
 }
@@ -658,6 +686,9 @@ export interface FileRouteTypes {
     | '/api/webhooks/otp'
     | '/zones/$id/active'
     | '/admin/dealers/'
+    | '/api/jobs/campaigns/expire'
+    | '/api/jobs/campaigns/publish'
+    | '/api/jobs/campaigns/reconcile'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
   fileRoutesByTo: FileRoutesByTo
@@ -720,6 +751,9 @@ export interface FileRouteTypes {
     | '/api/webhooks/otp'
     | '/zones/$id/active'
     | '/admin/dealers'
+    | '/api/jobs/campaigns/expire'
+    | '/api/jobs/campaigns/publish'
+    | '/api/jobs/campaigns/reconcile'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
   id:
@@ -786,6 +820,9 @@ export interface FileRouteTypes {
     | '/api/webhooks/otp'
     | '/zones/$id/active'
     | '/admin/dealers/'
+    | '/api/jobs/campaigns/expire'
+    | '/api/jobs/campaigns/publish'
+    | '/api/jobs/campaigns/reconcile'
     | '/checkout/payment/esewa/failure'
     | '/checkout/payment/esewa/success'
   fileRoutesById: FileRoutesById
@@ -819,6 +856,9 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiWebhooksNepalotpRoute: typeof ApiWebhooksNepalotpRoute
   ApiWebhooksOtpRoute: typeof ApiWebhooksOtpRoute
+  ApiJobsCampaignsExpireRoute: typeof ApiJobsCampaignsExpireRoute
+  ApiJobsCampaignsPublishRoute: typeof ApiJobsCampaignsPublishRoute
+  ApiJobsCampaignsReconcileRoute: typeof ApiJobsCampaignsReconcileRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1257,6 +1297,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ZonesIdActiveRouteImport
       parentRoute: typeof ZonesIdRoute
     }
+    '/api/jobs/campaigns/expire': {
+      id: '/api/jobs/campaigns/expire'
+      path: '/api/jobs/campaigns/expire'
+      fullPath: '/api/jobs/campaigns/expire'
+      preLoaderRoute: typeof ApiJobsCampaignsExpireRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/jobs/campaigns/publish': {
+      id: '/api/jobs/campaigns/publish'
+      path: '/api/jobs/campaigns/publish'
+      fullPath: '/api/jobs/campaigns/publish'
+      preLoaderRoute: typeof ApiJobsCampaignsPublishRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/jobs/campaigns/reconcile': {
+      id: '/api/jobs/campaigns/reconcile'
+      path: '/api/jobs/campaigns/reconcile'
+      fullPath: '/api/jobs/campaigns/reconcile'
+      preLoaderRoute: typeof ApiJobsCampaignsReconcileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checkout/payment/esewa/failure': {
       id: '/checkout/payment/esewa/failure'
       path: '/payment/esewa/failure'
@@ -1434,6 +1495,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiWebhooksNepalotpRoute: ApiWebhooksNepalotpRoute,
   ApiWebhooksOtpRoute: ApiWebhooksOtpRoute,
+  ApiJobsCampaignsExpireRoute: ApiJobsCampaignsExpireRoute,
+  ApiJobsCampaignsPublishRoute: ApiJobsCampaignsPublishRoute,
+  ApiJobsCampaignsReconcileRoute: ApiJobsCampaignsReconcileRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

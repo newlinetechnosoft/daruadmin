@@ -18,7 +18,28 @@ export const MODULES = [
   'staff',
   'users',
   'shipping',
-  'accounts',
+  'accounts', // umbrella
+  'accounts_overview',
+  'accounts_chart_of_accounts',
+  'accounts_branches',
+  'accounts_ledger',
+  'accounts_vouchers',
+  'accounts_party_accounts',
+  'accounts_dealer_ledger',
+  'accounts_rider_ledger',
+  'accounts_customer_ledger',
+  'accounts_supplier_ledger',
+  'accounts_employee_ledger',
+  'accounts_bank_cash',
+  'accounts_expenses',
+  'accounts_reconciliation',
+  'accounts_financial_reports',
+  'accounts_export_center',
+  'accounts_period_close',
+  'accounts_audit_trail',
+  'accounts_settings',
+  'accounts_sales_account',
+  'accounts_salary_account',
   'payments',
   'marketing',
   'reports',
@@ -187,9 +208,156 @@ export const PERMISSION_SECTIONS: PermissionSection[] = [
     modules: [
       {
         key: 'accounts',
-        label: 'Accounts',
+        label: 'Accounts (Master / All)',
         description:
-          'General ledger, COGS tracking, expense logging, and balance sheets',
+          'Umbrella access across all general ledger, vouchers, payroll, and financial modules',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_overview',
+        label: 'Accounts Overview',
+        description:
+          'Financial KPI summary, quick vouchers, and recent journals',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_chart_of_accounts',
+        label: 'Chart of Accounts',
+        description:
+          'Assets, liabilities, equity, revenues, and expense tree structure',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_branches',
+        label: 'Branches',
+        description:
+          'Multi-branch cost centers and location ledger allocation',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_ledger',
+        label: 'General Ledger',
+        description:
+          'Complete double-entry transactional journal ledger and search',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_vouchers',
+        label: 'Vouchers',
+        description:
+          'Journal vouchers (JV), payment (PV), receipt (RV), contra (CV)',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_party_accounts',
+        label: 'Party Accounts',
+        description:
+          'Sub-ledger control accounts, statements, and party reconciliation',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_dealer_ledger',
+        label: 'Dealer Ledger',
+        description:
+          'Procurement payables, vendor balances, and disbursements',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_rider_ledger',
+        label: 'Rider Ledger',
+        description:
+          'Fleet cash-on-delivery handovers, vault custody, and balances',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_customer_ledger',
+        label: 'Customer Ledger',
+        description:
+          'Customer credit statements, advance balances, and refunds',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_supplier_ledger',
+        label: 'Supplier Ledger',
+        description:
+          'Goods receipt note bills, accounts payable, and supplier aging',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_employee_ledger',
+        label: 'Employee Ledger',
+        description:
+          'Staff payroll payables, salary advances, and disbursements',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_bank_cash',
+        label: 'Bank & Cash',
+        description:
+          'Physical vault cash drawers, liquid bank accounts, and inter-account transfers',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_expenses',
+        label: 'Expenses',
+        description:
+          'Direct operational expenses, utility bills, and administrative costs',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_reconciliation',
+        label: 'Reconciliation',
+        description:
+          'Bank statement matching, uncleared cheques, and deposit verification',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_financial_reports',
+        label: 'Financial Reports',
+        description:
+          'Trial Balance, Profit & Loss (P&L), Balance Sheet, and Tax/VAT returns',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_export_center',
+        label: 'Export Center',
+        description:
+          'Official Nepal IRD audit exports, CSV, Excel, and JSON financial records',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_period_close',
+        label: 'Period Close',
+        description:
+          'Lock Bikram Sambat accounting periods, prevent back-dating, and Fiscal Year close',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_audit_trail',
+        label: 'Audit Trail',
+        description:
+          'Tamper-evident system audit log of all financial modifications and reversals',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_settings',
+        label: 'Accounting Settings',
+        description:
+          'System control accounts, default fiscal years, and financial configurations',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_sales_account',
+        label: 'Sales Account',
+        description:
+          'Order revenue attribution, VAT output ledger, and delivery fee journals',
+        section: 'Finance',
+      },
+      {
+        key: 'accounts_salary_account',
+        label: 'Salary Account',
+        description:
+          'Rider and staff wage settlements, bonus calculations, and payout execution',
         section: 'Finance',
       },
       {
@@ -422,7 +590,7 @@ export interface Settlement {
   cashHeldDeducted?: number
   netPayout?: number
   payout: number
-  status: 'draft' | 'approved' | 'paid'
+  status: 'draft' | 'approved' | 'paid' | 'cancelled'
   paymentMethod?: string | null
   paymentReference?: string | null
   paidAt?: string | null
@@ -543,14 +711,78 @@ export interface Banner {
   active: boolean
 }
 
+export type CampaignStatus =
+  | 'draft'
+  | 'scheduled'
+  | 'publishing'
+  | 'published'
+  | 'expired'
+  | 'cancelled'
+  | 'failed'
+
+export type CampaignChannel = 'push' | 'in-app' | 'sms' | 'email'
+
+export interface CampaignDeliveryProgress {
+  total: number
+  sent: number
+  failed: number
+  batches: number
+  currentBatch: number
+}
+
+export interface CampaignAnalytics {
+  impressions?: number
+  clicks?: number
+  conversions?: number
+  failures?: number
+  lastError?: string
+}
+
 export interface Campaign {
   id: string
   name: string
-  channel: 'sms' | 'email' | 'push' | 'in-app'
-  status: 'draft' | 'scheduled' | 'sent'
+  title?: string | null
+  channel: CampaignChannel
+  channels: CampaignChannel[]
+  status: CampaignStatus
   audience: string
+  targetAudienceDetails?: Record<string, string | number | boolean | null> | null
+  estimatedRecipients: number
   scheduledAt: string
+  scheduledDate?: string | null
+  scheduledTime?: string | null
+  expiresAt?: string | null
+  expiryDate?: string | null
+  expiryTime?: string | null
+  timezone: string
   body: string
+  imageUrl?: string | null
+  ctaUrl?: string | null
+  ctaText?: string | null
+  bannerPlacement?: 'none' | 'home' | 'drinks' | 'food' | 'all' | null
+  bannerId?: string | null
+  offerSlug?: string | null
+  publishedAt?: string | null
+  expiredAt?: string | null
+  deliveryProgress?: CampaignDeliveryProgress | null
+  analytics?: CampaignAnalytics | null
+  jobId?: string | null
+  expireJobId?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CampaignDeliveryItem {
+  id: string
+  campaignId: string
+  userId?: string | null
+  userName?: string | null
+  channel: CampaignChannel
+  recipient: string
+  status: 'pending' | 'sent' | 'failed'
+  sentAt?: string | null
+  error?: string | null
+  createdAt: string
 }
 
 export interface Review {
@@ -559,6 +791,7 @@ export interface Review {
   customerName: string
   rating: number
   body: string
+  imageUrl?: string | null
   status: 'pending' | 'published' | 'hidden'
   createdAt: string
 }
@@ -601,6 +834,16 @@ export interface StoreSettings {
   email: string
   address: string
   city: string
+  province?: string
+  postalCode?: string
+  companyRegNo?: string
+  tagline?: string
+  supportPhone?: string
+  secondaryPhone?: string
+  websiteUrl?: string
+  operatingHours?: string
+  currency?: string
+  currencySymbol?: string
   invoicePrefix: string
   taxRate: number
   lowStockThreshold: number
@@ -680,6 +923,7 @@ export interface Offer {
   priority: number
   stackable: boolean
   active: boolean
+  isExpired?: boolean
   startsAt?: string | null
   expiresAt?: string | null
   createdAt: string

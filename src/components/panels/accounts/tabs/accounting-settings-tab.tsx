@@ -557,7 +557,7 @@ export function AccountingSettingsTab() {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                {config.nepalCompliance?.legalName || 'Daru Gang Pvt Ltd'} ({config.nepalCompliance?.tradeName || 'Mezmani'})
+                {config.nepalCompliance?.legalName || 'Mezmani Group Pvt. Ltd.'} ({config.nepalCompliance?.tradeName || 'Mezmani'})
               </p>
             </Card>
 

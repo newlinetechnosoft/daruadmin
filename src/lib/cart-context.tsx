@@ -25,7 +25,11 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[]
-  addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => boolean
+  addItem: (
+    item: Omit<CartItem, 'quantity'>,
+    quantity?: number,
+    options?: { silent?: boolean },
+  ) => boolean
   removeItem: (variantId: string) => void
   updateQuantity: (
     variantId: string,
@@ -113,7 +117,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         typeof window !== 'undefined'
           ? window.location.pathname + window.location.search
           : '/drinks'
-      toast.info('Please sign in to add items to your cart')
+      toast.info('Please sign in to add items to your cart', {
+        id: 'auth-required',
+      })
       navigate({
         to: '/login',
         search: { redirect },
@@ -123,13 +129,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return true
   }
 
-  const addItem = (item: Omit<CartItem, 'quantity'>, quantity = 1): boolean => {
+  const addItem = (
+    item: Omit<CartItem, 'quantity'>,
+    quantity = 1,
+    options?: { silent?: boolean },
+  ): boolean => {
     // 1. LOGIN REQUIRED TO ADD TO CART
     if (!checkAuth()) {
       return false
     }
 
-    const isFirstAdd = !items.some((i) => i.variantId === item.variantId)
     setItems((prev) => {
       const existing = prev.find((i) => i.variantId === item.variantId)
       if (existing) {
@@ -142,9 +151,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...prev, { ...item, quantity }]
     })
 
-    // At most one subtle toast on the first add (no toast spam on repeated adds)
-    if (isFirstAdd) {
-      toast.success(`Added ${item.productName} to cart`)
+    if (!options?.silent) {
+      const label =
+        quantity > 1
+          ? `Added ${quantity}x ${item.productName} to cart`
+          : `Added ${item.productName} to cart`
+      toast.success(label, { id: 'cart-action' })
     }
     return true
   }
@@ -171,7 +183,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     if (maxStock !== undefined && quantity > maxStock) {
-      toast.warning(`Only ${maxStock} available in stock`)
+      toast.warning(`Only ${maxStock} available in stock`, {
+        id: 'cart-stock-warning',
+      })
       return false
     }
 

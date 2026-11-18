@@ -94,15 +94,18 @@ export function RiderSettlementApprovalDialog({
             <DialogTitle className="text-sm font-semibold flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Receipt className="h-4 w-4 text-emerald-500" />
-                Approve & Disburse Courier Settlement
+                {settlement.status === 'approved'
+                  ? 'Disburse Courier Settlement Payout'
+                  : 'Approve & Disburse Courier Settlement'}
               </span>
               <Badge variant="outline" className="font-mono text-xs">
                 {settlement.voucherNo || settlement.id}
               </Badge>
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Post double-entry salary expense accrual, debit Rider Payable, and
-              credit payment account with proof voucher generation.
+              Nepal Accounting Standards (NAS 19 / NAS 1) Compliant: Debit Rider
+              Payable, credit payment account, and link statutory disbursement
+              voucher.
             </DialogDescription>
           </DialogHeader>
 
@@ -115,6 +118,24 @@ export function RiderSettlementApprovalDialog({
                 </span>
                 <span className="font-semibold text-foreground">
                   {settlement.riderName}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between border-b border-border/50 pb-1.5">
+                <span className="text-muted-foreground">
+                  Recipient Role:
+                </span>
+                <Badge variant="outline" className="text-[10px] font-medium">
+                  Delivery Courier / Rider
+                </Badge>
+              </div>
+
+              <div className="flex items-center justify-between border-b border-border/50 pb-1.5">
+                <span className="text-muted-foreground">
+                  Standard Compliance:
+                </span>
+                <span className="font-mono text-[10px] font-semibold text-primary">
+                  NAS 19 Employee Benefits (Dr. Expense / Cr. Bank)
                 </span>
               </div>
 
@@ -285,7 +306,9 @@ export function RiderSettlementApprovalDialog({
               ) : (
                 <>
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  Approve & Disburse Payout
+                  {settlement.status === 'approved'
+                    ? 'Disburse Approved Payout (NAS 19)'
+                    : 'Approve & Disburse Payout (NAS 19)'}
                 </>
               )}
             </Button>

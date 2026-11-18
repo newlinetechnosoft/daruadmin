@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { logAudit, requirePermission } from '#/server/auth/permissions'
+import { getStoreSettingsQuery } from '#/server/platform/platform.queries'
 import {
   getAgingReportQuery,
   getBalanceSheetReportQuery,
@@ -609,12 +610,15 @@ export const exportFinancialReportFn = createServerFn({ method: 'POST' })
       content = buildExcelXml(reportTitle, headers, rows)
       contentType = 'application/vnd.ms-excel; charset=utf-8'
     } else if (data.format === 'html') {
+      const storeSettings = await getStoreSettingsQuery()
       content = buildPrintableHtml(
         reportTitle,
         {
-          legalName: 'Daru Gang Pvt Ltd',
-          pan: '601234567',
-          address: 'Kathmandu, Nepal',
+          legalName: storeSettings.legalName || 'Mezmani Group Pvt. Ltd.',
+          pan: storeSettings.pan || storeSettings.vat || '601234567',
+          address: storeSettings.address
+            ? `${storeSettings.address}, ${storeSettings.city}`
+            : 'Butwal, Nepal',
           dateRange: `${fromDate ? fromDate.toISOString().slice(0, 10) : 'Start'} to ${toDate ? toDate.toISOString().slice(0, 10) : today}`,
           branchName: data.branchName || 'All Branches (Consolidated)',
           fiscalYear: '2083/84',

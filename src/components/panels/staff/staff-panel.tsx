@@ -53,6 +53,18 @@ import {
   CheckCircle2,
   Info,
   Copy,
+  FolderTree,
+  Building2,
+  Receipt,
+  Landmark,
+  Tag,
+  Scale,
+  FileSpreadsheet,
+  Calendar,
+  SlidersHorizontal,
+  TrendingUp,
+  Coins,
+  UserCheck,
 } from 'lucide-react'
 import {
   Dialog,
@@ -144,6 +156,27 @@ const MODULE_ICONS: Record<
   users: Users,
   shipping: Truck,
   accounts: Wallet,
+  accounts_overview: Wallet,
+  accounts_chart_of_accounts: FolderTree,
+  accounts_branches: Building2,
+  accounts_ledger: Receipt,
+  accounts_vouchers: CreditCard,
+  accounts_party_accounts: Users,
+  accounts_dealer_ledger: Store,
+  accounts_rider_ledger: Bike,
+  accounts_customer_ledger: Users,
+  accounts_supplier_ledger: Building2,
+  accounts_employee_ledger: UserCheck,
+  accounts_bank_cash: Landmark,
+  accounts_expenses: Tag,
+  accounts_reconciliation: Scale,
+  accounts_financial_reports: FileSpreadsheet,
+  accounts_export_center: Download,
+  accounts_period_close: Calendar,
+  accounts_audit_trail: ShieldCheck,
+  accounts_settings: SlidersHorizontal,
+  accounts_sales_account: TrendingUp,
+  accounts_salary_account: Coins,
   payments: CreditCard,
   marketing: Megaphone,
   reports: BarChart3,
@@ -799,7 +832,6 @@ export function StaffPanel() {
       <PageHeader
         kicker="Operations"
         title="Staff and access control"
-        description="Configure granular module action privileges across managers, couriers, and support staff."
         actions={
           <div className="flex items-center gap-2">
             <DataRefreshButton

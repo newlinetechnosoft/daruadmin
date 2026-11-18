@@ -4,12 +4,15 @@ import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
+import { CampaignsTab } from './campaigns-tab'
 import {
   upsertCouponFn,
   deleteCouponFn,
   upsertBannerFn,
   deleteBannerFn,
   updateReviewFn,
+  createReviewFn,
+  deleteReviewFn,
 } from '#/server/operations/operations.functions'
 import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
@@ -67,15 +70,19 @@ export function MarketingPanel() {
     await queryClient.invalidateQueries({
       queryKey: adminQueries.marketing().queryKey,
     })
+    await queryClient.invalidateQueries({
+      queryKey: ['storefront', 'reviews'],
+    })
     await router.invalidate()
   }
 
   const [activeTab, setActiveTab] = useState<
-    'coupons' | 'banners' | 'reviews' | 'redemptions'
-  >('coupons')
+    'campaigns' | 'coupons' | 'banners' | 'reviews' | 'redemptions'
+  >('campaigns')
   const [redemptionSearch, setRedemptionSearch] = useState('')
   const [isAddCouponOpen, setIsAddCouponOpen] = useState(false)
   const [isAddBannerOpen, setIsAddBannerOpen] = useState(false)
+  const [isAddReviewOpen, setIsAddReviewOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deleteCouponTarget, setDeleteCouponTarget] = useState<{
     id: string
@@ -85,6 +92,14 @@ export function MarketingPanel() {
     id: string
     title: string
   } | null>(null)
+  const [reviewForm, setReviewForm] = useState({
+    customerName: '',
+    body: '',
+    rating: 5,
+    productName: 'Express Service',
+    imageUrl: '',
+    status: 'published' as 'pending' | 'published' | 'hidden',
+  })
 
   // Coupon form state
   const [couponForm, setCouponForm] = useState({
@@ -235,6 +250,55 @@ export function MarketingPanel() {
     }
   }
 
+  const handleCreateReview = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!reviewForm.customerName.trim() || !reviewForm.body.trim()) {
+      toast.error('Customer name and quote/body are required')
+      return
+    }
+    try {
+      setIsSubmitting(true)
+      await createReviewFn({
+        data: {
+          customerName: reviewForm.customerName.trim(),
+          body: reviewForm.body.trim(),
+          rating: Number(reviewForm.rating) || 5,
+          productName: reviewForm.productName.trim() || 'Express Service',
+          imageUrl: reviewForm.imageUrl.trim() || null,
+          status: reviewForm.status,
+        },
+      })
+      toast.success('Customer review created successfully!')
+      setIsAddReviewOpen(false)
+      setReviewForm({
+        customerName: '',
+        body: '',
+        rating: 5,
+        productName: 'Express Service',
+        imageUrl: '',
+        status: 'published',
+      })
+      await invalidateMarketing()
+    } catch {
+      toast.error('Failed to create review')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteReview = async (id: string) => {
+    try {
+      setIsSubmitting(true)
+      await deleteReviewFn({ data: { id } })
+      toast.success('Review deleted successfully')
+      await invalidateMarketing()
+    } catch {
+      toast.error('Failed to delete review')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const redemptions = ops.couponRedemptions ?? []
 
   const filteredRedemptions = redemptions.filter((r) => {
@@ -296,7 +360,6 @@ export function MarketingPanel() {
       <PageHeader
         kicker="Growth"
         title="Marketing & Promotions"
-        description="Discount promo vouchers, storefront campaign banners, and verified customer review moderation."
         actions={
           <div className="flex items-center gap-2">
             <DataRefreshButton
@@ -338,17 +401,17 @@ export function MarketingPanel() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
+          label="Scheduled Campaigns"
+          value={ops.campaigns.filter((c) => c.status === 'scheduled').length}
+          note="Queued for future publication"
+          icon={Megaphone}
+          tone="default"
+        />
+        <KpiCard
           label="Active Coupons"
           value={ops.coupons.filter((c) => c.active).length}
           note="Promotional voucher codes"
           icon={Tag}
-        />
-        <KpiCard
-          label="Promo Redemptions"
-          value={redemptions.length}
-          note="Customer orders with discounts"
-          icon={History}
-          tone="default"
         />
         <KpiCard
           label="Hero Campaign Sliders"
@@ -358,10 +421,11 @@ export function MarketingPanel() {
           tone="success"
         />
         <KpiCard
-          label="Customer Reviews"
-          value={ops.reviews.length}
-          note="Testimonials on catalog items"
-          icon={Star}
+          label="Promo Redemptions"
+          value={redemptions.length}
+          note="Customer discounts orders"
+          icon={History}
+          tone="default"
         />
       </div>
 
@@ -371,12 +435,16 @@ export function MarketingPanel() {
           value={activeTab}
           onValueChange={(val) =>
             setActiveTab(
-              val as 'coupons' | 'banners' | 'reviews' | 'redemptions',
+              val as 'campaigns' | 'coupons' | 'banners' | 'reviews' | 'redemptions',
             )
           }
           className="w-full space-y-4"
         >
           <TabsList>
+            <TabsTrigger value="campaigns" className="gap-2">
+              <Megaphone className="h-3.5 w-3.5" />
+              <span>Announcements & Campaigns ({ops.campaigns?.length ?? 0})</span>
+            </TabsTrigger>
             <TabsTrigger value="coupons" className="gap-2">
               <Tag className="h-3.5 w-3.5" />
               <span>Discount Coupons ({ops.coupons.length})</span>
@@ -394,6 +462,10 @@ export function MarketingPanel() {
               <span>Review Moderation ({ops.reviews.length})</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="campaigns" className="space-y-4">
+            <CampaignsTab />
+          </TabsContent>
 
           <TabsContent value="coupons" className="space-y-4">
             <Card>
@@ -624,6 +696,8 @@ export function MarketingPanel() {
                       <img
                         src={banner.imageUrl}
                         alt={banner.title}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent flex flex-col justify-end p-4 text-foreground">
@@ -666,12 +740,30 @@ export function MarketingPanel() {
           </TabsContent>
 
           <TabsContent value="reviews" className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">
+                  Customer Reviews & Testimonials
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Published reviews appear live on the landing page review section with verified customer photos.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setIsAddReviewOpen(true)}
+                className="gap-1.5 h-8 text-xs shrink-0 self-start sm:self-auto"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add Review
+              </Button>
+            </div>
+
             <Card>
               <CardContent className="p-4 space-y-4">
                 <div className="divide-y divide-border">
                   {ops.reviews.length === 0 ? (
                     <div className="py-8 text-center text-muted-foreground text-sm">
-                      No customer reviews to moderate.
+                      No customer reviews found in database.
                     </div>
                   ) : (
                     ops.reviews.map((rev) => (
@@ -679,72 +771,100 @@ export function MarketingPanel() {
                         key={rev.id}
                         className="py-3.5 first:pt-0 last:pb-0 space-y-2 text-xs"
                       >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="font-semibold text-foreground">
-                              {rev.customerName}
-                            </span>
-                            <span className="text-muted-foreground ml-2">
-                              on {rev.productName}
-                            </span>
-                            <span className="text-muted-foreground ml-2 font-mono">
-                              {rev.createdAt}
-                            </span>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            {rev.imageUrl ? (
+                              <img
+                                src={rev.imageUrl}
+                                alt={rev.customerName}
+                                loading="lazy"
+                                decoding="async"
+                                className="h-9 w-9 rounded-full object-cover border border-border shrink-0 shadow-xs"
+                              />
+                            ) : (
+                              <div className="h-9 w-9 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold shrink-0 text-sm">
+                                {rev.customerName.charAt(0)}
+                              </div>
+                            )}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-foreground text-sm">
+                                  {rev.customerName}
+                                </span>
+                                <Badge
+                                  variant={
+                                    rev.status === 'published'
+                                      ? 'success'
+                                      : rev.status === 'hidden'
+                                        ? 'destructive'
+                                        : 'warning'
+                                  }
+                                  className="text-[10px] uppercase font-bold"
+                                >
+                                  {rev.status}
+                                </Badge>
+                              </div>
+                              <div className="text-muted-foreground text-xs">
+                                <span>{rev.productName || 'Express Service'}</span>
+                                <span className="mx-1.5">&bull;</span>
+                                <span className="font-mono text-[11px]">
+                                  {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : ''}
+                                </span>
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center text-warning font-bold">
+                          <div className="flex items-center justify-between sm:justify-end gap-3">
+                            <div className="flex items-center text-warning font-bold text-sm">
                               {'★'.repeat(rev.rating)}
                               <span className="text-muted-foreground/30">
-                                {'★'.repeat(5 - rev.rating)}
+                                {'★'.repeat(Math.max(0, 5 - rev.rating))}
                               </span>
                             </div>
-                            <Badge
-                              variant={
-                                rev.status === 'published'
-                                  ? 'success'
-                                  : rev.status === 'hidden'
-                                    ? 'destructive'
-                                    : 'warning'
-                              }
-                            >
-                              {rev.status}
-                            </Badge>
+
+                            <div className="flex items-center gap-1.5">
+                              {rev.status !== 'published' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs gap-1"
+                                  onClick={() =>
+                                    handleUpdateReview(rev.id, 'published')
+                                  }
+                                >
+                                  <Check className="h-3.5 w-3.5 text-success" />
+                                  Approve
+                                </Button>
+                              )}
+                              {rev.status !== 'hidden' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                  onClick={() =>
+                                    handleUpdateReview(rev.id, 'hidden')
+                                  }
+                                >
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  Hide
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                onClick={() => handleDeleteReview(rev.id)}
+                                title="Delete review"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
 
-                        <p className="text-muted-foreground italic">
+                        <p className="text-foreground/90 pl-12 text-xs italic">
                           &ldquo;{rev.body}&rdquo;
                         </p>
-
-                        <div className="pt-1 flex justify-end gap-2">
-                          {rev.status !== 'published' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs gap-1"
-                              onClick={() =>
-                                handleUpdateReview(rev.id, 'published')
-                              }
-                            >
-                              <Check className="h-3.5 w-3.5 text-success" />
-                              Approve
-                            </Button>
-                          )}
-                          {rev.status !== 'hidden' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
-                              onClick={() =>
-                                handleUpdateReview(rev.id, 'hidden')
-                              }
-                            >
-                              <XCircle className="h-3.5 w-3.5" />
-                              Hide
-                            </Button>
-                          )}
-                        </div>
                       </div>
                     ))
                   )}
@@ -970,6 +1090,143 @@ export function MarketingPanel() {
               </Button>
               <Button type="submit" size="sm" disabled={isSubmitting}>
                 {isSubmitting ? 'Publishing...' : 'Publish Banner'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Review Dialog */}
+      <Dialog open={isAddReviewOpen} onOpenChange={setIsAddReviewOpen}>
+        <DialogContent className="sm:max-w-md w-[calc(100%-2rem)] flex flex-col p-0 overflow-hidden shadow-2xl">
+          <form onSubmit={handleCreateReview} className="flex flex-col">
+            <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
+              <DialogTitle className="text-sm font-semibold">
+                Add Customer Review
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Add a verified testimonial for the landing page review section
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="p-4 sm:p-6 space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="rev-customer-name">Customer Name *</Label>
+                <Input
+                  id="rev-customer-name"
+                  required
+                  value={reviewForm.customerName}
+                  onChange={(e) =>
+                    setReviewForm({ ...reviewForm, customerName: e.target.value })
+                  }
+                  placeholder="e.g. Amrit Bhattrai"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="rev-body">Review / Quote *</Label>
+                <Input
+                  id="rev-body"
+                  required
+                  value={reviewForm.body}
+                  onChange={(e) =>
+                    setReviewForm({ ...reviewForm, body: e.target.value })
+                  }
+                  placeholder="e.g. Too polite & for sure best service."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="rev-rating">Rating (Stars)</Label>
+                  <NativeSelect
+                    id="rev-rating"
+                    value={String(reviewForm.rating)}
+                    onChange={(e) =>
+                      setReviewForm({ ...reviewForm, rating: Number(e.target.value) })
+                    }
+                  >
+                    <option value="5">5 Stars (★★★★★)</option>
+                    <option value="4">4 Stars (★★★★☆)</option>
+                    <option value="3">3 Stars (★★★☆☆)</option>
+                    <option value="2">2 Stars (★★☆☆☆)</option>
+                    <option value="1">1 Star  (★☆☆☆☆)</option>
+                  </NativeSelect>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="rev-status">Status</Label>
+                  <NativeSelect
+                    id="rev-status"
+                    value={reviewForm.status}
+                    onChange={(e) =>
+                      setReviewForm({
+                        ...reviewForm,
+                        status: e.target.value as any,
+                      })
+                    }
+                  >
+                    <option value="published">Published (Live)</option>
+                    <option value="pending">Pending Moderation</option>
+                    <option value="hidden">Hidden</option>
+                  </NativeSelect>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="rev-product">Service / Product Highlight</Label>
+                <Input
+                  id="rev-product"
+                  value={reviewForm.productName}
+                  onChange={(e) =>
+                    setReviewForm({ ...reviewForm, productName: e.target.value })
+                  }
+                  placeholder="e.g. Express Delivery, Late Night"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="rev-image">Customer Avatar Image URL (Optional)</Label>
+                <Input
+                  id="rev-image"
+                  value={reviewForm.imageUrl}
+                  onChange={(e) =>
+                    setReviewForm({ ...reviewForm, imageUrl: e.target.value })
+                  }
+                  placeholder="https://images.unsplash.com/..."
+                />
+                {reviewForm.imageUrl && (
+                  <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
+                    <img
+                      src={reviewForm.imageUrl}
+                      alt="Preview"
+                      loading="lazy"
+                      decoding="async"
+                      className="h-8 w-8 rounded-full object-cover border"
+                      onError={(e) => (e.currentTarget.style.display = 'none')}
+                    />
+                    <span>Image preview</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter className="p-4 sm:p-6 pt-3 border-t border-border shrink-0 bg-muted/10">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAddReviewOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting}
+                className="gap-1.5"
+              >
+                <Plus className="h-4 w-4" /> Save Review
               </Button>
             </DialogFooter>
           </form>

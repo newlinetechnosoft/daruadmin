@@ -33,7 +33,7 @@ import {
   getOrderByTrackingCodeQuery,
   getCustomerOrdersQuery,
 } from '#/server/orders/order.queries'
-import type { PaymentMethod } from '#/server/operations/types'
+import type { PaymentMethod, Order } from '#/server/operations/types'
 import { checkoutFormSchema, validatePromoSchema } from './order.schemas'
 import { fromPaisa } from '#/lib/money'
 import { validateCoupon, calculateOrderTotals } from '#/lib/pricing'
@@ -113,6 +113,173 @@ export async function generateEsewaSignature(
 
 function nid(prefix = 'id') {
   return `${prefix}_${crypto.randomUUID().slice(0, 8)}`
+}
+
+// -------------------------------------------------------------
+// PUBLIC ACTIVE PAYMENT GATEWAYS & CUSTOMER SANITIZATION
+// -------------------------------------------------------------
+
+export interface PublicPaymentGateway {
+  id: PaymentMethod
+  name: string
+  channel: string
+  description: string
+  mode: string
+  enabled: boolean
+  defaultFee: string
+}
+
+const GATEWAY_METADATA: Record<
+  PaymentMethod,
+  { name: string; channel: string; defaultFee: string; description: string }
+> = {
+  cod: {
+    name: 'Cash on Delivery (COD)',
+    channel: 'MANUAL-FLOAT',
+    defaultFee: '0.00%',
+    description: 'Pay the rider in cash when your order arrives at your doorstep.',
+  },
+  esewa: {
+    name: 'eSewa Mobile Wallet',
+    channel: 'ESEWA-EPAY',
+    defaultFee: '1.75%',
+    description: 'Fast online checkout via official eSewa ePay v2 portal.',
+  },
+  khalti: {
+    name: 'Khalti Digital Wallet',
+    channel: 'KHALTI-EPAY',
+    defaultFee: '1.80%',
+    description: 'Pay instantly using your Khalti wallet or linked banking account.',
+  },
+  fonepay: {
+    name: 'Fonepay Interbank QR',
+    channel: 'FONEPAY-QR',
+    defaultFee: '1.20%',
+    description: 'Scan and pay via any Nepali mobile banking app using Fonepay QR.',
+  },
+  connectips: {
+    name: 'ConnectIPS NCHL',
+    channel: 'NCHL-CIPS',
+    defaultFee: '0.50%',
+    description: 'Direct real-time interbank account payment via ConnectIPS.',
+  },
+}
+
+export const getPublicActivePaymentGatewaysFn = createServerFn({
+  method: 'GET',
+}).handler(async (): Promise<PublicPaymentGateway[]> => {
+  let settings
+  try {
+    settings = await getStoreSettingsQuery()
+  } catch {
+    settings = defaultStoreSettings()
+  }
+
+  const gatewaysConfig = (settings.gateways || {}) as Record<string, any>
+  const allMethods: PaymentMethod[] = [
+    'cod',
+    'esewa',
+    'khalti',
+    'fonepay',
+    'connectips',
+  ]
+  const activeGateways: PublicPaymentGateway[] = []
+
+  for (const method of allMethods) {
+    const gw = gatewaysConfig[method]
+    // Default cod to true if settings.gateways not configured
+    const isEnabled = gw ? Boolean(gw.enabled) : method === 'cod'
+    if (isEnabled) {
+      const meta = GATEWAY_METADATA[method]
+      activeGateways.push({
+        id: method,
+        name: meta.name,
+        channel: meta.channel,
+        description: meta.description,
+        mode: gw?.mode || 'production',
+        enabled: true,
+        defaultFee: meta.defaultFee,
+      })
+    }
+  }
+
+  // Fallback: If no gateways are enabled for some reason, enable COD by default
+  if (activeGateways.length === 0) {
+    activeGateways.push({
+      id: 'cod',
+      name: GATEWAY_METADATA.cod.name,
+      channel: GATEWAY_METADATA.cod.channel,
+      description: GATEWAY_METADATA.cod.description,
+      mode: 'live',
+      enabled: true,
+      defaultFee: '0.00%',
+    })
+  }
+
+  return activeGateways
+})
+
+/**
+ * Sanitizes internal status history notes for public/customer audiences,
+ * strictly scrubbing any mention of dealers or wholesale partners.
+ */
+export function sanitizeEventsForCustomer(events: any[]) {
+  if (!Array.isArray(events)) return []
+  return events.map((ev) => {
+    let note = ev.note || ''
+    note = note
+      .replace(/dealer[s]?\s*assigned/gi, 'prepared for delivery')
+      .replace(
+        /assigned to dealer[s]?\s*(for sourcing)?/gi,
+        'prepared at fulfillment hub',
+      )
+      .replace(
+        /rider collected items from dealer/gi,
+        'rider collected items from hub',
+      )
+      .replace(/partner dealer[s]?/gi, 'fulfillment hub')
+      .replace(/dealer[s]?/gi, 'fulfillment hub')
+
+    let actor = ev.actor
+    if (actor && actor.toLowerCase().includes('dealer')) {
+      actor = 'Fulfillment Hub'
+    }
+
+    return {
+      ...ev,
+      note,
+      actor,
+    }
+  })
+}
+
+/**
+ * Strips all dealer identification, dealer objects, dealer IDs, dealer margins,
+ * and internal dealer notes from customer-facing order payloads.
+ */
+export function sanitizeOrderForCustomer<T extends Order | Record<string, any>>(
+  order: T,
+): T {
+  const sanitized = { ...order }
+  if ('dealerId' in sanitized) {
+    sanitized.dealerId = null
+  }
+
+  if (Array.isArray(sanitized.items)) {
+    sanitized.items = sanitized.items.map((it: any) => {
+      const cleanItem = { ...it }
+      cleanItem.dealerId = null
+      cleanItem.dealer = null
+      cleanItem.availableDealers = []
+      return cleanItem
+    })
+  }
+
+  if (Array.isArray(sanitized.events)) {
+    sanitized.events = sanitizeEventsForCustomer(sanitized.events)
+  }
+
+  return sanitized
 }
 
 // -------------------------------------------------------------
@@ -456,12 +623,14 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
     }
 
     // Verify payment method is enabled in store settings
-    const gateways = settings.gateways
-    const gateway = data.paymentMethod === 'cod' ? gateways.cod : gateways.esewa
-    const isMethodEnabled = Boolean(gateway.enabled)
+    const gateways = (settings.gateways || {}) as Record<string, any>
+    const gateway = gateways[data.paymentMethod]
+    const isMethodEnabled = gateway
+      ? Boolean(gateway.enabled)
+      : data.paymentMethod === 'cod'
     if (!isMethodEnabled) {
       throw new Error(
-        `Payment method "${data.paymentMethod === 'cod' ? 'Cash on Delivery' : 'eSewa'}" is currently disabled in store settings. Please select an active payment method.`,
+        `Payment method "${data.paymentMethod}" is currently disabled in store settings. Please select an active payment gateway.`,
       )
     }
 
@@ -628,7 +797,7 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         note:
           data.paymentMethod === 'cod'
             ? 'Order placed (Cash on Delivery)'
-            : 'Order placed (Pending eSewa payment)',
+            : `Order placed (Pending ${data.paymentMethod.toUpperCase()} payment)`,
         actor: sessionUser.name,
         actorId: sessionUser.id,
         actorRole: sessionUser.role,
@@ -715,6 +884,14 @@ export const getOrderDetailsFn = createServerFn({ method: 'GET' })
       sessionUser.role !== 'manager'
     ) {
       throw new Error('403: Forbidden: You do not have access to this order')
+    }
+
+    // Role customer cannot see any detail about dealers
+    if (
+      sessionUser.role === 'customer' ||
+      (sessionUser.role !== 'admin' && sessionUser.role !== 'manager')
+    ) {
+      return sanitizeOrderForCustomer(order)
     }
 
     return order
@@ -963,7 +1140,7 @@ export const trackPublicOrderFn = createServerFn({ method: 'GET' })
         unitPrice: it.unitPrice,
         lineTotal: it.lineTotal,
       })),
-      events: order.events,
+      events: sanitizeEventsForCustomer(order.events),
       rider: publicRider,
     }
   })
@@ -976,6 +1153,6 @@ export const getCustomerOrdersFn = createServerFn({ method: 'GET' }).handler(
   async () => {
     const sessionUser = await getSessionUser()
     const customerOrders = await getCustomerOrdersQuery(sessionUser.id)
-    return customerOrders
+    return customerOrders.map((o) => sanitizeOrderForCustomer(o))
   },
 )

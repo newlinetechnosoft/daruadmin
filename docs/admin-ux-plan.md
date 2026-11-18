@@ -1,4 +1,4 @@
-# Admin and Staff Panel UX Transformation Plan (Mezmani / Daru Gang)
+# Admin and Staff Panel UX Transformation Plan (Mezmani)
 
 ## 1. Executive Summary & Architecture Reference
 

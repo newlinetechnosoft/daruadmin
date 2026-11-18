@@ -1,5 +1,9 @@
 import { queryOptions } from '@tanstack/react-query'
-import { getPublicLandingNoticesFn } from '#/server/operations/operations.functions'
+import {
+  getPublicLandingNoticesFn,
+  getPublicStoreSettingsFn,
+  getPublicReviewsFn,
+} from '#/server/operations/operations.functions'
 import {
   getFrontpageDataFn,
   getFoodCategoriesFn,
@@ -14,6 +18,20 @@ import {
 } from '#/server/catalog/catalog.functions'
 
 export const storefrontQueries = {
+  publicSettings: () =>
+    queryOptions({
+      queryKey: ['store', 'public-settings'],
+      queryFn: () => getPublicStoreSettingsFn(),
+      staleTime: 1000 * 60 * 5,
+    }),
+
+  reviews: () =>
+    queryOptions({
+      queryKey: ['storefront', 'reviews'],
+      queryFn: () => getPublicReviewsFn(),
+      staleTime: 1000 * 60 * 5,
+    }),
+
   landingPopups: () =>
     queryOptions({
       queryKey: ['storefront', 'landing-popups'],

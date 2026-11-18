@@ -11,6 +11,7 @@ import {
   requirePermission,
   requireRole,
   logAudit,
+  getSessionUser,
 } from '#/server/auth/permissions'
 import { RIDER_SETTLEMENT_METHOD_LABELS } from '#/server/riders/rider-settlements'
 import {
@@ -478,6 +479,12 @@ export const getRiderAccountsSummaryFn = createServerFn({
 export const getPublicVoucherFn = createServerFn({ method: 'GET' })
   .validator((d: unknown) => z.object({ slug: z.string().min(1) }).parse(d))
   .handler(async ({ data }) => {
+    const user = await getSessionUser().catch(() => null)
+    if (user?.role === 'customer') {
+      throw new Error(
+        '403: Forbidden: Customers are not permitted to view partner settlement vouchers',
+      )
+    }
     const voucher = await getPublicVoucherBySlugQuery(data.slug)
     if (!voucher) {
       throw new Error('Voucher not found or link has expired')

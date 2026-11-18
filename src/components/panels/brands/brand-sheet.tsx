@@ -257,6 +257,8 @@ export function BrandSheet({
                 <img
                   src={form.watch('logoUrl')!}
                   alt="Logo preview"
+                  loading="lazy"
+                  decoding="async"
                   className="size-12 rounded-md object-contain bg-background border p-1"
                 />
                 <div className="flex-1 min-w-0">

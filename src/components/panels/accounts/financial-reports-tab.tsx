@@ -50,9 +50,9 @@ export interface FinancialReportsTabProps {
 export function FinancialReportsTab({
   onDrillDown,
   settings = {
-    legalName: 'Daru Gang Pvt Ltd',
-    address: 'Kathmandu, Nepal',
-    pan: '601234567',
+    legalName: 'Mezmani Retail Pvt. Ltd.',
+    address: 'Traffic Chowk, Butwal',
+    pan: '123456789',
   },
   fiscalYearName = '2083/84',
 }: FinancialReportsTabProps) {
@@ -319,9 +319,9 @@ export function FinancialReportsTab({
       {/* ==================================================================== */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-lg border border-border bg-card p-3 shadow-sm">
         <div>
-          <h2 className="text-base font-bold tracking-tight text-foreground">{settings.legalName || 'Daru Gang Pvt Ltd'}</h2>
+          <h2 className="text-base font-bold tracking-tight text-foreground">{settings.legalName || 'Mezmani Retail Pvt. Ltd.'}</h2>
           <p className="text-xs text-muted-foreground">
-            {settings.address || 'Kathmandu, Nepal'} • PAN: <span className="font-mono font-medium text-foreground">{settings.pan || '601234567'}</span>
+            {settings.address || 'Traffic Chowk, Butwal'} • PAN: <span className="font-mono font-medium text-foreground">{settings.pan || '123456789'}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">

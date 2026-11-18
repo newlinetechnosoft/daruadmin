@@ -1,4 +1,4 @@
-# Daru Gang (Mezmani) — Full Development Roadmap
+# Mezmani — Full Development Roadmap
 
 Legend: `[ ]` pending · `[x]` done · `[~]` partly done (exists but needs rework) · 🔴 blocker / logic bug · 🧾 accounting · 📱 mobile
 
@@ -98,7 +98,7 @@ Money is integer **paisa** everywhere. Every money/ledger change runs inside ONE
 
 - [x] Implement `postOrderDelivered`, `postCashHandover`, `postDealerSettlement`, `postRefund`, `postSalary`, `postExpense`, `postDealerCreditNote`
 - [x] Each posting idempotent (unique `ref_type + ref_id + event`)
-- [x] VAT rule: Daru Gang is seller of record; dealers give NO VAT bills → no input VAT / VAT Receivable on dealer cost (COGS at full dealer cost). Add per-dealer flag "provides VAT bill" (default OFF) so input VAT can be enabled later; don't enable until accountant confirms
+- [x] VAT rule: Mezmani is seller of record; dealers give NO VAT bills → no input VAT / VAT Receivable on dealer cost (COGS at full dealer cost). Add per-dealer flag "provides VAT bill" (default OFF) so input VAT can be enabled later; don't enable until accountant confirms
 - [x] Rider delivery pay (per-delivery rate) posted as its own component, never double-counting the delivery fee
 
 ### B4. 🧾 Accounting features

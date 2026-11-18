@@ -191,18 +191,77 @@ export const campaigns = pgTable(
   {
     id: text('id').primaryKey(),
     name: text('name').notNull(),
-    channel: text('channel').notNull(), // 'sms' | 'email' | 'push' | 'in-app'
-    status: text('status').notNull().default('draft'), // 'draft' | 'scheduled' | 'sent'
-    audience: text('audience').notNull(),
+    title: text('title'),
+    channel: text('channel').notNull().default('push'), // 'sms' | 'email' | 'push' | 'in-app'
+    channels: text('channels')
+      .array()
+      .notNull()
+      .default(sql`ARRAY['push']::text[]`),
+    status: text('status').notNull().default('draft'), // 'draft' | 'scheduled' | 'publishing' | 'published' | 'expired' | 'cancelled' | 'failed'
+    audience: text('audience').notNull().default('all'),
+    targetAudienceDetails: jsonb('target_audience_details'),
+    estimatedRecipients: integer('estimated_recipients').notNull().default(0),
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
+    scheduledDate: text('scheduled_date'),
+    scheduledTime: text('scheduled_time'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    expiryDate: text('expiry_date'),
+    expiryTime: text('expiry_time'),
+    timezone: text('timezone').notNull().default('Asia/Kathmandu'),
     body: text('body').notNull(),
+    imageUrl: text('image_url'),
+    ctaUrl: text('cta_url'),
+    ctaText: text('cta_text'),
+    bannerPlacement: text('banner_placement').default('none'),
+    bannerId: text('banner_id'),
+    offerSlug: text('offer_slug'),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    expiredAt: timestamp('expired_at', { withTimezone: true }),
+    deliveryProgress: jsonb('delivery_progress'),
+    analytics: jsonb('analytics'),
+    jobId: text('job_id'),
+    expireJobId: text('expire_job_id'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [
     index('campaigns_status_idx').on(table.status),
     index('campaigns_scheduled_at_idx').on(table.scheduledAt),
+    index('campaigns_expires_at_idx').on(table.expiresAt),
+  ],
+)
+
+export const campaignDeliveries = pgTable(
+  'campaign_deliveries',
+  {
+    id: text('id').primaryKey(),
+    campaignId: text('campaign_id')
+      .notNull()
+      .references(() => campaigns.id, { onDelete: 'cascade' }),
+    userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+    channel: text('channel').notNull(),
+    recipient: text('recipient').notNull(),
+    status: text('status').notNull().default('pending'), // 'pending' | 'sent' | 'failed'
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    error: text('error'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('campaign_deliveries_campaign_id_idx').on(table.campaignId),
+    index('campaign_deliveries_user_id_idx').on(table.userId),
+    index('campaign_deliveries_status_idx').on(table.status),
+    uniqueIndex('campaign_deliveries_campaign_user_channel_uniq_idx').on(
+      table.campaignId,
+      table.userId,
+      table.channel,
+    ),
   ],
 )
 
@@ -210,11 +269,12 @@ export const reviews = pgTable(
   'reviews',
   {
     id: text('id').primaryKey(),
-    productName: text('product_name').notNull(),
+    productName: text('product_name').notNull().default('Express Delivery'),
     customerName: text('customer_name').notNull(),
-    rating: integer('rating').notNull(),
+    rating: integer('rating').notNull().default(5),
     body: text('body').notNull(),
-    status: text('status').notNull().default('pending'), // 'pending' | 'published' | 'hidden'
+    imageUrl: text('image_url'),
+    status: text('status').notNull().default('published'), // 'pending' | 'published' | 'hidden'
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -266,6 +326,24 @@ export const complaintsRelations = relations(complaints, ({ one }) => ({
 export const couponsRelations = relations(coupons, ({ many }) => ({
   redemptions: many(couponRedemptions),
 }))
+
+export const campaignsRelations = relations(campaigns, ({ many }) => ({
+  deliveries: many(campaignDeliveries),
+}))
+
+export const campaignDeliveriesRelations = relations(
+  campaignDeliveries,
+  ({ one }) => ({
+    campaign: one(campaigns, {
+      fields: [campaignDeliveries.campaignId],
+      references: [campaigns.id],
+    }),
+    user: one(user, {
+      fields: [campaignDeliveries.userId],
+      references: [user.id],
+    }),
+  }),
+)
 
 export const couponRedemptionsRelations = relations(
   couponRedemptions,

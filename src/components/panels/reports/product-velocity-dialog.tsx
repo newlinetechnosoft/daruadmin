@@ -33,6 +33,7 @@ import {
 import type { ProductSourcingIntelligenceReport } from '#/server/operations/types'
 import { useQuery } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
+import { useStoreSettings } from '#/lib/use-store-settings'
 
 interface ProductVelocityDialogProps {
   open: boolean
@@ -43,12 +44,13 @@ interface ProductVelocityDialogProps {
 export function exportProductVelocityCSV(
   report: ProductSourcingIntelligenceReport,
   daysFilter: number | null = null,
+  companyName = 'Mezmani Group Pvt. Ltd.',
 ) {
   const timestamp = new Date().toISOString().slice(0, 10)
   const periodLabel = daysFilter ? `last-${daysFilter}-days` : 'all-time'
 
   // Multi-section CSV
-  let csv = `DARU GANG - PRODUCT VELOCITY & SOURCING INTELLIGENCE AUDIT (${periodLabel.toUpperCase()})\n`
+  let csv = `${companyName} - PRODUCT VELOCITY & SOURCING INTELLIGENCE AUDIT (${periodLabel.toUpperCase()})\n`
   csv += `Generated At: ${new Date().toISOString()}\n\n`
 
   // Section 1: Summary
@@ -108,6 +110,7 @@ export function ProductVelocityDialog({
   onOpenChange,
   initialData,
 }: ProductVelocityDialogProps) {
+  const storeSettings = useStoreSettings()
   const [activeTab, setActiveTab] = useState<
     'top' | 'slow' | 'unavailable' | 'substitution'
   >('top')
@@ -131,7 +134,11 @@ export function ProductVelocityDialog({
       toast.error('No report data available to export')
       return
     }
-    exportProductVelocityCSV(report, daysFilter)
+    exportProductVelocityCSV(
+      report,
+      daysFilter,
+      storeSettings?.legalName || storeSettings?.storeName,
+    )
   }
 
   // Filtered lists by search

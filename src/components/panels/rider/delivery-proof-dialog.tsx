@@ -295,6 +295,8 @@ export function DeliveryProofDialog({
                   <img
                     src={photoUrl}
                     alt="Proof Preview"
+                    loading="lazy"
+                    decoding="async"
                     className="h-28 w-auto object-cover rounded-lg"
                   />
                   <button

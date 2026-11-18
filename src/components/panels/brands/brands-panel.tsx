@@ -182,6 +182,8 @@ export function BrandsPanel() {
                 <img
                   src={b.logoUrl}
                   alt={b.name}
+                  loading="lazy"
+                  decoding="async"
                   className="size-7 rounded-md object-contain bg-background border p-0.5 shrink-0"
                 />
               ) : (
@@ -419,6 +421,8 @@ export function BrandsPanel() {
                   <img
                     src={brand.logoUrl}
                     alt={brand.name}
+                    loading="lazy"
+                    decoding="async"
                     className="size-6 rounded object-contain bg-background border p-0.5"
                   />
                 ) : (

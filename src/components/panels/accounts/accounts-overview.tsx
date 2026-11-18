@@ -292,9 +292,7 @@ export function AccountsOverview({
             <BarChart3 className="h-4 w-4 text-primary" />
             Executive Financial & Accounting Dashboard
           </h2>
-          <p className="text-xs text-muted-foreground">
-            Real-time double-entry KPIs, cash positions, profit margins, and operational distributions derived from posted general ledgers.
-          </p>
+          
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

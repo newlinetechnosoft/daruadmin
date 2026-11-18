@@ -437,6 +437,8 @@ export function TaxonomyPanel() {
             <img
               src={cat.imageUrl}
               alt={cat.name}
+              loading="lazy"
+              decoding="async"
               className="h-12 w-12 shrink-0 rounded-md bg-muted object-cover border border-border"
             />
           ) : (
@@ -572,6 +574,8 @@ export function TaxonomyPanel() {
             <img
               src={brand.logoUrl}
               alt={brand.name}
+              loading="lazy"
+              decoding="async"
               className="h-14 w-14 shrink-0 rounded-xl bg-secondary object-cover border border-border"
             />
           ) : (
@@ -841,6 +845,8 @@ export function TaxonomyPanel() {
                     <img
                       src={formImageUrl}
                       alt="Preview"
+                      loading="lazy"
+                      decoding="async"
                       className="h-16 w-16 rounded-md object-cover border border-border bg-muted"
                     />
                     <button

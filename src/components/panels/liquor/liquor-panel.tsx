@@ -560,6 +560,8 @@ export function LiquorPanel() {
                             'https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=100&q=80'
                           }
                           alt={p.name}
+                          loading="lazy"
+                          decoding="async"
                           className="h-12 w-12 shrink-0 rounded-xl bg-secondary object-cover border border-border shadow-xs"
                         />
                         <div className="min-w-0">

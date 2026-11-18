@@ -21,7 +21,8 @@
     "db:seed": "bun run src/db/seed.ts",
     "db:clean": "bun run src/db/clean.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/server/finance/accounting-validation.test.ts",
+    "test": "node --import tsx --test src/server/finance/accounting-validation.test.ts src/server/scheduler/campaign-scheduler.test.ts src/lib/campaign-timezone.test.ts src/server/auth/permissions.test.ts",
+    "test:campaigns": "node --import tsx --test src/server/scheduler/campaign-scheduler.test.ts",
     "demo:nepalotp": "bun run src/server/otp/demo-nepalotp.ts",
     "analyze": "ANALYZE=true vite build"
   },

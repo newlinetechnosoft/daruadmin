@@ -6,6 +6,7 @@ import {
   voucherSequences,
 } from '#/db/schema'
 import { desc, eq, sql } from 'drizzle-orm'
+import { getStoreSettingsQuery } from '#/server/platform/platform.queries'
 
 export interface VoucherSequenceItem {
   id: string
@@ -102,10 +103,13 @@ export async function getAccountingConfigurationQuery(): Promise<AccountingConfi
     .limit(1)
 
   // 2. Voucher Sequences
-  const seqRows = await db
-    .select()
-    .from(voucherSequences)
-    .where(activeFy ? eq(voucherSequences.fiscalYearId, activeFy.id) : sql`1=1`)
+  const [seqRows, storeSettings] = await Promise.all([
+    db
+      .select()
+      .from(voucherSequences)
+      .where(activeFy ? eq(voucherSequences.fiscalYearId, activeFy.id) : sql`1=1`),
+    getStoreSettingsQuery(),
+  ])
 
   // Standard voucher types ensure complete coverage
   const standardTypes = ['JV', 'PV', 'RV', 'CV', 'SV', 'CN', 'DN', 'OB', 'PC']
@@ -177,20 +181,20 @@ export async function getAccountingConfigurationQuery(): Promise<AccountingConfi
       activeFiscalYears: Number(fyCount?.count) || 1,
     },
     nepalCompliance: {
-      pan: '601234567',
-      legalName: 'Daru Gang Pvt Ltd',
-      tradeName: 'Mezmani',
-      vatRegistered: true,
-      taxOffice: 'Inland Revenue Office (IRO), Butwal / LTO Nepal',
+      pan: storeSettings.pan || '601234567',
+      legalName: storeSettings.legalName || 'Mezmani Retail Pvt. Ltd.',
+      tradeName: storeSettings.storeName || 'Mezmani',
+      vatRegistered: Boolean(storeSettings.vat || storeSettings.pan),
+      taxOffice: `Inland Revenue Office (IRO), ${storeSettings.city || 'Butwal'} / LTO Nepal`,
       currency: {
-        code: 'NPR',
-        symbol: 'Rs.',
+        code: storeSettings.currency || 'NPR',
+        symbol: storeSettings.currencySymbol || 'Rs.',
         subUnit: 'Paisa',
         subUnitRatio: 100,
         numberingFormat: 'South Asian (Lakhs & Crores: 1,23,45,678.90)',
       },
       vatRules: {
-        standardRatePercent: 13,
+        standardRatePercent: storeSettings.taxRate ?? 13,
         effectiveFromBS: '2054-08-01',
         effectiveFromAD: '1997-11-16',
         statutoryAct: 'Value Added Tax Act, 2052 (Nepal)',

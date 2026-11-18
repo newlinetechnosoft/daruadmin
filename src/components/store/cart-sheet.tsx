@@ -18,6 +18,7 @@ import { storeQueries } from '#/queries/admin'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { formatAbv } from '#/components/store/product-card'
 import { StoreCountdownTimer } from '#/components/store/countdown-timer'
+import { LazyImage } from '#/components/store/lazy-image'
 import {
   ShoppingBag,
   Clock,
@@ -170,10 +171,12 @@ export function CartSheet() {
                     className="flex gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-foreground/20"
                   >
                     {item.imageUrl ? (
-                      <img
+                      <LazyImage
                         src={item.imageUrl}
                         alt={item.productName}
-                        className="h-14 w-14 rounded-md object-contain bg-muted/30 p-1 shrink-0"
+                        className="h-full w-full object-contain p-1"
+                        containerClassName="h-14 w-14 rounded-md bg-muted/30 shrink-0"
+                        fallbackIcon={<Package className="h-6 w-6 text-muted-foreground/50" />}
                       />
                     ) : (
                       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-muted/30 text-muted-foreground">

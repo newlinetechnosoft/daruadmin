@@ -31,8 +31,10 @@ export const checkoutItemSchema = z.object({
 })
 
 export const checkoutFormSchema = z.object({
-  // a) Payment method (required, ONLY two options)
-  paymentMethod: z.enum(['cod', 'esewa']),
+  // a) Payment method (required, active payment gateway from admin settings)
+  paymentMethod: z
+    .enum(['cod', 'esewa', 'khalti', 'fonepay', 'connectips'])
+    .or(z.string()),
 
   // b) Promo code (optional)
   promoCode: z.string().optional(),

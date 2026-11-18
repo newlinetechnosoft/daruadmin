@@ -625,6 +625,8 @@ export function BannersPanel() {
                           <img
                             src={notice.imageUrl}
                             alt={notice.imageAlt || notice.title}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -749,6 +751,8 @@ export function BannersPanel() {
                     <img
                       src={banner.imageUrl}
                       alt={banner.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent flex flex-col justify-end p-4 text-foreground">
@@ -885,6 +889,8 @@ export function BannersPanel() {
                       <img
                         src={formData.imageUrl}
                         alt="Preview"
+                        loading="lazy"
+                        decoding="async"
                         className="max-h-36 w-full object-contain"
                         onError={(e) => {
                           ;(e.target as HTMLElement).style.display = 'none'

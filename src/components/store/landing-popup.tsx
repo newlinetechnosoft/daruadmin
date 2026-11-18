@@ -221,6 +221,8 @@ export function LandingPopup({
                       <img
                         src={currentNotice.imageUrl}
                         alt={currentNotice.imageAlt || currentNotice.title}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-auto max-h-[65vh] object-contain transition-transform duration-300 group-hover:scale-[1.01]"
                       />
                     </a>
@@ -228,6 +230,8 @@ export function LandingPopup({
                     <img
                       src={currentNotice.imageUrl}
                       alt={currentNotice.imageAlt || currentNotice.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-auto max-h-[65vh] object-contain"
                     />
                   )}

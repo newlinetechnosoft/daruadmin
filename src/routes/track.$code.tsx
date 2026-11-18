@@ -1,7 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { TrackOrderPanel } from '#/components/panels/customer/track-order-panel'
+import { OrdersPageSkeleton } from '#/components/shared/loading'
 
 export const Route = createFileRoute('/track/$code')({
+  pendingComponent: OrdersPageSkeleton,
   component: TrackOrderCodePage,
   head: () => ({
     meta: [

@@ -34,6 +34,7 @@ import {
   SheetTitle,
 } from '#/components/ui/sheet'
 import { EmptyState } from '#/components/shared/empty-state'
+import { CatalogPageSkeleton } from '#/components/shared/loading'
 
 const drinksSearchSchema = z.object({
   category: z.string().optional(),
@@ -69,6 +70,7 @@ export const Route = createFileRoute('/drinks')({
       products,
     }
   },
+  pendingComponent: CatalogPageSkeleton,
   component: DrinksPage,
 })
 
@@ -348,6 +350,8 @@ function DrinksPage() {
               src="/images/mezmani-drinks-bg-light.webp"
               alt=""
               aria-hidden="true"
+              loading="lazy"
+              decoding="async"
               className="h-full w-full object-cover object-right sm:object-center transition-opacity duration-500 dark:hidden"
               onError={(e) => {
                 const target = e.currentTarget
@@ -361,6 +365,8 @@ function DrinksPage() {
               src="/images/mezmani-drinks-bg-dark.webp"
               alt=""
               aria-hidden="true"
+              loading="lazy"
+              decoding="async"
               className="hidden h-full w-full object-cover object-right sm:object-center transition-opacity duration-500 dark:block"
               onError={(e) => {
                 const target = e.currentTarget

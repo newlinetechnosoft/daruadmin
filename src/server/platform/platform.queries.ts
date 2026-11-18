@@ -9,7 +9,6 @@ import {
   coupons,
   complaints,
   banners,
-  campaigns,
   reviews,
   shippingZones,
   couponRedemptions,
@@ -22,7 +21,6 @@ import type {
   AuditLog,
   Banner,
   LandingNotice,
-  Campaign,
   Complaint,
   Coupon,
   CouponRedemption,
@@ -47,6 +45,17 @@ export function defaultStoreSettings(): StoreSettings {
     email: 'ops@mezmani.com.np',
     address: 'Traffic Chowk, Butwal',
     city: 'Butwal',
+    province: 'Lumbini Province',
+    postalCode: '32907',
+    companyRegNo: '304589/080/081',
+    tagline:
+      'Good food, great drinks, delivered to your doorstep. Serving Butwal and Tilottama.',
+    supportPhone: '+977 9766653471',
+    secondaryPhone: '+977 9847820683',
+    websiteUrl: 'https://mezmani.com',
+    operatingHours: '10:00 AM - 12:00 AM (Late Night Delivery)',
+    currency: 'NPR',
+    currencySymbol: 'Rs.',
     invoicePrefix: 'MZ',
     taxRate: 13,
     lowStockThreshold: 20,
@@ -778,21 +787,7 @@ export async function reorderLandingNoticesQuery(
 // CAMPAIGNS
 // -------------------------------------------------------------
 
-export async function getAllCampaignsQuery(): Promise<Campaign[]> {
-  const rows = await db
-    .select()
-    .from(campaigns)
-    .orderBy(desc(campaigns.createdAt))
-  return rows.map((c) => ({
-    id: c.id,
-    name: c.name,
-    channel: c.channel as any,
-    status: c.status as any,
-    audience: c.audience,
-    scheduledAt: c.scheduledAt.toISOString(),
-    body: c.body,
-  }))
-}
+export { getAllCampaignsQuery } from './campaign.queries'
 
 // -------------------------------------------------------------
 // REVIEWS
@@ -806,9 +801,66 @@ export async function getAllReviewsQuery(): Promise<Review[]> {
     customerName: r.customerName,
     rating: r.rating,
     body: r.body,
+    imageUrl: r.imageUrl ?? null,
     status: r.status as 'pending' | 'published' | 'hidden',
     createdAt: r.createdAt.toISOString(),
   }))
+}
+
+export async function getPublishedReviewsQuery(): Promise<Review[]> {
+  const rows = await db
+    .select()
+    .from(reviews)
+    .where(eq(reviews.status, 'published'))
+    .orderBy(desc(reviews.createdAt))
+  return rows.map((r) => ({
+    id: r.id,
+    productName: r.productName,
+    customerName: r.customerName,
+    rating: r.rating,
+    body: r.body,
+    imageUrl: r.imageUrl ?? null,
+    status: r.status as 'pending' | 'published' | 'hidden',
+    createdAt: r.createdAt.toISOString(),
+  }))
+}
+
+export async function createReviewQuery(data: {
+  productName?: string
+  customerName: string
+  rating?: number
+  body: string
+  imageUrl?: string | null
+  status?: 'pending' | 'published' | 'hidden'
+}): Promise<Review> {
+  const id = `rev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
+  const [created] = await db
+    .insert(reviews)
+    .values({
+      id,
+      productName: data.productName || 'Express Service',
+      customerName: data.customerName,
+      rating: data.rating ?? 5,
+      body: data.body,
+      imageUrl: data.imageUrl ?? null,
+      status: data.status ?? 'published',
+    })
+    .returning()
+
+  return {
+    id: created.id,
+    productName: created.productName,
+    customerName: created.customerName,
+    rating: created.rating,
+    body: created.body,
+    imageUrl: created.imageUrl ?? null,
+    status: created.status as 'pending' | 'published' | 'hidden',
+    createdAt: created.createdAt.toISOString(),
+  }
+}
+
+export async function deleteReviewQuery(id: string) {
+  await db.delete(reviews).where(eq(reviews.id, id))
 }
 
 export async function updateReviewStatusQuery(
@@ -869,6 +921,7 @@ export async function upsertShippingZoneQuery(z: Zone) {
 // -------------------------------------------------------------
 
 function mapOfferRecord(o: typeof offers.$inferSelect): Offer {
+  const isExpired = o.expiresAt ? new Date(o.expiresAt).getTime() <= Date.now() : false
   return {
     id: o.id,
     title: o.title,
@@ -883,7 +936,8 @@ function mapOfferRecord(o: typeof offers.$inferSelect): Offer {
     description: o.description,
     priority: o.priority,
     stackable: o.stackable,
-    active: o.active,
+    active: o.active && !isExpired,
+    isExpired,
     startsAt: o.startsAt ? o.startsAt.toISOString() : null,
     expiresAt: o.expiresAt ? o.expiresAt.toISOString() : null,
     createdAt: o.createdAt.toISOString(),
@@ -892,18 +946,16 @@ function mapOfferRecord(o: typeof offers.$inferSelect): Offer {
 }
 
 export async function getAllOffersQuery(onlyActive = false): Promise<Offer[]> {
-  const rows = onlyActive
-    ? await db
-        .select()
-        .from(offers)
-        .where(eq(offers.active, true))
-        .orderBy(desc(offers.priority), desc(offers.createdAt))
-    : await db
-        .select()
-        .from(offers)
-        .orderBy(desc(offers.priority), desc(offers.createdAt))
+  const rows = await db
+    .select()
+    .from(offers)
+    .orderBy(desc(offers.priority), desc(offers.createdAt))
 
-  return rows.map(mapOfferRecord)
+  const all = rows.map(mapOfferRecord)
+  if (onlyActive) {
+    return all.filter((o) => o.active && !o.isExpired)
+  }
+  return all
 }
 
 export async function getOfferBySlugQuery(slug: string): Promise<Offer | null> {

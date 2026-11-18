@@ -28,8 +28,8 @@ const STEPS = [
   },
   {
     key: 'sourcing',
-    label: 'Dealer Sourcing',
-    description: 'Items packed at partner shop',
+    label: 'Order Preparation',
+    description: 'Items packed at fulfillment hub',
     icon: Store,
   },
   {

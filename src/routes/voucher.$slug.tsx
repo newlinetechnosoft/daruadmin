@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getPublicVoucherFn } from '#/server/finance/finance.functions'
+import { VoucherSkeleton } from '#/components/shared/loading'
 import { formatNPR } from '#/lib/money'
 import { Button } from '#/components/ui/button'
 import { Card } from '#/components/ui/card'
@@ -24,12 +25,16 @@ export const Route = createFileRoute('/voucher/$slug')({
       return { voucher: null, error: msg }
     }
   },
-  head: () => ({
-    meta: [
-      { name: 'robots', content: 'noindex, nofollow' },
-      { title: 'Official Settlement Voucher — Mezmani Nepal' },
-    ],
-  }),
+  head: ({ loaderData }) => {
+    const store = loaderData?.voucher?.storeSettings?.storeName || 'Mezmani'
+    return {
+      meta: [
+        { name: 'robots', content: 'noindex, nofollow' },
+        { title: `Official Settlement Voucher — ${store}` },
+      ],
+    }
+  },
+  pendingComponent: VoucherSkeleton,
   component: PublicVoucherPage,
 })
 
@@ -64,8 +69,9 @@ function PublicVoucherPage() {
   }
 
   const handleShareWhatsApp = () => {
+    const storeName = voucher.storeSettings?.storeName || 'Mezmani'
     const text = encodeURIComponent(
-      `Mezmani Official Settlement Voucher ${voucher.voucherNo} for ${voucher.partyName} (Net: ${formatNPR(voucher.netAmount)}):\n${window.location.href}`,
+      `${storeName} Official Settlement Voucher ${voucher.voucherNo} for ${voucher.partyName} (Net: ${formatNPR(voucher.netAmount)}):\n${window.location.href}`,
     )
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank')
   }
@@ -118,18 +124,19 @@ function PublicVoucherPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-bold tracking-tight text-primary">
-                  MEZMANI
+                <span className="text-xl font-bold tracking-tight text-primary uppercase">
+                  {voucher.storeSettings?.storeName || 'MEZMANI'}
                 </span>
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                   Liquor &amp; Delivery ERP
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Mezmani Retail Pvt. Ltd. &bull; Butwal, Rupandehi, Nepal
+                {voucher.storeSettings?.legalName || 'Mezmani Retail Pvt. Ltd.'} &bull; {voucher.storeSettings?.address || 'Butwal, Rupandehi, Nepal'}
               </p>
               <p className="text-xs font-mono text-muted-foreground">
-                PAN / VAT: 123456789 &bull; Fiscal Year 2083/84 BS
+                PAN / VAT: {voucher.storeSettings?.pan || voucher.storeSettings?.vat || '123456789'}
+                {voucher.storeSettings?.phone ? ` • Tel: ${voucher.storeSettings.phone}` : ''}
               </p>
             </div>
 
@@ -356,7 +363,7 @@ function PublicVoucherPage() {
               <div className="h-10 border-b border-dashed border-border/80 mb-2"></div>
               <div>Prepared By / Authorized Signature</div>
               <div className="font-semibold text-foreground mt-0.5">
-                Mezmani Finance Operations
+                {voucher.storeSettings?.storeName || 'Store'} Finance Operations
               </div>
             </div>
             <div>
@@ -372,7 +379,7 @@ function PublicVoucherPage() {
         {/* Footer */}
         <div className="p-4 bg-muted/10 border-t text-center text-[11px] text-muted-foreground">
           Computer-generated official settlement receipt &bull; Secured with
-          cryptographic tamper-evident slug &bull; Mezmani ERP Nepal
+          cryptographic tamper-evident slug &bull; {voucher.storeSettings?.storeName || 'ERP'} Nepal
         </div>
       </div>
     </div>

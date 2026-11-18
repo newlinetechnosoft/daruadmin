@@ -16,6 +16,7 @@ import { AgeGate } from '#/components/store/age-gate'
 import { StoreClosedPopup } from '#/components/store/store-closed-popup'
 import { Toaster } from '#/components/ui/sonner'
 import { adminQueries } from '#/queries/admin'
+import { storefrontQueries } from '#/queries/storefront'
 
 import appCss from '../styles.css?url'
 
@@ -62,39 +63,50 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       if (isRedirect(err)) throw err
     }
   },
-  head: () => ({
-    meta: [
-      {
-        charSet: 'utf-8',
-      },
-      {
-        name: 'viewport',
-        content: 'width=device-width, initial-scale=1',
-      },
-      {
-        title: "Mezmani | Nepal's Fastest Late-Night Liquor & Food Delivery",
-      },
-      {
-        name: 'description',
-        content:
-          'Mezmani offers the fastest late-night drinks, beer, snacks, and ice delivery across Butwal within 45 minutes.',
-      },
-    ],
-    links: [
-      {
-        rel: 'preconnect',
-        href: 'https://images.unsplash.com',
-      },
-      {
-        rel: 'dns-prefetch',
-        href: 'https://images.unsplash.com',
-      },
-      {
-        rel: 'stylesheet',
-        href: appCss,
-      },
-    ],
-  }),
+  loader: async ({ context }) => {
+    const settings = await context.queryClient
+      .ensureQueryData(storefrontQueries.publicSettings())
+      .catch(() => null)
+    return { settings }
+  },
+  head: ({ loaderData }) => {
+    const storeName = loaderData?.settings?.storeName || 'Mezmani'
+    const tagline =
+      loaderData?.settings?.tagline ||
+      "Nepal's Fastest Late-Night Liquor & Food Delivery"
+    return {
+      meta: [
+        {
+          charSet: 'utf-8',
+        },
+        {
+          name: 'viewport',
+          content: 'width=device-width, initial-scale=1',
+        },
+        {
+          title: `${storeName} | ${tagline}`,
+        },
+        {
+          name: 'description',
+          content: `${storeName} offers fast drinks, beer, snacks, and grocery delivery across ${loaderData?.settings?.city || 'Butwal'} & Tilottama.`,
+        },
+      ],
+      links: [
+        {
+          rel: 'preconnect',
+          href: 'https://images.unsplash.com',
+        },
+        {
+          rel: 'dns-prefetch',
+          href: 'https://images.unsplash.com',
+        },
+        {
+          rel: 'stylesheet',
+          href: appCss,
+        },
+      ],
+    }
+  },
   shellComponent: RootDocument,
 })
 
@@ -116,7 +128,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <CartSheet />
             <AgeGate />
             <StoreClosedPopup />
-            <Toaster position="bottom-right" richColors />
+            <Toaster position="bottom-right" richColors visibleToasts={1} />
           </CartProvider>
         </ThemeProvider>
         <TanStackDevtools

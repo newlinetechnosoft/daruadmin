@@ -771,6 +771,11 @@ export async function getRiderLedgerBalanceQuery(
   }
 }
 
+import {
+  defaultStoreSettings,
+  getStoreSettingsQuery,
+} from '#/server/platform/platform.queries'
+
 export interface PublicVoucherData {
   type: 'dealer' | 'rider'
   voucherNo: string
@@ -795,11 +800,33 @@ export interface PublicVoucherData {
   notes?: string | null
   proofUrls: string[]
   journalEntryId?: string | null
+  storeSettings?: {
+    storeName: string
+    legalName: string
+    pan: string
+    vat: string
+    phone: string
+    email: string
+    address: string
+    city: string
+  }
 }
 
 export async function getPublicVoucherBySlugQuery(
   slug: string,
 ): Promise<PublicVoucherData | null> {
+  const store = await getStoreSettingsQuery().catch(() => defaultStoreSettings())
+  const storeSettings = {
+    storeName: store.storeName || 'Mezmani',
+    legalName: store.legalName || 'Mezmani Retail Pvt. Ltd.',
+    pan: store.pan || '',
+    vat: store.vat || '',
+    phone: store.phone || '',
+    email: store.email || '',
+    address: store.address || '',
+    city: store.city || '',
+  }
+
   // 1. Try dealer settlements
   const ds = await db
     .select()
@@ -834,6 +861,7 @@ export async function getPublicVoucherBySlugQuery(
       notes: row.notes,
       proofUrls: proofs,
       journalEntryId: row.journalEntryId,
+      storeSettings,
     }
   }
 
@@ -875,6 +903,7 @@ export async function getPublicVoucherBySlugQuery(
       notes: row.notes,
       proofUrls: proofs,
       journalEntryId: row.journalEntryId,
+      storeSettings,
     }
   }
 

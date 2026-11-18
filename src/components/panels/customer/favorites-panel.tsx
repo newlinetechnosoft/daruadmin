@@ -9,7 +9,8 @@ import { Footer } from '#/components/store/footer'
 import { Button } from '#/components/ui/button'
 import { EmptyState } from '#/components/shared/empty-state'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
-import { Heart, Trash2, ArrowRight, Loader2 } from 'lucide-react'
+import { ProductGridSkeleton } from '#/components/shared/loading'
+import { Heart, Trash2, ArrowRight } from 'lucide-react'
 
 /**
  * CUSTOMER FAVORITES PANEL
@@ -114,9 +115,7 @@ export function FavoritesPanel() {
           {/* Content Area */}
           <div className="pt-8">
             {isLoading && visibleProducts.length === 0 ? (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
+              <ProductGridSkeleton count={6} />
             ) : visibleProducts.length === 0 ? (
               <EmptyState
                 icon={Heart}

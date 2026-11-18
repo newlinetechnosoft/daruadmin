@@ -1,4 +1,16 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, it } from 'node:test'
+import assert from 'node:assert/strict'
+
+function expect(actual: any) {
+  return {
+    toBe(expected: any) {
+      assert.strictEqual(actual, expected)
+    },
+    toEqual(expected: any) {
+      assert.deepStrictEqual(actual, expected)
+    },
+  }
+}
 import { DEFAULT_GRANTS_BY_ROLE, can, isSuperAdmin } from './permissions-shared'
 import type { UserGrants } from './permissions-shared'
 import { MODULES, ACTIONS } from '#/server/operations/types'
@@ -271,6 +283,79 @@ describe('Role & Financial Permissions Alignment (ACC-0.7 / G8)', () => {
       expect(can(customizedAdminGrants, 'accounts', 'view')).toBe(true)
       // Superadmin default role remains completely unrestricted
       expect(can(DEFAULT_GRANTS_BY_ROLE.superadmin, 'settings', 'delete')).toBe(true)
+    })
+  })
+
+  describe('6. Granular Accounts Sub-Menu Matrix Permissions', () => {
+    it('supports all 21 Accounts sub-modules in the permission matrix without drift', () => {
+      const allAccountsModules = [
+        'accounts_overview',
+        'accounts_chart_of_accounts',
+        'accounts_branches',
+        'accounts_ledger',
+        'accounts_vouchers',
+        'accounts_party_accounts',
+        'accounts_dealer_ledger',
+        'accounts_rider_ledger',
+        'accounts_customer_ledger',
+        'accounts_supplier_ledger',
+        'accounts_employee_ledger',
+        'accounts_bank_cash',
+        'accounts_expenses',
+        'accounts_reconciliation',
+        'accounts_financial_reports',
+        'accounts_export_center',
+        'accounts_period_close',
+        'accounts_audit_trail',
+        'accounts_settings',
+        'accounts_sales_account',
+        'accounts_salary_account',
+      ] as const
+
+      for (const mod of allAccountsModules) {
+        expect(can(DEFAULT_GRANTS_BY_ROLE.admin, mod, 'view')).toBe(true)
+      }
+
+      const hrPayrollOfficerGrants: UserGrants = {
+        accounts_salary_account: ['view', 'create', 'export', 'approve'],
+        accounts_employee_ledger: ['view', 'export'],
+      }
+
+      // Can view and approve salary
+      expect(can(hrPayrollOfficerGrants, 'accounts_salary_account', 'view')).toBe(true)
+      expect(can(hrPayrollOfficerGrants, 'accounts_salary_account', 'approve')).toBe(true)
+      expect(can(hrPayrollOfficerGrants, 'accounts_employee_ledger', 'view')).toBe(true)
+
+      // Umbrella accounts is automatically reachable when sub-modules are granted
+      expect(can(hrPayrollOfficerGrants, 'accounts', 'view')).toBe(true)
+
+      // But cannot view bank & cash or post general vouchers
+      expect(can(hrPayrollOfficerGrants, 'accounts_bank_cash', 'view')).toBe(false)
+      expect(can(hrPayrollOfficerGrants, 'accounts_vouchers', 'create')).toBe(false)
+      expect(can(hrPayrollOfficerGrants, 'accounts_period_close', 'edit')).toBe(false)
+    })
+
+    it('inherits umbrella accounts permissions when sub-modules are undefined in legacy grants', () => {
+      const legacyAccountantGrants: UserGrants = {
+        accounts: ['view', 'create', 'export'],
+      }
+
+      expect(can(legacyAccountantGrants, 'accounts_overview', 'view')).toBe(true)
+      expect(can(legacyAccountantGrants, 'accounts_ledger', 'create')).toBe(true)
+      expect(can(legacyAccountantGrants, 'accounts_financial_reports', 'export')).toBe(true)
+      // Approve was not in umbrella accounts, so it remains denied
+      expect(can(legacyAccountantGrants, 'accounts_salary_account', 'approve')).toBe(false)
+    })
+
+    it('enforces strict denial when sub-module is explicitly empty [] despite umbrella', () => {
+      const restrictedAuditorGrants: UserGrants = {
+        accounts: ['view', 'export'],
+        accounts_salary_account: [], // Explicitly denied access to payroll
+      }
+
+      expect(can(restrictedAuditorGrants, 'accounts_ledger', 'view')).toBe(true)
+      expect(can(restrictedAuditorGrants, 'accounts_salary_account', 'view')).toBe(false)
+      expect(can(restrictedAuditorGrants, 'accounts_salary_account', 'export')).toBe(false)
     })
   })
 })

@@ -11,6 +11,7 @@ import {
   getPublicStoreOperatingStatusFn,
 } from '#/server/superadmin/superadmin.functions'
 import { getRecycleBinFn } from '#/server/recycle-bin/recycle-bin.functions'
+import { getPublicActivePaymentGatewaysFn } from '#/server/orders/order.functions'
 import { queryOptions } from '@tanstack/react-query'
 import {
   getAdminChromeFn,
@@ -31,6 +32,9 @@ import {
   getShippingFn,
   getStaffOpsFn,
   getPublicDeliverySettingsFn,
+  getAdminCampaignsFn,
+  getCampaignDeliveriesFn,
+  getAudienceEstimateFn,
 } from '#/server/operations/operations.functions'
 import {
   getAdminFoodProductsFn,
@@ -514,6 +518,13 @@ export const adminQueries = {
       staleTime: 1000 * 60,
     }),
 
+  activePaymentGateways: () =>
+    queryOptions({
+      queryKey: ['public', 'activePaymentGateways'],
+      queryFn: () => getPublicActivePaymentGatewaysFn(),
+      staleTime: 1000 * 60,
+    }),
+
   shipping: () =>
     queryOptions({
       queryKey: ['admin', 'shipping'],
@@ -526,6 +537,28 @@ export const adminQueries = {
       queryKey: ['admin', 'marketing'],
       queryFn: () => getMarketingFn(),
       staleTime: 1000 * 60 * 2,
+    }),
+
+  campaigns: (status?: any) =>
+    queryOptions({
+      queryKey: ['admin', 'campaigns', status ?? 'all'],
+      queryFn: () => getAdminCampaignsFn({ data: { status } }),
+      staleTime: 1000 * 30,
+    }),
+
+  campaignDeliveries: (campaignId: string) =>
+    queryOptions({
+      queryKey: ['admin', 'campaign-deliveries', campaignId],
+      queryFn: () => getCampaignDeliveriesFn({ data: { campaignId } }),
+      staleTime: 1000 * 15,
+      enabled: !!campaignId,
+    }),
+
+  audienceEstimate: (audience: string) =>
+    queryOptions({
+      queryKey: ['admin', 'audience-estimate', audience],
+      queryFn: () => getAudienceEstimateFn({ data: { audience } }),
+      staleTime: 1000 * 60,
     }),
 
   banners: () =>

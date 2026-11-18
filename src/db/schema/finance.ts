@@ -682,7 +682,7 @@ export const bankAccounts = pgTable(
     id: text('id').primaryKey(),
     bankName: text('bank_name').notNull(), // e.g. 'Nabil Bank', 'Global IME'
     accountNumber: text('account_number').notNull().unique(),
-    accountName: text('account_name').notNull(), // e.g. 'Daru Gang Pvt Ltd'
+    accountName: text('account_name').notNull(), // e.g. 'Mezmani Group Pvt. Ltd.'
     branchName: text('branch_name'),
     ledgerAccountId: text('ledger_account_id').references(
       () => ledgerAccounts.id,

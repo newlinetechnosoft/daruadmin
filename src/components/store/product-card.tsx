@@ -1,6 +1,7 @@
 import { memo, useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { LazyImage } from '#/components/store/lazy-image'
 import {
   Heart,
   Wine,
@@ -134,7 +135,6 @@ function ProductCardComponent({
       volumeMl: activeVariant.volumeMl,
       abv: activeVariant.abv,
     })
-    toast.success(`Added ${product.name} to cart`)
   }
 
   const handleDecrement = () => {
@@ -245,30 +245,33 @@ function ProductCardComponent({
     return []
   }, [suggestedProducts, dynamicProducts, modalProduct.id])
 
-  const handleModalAddToCart = () => {
-    if (modalActiveVariant.stock <= 0) return
-    addItem({
-      id: modalActiveVariant.id,
-      productId: modalProduct.id,
-      productName: modalProduct.name,
-      productSlug: modalProduct.slug,
-      variantId: modalActiveVariant.id,
-      variantName: modalActiveVariant.name,
-      catalogType: modalProduct.catalogType,
-      price: modalActiveVariant.price,
-      mrp: modalActiveVariant.mrp,
-      imageUrl: modalProduct.primaryImage,
-      customBadge: modalProduct.customBadge,
-      customDiscountLabel: modalDiscountLabel,
-      volumeMl: modalActiveVariant.volumeMl,
-      abv: modalActiveVariant.abv,
-    })
+  const handleModalAddToCart = (quantity = 1) => {
+    if (modalActiveVariant.stock <= 0) return false
+    return addItem(
+      {
+        id: modalActiveVariant.id,
+        productId: modalProduct.id,
+        productName: modalProduct.name,
+        productSlug: modalProduct.slug,
+        variantId: modalActiveVariant.id,
+        variantName: modalActiveVariant.name,
+        catalogType: modalProduct.catalogType,
+        price: modalActiveVariant.price,
+        mrp: modalActiveVariant.mrp,
+        imageUrl: modalProduct.primaryImage,
+        customBadge: modalProduct.customBadge,
+        customDiscountLabel: modalDiscountLabel,
+        volumeMl: modalActiveVariant.volumeMl,
+        abv: modalActiveVariant.abv,
+      },
+      quantity,
+    )
   }
 
   const quickAddSuggested = (item: ProductProps) => {
     const v = item.variants[0]
     if (v.stock <= 0) {
-      toast.error('Item is out of stock')
+      toast.error('Item is out of stock', { id: 'cart-action' })
       return
     }
     addItem({
@@ -285,7 +288,6 @@ function ProductCardComponent({
       volumeMl: v.volumeMl,
       abv: v.abv,
     })
-    toast.success(`Added ${item.name} to cart`)
   }
 
   return (
@@ -336,23 +338,22 @@ function ProductCardComponent({
             />
           </button>
 
-          {/* Product Image (Flush 100% to card top and sides) */}
-          {product.primaryImage ? (
-            <img
-              src={product.primaryImage}
-              alt={product.name}
-              className="w-full h-full object-contain p-2 sm:p-2.5 transition-transform duration-500 ease-out group-hover:scale-105"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-muted-foreground/50">
-              {product.catalogType === 'liquor' ? (
+          {/* Product Image with progressive lazy load and skeleton */}
+          <LazyImage
+            src={product.primaryImage ?? undefined}
+            alt={product.name}
+            className="w-full h-full object-contain p-2 sm:p-2.5 transition-transform duration-500 ease-out group-hover:scale-105"
+            containerClassName="w-full h-full"
+            loading="lazy"
+            decoding="async"
+            fallbackIcon={
+              product.catalogType === 'liquor' ? (
                 <Wine className="h-10 w-10 sm:h-12 sm:w-12 stroke-[1.25]" />
               ) : (
                 <Package className="h-10 w-10 sm:h-12 sm:w-12 stroke-[1.25]" />
-              )}
-            </div>
-          )}
+              )
+            }
+          />
         </div>
 
         {/* 2. PRODUCT INFO & DETAILS (Responsive padding, natural gap & perfect alignment) */}
@@ -527,15 +528,13 @@ function ProductCardComponent({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
               {/* Left Column: Image */}
               <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-zinc-900/40 border border-border/50 flex items-center justify-center p-4">
-                {modalProduct.primaryImage ? (
-                  <img
-                    src={modalProduct.primaryImage}
-                    alt={modalProduct.name}
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <Wine className="h-20 w-20 text-muted-foreground stroke-1" />
-                )}
+                <LazyImage
+                  src={modalProduct.primaryImage ?? undefined}
+                  alt={modalProduct.name}
+                  className="w-full h-full object-contain"
+                  containerClassName="w-full h-full"
+                  fallbackIcon={<Wine className="h-20 w-20 text-muted-foreground stroke-1" />}
+                />
 
                 {modalDiscountLabel && (
                   <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-emerald-500 text-zinc-950 text-xs font-bold shadow-md">
@@ -678,12 +677,7 @@ function ProductCardComponent({
                   <Button
                     className="flex-1 h-10 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-sm shadow-xs gap-2 cursor-pointer"
                     onClick={() => {
-                      for (let i = 0; i < modalQty; i++) {
-                        handleModalAddToCart()
-                      }
-                      toast.success(
-                        `Added ${modalQty}x ${modalProduct.name} to cart`,
-                      )
+                      handleModalAddToCart(modalQty)
                       setIsDetailOpen(false)
                     }}
                   >
@@ -722,15 +716,13 @@ function ProductCardComponent({
                       className="group/suggested p-2.5 rounded-xl border border-border/60 bg-muted/20 hover:border-amber-500/40 hover:bg-muted/40 transition-all flex flex-col justify-between cursor-pointer"
                     >
                       <div className="relative aspect-square w-full rounded-lg bg-zinc-900/30 overflow-hidden mb-2 flex items-center justify-center">
-                        {item.primaryImage ? (
-                          <img
-                            src={item.primaryImage}
-                            alt={item.name}
-                            className="w-full h-full object-contain group-hover/suggested:scale-105 transition-transform"
-                          />
-                        ) : (
-                          <Wine className="h-8 w-8 text-muted-foreground stroke-1" />
-                        )}
+                        <LazyImage
+                          src={item.primaryImage ?? undefined}
+                          alt={item.name}
+                          className="w-full h-full object-contain group-hover/suggested:scale-105 transition-transform"
+                          containerClassName="w-full h-full"
+                          fallbackIcon={<Wine className="h-8 w-8 text-muted-foreground stroke-1" />}
+                        />
                       </div>
 
                       <div className="space-y-1">
@@ -772,3 +764,4 @@ function ProductCardComponent({
 }
 
 export const ProductCard = memo(ProductCardComponent)
+export { ProductCardSkeleton, ProductGridSkeleton } from '#/components/shared/loading'

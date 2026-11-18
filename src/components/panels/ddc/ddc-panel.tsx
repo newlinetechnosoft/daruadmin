@@ -558,6 +558,8 @@ export function DdcPanel() {
                             <img
                               src={p.primaryImage}
                               alt={p.name}
+                              loading="lazy"
+                              decoding="async"
                               className="h-full w-full object-cover"
                             />
                           ) : (

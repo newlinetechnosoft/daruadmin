@@ -19,6 +19,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '#/components/ui/dropdown-menu'
 import { ROOT_TYPE_OPTIONS } from '../accounts-route'
 import { exportCsv } from '../export-csv'
 import { useDebouncedValue } from '#/hooks/use-debounced-value'
@@ -34,6 +41,7 @@ import {
   Download,
   Edit2,
   ExternalLink,
+  MoreVertical,
   Plus,
   Power,
   Snowflake,
@@ -520,57 +528,80 @@ export function ChartOfAccountsTab() {
               className="flex items-center justify-end gap-1"
               onClick={(event) => event.stopPropagation()}
             >
-              <Button
-                size="sm"
-                variant="ghost"
-                title="Edit account properties"
-                onClick={() => handleOpenEdit(acc)}
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-              >
-                <Edit2 className="h-3 w-3" />
-              </Button>
-
-              <Button
-                size="sm"
-                variant="ghost"
-                title={acc.isFrozen ? 'Unfreeze account' : 'Freeze account'}
-                onClick={() => handleToggleFreeze(acc)}
-                disabled={isSubmitting}
-                className={`h-7 w-7 p-0 ${
-                  acc.isFrozen
-                    ? 'text-sky-600 dark:text-sky-400'
-                    : 'text-muted-foreground hover:text-sky-600'
-                }`}
-              >
-                <Snowflake className="h-3 w-3" />
-              </Button>
-
-              <Button
-                size="sm"
-                variant="ghost"
-                title={acc.isActive ? 'Deactivate account' : 'Activate account'}
-                onClick={() => handleToggleActive(acc)}
-                disabled={isSubmitting}
-                className={`h-7 w-7 p-0 ${
-                  acc.isActive
-                    ? 'text-muted-foreground hover:text-rose-600'
-                    : 'text-rose-600'
-                }`}
-              >
-                <Power className="h-3 w-3" />
-              </Button>
-
               {!acc.isGroup && (
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => openLedger(acc.id)}
-                  className="h-7 gap-1 px-2 text-xs"
+                  className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
                 >
                   <ExternalLink className="h-3 w-3" />
-                  Ledger
+                  <span className="hidden sm:inline">Ledger</span>
                 </Button>
               )}
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                    title="Account options"
+                  >
+                    <MoreVertical className="h-3.5 w-3.5" />
+                    <span className="sr-only">Open account options</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 text-xs">
+                  <DropdownMenuItem
+                    onClick={() => handleOpenEdit(acc)}
+                    className="gap-2 cursor-pointer"
+                  >
+                    <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span>Edit Account</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleToggleFreeze(acc)}
+                    disabled={isSubmitting}
+                    className="gap-2 cursor-pointer"
+                  >
+                    <Snowflake
+                      className={`h-3.5 w-3.5 ${
+                        acc.isFrozen ? 'text-sky-500' : 'text-muted-foreground'
+                      }`}
+                    />
+                    <span>
+                      {acc.isFrozen ? 'Unfreeze Account' : 'Freeze Account'}
+                    </span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleToggleActive(acc)}
+                    disabled={isSubmitting}
+                    className={`gap-2 cursor-pointer ${
+                      acc.isActive
+                        ? 'text-rose-600 focus:text-rose-600'
+                        : 'text-emerald-600 focus:text-emerald-600'
+                    }`}
+                  >
+                    <Power className="h-3.5 w-3.5" />
+                    <span>
+                      {acc.isActive ? 'Deactivate Account' : 'Activate Account'}
+                    </span>
+                  </DropdownMenuItem>
+                  {!acc.isGroup && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => openLedger(acc.id)}
+                        className="gap-2 cursor-pointer"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>View General Ledger</span>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )
         },

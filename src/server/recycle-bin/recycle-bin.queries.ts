@@ -27,6 +27,7 @@ import {
   banners,
   offers,
   riders,
+  campaigns,
 } from '#/db/schema'
 import { desc, eq, lte } from 'drizzle-orm'
 
@@ -49,6 +50,7 @@ export interface MoveToRecycleBinParams {
     | 'banner'
     | 'offer'
     | 'rider'
+    | 'campaign'
   entityId: string
   name: string
   description?: string | null
@@ -1014,6 +1016,21 @@ export async function restoreRecycleBinItemQuery(
           deliveries: rider.deliveries || 0,
           rating: rider.rating ? String(rider.rating) : '5.00',
           createdAt: rider.createdAt ? new Date(rider.createdAt) : new Date(),
+          updatedAt: new Date(),
+        })
+        break
+      }
+
+      case 'campaign': {
+        const { campaign } = data
+        if (!campaign) throw new Error('Invalid campaign data in Recycle Bin')
+        await tx.insert(campaigns).values({
+          ...campaign,
+          scheduledAt: new Date(campaign.scheduledAt),
+          expiresAt: campaign.expiresAt ? new Date(campaign.expiresAt) : null,
+          publishedAt: campaign.publishedAt ? new Date(campaign.publishedAt) : null,
+          expiredAt: campaign.expiredAt ? new Date(campaign.expiredAt) : null,
+          createdAt: campaign.createdAt ? new Date(campaign.createdAt) : new Date(),
           updatedAt: new Date(),
         })
         break

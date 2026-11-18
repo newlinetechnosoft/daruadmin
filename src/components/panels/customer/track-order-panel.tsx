@@ -188,7 +188,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
             variant="outline"
             className="border-purple-500 text-purple-500 bg-purple-500/10 text-xs px-2.5 py-0.5 uppercase tracking-wide font-semibold"
           >
-            Sourcing at Partner Dealer
+            Order in Preparation
           </Badge>
         )
       case 'rider_assigned':
@@ -253,9 +253,9 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
       case 'pending':
         return 'We have received your order and our Butwal dispatch center is confirming it.'
       case 'confirmed':
-        return 'Order is confirmed! Items are being sourced from partner dealers in Butwal/Tilottama.'
+        return 'Order is confirmed! Items are being packed at our Butwal fulfillment hub.'
       case 'dealer_assigned':
-        return 'Partner dealer is preparing your items for rider pickup.'
+        return 'Your items are packed and ready for rider pickup.'
       case 'rider_assigned':
       case 'picked_up':
         return 'Our express rider is picking up your items and preparing for departure.'
@@ -292,7 +292,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
             Track Your Order
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Real-time status, dealer sourcing progress &amp; rider details for
+            Real-time status, packing progress &amp; rider details for
             fast 45-min delivery across Butwal and Tilottama.
           </p>
 
@@ -538,6 +538,8 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
                           <img
                             src={order.deliveryProofPhotoUrl}
                             alt="Delivery Proof"
+                            loading="lazy"
+                            decoding="async"
                             className="h-32 w-auto object-cover rounded-lg border border-border hover:opacity-90 transition-opacity"
                           />
                         </a>
@@ -653,7 +655,7 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
                         <p className="text-xs text-muted-foreground">
                           {order.status === 'pending' ||
                           order.status === 'confirmed'
-                            ? 'Rider will be assigned once partner dealer prepares your items.'
+                            ? 'Rider will be assigned once fulfillment center packs your items.'
                             : 'Dedicated rider dispatch in progress.'}
                         </p>
                         <p className="text-xs text-muted-foreground mt-2">

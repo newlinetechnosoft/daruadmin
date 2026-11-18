@@ -97,6 +97,7 @@ import { Avatar, AvatarFallback } from '#/components/ui/avatar'
 import { Badge } from '#/components/ui/badge'
 import { Kbd } from '#/components/ui/kbd'
 import { ThemeToggle } from '#/components/shared/theme-toggle'
+import { AdminLayoutSkeleton } from '#/components/shared/loading'
 import {
   playOrderAlertSound,
   unlockNotificationSound,
@@ -136,6 +137,7 @@ export const Route = createFileRoute('/admin')({
   loader: async ({ context }) => {
     return context.queryClient.ensureQueryData(adminQueries.chrome())
   },
+  pendingComponent: AdminLayoutSkeleton,
   component: AdminLayout,
 })
 
@@ -143,6 +145,7 @@ type NavSubItem = {
   label: string
   to: string
   search?: Record<string, string>
+  module?: ModuleKey
 }
 
 type NavItem = {
@@ -271,39 +274,130 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
         module: 'accounts',
         subItems: [
           {
-            label: 'Ledger',
+            label: 'Overview',
             to: '/admin/accounts',
-            search: { tab: 'ledger' },
-          },
-          {
-            label: 'Transaction',
-            to: '/admin/accounts',
-            search: { tab: 'transactions' },
-          },
-          {
-            label: 'Dealer Ledger',
-            to: '/admin/accounts',
-            search: { tab: 'dealer-ledger' },
-          },
-          {
-            label: 'Rider Ledger',
-            to: '/admin/accounts',
-            search: { tab: 'rider-ledger' },
-          },
-          {
-            label: 'Sales Account',
-            to: '/admin/accounts',
-            search: { tab: 'sales-account' },
-          },
-          {
-            label: 'Salary Account',
-            to: '/admin/accounts',
-            search: { tab: 'salary-account' },
+            search: { tab: 'overview' },
+            module: 'accounts_overview',
           },
           {
             label: 'Chart of Accounts',
             to: '/admin/accounts',
             search: { tab: 'chart-of-accounts' },
+            module: 'accounts_chart_of_accounts',
+          },
+          {
+            label: 'Branches',
+            to: '/admin/accounts',
+            search: { tab: 'branches' },
+            module: 'accounts_branches',
+          },
+          {
+            label: 'General Ledger',
+            to: '/admin/accounts',
+            search: { tab: 'ledger' },
+            module: 'accounts_ledger',
+          },
+          {
+            label: 'Vouchers',
+            to: '/admin/accounts',
+            search: { tab: 'vouchers' },
+            module: 'accounts_vouchers',
+          },
+          {
+            label: 'Party Accounts',
+            to: '/admin/accounts',
+            search: { tab: 'party-accounts' },
+            module: 'accounts_party_accounts',
+          },
+          {
+            label: 'Dealer Ledger',
+            to: '/admin/accounts',
+            search: { tab: 'dealer-ledger' },
+            module: 'accounts_dealer_ledger',
+          },
+          {
+            label: 'Rider Ledger',
+            to: '/admin/accounts',
+            search: { tab: 'rider-ledger' },
+            module: 'accounts_rider_ledger',
+          },
+          {
+            label: 'Customer Ledger',
+            to: '/admin/accounts',
+            search: { tab: 'customer-ledger' },
+            module: 'accounts_customer_ledger',
+          },
+          {
+            label: 'Supplier Ledger',
+            to: '/admin/accounts',
+            search: { tab: 'supplier-ledger' },
+            module: 'accounts_supplier_ledger',
+          },
+          {
+            label: 'Employee Ledger',
+            to: '/admin/accounts',
+            search: { tab: 'employee-ledger' },
+            module: 'accounts_employee_ledger',
+          },
+          {
+            label: 'Bank & Cash',
+            to: '/admin/accounts',
+            search: { tab: 'bank-cash' },
+            module: 'accounts_bank_cash',
+          },
+          {
+            label: 'Expenses',
+            to: '/admin/accounts',
+            search: { tab: 'expenses' },
+            module: 'accounts_expenses',
+          },
+          {
+            label: 'Reconciliation',
+            to: '/admin/accounts',
+            search: { tab: 'reconciliation' },
+            module: 'accounts_reconciliation',
+          },
+          {
+            label: 'Financial Reports',
+            to: '/admin/accounts',
+            search: { tab: 'financial-reports' },
+            module: 'accounts_financial_reports',
+          },
+          {
+            label: 'Export Center',
+            to: '/admin/accounts',
+            search: { tab: 'export-center' },
+            module: 'accounts_export_center',
+          },
+          {
+            label: 'Period Close',
+            to: '/admin/accounts',
+            search: { tab: 'period-close' },
+            module: 'accounts_period_close',
+          },
+          {
+            label: 'Audit Trail',
+            to: '/admin/accounts',
+            search: { tab: 'audit-trail' },
+            module: 'accounts_audit_trail',
+          },
+          {
+            label: 'Accounting Settings',
+            to: '/admin/accounts',
+            search: { tab: 'settings' },
+            module: 'accounts_settings',
+          },
+          {
+            label: 'Sales Account',
+            to: '/admin/accounts',
+            search: { tab: 'sales-account' },
+            module: 'accounts_sales_account',
+          },
+          {
+            label: 'Salary Account',
+            to: '/admin/accounts',
+            search: { tab: 'salary-account' },
+            module: 'accounts_salary_account',
           },
         ],
       },
@@ -464,14 +558,22 @@ function AdminLayout() {
     }
   }
 
+  const storeName = (chromeQuery.data as any)?.storeSettings?.storeName || 'Mezmani'
   const unreadCount = notificationsRead ? 0 : liveUnread
 
   const visibleNavGroups = useMemo(() => {
     return NAV_GROUPS.map((group) => ({
       ...group,
-      items: group.items.filter((item) => {
-        return can(grants, item.module, 'view')
-      }),
+      items: group.items
+        .filter((item) => {
+          return can(grants, item.module, 'view')
+        })
+        .map((item) => ({
+          ...item,
+          subItems: item.subItems?.filter((sub) => {
+            return !sub.module || can(grants, sub.module, 'view')
+          }),
+        })),
     })).filter((group) => group.items.length > 0)
   }, [grants])
 
@@ -496,9 +598,11 @@ function AdminLayout() {
                             target.src = '/mezmani_logo.webp'
                           }
                         }}
-                        alt="Mezmani"
+                        alt={storeName}
                         width="110"
                         height="32"
+                        loading="lazy"
+                        decoding="async"
                         className="h-7 w-auto object-contain dark:hidden"
                       />
                       <img
@@ -509,15 +613,20 @@ function AdminLayout() {
                             target.src = '/mezmani_logo_bg.svg'
                           }
                         }}
-                        alt="Mezmani"
+                        alt={storeName}
                         width="110"
                         height="32"
+                        loading="lazy"
+                        decoding="async"
                         className="h-7 w-auto object-contain hidden dark:block"
                       />
                     </div>
 
                     <div className="grid min-w-0 flex-1 text-left leading-tight">
-                      <span className="text-xs text-sidebar-foreground/60 font-medium">
+                      <span className="truncate font-semibold text-sidebar-foreground text-sm">
+                        {storeName}
+                      </span>
+                      <span className="text-[11px] text-sidebar-foreground/60 font-medium">
                         {adminUser.role === 'manager'
                           ? 'Manager Console'
                           : 'Admin Console'}
@@ -559,7 +668,7 @@ function AdminLayout() {
                               <SidebarMenuSub className="my-1 ml-3 border-l border-border/60 pl-2">
                                 {item.subItems.map((sub) => {
                                   const defaultTab =
-                                    sub.to === '/admin/accounts' ? 'ledger' : 'customers'
+                                    sub.to === '/admin/accounts' ? 'overview' : 'customers'
                                   const currentTab =
                                     (routerState.location.search as any)?.tab || defaultTab
                                   const isSubActive =

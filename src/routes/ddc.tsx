@@ -33,6 +33,7 @@ import {
   SheetTitle,
 } from '#/components/ui/sheet'
 import { EmptyState } from '#/components/shared/empty-state'
+import { CatalogPageSkeleton } from '#/components/shared/loading'
 
 const ddcSearchSchema = z.object({
   category: z.string().optional(),
@@ -65,6 +66,7 @@ export const Route = createFileRoute('/ddc')({
       products,
     }
   },
+  pendingComponent: CatalogPageSkeleton,
   component: DdcPage,
 })
 
@@ -392,6 +394,8 @@ function DdcPage() {
                       <img
                         src={c.imageUrl}
                         alt=""
+                        loading="lazy"
+                        decoding="async"
                         className="h-3.5 w-3.5 rounded-full object-cover"
                       />
                     )}

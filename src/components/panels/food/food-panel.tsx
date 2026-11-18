@@ -552,6 +552,8 @@ export function FoodPanel() {
                             'https://images.unsplash.com/photo-1566478989037-eec170784d0b?auto=format&fit=crop&w=100&q=80'
                           }
                           alt={p.name}
+                          loading="lazy"
+                          decoding="async"
                           className="h-12 w-12 shrink-0 rounded-xl bg-secondary object-cover border border-border shadow-xs"
                         />
                         <div className="min-w-0">

@@ -35,6 +35,7 @@ import {
   reverseJournalVoucherFn,
 } from '#/server/finance/finance.functions'
 import { formatNPR } from '#/lib/money'
+import { useStoreSettings } from '#/lib/use-store-settings'
 import { toast } from 'sonner'
 import {
   AlertCircle,
@@ -69,6 +70,7 @@ interface VoucherLineForm {
 }
 
 export function VouchersTab() {
+  const storeSettings = useStoreSettings()
   const queryClient = useQueryClient()
   const { data: ledgerData } = useSuspenseQuery(adminQueries.ledger())
   const chartOfAccounts = ledgerData.ops.chartOfAccounts
@@ -459,9 +461,13 @@ export function VouchersTab() {
         </head>
         <body>
           <div class="header">
-            <div class="title">DARU GANG / MEZMANI</div>
+            <div class="title">${storeSettings?.legalName || storeSettings?.storeName || 'MEZMANI'}</div>
             <div class="subtitle">FINANCIAL ACCOUNTING SYSTEM &bull; ${voucher.voucherType} VOUCHER</div>
-            <div style="font-size: 11px; color: #666; margin-top: 2px;">Branch: ${voucher.branchName || 'Head Office'}</div>
+            <div style="font-size: 11px; color: #666; margin-top: 2px;">
+              ${storeSettings?.address ? `${storeSettings.address}, ${storeSettings.city}` : ''}
+              ${storeSettings?.pan || storeSettings?.vat ? ` &bull; PAN/VAT: ${storeSettings.pan || storeSettings.vat}` : ''}
+              &bull; Branch: ${voucher.branchName || 'Head Office'}
+            </div>
           </div>
 
           <div class="meta-grid">

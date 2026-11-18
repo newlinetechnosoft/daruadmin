@@ -106,6 +106,9 @@ import {
   reorderLandingNoticesQuery,
   getAllCampaignsQuery,
   getAllReviewsQuery,
+  getPublishedReviewsQuery,
+  createReviewQuery,
+  deleteReviewQuery,
   updateReviewStatusQuery,
   getAllShippingZonesQuery,
   upsertShippingZoneQuery,
@@ -126,6 +129,7 @@ import type {
   OrderStatus,
   LandingNotice,
   AdminBannersPayload,
+  StoreSettings,
 } from './types'
 import { ACTIONS, MODULES } from './types'
 import {
@@ -135,6 +139,7 @@ import {
 import {
   postRiderPayoutTx,
   postRiderSalaryAccrualTx,
+  reverseJournalTx,
 } from '#/server/finance/double-entry'
 
 export { ACTIONS, MODULES }
@@ -200,6 +205,7 @@ export const getAdminChromeFn = createServerFn({ method: 'GET' }).handler(
       pendingSettlementsRes,
       pendingReviewsRes,
       allNotifs,
+      storeSettings,
     ] = await Promise.all([
       canOrders
         ? db
@@ -238,6 +244,7 @@ export const getAdminChromeFn = createServerFn({ method: 'GET' }).handler(
             .where(eq(reviews.status, 'pending'))
         : Promise.resolve([{ count: 0 }]),
       getAllNotificationsQuery(20),
+      getStoreSettingsQuery().catch(() => defaultStoreSettings()),
     ])
 
     const badges = {
@@ -261,6 +268,15 @@ export const getAdminChromeFn = createServerFn({ method: 'GET' }).handler(
       badges,
       user: sessionUser,
       grants,
+      storeSettings: {
+        storeName: storeSettings.storeName || 'Mezmani',
+        legalName: storeSettings.legalName || 'Mezmani Retail Pvt. Ltd.',
+        address: storeSettings.address || 'Traffic Chowk, Butwal',
+        city: storeSettings.city || 'Butwal',
+        phone: storeSettings.phone || '',
+        email: storeSettings.email || '',
+        pan: storeSettings.pan || '',
+      },
     }
   },
 )
@@ -2550,6 +2566,16 @@ export const saveSettingsFn = createServerFn({ method: 'POST' })
         email: z.string().email().optional(),
         address: z.string().optional(),
         city: z.string().optional(),
+        province: z.string().optional(),
+        postalCode: z.string().optional(),
+        companyRegNo: z.string().optional(),
+        tagline: z.string().optional(),
+        supportPhone: z.string().optional(),
+        secondaryPhone: z.string().optional(),
+        websiteUrl: z.string().optional(),
+        operatingHours: z.string().optional(),
+        currency: z.string().optional(),
+        currencySymbol: z.string().optional(),
         invoicePrefix: z.string().optional(),
         taxRate: z.number().min(0).max(100).optional(),
         lowStockThreshold: z.number().int().min(0).optional(),
@@ -2569,6 +2595,45 @@ export const saveSettingsFn = createServerFn({ method: 'POST' })
     await logAudit(user.name, 'settings', 'edit', 'Updated store configuration')
     return true
   })
+
+export const getPublicStoreSettingsFn = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  let settings: StoreSettings
+  try {
+    settings = await getStoreSettingsQuery()
+  } catch {
+    settings = defaultStoreSettings()
+  }
+  return {
+    storeName: settings.storeName || 'Mezmani',
+    legalName: settings.legalName || 'Mezmani Retail Pvt. Ltd.',
+    pan: settings.pan || '',
+    vat: settings.vat || '',
+    phone: settings.phone || '',
+    email: settings.email || '',
+    address: settings.address || '',
+    city: settings.city || '',
+    province: settings.province || 'Lumbini Province',
+    postalCode: settings.postalCode || '',
+    companyRegNo: settings.companyRegNo || '',
+    tagline:
+      settings.tagline ||
+      'Good food, great drinks, delivered to your doorstep. Serving Butwal and Tilottama.',
+    supportPhone: settings.supportPhone || settings.phone || '',
+    secondaryPhone: settings.secondaryPhone || '',
+    websiteUrl: settings.websiteUrl || 'https://mezmani.com',
+    operatingHours: settings.operatingHours || '10:00 AM - 12:00 AM',
+    currency: settings.currency || 'NPR',
+    currencySymbol: settings.currencySymbol || 'Rs.',
+    invoicePrefix: settings.invoicePrefix || 'MZ',
+    taxRate: settings.taxRate ?? 13,
+    ageGate: settings.ageGate ?? true,
+    deliveryFee: settings.deliveryFee ?? 0,
+    freeDeliveryThreshold: settings.freeDeliveryThreshold ?? 0,
+    isGrowthFreeDelivery: (settings.deliveryFee ?? 0) === 0,
+  }
+})
 
 export const getPublicDeliverySettingsFn = createServerFn({
   method: 'GET',
@@ -2666,6 +2731,35 @@ export const savePermissionsFn = createServerFn({ method: 'POST' })
       ]),
     )
 
+    const accountsSubActions = [
+      ...(data.permissions.accounts_overview || []),
+      ...(data.permissions.accounts_chart_of_accounts || []),
+      ...(data.permissions.accounts_branches || []),
+      ...(data.permissions.accounts_ledger || []),
+      ...(data.permissions.accounts_vouchers || []),
+      ...(data.permissions.accounts_party_accounts || []),
+      ...(data.permissions.accounts_dealer_ledger || []),
+      ...(data.permissions.accounts_rider_ledger || []),
+      ...(data.permissions.accounts_customer_ledger || []),
+      ...(data.permissions.accounts_supplier_ledger || []),
+      ...(data.permissions.accounts_employee_ledger || []),
+      ...(data.permissions.accounts_bank_cash || []),
+      ...(data.permissions.accounts_expenses || []),
+      ...(data.permissions.accounts_reconciliation || []),
+      ...(data.permissions.accounts_financial_reports || []),
+      ...(data.permissions.accounts_export_center || []),
+      ...(data.permissions.accounts_period_close || []),
+      ...(data.permissions.accounts_audit_trail || []),
+      ...(data.permissions.accounts_settings || []),
+      ...(data.permissions.accounts_sales_account || []),
+      ...(data.permissions.accounts_salary_account || []),
+    ]
+    if (accountsSubActions.length > 0 || data.permissions.accounts) {
+      permissionsToSave.accounts = Array.from(
+        new Set([...(data.permissions.accounts || []), ...accountsSubActions]),
+      )
+    }
+
     await saveUserPermissionsQuery(data.userId, permissionsToSave)
     await logAudit(
       actor.name,
@@ -2731,6 +2825,57 @@ export const updateReviewFn = createServerFn({ method: 'POST' })
       'marketing',
       'edit',
       `Review ${data.id} -> ${data.status}`,
+    )
+    return true
+  })
+
+export const getPublicReviewsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    return getPublishedReviewsQuery()
+  },
+)
+
+export const createReviewFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        customerName: z.string().min(1, 'Name is required'),
+        body: z.string().min(1, 'Review quote/body is required'),
+        rating: z.number().int().min(1).max(5).default(5),
+        productName: z.string().optional(),
+        imageUrl: z.string().nullable().optional(),
+        status: z.enum(['pending', 'published', 'hidden']).default('published'),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('marketing', 'create')
+    const rev = await createReviewQuery(data)
+    await logAudit(
+      user.name,
+      'marketing',
+      'create',
+      `Created review for "${data.customerName}" (${data.rating}★)`,
+    )
+    return rev
+  })
+
+export const deleteReviewFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.string(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('marketing', 'delete')
+    await deleteReviewQuery(data.id)
+    await logAudit(
+      user.name,
+      'marketing',
+      'delete',
+      `Deleted review ${data.id}`,
     )
     return true
   })
@@ -2853,8 +2998,12 @@ export const approveSettlementFn = createServerFn({ method: 'POST' })
     const advancesDeducted = row[0].advancesDeducted || 0
 
     const result = await dbTx.transaction(async (tx) => {
-      // If base salary was included, accrue it first to Rider Payable
-      if (row[0].baseSalaryAmount && row[0].baseSalaryAmount > 0) {
+      // If base salary was included and not yet accrued, accrue it first to Rider Payable (NAS 19)
+      if (
+        row[0].status === 'draft' &&
+        row[0].baseSalaryAmount &&
+        row[0].baseSalaryAmount > 0
+      ) {
         await postRiderSalaryAccrualTx(tx, {
           settlementId: row[0].id,
           riderId: row[0].riderId,
@@ -2910,10 +3059,191 @@ export const approveSettlementFn = createServerFn({ method: 'POST' })
       user.name,
       'accounts',
       'approve',
-      `Approved settlement ${result.voucherNo} for ${row[0].riderName} (slug: ${slug})`,
+      `Approved and disbursed settlement ${result.voucherNo} for ${row[0].riderName} (slug: ${slug}) [NAS 19 Payout]`,
     )
 
     return result
+  })
+
+export const approveOnlySettlementFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.string(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('accounts', 'approve')
+    const row = await db
+      .select()
+      .from(settlements)
+      .where(eq(settlements.id, data.id))
+      .limit(1)
+
+    if (!row[0]) throw new Error('Settlement not found')
+
+    if (row[0].status !== 'draft') {
+      throw new Error(
+        `Settlement "${row[0].voucherNo || row[0].id}" is already "${row[0].status}". Only draft settlements can be approved.`,
+      )
+    }
+
+    const slug =
+      row[0].slug || `vch_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`
+    const now = new Date()
+
+    const result = await dbTx.transaction(async (tx) => {
+      let journalEntryId = row[0].journalEntryId
+      let voucherNo = row[0].voucherNo
+
+      if (row[0].baseSalaryAmount && row[0].baseSalaryAmount > 0) {
+        const accrual = await postRiderSalaryAccrualTx(tx, {
+          settlementId: row[0].id,
+          riderId: row[0].riderId,
+          riderName: row[0].riderName,
+          baseSalaryAmount: row[0].baseSalaryAmount,
+          actor: user,
+        })
+        journalEntryId = accrual.journalEntryId
+        voucherNo = accrual.voucherNo
+      }
+
+      const effectiveVoucherNo = voucherNo || `APR-${row[0].id.slice(-6).toUpperCase()}`
+
+      await tx
+        .update(settlements)
+        .set({
+          status: 'approved',
+          slug,
+          voucherNo: effectiveVoucherNo,
+          journalEntryId: journalEntryId || null,
+          updatedAt: now,
+        })
+        .where(eq(settlements.id, data.id))
+
+      return {
+        id: data.id,
+        status: 'approved' as const,
+        voucherNo: effectiveVoucherNo,
+        journalEntryId,
+      }
+    })
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'approve',
+      `Approved payroll accrual for courier ${row[0].riderName} (${result.voucherNo}) [NAS 19 Accrual]`,
+    )
+
+    return result
+  })
+
+export const cancelSettlementFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.string(),
+        reason: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('accounts', 'approve')
+    const row = await db
+      .select()
+      .from(settlements)
+      .where(eq(settlements.id, data.id))
+      .limit(1)
+
+    if (!row[0]) throw new Error('Settlement not found')
+
+    if (row[0].status === 'cancelled') {
+      throw new Error(`Settlement "${row[0].voucherNo || row[0].id}" is already cancelled.`)
+    }
+
+    if (row[0].status === 'paid') {
+      throw new Error(
+        `Cannot cancel paid settlement "${row[0].voucherNo || row[0].id}". Under Nepal Accounting Standards (NAS 19 / NAS 1), disbursed bank/cash payments cannot be directly cancelled. A formal statutory reversal voucher must be processed.`,
+      )
+    }
+
+    const now = new Date()
+    const reason = data.reason?.trim() || 'Payroll settlement cancelled by admin'
+
+    await dbTx.transaction(async (tx) => {
+      // If approved and has an accrual journal entry, reverse it under NAS 8 / NAS 1
+      if (row[0].status === 'approved' && row[0].journalEntryId) {
+        await reverseJournalTx(tx, {
+          originalEntryId: row[0].journalEntryId,
+          narration: `Reversal of payroll accrual upon settlement cancellation: ${reason}`,
+          createdBy: user.name,
+        })
+      }
+
+      await tx
+        .update(settlements)
+        .set({
+          status: 'cancelled',
+          notes: row[0].notes ? `${row[0].notes} | Cancelled: ${reason}` : `Cancelled: ${reason}`,
+          updatedAt: now,
+        })
+        .where(eq(settlements.id, data.id))
+    })
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'edit',
+      `Cancelled settlement ${row[0].voucherNo || row[0].id} for courier ${row[0].riderName}: ${reason}`,
+    )
+
+    return { id: data.id, success: true, status: 'cancelled' as const }
+  })
+
+export const deleteSettlementFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        id: z.string(),
+        confirmed: z.boolean().default(false),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user } = await requirePermission('accounts', 'delete')
+    const row = await db
+      .select()
+      .from(settlements)
+      .where(eq(settlements.id, data.id))
+      .limit(1)
+
+    if (!row[0]) throw new Error('Settlement not found')
+
+    // Accounting standards guard: Paid or Approved records CANNOT be deleted
+    if (row[0].status === 'paid' || row[0].status === 'approved') {
+      throw new Error(
+        `Cannot delete settlement "${row[0].voucherNo || row[0].id}" with status "${row[0].status}": Deletion is strictly prohibited under Nepal Accounting Standards (NAS 1 / NAS 19). Transactions that have been approved or paid are permanently locked in the General Ledger to preserve double-entry audit integrity. You must cancel the settlement before deleting.`,
+      )
+    }
+
+    if (!data.confirmed) {
+      throw new Error(
+        'Deletion guard: Without explicit deletion confirmation, this settlement record cannot be deleted.',
+      )
+    }
+
+    await db.delete(settlements).where(eq(settlements.id, data.id))
+
+    await logAudit(
+      user.name,
+      'accounts',
+      'delete',
+      `Deleted ${row[0].status} settlement ${row[0].id} for courier ${row[0].riderName} [NAS 1 Audit Trail]`,
+    )
+
+    return { id: data.id, success: true }
   })
 
 export const generateMonthlyRiderPayrollRunFn = createServerFn({
@@ -3938,3 +4268,20 @@ export const setDefaultCustomerAddressFn = createServerFn({ method: 'POST' })
     await setDefaultCustomerAddressQuery(data.id, user.id)
     return true
   })
+
+// -----------------------------------------------------------------------------
+// CAMPAIGNS & SCHEDULING (Re-exported from campaign.functions.ts)
+// -----------------------------------------------------------------------------
+export {
+  getAdminCampaignsFn,
+  getCampaignByIdFn,
+  getCampaignDeliveriesFn,
+  getAudienceEstimateFn,
+  saveCampaignDraftFn,
+  scheduleCampaignFn,
+  publishCampaignNowFn,
+  cancelScheduledCampaignFn,
+  rescheduleCampaignFn,
+  deleteCampaignFn,
+  reconcileCampaignsFn,
+} from './campaign.functions'

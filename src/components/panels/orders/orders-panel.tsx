@@ -123,6 +123,7 @@ export function OrdersPanel() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false)
   const [invoiceMode, setInvoiceMode] = useState<'a4' | 'thermal'>('a4')
+  const [showRiderRouting, setShowRiderRouting] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
@@ -2032,6 +2033,18 @@ export function OrdersPanel() {
                     </button>
                   </div>
 
+                  {invoiceMode === 'thermal' && (
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none border border-border rounded px-2 py-1 bg-muted/40">
+                      <input
+                        type="checkbox"
+                        checked={showRiderRouting}
+                        onChange={(e) => setShowRiderRouting(e.target.checked)}
+                        className="rounded border-border cursor-pointer h-3.5 w-3.5"
+                      />
+                      <span>Internal Rider Manifest</span>
+                    </label>
+                  )}
+
                   <Button
                     onClick={() => window.print()}
                     className="gap-1.5"
@@ -2051,17 +2064,18 @@ export function OrdersPanel() {
                     {/* Store Header */}
                     <div className="text-center space-y-0.5 pb-2 border-b border-dashed border-border">
                       <div className="font-bold text-sm tracking-tight">
-                        {ops.settings.legalName || 'MEZMANI LIQUOR & FOOD'}
+                        {ops.settings.legalName || ops.settings.storeName || 'MEZMANI'}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {ops.settings.address || 'Traffic Chowk, Butwal, Nepal'}
+                        {ops.settings.address || 'Traffic Chowk, Butwal'}
+                        {ops.settings.city ? `, ${ops.settings.city}` : ''}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         PAN / VAT:{' '}
-                        <strong>{ops.settings.pan || '609823415'}</strong>
+                        <strong>{ops.settings.pan || ops.settings.vat || '—'}</strong>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Tel: {ops.settings.phone || '+977-71-540000'}
+                        Tel: {ops.settings.phone || ops.settings.supportPhone || '+977-9800000000'}
                       </div>
                     </div>
 
@@ -2116,78 +2130,80 @@ export function OrdersPanel() {
                       )}
                     </div>
 
-                    {/* Dealer Pickup Checklist */}
-                    <div className="space-y-2 pb-2 border-b border-dashed border-border">
-                      <div className="font-bold uppercase text-xs text-muted-foreground">
-                        Dealer Pickups (Rider Route):
-                      </div>
-                      {(() => {
-                        const dealerGroups = new Map<
-                          string,
-                          {
-                            name: string
-                            phone?: string
-                            address?: string
-                            items: typeof selectedOrder.items
+                    {/* Dealer Pickup Checklist (Hidden for customer receipts; enabled only when internal manifest is checked) */}
+                    {showRiderRouting && (
+                      <div className="space-y-2 pb-2 border-b border-dashed border-border">
+                        <div className="font-bold uppercase text-xs text-muted-foreground">
+                          Dealer Pickups (Rider Route):
+                        </div>
+                        {(() => {
+                          const dealerGroups = new Map<
+                            string,
+                            {
+                              name: string
+                              phone?: string
+                              address?: string
+                              items: typeof selectedOrder.items
+                            }
+                          >()
+                          for (const it of selectedOrder.items) {
+                            const dKey = it.dealerId || 'unassigned'
+                            const dName =
+                              it.dealer?.name ||
+                              (it.dealerId
+                                ? 'Assigned Dealer'
+                                : '⚠️ Sourcing Required')
+                            const existing = dealerGroups.get(dKey) || {
+                              name: dName,
+                              phone: it.dealer?.contact,
+                              address: it.dealer?.address,
+                              items: [],
+                            }
+                            existing.items.push(it)
+                            dealerGroups.set(dKey, existing)
                           }
-                        >()
-                        for (const it of selectedOrder.items) {
-                          const dKey = it.dealerId || 'unassigned'
-                          const dName =
-                            it.dealer?.name ||
-                            (it.dealerId
-                              ? 'Assigned Dealer'
-                              : '⚠️ Sourcing Required')
-                          const existing = dealerGroups.get(dKey) || {
-                            name: dName,
-                            phone: it.dealer?.contact,
-                            address: it.dealer?.address,
-                            items: [],
-                          }
-                          existing.items.push(it)
-                          dealerGroups.set(dKey, existing)
-                        }
-                        return Array.from(dealerGroups.entries()).map(
-                          ([key, group], idx) => (
-                            <div
-                              key={key}
-                              className="bg-muted/40 p-2 rounded border border-border/50 text-xs space-y-1"
-                            >
-                              <div className="font-bold flex items-center justify-between">
-                                <span>
-                                  #{idx + 1} {group.name}
-                                </span>
-                                {group.phone && (
-                                  <span className="text-xs font-normal">
-                                    {group.phone}
+                          return Array.from(dealerGroups.entries()).map(
+                            ([key, group], idx) => (
+                              <div
+                                key={key}
+                                className="bg-muted/40 p-2 rounded border border-border/50 text-xs space-y-1"
+                              >
+                                <div className="font-bold flex items-center justify-between">
+                                  <span>
+                                    #{idx + 1} {group.name}
                                   </span>
-                                )}
-                              </div>
-                              {group.address && (
-                                <div className="text-xs text-muted-foreground truncate">
-                                  {group.address}
+                                  {group.phone && (
+                                    <span className="text-xs font-normal">
+                                      {group.phone}
+                                    </span>
+                                  )}
                                 </div>
-                              )}
-                              <div className="pl-1 pt-0.5 space-y-0.5">
-                                {group.items.map((it) => (
-                                  <div
-                                    key={it.id}
-                                    className="flex justify-between items-center text-xs"
-                                  >
-                                    <span>
-                                      [ ] {it.qty}x {it.name}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {it.variantName}
-                                    </span>
+                                {group.address && (
+                                  <div className="text-xs text-muted-foreground truncate">
+                                    {group.address}
                                   </div>
-                                ))}
+                                )}
+                                <div className="pl-1 pt-0.5 space-y-0.5">
+                                  {group.items.map((it) => (
+                                    <div
+                                      key={it.id}
+                                      className="flex justify-between items-center text-xs"
+                                    >
+                                      <span>
+                                        [ ] {it.qty}x {it.name}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {it.variantName}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          ),
-                        )
-                      })()}
-                    </div>
+                            ),
+                          )
+                        })()}
+                      </div>
+                    )}
 
                     {/* Items List */}
                     <div className="space-y-1 text-xs pb-2 border-b border-dashed border-border">
@@ -2290,17 +2306,19 @@ export function OrdersPanel() {
                     <div>
                       <h2 className="text-base font-bold text-foreground uppercase tracking-tight">
                         {ops.settings.legalName ||
-                          'MEZMANI LIQUOR & FOOD PVT. LTD.'}
+                          ops.settings.storeName ||
+                          'MEZMANI'}
                       </h2>
                       <p className="text-muted-foreground">
-                        {ops.settings.address || 'Traffic Chowk, Butwal, Nepal'}
+                        {ops.settings.address || 'Traffic Chowk, Butwal'}
+                        {ops.settings.city ? `, ${ops.settings.city}` : ''}
                       </p>
                       <p className="text-muted-foreground font-mono">
                         PAN / VAT Reg:{' '}
-                        <strong>{ops.settings.pan || '609823415'}</strong>
+                        <strong>{ops.settings.pan || ops.settings.vat || '—'}</strong>
                       </p>
                       <p className="text-muted-foreground">
-                        Contact: {ops.settings.phone || '+977-71-540000'}
+                        Contact: {ops.settings.phone || ops.settings.supportPhone || '+977-9800000000'}
                       </p>
                     </div>
                     <div className="text-right">

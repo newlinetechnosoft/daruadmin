@@ -72,6 +72,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { ChangePasswordDialog } from '#/components/auth/change-password-dialog'
+import { AdminLayoutSkeleton } from '#/components/shared/loading'
 import type { SuperAdminTabKey } from '#/components/panels/superadmin'
 
 interface SuperAdminNavItem {
@@ -155,6 +156,7 @@ export const Route = createFileRoute('/superadmin')({
       context.queryClient.ensureQueryData(adminQueries.superAdminTelemetry()),
     ])
   },
+  pendingComponent: AdminLayoutSkeleton,
   component: SuperAdminLayout,
 })
 
@@ -232,6 +234,8 @@ function SuperAdminLayout() {
                         alt="Mezmani"
                         width="110"
                         height="32"
+                        loading="lazy"
+                        decoding="async"
                         className="h-7 w-auto object-contain dark:hidden"
                       />
                       <img
@@ -245,6 +249,8 @@ function SuperAdminLayout() {
                         alt="Mezmani"
                         width="110"
                         height="32"
+                        loading="lazy"
+                        decoding="async"
                         className="h-7 w-auto object-contain hidden dark:block"
                       />
                     </div>

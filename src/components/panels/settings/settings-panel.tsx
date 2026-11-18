@@ -96,6 +96,9 @@ export function SettingsPanel() {
       queryKey: adminQueries.settings().queryKey,
     })
     await queryClient.invalidateQueries({
+      queryKey: ['store', 'public-settings'],
+    })
+    await queryClient.invalidateQueries({
       queryKey: ['store', 'delivery-pricing'],
     })
     await router.invalidate()
@@ -120,6 +123,19 @@ export function SettingsPanel() {
     email: ops.settings?.email ?? 'ops@mezmani.com.np',
     address: ops.settings?.address ?? 'Traffic Chowk, Butwal',
     city: ops.settings?.city ?? 'Butwal',
+    province: ops.settings?.province ?? 'Lumbini Province',
+    postalCode: ops.settings?.postalCode ?? '32907',
+    companyRegNo: ops.settings?.companyRegNo ?? '304589/080/081',
+    tagline:
+      ops.settings?.tagline ??
+      'Good food, great drinks, delivered to your doorstep. Serving Butwal and Tilottama.',
+    supportPhone: ops.settings?.supportPhone ?? '+977 9766653471',
+    secondaryPhone: ops.settings?.secondaryPhone ?? '+977 9847820683',
+    websiteUrl: ops.settings?.websiteUrl ?? 'https://mezmani.com',
+    operatingHours:
+      ops.settings?.operatingHours ?? '10:00 AM - 12:00 AM (Late Night Delivery)',
+    currency: ops.settings?.currency ?? 'NPR',
+    currencySymbol: ops.settings?.currencySymbol ?? 'Rs.',
     invoicePrefix: ops.settings?.invoicePrefix ?? 'MZ',
     taxRate: ops.settings?.taxRate ?? 13,
     lowStockThreshold: ops.settings?.lowStockThreshold ?? 20,
@@ -362,7 +378,7 @@ export function SettingsPanel() {
                           onChange={(e) =>
                             setForm({ ...form, legalName: e.target.value })
                           }
-                          placeholder="e.g. Mezmani Retail Pvt. Ltd."
+                          placeholder="e.g. Mezmani Group Pvt. Ltd."
                           required
                         />
                       </div>
@@ -467,6 +483,134 @@ export function SettingsPanel() {
                           required
                         />
                       </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="store-province">Province / State</Label>
+                        <Input
+                          id="store-province"
+                          value={form.province || ''}
+                          onChange={(e) =>
+                            setForm({ ...form, province: e.target.value })
+                          }
+                          placeholder="e.g. Lumbini Province"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="store-postal">Postal / Pin Code</Label>
+                        <Input
+                          id="store-postal"
+                          value={form.postalCode || ''}
+                          onChange={(e) =>
+                            setForm({ ...form, postalCode: e.target.value })
+                          }
+                          placeholder="e.g. 32907"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="store-company-reg">
+                          Company Registration Number (OCR)
+                        </Label>
+                        <Input
+                          id="store-company-reg"
+                          value={form.companyRegNo || ''}
+                          onChange={(e) =>
+                            setForm({ ...form, companyRegNo: e.target.value })
+                          }
+                          placeholder="e.g. 304589/080/081"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2 space-y-1.5">
+                        <Label htmlFor="store-tagline">
+                          Brand Tagline / Slogan
+                        </Label>
+                        <Input
+                          id="store-tagline"
+                          value={form.tagline || ''}
+                          onChange={(e) =>
+                            setForm({ ...form, tagline: e.target.value })
+                          }
+                          placeholder="e.g. Good food, great drinks, delivered to your doorstep. Serving Butwal and Tilottama."
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="store-support-phone">
+                          Customer Support Helpline
+                        </Label>
+                        <Input
+                          id="store-support-phone"
+                          value={form.supportPhone || ''}
+                          onChange={(e) =>
+                            setForm({ ...form, supportPhone: e.target.value })
+                          }
+                          placeholder="+977-9766653471"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="store-secondary-phone">
+                          Secondary Phone Number
+                        </Label>
+                        <Input
+                          id="store-secondary-phone"
+                          value={form.secondaryPhone || ''}
+                          onChange={(e) =>
+                            setForm({ ...form, secondaryPhone: e.target.value })
+                          }
+                          placeholder="+977-9847820683"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="store-website">Official Website URL</Label>
+                        <Input
+                          id="store-website"
+                          value={form.websiteUrl || ''}
+                          onChange={(e) =>
+                            setForm({ ...form, websiteUrl: e.target.value })
+                          }
+                          placeholder="https://mezmani.com"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="store-hours">Operating Hours</Label>
+                        <Input
+                          id="store-hours"
+                          value={form.operatingHours || ''}
+                          onChange={(e) =>
+                            setForm({ ...form, operatingHours: e.target.value })
+                          }
+                          placeholder="10:00 AM - 12:00 AM"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="store-currency">Currency Code</Label>
+                        <Input
+                          id="store-currency"
+                          value={form.currency || 'NPR'}
+                          onChange={(e) =>
+                            setForm({ ...form, currency: e.target.value.toUpperCase() })
+                          }
+                          placeholder="NPR"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="store-currency-symbol">Currency Symbol</Label>
+                        <Input
+                          id="store-currency-symbol"
+                          value={form.currencySymbol || 'Rs.'}
+                          onChange={(e) =>
+                            setForm({ ...form, currencySymbol: e.target.value })
+                          }
+                          placeholder="Rs."
+                        />
+                      </div>
                     </div>
 
                     <div className="pt-4 flex justify-end border-t border-border">
@@ -495,22 +639,28 @@ export function SettingsPanel() {
                   </CardHeader>
                   <CardContent>
                     <div className="rounded-lg border border-border bg-muted/30 p-4 text-center space-y-1">
-                      <h4 className="text-sm font-bold uppercase tracking-tight text-foreground">
+                      <h4 className="text-sm font-bold uppercase tracking-tight text-primary">
                         {form.storeName || 'Mezmani'}
                       </h4>
-                      <p className="text-xs text-muted-foreground font-medium">
-                        {form.legalName}
+                      <p className="text-xs text-foreground font-semibold">
+                        {form.legalName || 'Mezmani Retail Pvt. Ltd.'}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {form.address}, {form.city}
+                        {form.address}, {form.city}{form.province ? `, ${form.province}` : ''}
                       </p>
-                      <div className="pt-2 flex items-center justify-center gap-2 text-xs font-mono text-foreground font-semibold">
-                        <span>PAN: {form.pan}</span>
+                      <div className="pt-2 flex flex-wrap items-center justify-center gap-2 text-xs font-mono text-foreground font-semibold">
+                        <span>PAN: {form.pan || '—'}</span>
                         <span>•</span>
-                        <span>VAT: {form.vat}</span>
+                        <span>VAT: {form.vat || '—'}</span>
+                        {form.companyRegNo && (
+                          <>
+                            <span>•</span>
+                            <span>Reg: {form.companyRegNo}</span>
+                          </>
+                        )}
                       </div>
                       <p className="pt-1 text-xs text-muted-foreground">
-                        Tel: {form.phone} | Email: {form.email}
+                        Tel: {form.phone} {form.supportPhone && form.supportPhone !== form.phone ? `| Help: ${form.supportPhone}` : ''} | Email: {form.email}
                       </p>
                     </div>
                   </CardContent>

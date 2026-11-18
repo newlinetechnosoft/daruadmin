@@ -9,11 +9,13 @@ import type { Order, Complaint } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
 import { useCart } from '#/lib/cart-context'
 import { authClient } from '#/lib/auth-client'
+import { useStoreSettings } from '#/lib/use-store-settings'
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { Card, CardContent } from '#/components/ui/card'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
+import { Skeleton } from '#/components/ui/skeleton'
 import { Separator } from '#/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '#/components/ui/tabs'
 import { Input } from '#/components/ui/input'
@@ -49,6 +51,7 @@ import {
 import { cn } from '#/lib/utils'
 
 export function CustomerOrdersPanel() {
+  const storeSettings = useStoreSettings()
   const { data: session, isPending: isSessionPending } = authClient.useSession()
   const { addItem, setIsOpen } = useCart()
   const [orders, setOrders] = useState<Order[]>([])
@@ -168,6 +171,7 @@ export function CustomerOrdersPanel() {
             price: item.unitPrice,
           },
           item.qty,
+          { silent: true },
         )
         if (success) {
           addedCount += item.qty
@@ -179,6 +183,7 @@ export function CustomerOrdersPanel() {
       setIsOpen(true)
       toast.success(
         `Added ${addedCount} items from order #${order.number} to your cart`,
+        { id: 'cart-action' },
       )
     }
   }
@@ -214,7 +219,7 @@ export function CustomerOrdersPanel() {
             variant="outline"
             className="border-purple-500 text-purple-500 bg-purple-500/10 text-xs px-2 py-0.5 uppercase tracking-wide font-medium"
           >
-            Sourcing
+            Preparing
           </Badge>
         )
       case 'rider_assigned':
@@ -319,14 +324,32 @@ export function CustomerOrdersPanel() {
           </Card>
         )}
 
-        {/* Loading State */}
+        {/* Loading Skeleton */}
         {isLoading && session?.user && (
           <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-36 rounded-lg border border-border bg-card/40 animate-pulse"
-              />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i} className="p-5 border-border">
+                <CardContent className="p-0 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div className="space-y-1.5">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-44" />
+                    </div>
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </div>
+                  <div className="flex items-center gap-3 py-2 border-y border-border/40">
+                    <Skeleton className="h-12 w-12 rounded-lg shrink-0" />
+                    <div className="space-y-1.5 flex-1">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center pt-1">
+                    <Skeleton className="h-5 w-24" />
+                    <Skeleton className="h-8 w-28 rounded-lg" />
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}
@@ -691,13 +714,13 @@ export function CustomerOrdersPanel() {
             <DialogContent className="max-w-md p-6 font-mono text-xs">
               <DialogHeader className="text-center pb-2 border-b border-border">
                 <DialogTitle className="text-base font-extrabold tracking-wider uppercase">
-                  MEZMANI NEPAL
+                  {storeSettings.storeName || 'MEZMANI NEPAL'}
                 </DialogTitle>
                 <p className="text-xs text-muted-foreground">
-                  Express Sourcing &amp; Delivery &bull; Butwal, Rupandehi
+                  {storeSettings.legalName || 'Express Sourcing & Delivery'} &bull; {storeSettings.address ? `${storeSettings.address}, ${storeSettings.city}` : 'Butwal, Rupandehi'}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  VAT Reg: 609823145 &bull; Ph: +977-9847820683
+                  VAT/PAN: {storeSettings.pan || storeSettings.vat || '609823145'} &bull; Ph: {storeSettings.phone || storeSettings.supportPhone || '+977-9847820683'}
                 </p>
               </DialogHeader>
 

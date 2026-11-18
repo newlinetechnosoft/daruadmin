@@ -434,6 +434,8 @@ export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(
                       <img
                         src={img.url}
                         alt={img.alt || 'Product image'}
+                        loading="lazy"
+                        decoding="async"
                         className="h-full w-full object-cover"
                       />
                       {img.isPrimary && (
@@ -494,6 +496,8 @@ export const ImageUploader = forwardRef<ImageUploaderRef, ImageUploaderProps>(
                     <img
                       src={item.dataUrl}
                       alt={item.name}
+                      loading="lazy"
+                      decoding="async"
                       className="h-full w-full object-cover"
                     />
                     {item.isPrimary && (

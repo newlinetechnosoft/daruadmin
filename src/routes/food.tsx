@@ -34,6 +34,7 @@ import {
   SheetTitle,
 } from '#/components/ui/sheet'
 import { EmptyState } from '#/components/shared/empty-state'
+import { CatalogPageSkeleton } from '#/components/shared/loading'
 
 const foodSearchSchema = z.object({
   category: z.string().optional(),
@@ -66,6 +67,7 @@ export const Route = createFileRoute('/food')({
       products,
     }
   },
+  pendingComponent: CatalogPageSkeleton,
   component: FoodPage,
 })
 

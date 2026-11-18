@@ -1,7 +1,9 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
+import { can } from '#/server/auth/permissions-shared'
+import type { ModuleKey } from '#/server/operations/types'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
 import { PageHeader } from '#/components/shared/page-header'
@@ -95,10 +97,38 @@ const DEALER_PAYMENT_METHODS: Array<{
   { value: 'cheque', label: 'Cheque' },
 ]
 
+export const TAB_MODULE_MAP: Record<AccountsTab, ModuleKey> = {
+  overview: 'accounts_overview',
+  'chart-of-accounts': 'accounts_chart_of_accounts',
+  branches: 'accounts_branches',
+  ledger: 'accounts_ledger',
+  transactions: 'accounts_ledger',
+  vouchers: 'accounts_vouchers',
+  'party-accounts': 'accounts_party_accounts',
+  'dealer-ledger': 'accounts_dealer_ledger',
+  'rider-ledger': 'accounts_rider_ledger',
+  'customer-ledger': 'accounts_customer_ledger',
+  'supplier-ledger': 'accounts_supplier_ledger',
+  'employee-ledger': 'accounts_employee_ledger',
+  'bank-cash': 'accounts_bank_cash',
+  expenses: 'accounts_expenses',
+  reconciliation: 'accounts_reconciliation',
+  'financial-reports': 'accounts_financial_reports',
+  'export-center': 'accounts_export_center',
+  'period-close': 'accounts_period_close',
+  'audit-trail': 'accounts_audit_trail',
+  settings: 'accounts_settings',
+  'account-defaults': 'accounts_settings',
+  'sales-account': 'accounts_sales_account',
+  'salary-account': 'accounts_salary_account',
+}
+
 export function AccountsPanel() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const search = accountsRouteApi.useSearch()
+  const { data: access } = useSuspenseQuery(adminQueries.access())
+  const grants = access?.grants
   const {
     data: ledgerData,
     isFetching,
@@ -570,6 +600,19 @@ export function AccountsPanel() {
     },
   ]
 
+  const visibleTabItems = useMemo(() => {
+    return tabItems.filter((item) => {
+      const moduleKey = TAB_MODULE_MAP[item.value]
+      return !moduleKey || can(grants, moduleKey, 'view')
+    })
+  }, [grants, tabItems])
+
+  useEffect(() => {
+    if (visibleTabItems.length > 0 && !visibleTabItems.some((t) => t.value === activeTab)) {
+      setActiveTab(visibleTabItems[0].value)
+    }
+  }, [visibleTabItems, activeTab, setActiveTab])
+
   return (
     <div className="space-y-3.5">
       <PageHeader
@@ -583,150 +626,168 @@ export function AccountsPanel() {
               isRefreshing={isFetching}
               variant="button"
             />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setActiveTab('financial-reports')}
-              className="h-8 gap-1.5 text-xs"
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              Reports
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setIsAddVoucherOpen(true)}
-              className="h-8 gap-1.5 text-xs"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Post voucher
-            </Button>
+            {can(grants, 'accounts_financial_reports', 'view') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveTab('financial-reports')}
+                className="h-8 gap-1.5 text-xs"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                Reports
+              </Button>
+            )}
+            {can(grants, 'accounts_vouchers', 'create') && (
+              <Button
+                size="sm"
+                onClick={() => setIsAddVoucherOpen(true)}
+                className="h-8 gap-1.5 text-xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Post voucher
+              </Button>
+            )}
           </div>
         }
       />
 
       <DataSection isRefreshing={isFetching}>
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(normalizeAccountsTab(value))}
-        >
-          <div className="border-b border-border">
-            <TabsList className="click-scroll flex h-9 w-full items-center justify-start gap-0.5 overflow-x-auto border-none bg-transparent p-0">
-              {tabItems.map((item) => {
-                const Icon = item.icon
-                return (
-                  <TabsTrigger
-                    key={item.value}
-                    value={item.value}
-                    className={TAB_TRIGGER_CLASS}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    <span>{item.label}</span>
-                    {item.count !== undefined && (
-                      <span className="rounded-full bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-                        {item.count}
-                      </span>
-                    )}
-                  </TabsTrigger>
-                )
-              })}
-            </TabsList>
+        {visibleTabItems.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center shadow-xs">
+            <ShieldCheck className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+            <h3 className="text-sm font-semibold text-foreground">
+              Permission Required
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+              Your account does not have permission to view any accounting ledgers or sub-menus. Please contact an administrator to adjust your permissions in the Staff Matrix.
+            </p>
           </div>
-        </Tabs>
+        ) : (
+          <>
+            <Tabs
+              value={activeTab}
+              onValueChange={(value) => setActiveTab(normalizeAccountsTab(value))}
+            >
+              <div className="border-b border-border">
+                <TabsList className="click-scroll flex h-9 w-full items-center justify-start gap-0.5 overflow-x-auto border-none bg-transparent p-0">
+                  {visibleTabItems.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <TabsTrigger
+                        key={item.value}
+                        value={item.value}
+                        className={TAB_TRIGGER_CLASS}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        <span>{item.label}</span>
+                        {item.count !== undefined && (
+                          <span className="rounded-full bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+                            {item.count}
+                          </span>
+                        )}
+                      </TabsTrigger>
+                    )
+                  })}
+                </TabsList>
+              </div>
+            </Tabs>
 
-        <div className="pt-4">
-          {activeTab === 'overview' && (
-            <AccountsOverview
-              onPostVoucher={() => setIsAddVoucherOpen(true)}
-              onCashHandover={() => handleOpenCashHandover()}
-              onDealerSettlement={() => handleOpenBatchSettlement()}
-              onRiderPayroll={() => setIsRiderPayrollRunOpen(true)}
-              onNavigateTab={setActiveTab}
-            />
-          )}
+            <div className="pt-4">
+              {activeTab === 'overview' && (
+                <AccountsOverview
+                  onPostVoucher={() => setIsAddVoucherOpen(true)}
+                  onCashHandover={() => handleOpenCashHandover()}
+                  onDealerSettlement={() => handleOpenBatchSettlement()}
+                  onRiderPayroll={() => setIsRiderPayrollRunOpen(true)}
+                  onNavigateTab={setActiveTab}
+                />
+              )}
 
-          {activeTab === 'ledger' && <GeneralLedgerTab />}
+              {activeTab === 'ledger' && <GeneralLedgerTab />}
 
-          {activeTab === 'transactions' && <TransactionsTab />}
+              {activeTab === 'transactions' && <TransactionsTab />}
 
-          {activeTab === 'vouchers' && <VouchersTab />}
+              {activeTab === 'vouchers' && <VouchersTab />}
 
-          {activeTab === 'party-accounts' && <PartyAccountsTab />}
+              {activeTab === 'party-accounts' && <PartyAccountsTab />}
 
-          {activeTab === 'customer-ledger' && (
-            <PartyAccountsTab initialPartyType="customer" />
-          )}
+              {activeTab === 'customer-ledger' && (
+                <PartyAccountsTab initialPartyType="customer" />
+              )}
 
-          {activeTab === 'supplier-ledger' && (
-            <PartyAccountsTab initialPartyType="supplier" />
-          )}
+              {activeTab === 'supplier-ledger' && (
+                <PartyAccountsTab initialPartyType="supplier" />
+              )}
 
-          {activeTab === 'employee-ledger' && (
-            <PartyAccountsTab initialPartyType="employee" />
-          )}
+              {activeTab === 'employee-ledger' && (
+                <PartyAccountsTab initialPartyType="employee" />
+              )}
 
-          {activeTab === 'bank-cash' && <BankCashTab />}
+              {activeTab === 'bank-cash' && <BankCashTab />}
 
-          {activeTab === 'expenses' && <ExpensesTab />}
+              {activeTab === 'expenses' && <ExpensesTab />}
 
-          {activeTab === 'reconciliation' && <ReconciliationTab />}
+              {activeTab === 'reconciliation' && <ReconciliationTab />}
 
-          {activeTab === 'export-center' && <ExportCenterTab />}
+              {activeTab === 'export-center' && <ExportCenterTab />}
 
-          {activeTab === 'period-close' && <PeriodCloseTab />}
+              {activeTab === 'period-close' && <PeriodCloseTab />}
 
-          {activeTab === 'audit-trail' && <AuditTrailTab />}
+              {activeTab === 'audit-trail' && <AuditTrailTab />}
 
-          {activeTab === 'settings' && <AccountingSettingsTab />}
+              {activeTab === 'settings' && <AccountingSettingsTab />}
 
-          {activeTab === 'dealer-ledger' && (
-            <DealerReportTab
-              onPayoutDealer={handleOpenDealerPayout}
-              onSettleDealer={handleOpenBatchSettlement}
-            />
-          )}
+              {activeTab === 'dealer-ledger' && (
+                <DealerReportTab
+                  onPayoutDealer={handleOpenDealerPayout}
+                  onSettleDealer={handleOpenBatchSettlement}
+                />
+              )}
 
-          {activeTab === 'rider-ledger' && (
-            <div className="space-y-5">
-              <RiderReportTab onRecordCashHandover={handleOpenCashHandover} />
-              <RiderSettlementRequests requests={riderCashHandovers} />
+              {activeTab === 'rider-ledger' && (
+                <div className="space-y-5">
+                  <RiderReportTab onRecordCashHandover={handleOpenCashHandover} />
+                  <RiderSettlementRequests requests={riderCashHandovers} />
+                </div>
+              )}
+
+              {activeTab === 'sales-account' && <SalesAccountTab />}
+
+              {activeTab === 'salary-account' && (
+                <SalaryAccountTab
+                  onRunPayroll={() => setIsRiderPayrollRunOpen(true)}
+                  onApproveSettlement={handleOpenSettlementApproval}
+                />
+              )}
+
+              {activeTab === 'chart-of-accounts' && <ChartOfAccountsTab />}
+
+              {activeTab === 'branches' && <BranchesTab />}
+
+              {activeTab === 'financial-reports' && (
+                <FinancialReportsTab
+                  chartOfAccounts={chartOfAccounts}
+                  onDrillDown={(accountId) => {
+                    navigate({
+                      to: '/admin/accounts',
+                      search: (previous) => ({
+                        ...previous,
+                        tab: 'ledger',
+                        account: accountId,
+                        partyType: undefined,
+                        partyId: undefined,
+                      }),
+                    })
+                  }}
+                  settings={ops.settings}
+                  fiscalYearName={ops.fiscalYears[0]?.name}
+                />
+              )}
+
+              {activeTab === 'account-defaults' && <AccountDefaultsTab />}
             </div>
-          )}
-
-          {activeTab === 'sales-account' && <SalesAccountTab />}
-
-          {activeTab === 'salary-account' && (
-            <SalaryAccountTab
-              onRunPayroll={() => setIsRiderPayrollRunOpen(true)}
-              onApproveSettlement={handleOpenSettlementApproval}
-            />
-          )}
-
-          {activeTab === 'chart-of-accounts' && <ChartOfAccountsTab />}
-
-          {activeTab === 'branches' && <BranchesTab />}
-
-          {activeTab === 'financial-reports' && (
-            <FinancialReportsTab
-              chartOfAccounts={chartOfAccounts}
-              onDrillDown={(accountId) => {
-                navigate({
-                  to: '/admin/accounts',
-                  search: (previous) => ({
-                    ...previous,
-                    tab: 'ledger',
-                    account: accountId,
-                    partyType: undefined,
-                    partyId: undefined,
-                  }),
-                })
-              }}
-              settings={ops.settings}
-              fiscalYearName={ops.fiscalYears[0]?.name}
-            />
-          )}
-
-          {activeTab === 'account-defaults' && <AccountDefaultsTab />}
-        </div>
+          </>
+        )}
       </DataSection>
 
       <Dialog open={isAddVoucherOpen} onOpenChange={setIsAddVoucherOpen}>

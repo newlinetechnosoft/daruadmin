@@ -210,7 +210,7 @@ CREATE INDEX IF NOT EXISTS "bank_accounts_is_active_idx" ON "bank_accounts" ("is
 
 -- Seed default bank account linked to BANK_MAIN (acc_1012)
 INSERT INTO "bank_accounts" ("id", "bank_name", "account_number", "account_name", "branch_name", "ledger_account_id", "branch_id", "is_active")
-VALUES ('bank_nabil_main', 'Nabil Bank Ltd', '0100017500001', 'Daru Gang Pvt Ltd', 'Butwal Branch', 'acc_1012', 'br_butwal_main', true)
+VALUES ('bank_nabil_main', 'Nabil Bank Ltd', '0100017500001', 'Mezmani Group Pvt. Ltd.', 'Butwal Branch', 'acc_1012', 'br_butwal_main', true)
 ON CONFLICT ("id") DO NOTHING;
 --> statement-breakpoint
 

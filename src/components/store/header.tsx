@@ -44,8 +44,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '#/components/ui/sheet'
+import { useStoreSettings } from '#/lib/use-store-settings'
 
 export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
+  const storeSettings = useStoreSettings()
+  const storeName = storeSettings?.storeName || 'Mezmani'
   const { itemCount, setIsOpen } = useCart()
   const { data: session } = authClient.useSession()
   const [searchVal, setSearchVal] = useState('')
@@ -128,7 +131,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
         <div className="flex gap-4">
           <Link
             to="/"
-            aria-label="Mezmani home"
+            aria-label={`${storeName} home`}
             className="flex shrink-0 items-center"
           >
             {/* Light Theme Logo */}
@@ -140,7 +143,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                   target.src = '/mezmani_logo.webp'
                 }
               }}
-              alt="Mezmani"
+              alt={storeName}
               width="156"
               height="48"
               className="h-7 sm:h-8 lg:h-9 w-auto object-contain dark:hidden"
@@ -154,7 +157,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                   target.src = '/mezmani_logo_bg.svg'
                 }
               }}
-              alt="Mezmani"
+              alt={storeName}
               width="156"
               height="48"
               className="h-7 sm:h-8 lg:h-9 w-auto object-contain hidden dark:block"

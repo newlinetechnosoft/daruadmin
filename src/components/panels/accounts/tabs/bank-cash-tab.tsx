@@ -109,8 +109,8 @@ export function BankCashTab() {
   // Add Bank Account Form
   const [newBankName, setNewBankName] = useState('')
   const [newAccountNumber, setNewAccountNumber] = useState('')
-  const [newAccountName, setNewAccountName] = useState('Daru Gang Pvt Ltd')
-  const [newBranchName, setNewBranchName] = useState('Kathmandu Main Branch')
+  const [newAccountName, setNewAccountName] = useState('Mezmani Group Pvt Ltd')
+  const [newBranchName, setNewBranchName] = useState('Butwal Main Branch')
   const [newOpeningBalanceRs, setNewOpeningBalanceRs] = useState('0')
 
   // Quick Bank Transaction Form (Bank charges, interest, deposit, withdrawal)

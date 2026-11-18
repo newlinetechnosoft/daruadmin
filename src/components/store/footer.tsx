@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { Facebook, Instagram } from 'lucide-react'
+import { Facebook, Instagram, MapPin } from 'lucide-react'
+import { useStoreSettings } from '#/lib/use-store-settings'
 
 function TikTokIcon({ className }: { className?: string }) {
   return (
@@ -15,6 +16,21 @@ function TikTokIcon({ className }: { className?: string }) {
 }
 
 export function Footer() {
+  const storeSettings = useStoreSettings()
+
+  const storeName = storeSettings?.storeName || 'Mezmani'
+  const legalName = storeSettings?.legalName || 'Mezmani Retail Pvt. Ltd.'
+  const tagline =
+    storeSettings?.tagline ||
+    'Good food, great drinks, delivered to your doorstep. Serving Butwal and Tilottama.'
+  const address = storeSettings?.address || 'Traffic Chowk, Butwal'
+  const city = storeSettings?.city || 'Butwal'
+  const phone = storeSettings?.phone || '+977-9800000000'
+  const supportPhone = storeSettings?.supportPhone || phone
+  const secondaryPhone = storeSettings?.secondaryPhone || ''
+  const email = storeSettings?.email || 'ops@mezmani.com.np'
+  const pan = storeSettings?.pan || ''
+
   return (
     <footer
       id="about"
@@ -35,18 +51,30 @@ export function Footer() {
                     target.src = '/mezmani_logo_bg.svg'
                   }
                 }}
-                alt="Mezmani"
+                alt={storeName}
                 width="190"
                 height="80"
                 loading="lazy"
+                decoding="async"
                 className="h-auto w-36"
               />
             </Link>
 
             <p className="max-w-xs text-sm leading-relaxed text-sidebar-foreground/70">
-              Good food, great drinks, delivered to your doorstep.
-              Serving Butwal and Tilottama.
+              {tagline}
             </p>
+
+            <div className="space-y-1 text-xs text-sidebar-foreground/60 pt-1">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-sidebar-primary" />
+                <span>{address}, {city}</span>
+              </div>
+              {pan && (
+                <div className="text-[11px] font-mono text-sidebar-foreground/50 pl-5">
+                  PAN / VAT: {pan}
+                </div>
+              )}
+            </div>
 
             <div className="flex items-center gap-4 pt-2">
               <a
@@ -110,7 +138,10 @@ export function Footer() {
             <a href="/#about" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary underline">
               Delivery areas
             </a>
-            <a href="tel:+9779766653471" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary underline">
+            <a
+              href={`tel:${phone.replace(/[^0-9+]/g, '')}`}
+              className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary underline"
+            >
               Contact us
             </a>
           </div>
@@ -124,18 +155,30 @@ export function Footer() {
             <p className="max-w-xs text-sidebar-foreground/65">
               Need help with an order? We're happy to help.
             </p>
-            <a
-              href="tel:+9779766653471"
-              className="font-medium text-sidebar-primary transition-opacity hover:opacity-80 underline"
-            >
-              +977 9766653471
-            </a>
-            <a
-              href="tel:+9779847820683"
-              className="font-medium text-sidebar-primary transition-opacity hover:opacity-80 underline"
-            >
-              +977 9847820683
-            </a>
+            {supportPhone && (
+              <a
+                href={`tel:${supportPhone.replace(/[^0-9+]/g, '')}`}
+                className="font-medium text-sidebar-primary transition-opacity hover:opacity-80 underline"
+              >
+                {supportPhone}
+              </a>
+            )}
+            {secondaryPhone && (
+              <a
+                href={`tel:${secondaryPhone.replace(/[^0-9+]/g, '')}`}
+                className="font-medium text-sidebar-primary transition-opacity hover:opacity-80 underline"
+              >
+                {secondaryPhone}
+              </a>
+            )}
+            {email && (
+              <a
+                href={`mailto:${email}`}
+                className="text-xs text-sidebar-foreground/70 transition-opacity hover:opacity-80 underline"
+              >
+                {email}
+              </a>
+            )}
           </div>
         </div>
 
@@ -143,7 +186,7 @@ export function Footer() {
         <div className="flex flex-col gap-5 border-t border-sidebar-border pt-6 text-xs text-sidebar-foreground/60 sm:flex-row sm:items-center sm:justify-between">
 
           <p>
-            © 2026 Mezmani Retail Pvt. Ltd. All rights reserved.
+            © {new Date().getFullYear()} {legalName}. All rights reserved.
           </p>
 
           {/* Payment methods */}
@@ -151,7 +194,8 @@ export function Footer() {
             <span>eSewa</span>
             <span>Khalti</span>
             <span>fonepay</span>
-            <span>IME Pay</span>
+            <span>ConnectIPS</span>
+            <span>COD</span>
           </div>
         </div>
 

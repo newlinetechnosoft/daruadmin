@@ -18,6 +18,7 @@ import {
   BreadcrumbSeparator,
 } from '#/components/ui/breadcrumb'
 import { EmptyState } from '#/components/shared/empty-state'
+import { CatalogPageSkeleton } from '#/components/shared/loading'
 import {
   AlertCircle,
   ArrowRight,
@@ -93,6 +94,7 @@ export const Route = createFileRoute('/offers/$slug')({
       },
     ],
   }),
+  pendingComponent: CatalogPageSkeleton,
   component: OfferDetailPage,
 })
 
@@ -123,6 +125,64 @@ function OfferDetailPage() {
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </Button>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
+  // Expired offer safeguard (Requirement 3: "If a user opens an old push notification after expiry, show a clear message such as 'This offer has expired' rather than displaying it as an active offer")
+  const isOfferExpired =
+    offer.isExpired ||
+    !offer.active ||
+    (offer.expiresAt ? new Date(offer.expiresAt).getTime() <= Date.now() : false)
+
+  if (isOfferExpired) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
+          <Card className="max-w-lg w-full p-6 sm:p-8 text-center space-y-5 border-amber-500/30 bg-amber-500/5 shadow-sm">
+            <div className="h-14 w-14 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto ring-8 ring-amber-500/5">
+              <AlertCircle className="h-7 w-7" />
+            </div>
+            <div className="space-y-2">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-700 border border-amber-500/30">
+                Offer Concluded
+              </span>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                This offer has expired
+              </h1>
+              <p className="text-xs sm:text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                The promotional campaign for &ldquo;{offer.title}&rdquo; has expired and is no longer active. Previously sent notifications or announcement links cannot be redeemed.
+              </p>
+              {offer.expiresAt && (
+                <p className="text-xs font-mono text-muted-foreground/80 pt-1">
+                  Expired on:{' '}
+                  {new Date(offer.expiresAt).toLocaleString('en-US', {
+                    timeZone: 'Asia/Kathmandu',
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}{' '}
+                  (Asia/Kathmandu, UTC+05:45)
+                </p>
+              )}
+            </div>
+            <div className="pt-2 flex flex-col sm:flex-row gap-2.5 justify-center">
+              <Button size="sm" asChild className="gap-1.5">
+                <Link to="/drinks">
+                  Explore Current Drinks
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+              <Button size="sm" variant="outline" asChild>
+                <Link to="/food">Browse Food Catalog</Link>
+              </Button>
+            </div>
           </Card>
         </main>
         <Footer />
@@ -226,6 +286,8 @@ function OfferDetailPage() {
               <img
                 src={offer.bannerUrl}
                 alt={offer.title}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover"
               />
             </div>
