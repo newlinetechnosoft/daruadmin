@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { guardModule } from '#/server/auth/guards'
 import { FoodPanel } from '#/components/panels/food'
 import { adminQueries } from '#/queries/admin'
+import { AdminContentSkeleton } from '#/components/shared/loading'
 
 export const Route = createFileRoute('/admin/food')({
   beforeLoad: guardModule('food'),
@@ -12,5 +13,6 @@ export const Route = createFileRoute('/admin/food')({
     ])
     return { products, taxonomy }
   },
+  pendingComponent: () => <AdminContentSkeleton variant="table" />,
   component: FoodPanel,
 })
