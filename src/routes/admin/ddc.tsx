@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { guardModule } from '#/server/auth/guards'
 import { DdcPanel } from '#/components/panels/ddc'
 import { adminQueries } from '#/queries/admin'
+import { AdminContentSkeleton } from '#/components/shared/loading'
 
 export const Route = createFileRoute('/admin/ddc')({
   beforeLoad: guardModule('ddc'),
@@ -12,5 +13,6 @@ export const Route = createFileRoute('/admin/ddc')({
     ])
     return { products, taxonomy }
   },
+  pendingComponent: () => <AdminContentSkeleton variant="table" />,
   component: DdcPanel,
 })

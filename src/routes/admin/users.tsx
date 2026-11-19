@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { guardModule } from '#/server/auth/guards'
 import { UsersPanel } from '#/components/panels/users'
 import { adminQueries } from '#/queries/admin'
+import { AdminContentSkeleton } from '#/components/shared/loading'
 
 export const Route = createFileRoute('/admin/users')({
   beforeLoad: guardModule('users'),
@@ -11,5 +12,6 @@ export const Route = createFileRoute('/admin/users')({
     )
     return { users }
   },
+  pendingComponent: () => <AdminContentSkeleton variant="table" />,
   component: UsersPanel,
 })
