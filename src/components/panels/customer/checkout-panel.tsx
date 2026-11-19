@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
@@ -10,6 +10,8 @@ import { storeQueries, adminQueries } from '#/queries/admin'
 import { useActiveServiceZones } from '#/queries/zones'
 import { isPointInsideAnyZone } from '#/lib/geo-utils'
 import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
+import { Skeleton } from '#/components/ui/skeleton'
+
 import {
   checkoutFormSchema,
   normalizeNepaliPhone,
@@ -28,8 +30,12 @@ import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { StoreCountdownTimer } from '#/components/store/countdown-timer'
 import { getPaymentGatewayLogo } from '#/components/checkout/payment-icons'
-import { DeliveryMap } from './delivery-map'
 import { DEFAULT_MAP_CENTER, isWithinButwalArea } from '#/lib/map-config'
+
+const DeliveryMap = lazy(() =>
+  import('./delivery-map').then((m) => ({ default: m.DeliveryMap })),
+)
+
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -766,26 +772,35 @@ export function CheckoutPanel() {
                   name="lat"
                   control={control}
                   render={() => (
-                    <DeliveryMap
-                      value={selectedLocation}
-                      disabled={isSubmitting}
-                      onChange={(pt) => {
-                        setValue('lat', pt.lat, { shouldValidate: true })
-                        setValue('lng', pt.lng, { shouldValidate: true })
-                        // Check if the coordinate dropped falls within an active service zone to sync Area
-                        const matchingZone = serviceZoneFeatures.find((f) =>
-                          isPointInsideAnyZone(pt.lat, pt.lng, [
-                            { polygon: f.geometry, isActive: true },
-                          ]),
-                        )
-                        if (matchingZone && matchingZone.id !== selectedZoneId) {
-                          setSelectedZoneId(matchingZone.id)
-                          setValue('city', matchingZone.properties.name, {
-                            shouldValidate: true,
-                          })
-                        }
-                      }}
-                    />
+                    <Suspense
+                      fallback={
+                        <div className="h-[280px] sm:h-[340px] w-full rounded-lg border border-border bg-muted/30 flex flex-col items-center justify-center gap-2 p-4 animate-pulse">
+                          <Skeleton className="h-8 w-8 rounded-full" />
+                          <Skeleton className="h-4 w-48" />
+                        </div>
+                      }
+                    >
+                      <DeliveryMap
+                        value={selectedLocation}
+                        disabled={isSubmitting}
+                        onChange={(pt) => {
+                          setValue('lat', pt.lat, { shouldValidate: true })
+                          setValue('lng', pt.lng, { shouldValidate: true })
+                          // Check if the coordinate dropped falls within an active service zone to sync Area
+                          const matchingZone = serviceZoneFeatures.find((f) =>
+                            isPointInsideAnyZone(pt.lat, pt.lng, [
+                              { polygon: f.geometry, isActive: true },
+                            ]),
+                          )
+                          if (matchingZone && matchingZone.id !== selectedZoneId) {
+                            setSelectedZoneId(matchingZone.id)
+                            setValue('city', matchingZone.properties.name, {
+                              shouldValidate: true,
+                            })
+                          }
+                        }}
+                      />
+                    </Suspense>
                   )}
                 />
                 {(errors.lat || errors.lng) && (

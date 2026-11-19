@@ -1,12 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import type { FormEvent } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { storefrontQueries } from '#/queries/storefront'
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
-import { LandingPopup } from '#/components/store/landing-popup'
+import { LazySection } from '#/components/store/lazy-section'
 import { LandingPageSkeleton } from '#/components/shared/loading'
+
+const LandingPopup = lazy(() =>
+  import('#/components/store/landing-popup').then((m) => ({
+    default: m.LandingPopup,
+  })),
+)
+
 import {
   ArrowRight,
   ShieldCheck,
@@ -992,71 +999,73 @@ function HomePage() {
         {/* </section> */}
 
         {/* REVIEWS */}
-        <section
-          className="scroll-mt-24 bg-background py-16 sm:py-24"
-          id="reviews"
-        >
-          <div className={wrap}>
-            <div className="mb-9 flex flex-col justify-between gap-4 sm:mb-12 sm:flex-row sm:items-end">
-              <div>
-                <p className={eyebrow}>Kind words from our customers</p>
-                <h2 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
-                  The good word<span className="text-primary">.</span>
-                </h2>
+        <LazySection minHeight="min-h-[460px]">
+          <section
+            className="scroll-mt-24 bg-background py-16 sm:py-24"
+            id="reviews"
+          >
+            <div className={wrap}>
+              <div className="mb-9 flex flex-col justify-between gap-4 sm:mb-12 sm:flex-row sm:items-end">
+                <div>
+                  <p className={eyebrow}>Kind words from our customers</p>
+                  <h2 className="mt-3 text-4xl font-black tracking-[-0.045em] sm:text-5xl">
+                    The good word<span className="text-primary">.</span>
+                  </h2>
+                </div>
+                <p className="max-w-sm text-sm leading-6 text-muted-foreground">
+                  We’re glad to be part of your everyday moments. Here’s what
+                  local customers have shared.
+                </p>
               </div>
-              <p className="max-w-sm text-sm leading-6 text-muted-foreground">
-                We’re glad to be part of your everyday moments. Here’s what
-                local customers have shared.
-              </p>
-            </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              {reviewsList.map((review: any) => (
-                <article
-                  key={review.id || review.name}
-                  className="flex min-h-[250px] flex-col justify-between rounded-2xl border border-border bg-card p-6 transition hover:-translate-y-1 hover:shadow-lg sm:p-7"
-                >
-                  <div>
-                    <div
-                      className="text-sm tracking-[0.18em] text-primary"
-                      aria-label={`${review.rating || 5} out of 5 stars`}
-                    >
-                      {'★'.repeat(Math.min(5, Math.max(1, review.rating || 5)))}
-                    </div>
-                    <blockquote className="mt-6 text-lg font-semibold leading-7 tracking-tight text-foreground">
-                      “{review.quote}”
-                    </blockquote>
-                  </div>
-                  <div className="mt-8 flex items-center gap-3 border-t border-border pt-5">
-                    {review.imageUrl ? (
-                      <img
-                        src={review.imageUrl}
-                        alt={review.name}
-                        width="40"
-                        height="40"
-                        className="h-10 w-10 rounded-full object-cover border border-border shrink-0 shadow-xs"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/15 text-sm font-black text-primary shrink-0">
-                        {review.name.charAt(0)}
+              <div className="grid gap-4 md:grid-cols-3">
+                {reviewsList.map((review: any) => (
+                  <article
+                    key={review.id || review.name}
+                    className="flex min-h-[250px] flex-col justify-between rounded-2xl border border-border bg-card p-6 transition hover:-translate-y-1 hover:shadow-lg sm:p-7"
+                  >
+                    <div>
+                      <div
+                        className="text-sm tracking-[0.18em] text-primary"
+                        aria-label={`${review.rating || 5} out of 5 stars`}
+                      >
+                        {'★'.repeat(Math.min(5, Math.max(1, review.rating || 5)))}
                       </div>
-                    )}
-                    <div className="min-w-0">
-                      <strong className="block text-sm font-bold truncate">
-                        {review.name}
-                      </strong>
-                      <span className="mt-0.5 block text-xs text-muted-foreground truncate">
-                        {review.productName ? `${review.productName} • Verified` : 'Mezmani customer'}
-                      </span>
+                      <blockquote className="mt-6 text-lg font-semibold leading-7 tracking-tight text-foreground">
+                        “{review.quote}”
+                      </blockquote>
                     </div>
-                  </div>
-                </article>
-              ))}
+                    <div className="mt-8 flex items-center gap-3 border-t border-border pt-5">
+                      {review.imageUrl ? (
+                        <img
+                          src={review.imageUrl}
+                          alt={review.name}
+                          width="40"
+                          height="40"
+                          className="h-10 w-10 rounded-full object-cover border border-border shrink-0 shadow-xs"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/15 text-sm font-black text-primary shrink-0">
+                          {review.name.charAt(0)}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <strong className="block text-sm font-bold truncate">
+                          {review.name}
+                        </strong>
+                        <span className="mt-0.5 block text-xs text-muted-foreground truncate">
+                          {review.productName ? `${review.productName} • Verified` : 'Mezmani customer'}
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </LazySection>
       </main>
 
       {/* Features */}
@@ -1102,7 +1111,9 @@ function HomePage() {
       <Footer />
 
       {/* LANDING POPUP BANNER NOTICES */}
-      <LandingPopup notices={landingPopups} />
+      <Suspense fallback={null}>
+        <LandingPopup notices={landingPopups} />
+      </Suspense>
     </div>
   )
 }

@@ -1,7 +1,14 @@
-import { LocationPicker } from '#/components/shared/location-picker'
+import * as React from 'react'
 import type { GeoPoint } from '#/lib/map-config'
 import { isWithinButwalArea } from '#/lib/map-config'
+import { Skeleton } from '#/components/ui/skeleton'
 import { MapPin } from 'lucide-react'
+
+const LocationPicker = React.lazy(() =>
+  import('#/components/shared/location-picker').then((m) => ({
+    default: m.LocationPicker,
+  })),
+)
 
 export interface DeliveryMapProps {
   value: GeoPoint | null
@@ -16,15 +23,24 @@ export interface DeliveryMapProps {
 export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
   return (
     <div className="space-y-2.5">
-      <LocationPicker
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        restrictToZone={true}
-        boundsWarningMessage="This location is outside our service area."
-        helperText="Tap map or drag pin to your delivery address"
-        showCoordinatesInputs={false}
-      />
+      <React.Suspense
+        fallback={
+          <div className="h-[280px] sm:h-[340px] w-full rounded-lg border border-border bg-muted/30 flex flex-col items-center justify-center gap-2 p-4 animate-pulse">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+        }
+      >
+        <LocationPicker
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          restrictToZone={true}
+          boundsWarningMessage="This location is outside our service area."
+          helperText="Tap map or drag pin to your delivery address"
+          showCoordinatesInputs={false}
+        />
+      </React.Suspense>
 
       {/* Customer Coordinates Display Bar */}
       <div className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-1.5 text-xs font-mono text-muted-foreground">

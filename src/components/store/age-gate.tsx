@@ -51,6 +51,10 @@ export function AgeGate() {
     )
   }
 
+  if (!isOpen) {
+    return null
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent

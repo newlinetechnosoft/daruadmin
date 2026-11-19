@@ -43,9 +43,20 @@ export function CartSheet() {
   } = useCart()
   const navigate = useNavigate()
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [hasOpened, setHasOpened] = useState(false)
 
-  const { data: deliverySettings } = useQuery(storeQueries.deliveryPricing())
-  const { data: storeStatus } = useQuery(storeQueries.operatingStatus())
+  if (isOpen && !hasOpened) {
+    setHasOpened(true)
+  }
+
+  const { data: deliverySettings } = useQuery({
+    ...storeQueries.deliveryPricing(),
+    enabled: hasOpened || isOpen,
+  })
+  const { data: storeStatus } = useQuery({
+    ...storeQueries.operatingStatus(),
+    enabled: hasOpened || isOpen,
+  })
   const deliveryFeePaisa = deliverySettings?.deliveryFee ?? 0
   const freeThresholdPaisa = deliverySettings?.freeDeliveryThreshold ?? 0
   const isGrowthFreeDelivery = deliveryFeePaisa === 0
@@ -68,6 +79,11 @@ export function CartSheet() {
     isGrowthFreeDelivery || remainingForFree === 0
       ? 100
       : Math.min(100, Math.round((totalPaisa / freeThresholdPaisa) * 100))
+
+  if (!hasOpened && !isOpen) {
+    return null
+  }
+
 
   const currentDeliveryFee =
     isGrowthFreeDelivery || remainingForFree === 0 ? 0 : deliveryFeePaisa
