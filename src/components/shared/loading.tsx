@@ -11,6 +11,7 @@ export function TableSkeleton({
   columns?: number
   className?: string
 }) {
+  const safeRows = Math.min(rows, 6)
   return (
     <div
       className={cn(
@@ -24,7 +25,7 @@ export function TableSkeleton({
         ))}
       </div>
       <div className="divide-y divide-border">
-        {Array.from({ length: rows }).map((_, r) => (
+        {Array.from({ length: safeRows }).map((_, r) => (
           <div key={r} className="h-12 flex items-center px-4 gap-4">
             {Array.from({ length: columns }).map((_, c) => (
               <Skeleton key={c} className="h-4 flex-1 max-w-[120px]" />
@@ -89,6 +90,166 @@ export function CardSkeleton({
           </CardContent>
         </Card>
       ))}
+    </div>
+  )
+}
+
+export type SkeletonVariant =
+  | 'table'
+  | 'stats-table'
+  | 'form'
+  | 'report'
+  | 'cards'
+
+export function FormSkeleton({ className }: { className?: string }) {
+  return (
+    <Card className={cn('p-5 sm:p-6 shadow-none border-border', className)}>
+      <CardContent className="p-0 space-y-5">
+        <div className="space-y-1.5 pb-2 border-b border-border">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-3.5 w-64" />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-9 w-full rounded-md" />
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end gap-2 pt-3 border-t border-border">
+          <Skeleton className="h-9 w-20 rounded-md" />
+          <Skeleton className="h-9 w-28 rounded-md" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+export function ReportSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn('space-y-4', className)}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Skeleton className="h-9 w-64 rounded-md" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-24 rounded-md" />
+          <Skeleton className="h-9 w-24 rounded-md" />
+        </div>
+      </div>
+      <StatsSkeleton count={4} />
+      <Card className="p-5 shadow-none border-border">
+        <CardContent className="p-0 space-y-3">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+          <Skeleton className="h-48 w-full rounded-lg" />
+        </CardContent>
+      </Card>
+      <TableSkeleton rows={5} columns={5} />
+    </div>
+  )
+}
+
+export function TabSkeleton({
+  variant = 'table',
+  className,
+}: {
+  variant?: SkeletonVariant
+  className?: string
+}) {
+  return (
+    <div className={cn('animate-skeleton-fade-in space-y-4 pt-1', className)}>
+      {variant === 'table' && (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Skeleton className="h-9 w-64 rounded-md" />
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-9 w-28 rounded-md" />
+              <Skeleton className="h-9 w-24 rounded-md" />
+            </div>
+          </div>
+          <TableSkeleton rows={6} columns={5} />
+        </>
+      )}
+
+      {variant === 'stats-table' && (
+        <>
+          <StatsSkeleton count={4} />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Skeleton className="h-9 w-64 rounded-md" />
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-9 w-28 rounded-md" />
+            </div>
+          </div>
+          <TableSkeleton rows={6} columns={5} />
+        </>
+      )}
+
+      {variant === 'form' && <FormSkeleton />}
+
+      {variant === 'report' && <ReportSkeleton />}
+
+      {variant === 'cards' && (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Skeleton className="h-9 w-64 rounded-md" />
+            <Skeleton className="h-9 w-28 rounded-md" />
+          </div>
+          <CardSkeleton count={6} />
+        </>
+      )}
+    </div>
+  )
+}
+
+export function PanelSkeleton({
+  variant = 'table',
+  showHeader = true,
+  className,
+}: {
+  variant?: SkeletonVariant
+  showHeader?: boolean
+  className?: string
+}) {
+  return (
+    <div className={cn('animate-skeleton-fade-in space-y-5', className)}>
+      {showHeader && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+          <div className="space-y-1.5">
+            <Skeleton className="h-3.5 w-24" />
+            <Skeleton className="h-7 w-52" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-24 rounded-md" />
+            <Skeleton className="h-8 w-28 rounded-md" />
+          </div>
+        </div>
+      )}
+      <TabSkeleton variant={variant} />
+    </div>
+  )
+}
+
+export function AdminContentSkeleton({
+  variant = 'stats-table',
+  className,
+}: {
+  variant?: SkeletonVariant
+  className?: string
+}) {
+  return (
+    <div className={cn('animate-skeleton-fade-in space-y-6', className)}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="space-y-1.5">
+          <Skeleton className="h-3.5 w-28" />
+          <Skeleton className="h-7 w-48" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-24 rounded-md" />
+        </div>
+      </div>
+      <TabSkeleton variant={variant} />
     </div>
   )
 }

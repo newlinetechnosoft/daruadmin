@@ -94,7 +94,7 @@ export function DataSection({
   return (
     <div
       className={cn(
-        'relative w-full min-w-0 transition-all duration-300',
+        'relative w-full min-w-0 transition-opacity duration-200',
         variant === 'card' &&
           'rounded-xl border border-border bg-card p-4 shadow-2xs',
         className,
@@ -144,14 +144,8 @@ export function DataSection({
         </div>
       )}
 
-      {/* Main Content Area with Smooth Opacity Transition */}
-      <div
-        className={cn(
-          'transition-opacity duration-300 ease-in-out',
-          isRefreshing && 'opacity-80',
-          contentClassName,
-        )}
-      >
+      {/* Main Content Area */}
+      <div className={cn(contentClassName)}>
         {children}
       </div>
     </div>

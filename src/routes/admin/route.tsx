@@ -97,7 +97,11 @@ import { Avatar, AvatarFallback } from '#/components/ui/avatar'
 import { Badge } from '#/components/ui/badge'
 import { Kbd } from '#/components/ui/kbd'
 import { ThemeToggle } from '#/components/shared/theme-toggle'
-import { AdminLayoutSkeleton } from '#/components/shared/loading'
+import {
+  AdminLayoutSkeleton,
+  AdminContentSkeleton,
+} from '#/components/shared/loading'
+import { AsyncBoundary } from '#/components/shared/async-boundary'
 import {
   playOrderAlertSound,
   unlockNotificationSound,
@@ -467,11 +471,21 @@ function AdminLayout() {
   const { notifications } = Route.useLoaderData()
   const chromeQuery = useQuery({
     ...adminQueries.chrome(),
-    refetchInterval: 15_000,
+    refetchInterval: () => {
+      if (typeof document !== 'undefined' && document.hidden) return false
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return false
+      return 15_000
+    },
+    refetchIntervalInBackground: false,
   })
   const liveNotifications = (chromeQuery.data?.notifications ??
     notifications) as OrderNotification[]
-  const routerState = useRouterState()
+  const currentPath = useRouterState({
+    select: (s) => s.location.pathname,
+  })
+  const currentSearchTab = useRouterState({
+    select: (s) => (s.location.search as { tab?: string } | undefined)?.tab,
+  })
   const navigate = useNavigate()
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -482,8 +496,6 @@ function AdminLayout() {
   const [notificationsRead, setNotificationsRead] = useState(false)
   const liveUnread =
     chromeQuery.data?.unread ?? liveNotifications.filter((n) => !n.read).length
-
-  const currentPath = routerState.location.pathname
 
   useEffect(() => {
     const unlock = () => unlockNotificationSound()
@@ -670,7 +682,7 @@ function AdminLayout() {
                                   const defaultTab =
                                     sub.to === '/admin/accounts' ? 'overview' : 'customers'
                                   const currentTab =
-                                    (routerState.location.search as any)?.tab || defaultTab
+                                    currentSearchTab || defaultTab
                                   const isSubActive =
                                     currentPath === sub.to &&
                                     (sub.search?.tab === currentTab ||
@@ -941,7 +953,9 @@ function AdminLayout() {
           )}
 
           <main className="flex-1 min-w-0 bg-background p-4 sm:p-6 lg:p-7 overflow-x-clip">
-            <Outlet />
+            <AsyncBoundary fallback={<AdminContentSkeleton />}>
+              <Outlet />
+            </AsyncBoundary>
           </main>
         </SidebarInset>
 

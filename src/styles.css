@@ -448,4 +448,32 @@
     background: transparent !important;
     border: none !important;
   }
+
+  /* Skeleton delay-in and reduced motion safety */
+  @keyframes skeleton-fade-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  .animate-skeleton-fade-in {
+    animation: skeleton-fade-in 200ms ease-out 150ms forwards;
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-slot="skeleton"],
+    .animate-pulse,
+    .animate-refresh-shimmer,
+    .animate-data-glow {
+      animation: none !important;
+    }
+    .animate-skeleton-fade-in {
+      animation: none !important;
+      opacity: 1 !important;
+    }
+  }
 }

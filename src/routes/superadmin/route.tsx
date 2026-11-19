@@ -72,7 +72,11 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { ChangePasswordDialog } from '#/components/auth/change-password-dialog'
-import { AdminLayoutSkeleton } from '#/components/shared/loading'
+import {
+  AdminLayoutSkeleton,
+  AdminContentSkeleton,
+} from '#/components/shared/loading'
+import { AsyncBoundary } from '#/components/shared/async-boundary'
 import type { SuperAdminTabKey } from '#/components/panels/superadmin'
 
 interface SuperAdminNavItem {
@@ -163,7 +167,11 @@ export const Route = createFileRoute('/superadmin')({
 function SuperAdminLayout() {
   const navigate = useNavigate()
   const router = useRouter()
-  const routerState = useRouterState()
+  const currentTab = useRouterState({
+    select: (s) =>
+      ((s.location.search as Record<string, unknown> | undefined)?.tab ??
+        'customers') as SuperAdminTabKey,
+  })
   const queryClient = useQueryClient()
   const [logoutOpen, setLogoutOpen] = useState(false)
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
@@ -171,9 +179,6 @@ function SuperAdminLayout() {
 
   const { data: access } = useQuery(adminQueries.access())
   const { data: telemetry } = useQuery(adminQueries.superAdminTelemetry())
-
-  const search = routerState.location.search as Record<string, unknown>
-  const currentTab = (typeof search.tab === 'string' ? search.tab : 'customers') as SuperAdminTabKey
 
   const currentItem = useMemo(() => {
     for (const group of SUPERADMIN_NAV_GROUPS) {
@@ -454,7 +459,9 @@ function SuperAdminLayout() {
 
           {/* Main Body */}
           <main className="flex-1 p-4 lg:p-6 max-w-[1700px] w-full mx-auto">
-            <Outlet />
+            <AsyncBoundary fallback={<AdminContentSkeleton />}>
+              <Outlet />
+            </AsyncBoundary>
           </main>
 
           {/* Footer */}
