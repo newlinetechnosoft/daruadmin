@@ -11,6 +11,7 @@ import { formatNPR } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
 import { calculateOrderMargins } from '#/server/orders/order.queries'
+import * as React from 'react'
 import {
   Download,
   Printer,
@@ -22,10 +23,12 @@ import {
   Eye,
   Flame,
 } from 'lucide-react'
-import {
-  ProductVelocityDialog,
-  exportProductVelocityCSV,
-} from './product-velocity-dialog'
+
+const ProductVelocityDialog = React.lazy(() =>
+  import('./product-velocity-dialog').then((m) => ({
+    default: m.ProductVelocityDialog,
+  })),
+)
 import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
@@ -71,6 +74,7 @@ export function ReportsPanel() {
   const [isMarginModalOpen, setIsMarginModalOpen] = useState(false)
   const [isFleetModalOpen, setIsFleetModalOpen] = useState(false)
   const [isVelocityModalOpen, setIsVelocityModalOpen] = useState(false)
+  const [hasOpenedVelocityModal, setHasOpenedVelocityModal] = useState(false)
   const [marginTab, setMarginTab] = useState<'product' | 'dealer'>('product')
 
   // Aggregate Metrics based on selected date period (default: Today)
@@ -265,7 +269,9 @@ export function ReportsPanel() {
 
   const handleExportProductVelocityCSV = () => {
     if (ops.sourcingIntelligence) {
-      exportProductVelocityCSV(ops.sourcingIntelligence, null)
+      void import('./product-velocity-dialog').then((m) => {
+        m.exportProductVelocityCSV(ops.sourcingIntelligence, null)
+      })
     } else {
       toast.error('Sourcing intelligence data not loaded yet')
     }
@@ -518,7 +524,10 @@ export function ReportsPanel() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsVelocityModalOpen(true)}
+                    onClick={() => {
+                      setHasOpenedVelocityModal(true)
+                      setIsVelocityModalOpen(true)
+                    }}
                     className="h-8 gap-1.5 text-xs cursor-pointer"
                   >
                     <Eye className="h-3.5 w-3.5" />
@@ -1012,11 +1021,15 @@ export function ReportsPanel() {
       </Dialog>
 
       {/* Product Velocity & Sourcing Intelligence Preview Dialog */}
-      <ProductVelocityDialog
-        open={isVelocityModalOpen}
-        onOpenChange={setIsVelocityModalOpen}
-        initialData={ops.sourcingIntelligence}
-      />
+      {hasOpenedVelocityModal && (
+        <React.Suspense fallback={null}>
+          <ProductVelocityDialog
+            open={isVelocityModalOpen}
+            onOpenChange={setIsVelocityModalOpen}
+            initialData={ops.sourcingIntelligence}
+          />
+        </React.Suspense>
+      )}
     </div>
   )
 }
