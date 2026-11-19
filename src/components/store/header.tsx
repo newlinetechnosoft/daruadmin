@@ -147,7 +147,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
               width="156"
               height="48"
               loading="eager"
-              decoding="sync"
+              decoding="async"
               fetchPriority="high"
               className="h-7 sm:h-8 lg:h-9 w-auto object-contain dark:hidden"
             />
@@ -164,8 +164,8 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
               width="156"
               height="48"
               loading="eager"
-              decoding="sync"
-              fetchPriority="high"
+              decoding="async"
+              fetchPriority="low"
               className="h-7 sm:h-8 lg:h-9 w-auto object-contain hidden dark:block"
             />
           </Link>
