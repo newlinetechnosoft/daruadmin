@@ -538,9 +538,11 @@ export function TrackOrderPanel({ initialCode }: TrackOrderPanelProps) {
                           <img
                             src={order.deliveryProofPhotoUrl}
                             alt="Delivery Proof"
+                            width="160"
+                            height="128"
                             loading="lazy"
                             decoding="async"
-                            className="h-32 w-auto object-cover rounded-lg border border-border hover:opacity-90 transition-opacity"
+                            className="h-32 w-auto aspect-[4/3] object-cover rounded-lg border border-border hover:opacity-90 transition-opacity"
                           />
                         </a>
                       </div>

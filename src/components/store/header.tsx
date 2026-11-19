@@ -146,6 +146,9 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
               alt={storeName}
               width="156"
               height="48"
+              loading="eager"
+              decoding="sync"
+              fetchPriority="high"
               className="h-7 sm:h-8 lg:h-9 w-auto object-contain dark:hidden"
             />
             {/* Dark Theme Logo */}
@@ -160,6 +163,9 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
               alt={storeName}
               width="156"
               height="48"
+              loading="eager"
+              decoding="sync"
+              fetchPriority="high"
               className="h-7 sm:h-8 lg:h-9 w-auto object-contain hidden dark:block"
             />
           </Link>
@@ -370,6 +376,8 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                       alt="Mezmani"
                       width="140"
                       height="42"
+                      loading="lazy"
+                      decoding="async"
                       className="h-7 w-auto object-contain dark:hidden"
                     />
                     <img
@@ -383,6 +391,8 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                       alt="Mezmani"
                       width="140"
                       height="42"
+                      loading="lazy"
+                      decoding="async"
                       className="h-7 w-auto object-contain hidden dark:block"
                     />
                   </Link>

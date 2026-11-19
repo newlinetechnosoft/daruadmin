@@ -282,7 +282,7 @@ function OfferDetailPage() {
           </div>
 
           {offer.bannerUrl && (
-            <div className="mt-4 sm:mt-0 sm:absolute sm:right-6 sm:top-6 sm:bottom-6 sm:w-1/3 rounded-xl overflow-hidden shadow-sm border border-border/50">
+            <div className="mt-4 sm:mt-0 sm:absolute sm:right-6 sm:top-6 sm:bottom-6 sm:w-1/3 aspect-video sm:aspect-auto rounded-xl overflow-hidden shadow-sm border border-border/50">
               <img
                 src={offer.bannerUrl}
                 alt={offer.title}

@@ -350,8 +350,9 @@ function DrinksPage() {
               src="/images/mezmani-drinks-bg-light.webp"
               alt=""
               aria-hidden="true"
-              loading="lazy"
+              loading="eager"
               decoding="async"
+              fetchPriority="high"
               className="h-full w-full object-cover object-right sm:object-center transition-opacity duration-500 dark:hidden"
               onError={(e) => {
                 const target = e.currentTarget
@@ -365,8 +366,9 @@ function DrinksPage() {
               src="/images/mezmani-drinks-bg-dark.webp"
               alt=""
               aria-hidden="true"
-              loading="lazy"
+              loading="eager"
               decoding="async"
+              fetchPriority="high"
               className="hidden h-full w-full object-cover object-right sm:object-center transition-opacity duration-500 dark:block"
               onError={(e) => {
                 const target = e.currentTarget

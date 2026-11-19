@@ -584,6 +584,8 @@ function HomePage() {
               <img
                 src="/images/logos/grocery-transparent.png"
                 alt="Grocery Logo"
+                width="120"
+                height="120"
                 loading="lazy"
                 decoding="async"
                 className="h-15 w-auto sm:h-20 lg:h-30 object-contain drop-shadow-md"
@@ -594,6 +596,8 @@ function HomePage() {
               <img
                 src="/images/logos/ddc-transparent.png"
                 alt="DDC Logo"
+                width="120"
+                height="120"
                 loading="lazy"
                 decoding="async"
                 className="h-15 w-auto sm:h-20 lg:h-30 object-contain drop-shadow-md"
@@ -1028,6 +1032,8 @@ function HomePage() {
                       <img
                         src={review.imageUrl}
                         alt={review.name}
+                        width="40"
+                        height="40"
                         className="h-10 w-10 rounded-full object-cover border border-border shrink-0 shadow-xs"
                         loading="lazy"
                         decoding="async"

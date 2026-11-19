@@ -205,7 +205,7 @@ export function LandingPopup({
           {currentNotice.type === 'image' && (
             <div className="flex flex-col">
               {currentNotice.imageUrl ? (
-                <div className="relative w-full bg-muted/20 flex items-center justify-center overflow-hidden max-h-[65vh]">
+                <div className="relative w-full min-h-[220px] bg-muted/20 flex items-center justify-center overflow-hidden max-h-[65vh]">
                   {currentNotice.linkUrl ? (
                     <a
                       href={currentNotice.linkUrl}

@@ -394,6 +394,8 @@ function GroceryPage() {
                       <img
                         src={c.imageUrl}
                         alt=""
+                        width="14"
+                        height="14"
                         loading="lazy"
                         decoding="async"
                         className="h-3.5 w-3.5 rounded-full object-cover"
