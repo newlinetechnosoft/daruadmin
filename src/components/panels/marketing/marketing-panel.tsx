@@ -1,10 +1,16 @@
-import { useState } from 'react'
+import { useState, lazy } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
-import { CampaignsTab } from './campaigns-tab'
+import { AsyncBoundary } from '#/components/shared/async-boundary'
+import { TabSkeleton } from '#/components/shared/loading'
+
+const CampaignsTab = lazy(() =>
+  import('./campaigns-tab').then((m) => ({ default: m.CampaignsTab })),
+)
+
 import {
   upsertCouponFn,
   deleteCouponFn,
@@ -464,7 +470,9 @@ export function MarketingPanel() {
           </TabsList>
 
           <TabsContent value="campaigns" className="space-y-4">
-            <CampaignsTab />
+            <AsyncBoundary fallback={<TabSkeleton variant="stats-table" />}>
+              <CampaignsTab />
+            </AsyncBoundary>
           </TabsContent>
 
           <TabsContent value="coupons" className="space-y-4">
