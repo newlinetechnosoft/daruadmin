@@ -12,7 +12,7 @@ import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { Progress } from '#/components/ui/progress'
 import { useCart } from '#/lib/cart-context'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouter } from '@tanstack/react-router'
 import { formatNPR } from '#/lib/money'
 import { storeQueries } from '#/queries/admin'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
@@ -42,6 +42,7 @@ export function CartSheet() {
     clearCart,
   } = useCart()
   const navigate = useNavigate()
+  const router = useRouter()
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [hasOpened, setHasOpened] = useState(false)
 
@@ -385,6 +386,9 @@ export function CartSheet() {
                 type="button"
                 disabled={Boolean(storeStatus && !storeStatus.isOpen && !storeStatus.allowAdvanceOrders)}
                 className="w-full h-10 text-xs font-medium gap-2 cursor-pointer disabled:cursor-not-allowed"
+                onPointerEnter={() => {
+                  router.preloadRoute({ to: '/checkout' })
+                }}
                 onClick={() => {
                   setIsOpen(false)
                   navigate({ to: '/checkout' })

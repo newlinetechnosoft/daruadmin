@@ -724,6 +724,7 @@ function HomePage() {
               </div>
               <Link
                 to="/drinks"
+                preload="intent"
                 className="shrink-0 border-b border-foreground pb-0.5 text-sm font-semibold transition-opacity hover:opacity-60 text-foreground"
               >
                 View all →
@@ -904,6 +905,7 @@ function HomePage() {
 
               <Link
                 to="/food"
+                preload="intent"
                 className="group inline-flex items-center gap-2 border-b border-foreground pb-1 text-sm font-semibold text-foreground transition-all hover:opacity-75"
               >
                 <span>View all food &amp; snacks</span>

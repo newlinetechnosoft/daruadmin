@@ -115,10 +115,10 @@ export function Footer() {
               Explore
             </h4>
 
-            <Link to="/drinks" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary underline">
+            <Link to="/drinks" preload="intent" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary underline">
               Drinks
             </Link>
-            <Link to="/food" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary underline">
+            <Link to="/food" preload="intent" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary underline">
               Food
             </Link>
             <a href="/#reviews" className="text-sidebar-foreground/75 transition-colors hover:text-sidebar-primary underline">
