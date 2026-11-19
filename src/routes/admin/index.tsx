@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { guardModule } from '#/server/auth/guards'
 import { DashboardPanel } from '#/components/panels/dashboard'
 import { adminQueries } from '#/queries/admin'
+import { AdminContentSkeleton } from '#/components/shared/loading'
 
 const searchSchema = z.object({
   range: z.enum(['today', '7d', '30d', '90d', 'ytd', 'custom']).optional(),
@@ -23,5 +24,6 @@ export const Route = createFileRoute('/admin/')({
       }),
     )
   },
+  pendingComponent: () => <AdminContentSkeleton variant="stats-table" />,
   component: DashboardPanel,
 })

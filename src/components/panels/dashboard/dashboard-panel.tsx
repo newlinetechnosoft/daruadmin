@@ -1,3 +1,4 @@
+import * as React from 'react'
 import type { ReactNode } from 'react'
 import { Link, getRouteApi } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
@@ -8,10 +9,14 @@ import { MoneyText } from '#/components/shared/money-text'
 import { DateText } from '#/components/shared/date-text'
 import { StatusIndicator } from '#/components/shared/status-indicator'
 import { PageShell, PageHeader } from '#/components/shared/page-shell'
-import { LineChart } from '#/components/shared/charts'
 import { MetricCard, metricToneStyles } from '#/components/shared/metric-card'
 import type { MetricTone } from '#/components/shared/metric-card'
+import { Skeleton } from '#/components/ui/skeleton'
 import { cn } from '#/lib/utils'
+
+const LineChart = React.lazy(() =>
+  import('#/components/shared/charts').then((m) => ({ default: m.LineChart })),
+)
 import {
   AlertCircle,
   ArrowRight,
@@ -259,7 +264,11 @@ export function DashboardPanel() {
                 </span>
               </CardHeader>
               <CardContent className="px-2 pt-3 pb-2 sm:px-4">
-                <LineChart data={data.salesTrend} money />
+                <React.Suspense
+                  fallback={<Skeleton className="h-48 w-full rounded-lg" />}
+                >
+                  <LineChart data={data.salesTrend} money />
+                </React.Suspense>
               </CardContent>
             </Card>
 
