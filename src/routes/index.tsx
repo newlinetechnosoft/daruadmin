@@ -7,7 +7,6 @@ import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { LazySection } from '#/components/store/lazy-section'
 import { LandingPageSkeleton } from '#/components/shared/loading'
-import { ReviewsSectionSkeleton } from '#/components/store/skeletons'
 
 const LandingPopup = lazy(() =>
   import('#/components/store/landing-popup').then((m) => ({
@@ -1002,10 +1001,7 @@ function HomePage() {
         {/* </section> */}
 
         {/* REVIEWS */}
-        <LazySection
-          minHeight="min-h-[460px]"
-          fallback={<ReviewsSectionSkeleton />}
-        >
+        <LazySection>
           <section
             className="scroll-mt-24 bg-background py-16 sm:py-24"
             id="reviews"

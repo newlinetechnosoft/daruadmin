@@ -1,59 +1,31 @@
-import * as React from 'react'
-import { useState, useEffect, useRef } from 'react'
+import type { ReactNode } from 'react'
+import { cn } from '#/lib/utils'
 
 export interface LazySectionProps {
-  children: React.ReactNode
-  fallback?: React.ReactNode
+  children: ReactNode
   className?: string
-  minHeight?: string
-  rootMargin?: string
 }
 
 /**
- * Renders below-the-fold content only when within `rootMargin` (default 200px) of viewport.
- * Shows a matching height placeholder/skeleton until visible, preventing layout shifts.
+ * Defers offscreen rendering without removing content from the SSR HTML.
+ *
+ * The intrinsic sizes are the measured heights of the homepage reviews
+ * section (three cards) at each Tailwind breakpoint:
+ *   <640px: 1100 (measured at 360px)  |  640px: 1163  |  768px: 672
+ *   1024px: 596  |  1280px: 568
+ *
+ * The `auto` keyword lets the browser remember the real rendered size after
+ * the first paint, so later scrolls do not shift layout.
  */
-export function LazySection({
-  children,
-  fallback,
-  className = '',
-  minHeight = 'min-h-[300px]',
-  rootMargin = '200px',
-}: LazySectionProps) {
-  const [isVisible, setIsVisible] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    // If IntersectionObserver is not supported, mount immediately
-    if (typeof IntersectionObserver === 'undefined') {
-      setIsVisible(true)
-      return
-    }
-
-    const element = ref.current
-    if (!element) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries
-        if (entry.isIntersecting) {
-          setIsVisible(true)
-          observer.disconnect()
-        }
-      },
-      { rootMargin },
-    )
-
-    observer.observe(element)
-
-    return () => {
-      observer.disconnect()
-    }
-  }, [rootMargin])
-
+export function LazySection({ children, className }: LazySectionProps) {
   return (
-    <div ref={ref} className={`${minHeight} ${className}`.trim()}>
-      {isVisible ? children : fallback ?? <div className={minHeight} />}
+    <div
+      className={cn(
+        '[content-visibility:auto] [contain-intrinsic-size:auto_1100px] sm:[contain-intrinsic-size:auto_1163px] md:[contain-intrinsic-size:auto_672px] lg:[contain-intrinsic-size:auto_596px] xl:[contain-intrinsic-size:auto_568px]',
+        className,
+      )}
+    >
+      {children}
     </div>
   )
 }
