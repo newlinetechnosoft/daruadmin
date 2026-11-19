@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Skeleton } from '#/components/ui/skeleton'
 import { cn } from '#/lib/utils'
 import { ImageOff } from 'lucide-react'
@@ -7,13 +7,13 @@ export interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement
   containerClassName?: string
   fallbackIcon?: React.ReactNode
   showSkeleton?: boolean
+  fallbackSrc?: string
 }
 
 /**
- * LazyImage component provides buttery smooth image lazy-loading
- * with an integrated Skeleton placeholder, zero layout shift,
- * and progressive fade-in on complete load.
- * Accurately handles cached and preloaded images where native onLoad does not fire.
+ * LazyImage component provides reliable, bulletproof image rendering.
+ * Keeps images visible at all times, preventing white/blank cards during SSR,
+ * hydration, fast navigation, or page refresh.
  */
 export function LazyImage({
   src,
@@ -21,6 +21,7 @@ export function LazyImage({
   className,
   containerClassName,
   fallbackIcon,
+  fallbackSrc,
   showSkeleton = true,
   loading = 'lazy',
   decoding = 'async',
@@ -30,75 +31,39 @@ export function LazyImage({
 }: LazyImageProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [hasError, setHasError] = useState(false)
+  const [currentSrc, setCurrentSrc] = useState(src)
   const imgRef = useRef<HTMLImageElement | null>(null)
 
-  // Callback ref checks image completion immediately when DOM node is attached
-  const setImgRef = useCallback(
-    (node: HTMLImageElement | null) => {
-      imgRef.current = node
-      if (node && src) {
-        if (node.complete) {
-          if (node.naturalWidth > 0) {
-            setIsLoaded(true)
-            setHasError(false)
-          } else if (node.naturalWidth === 0 && node.src) {
-            setHasError(true)
-            setIsLoaded(false)
-          }
-        } else if (typeof node.decode === 'function') {
-          node
-            .decode()
-            .then(() => {
-              setIsLoaded(true)
-              setHasError(false)
-            })
-            .catch(() => {
-              // Wait for onLoad/onError if decode rejects while loading
-            })
-        }
-      }
-    },
-    [src],
-  )
-
-  // Reset and inspect state when src changes
+  // Sync internal src with prop
   useEffect(() => {
-    if (!src) {
-      setIsLoaded(false)
-      setHasError(false)
-      return
-    }
-
-    const img = imgRef.current
-    if (img) {
-      if (img.complete && (img.currentSrc === src || img.src === src)) {
-        if (img.naturalWidth > 0) {
-          setIsLoaded(true)
-          setHasError(false)
-          return
-        } else if (img.naturalWidth === 0) {
-          setHasError(true)
-          setIsLoaded(false)
-          return
-        }
-      } else if (typeof img.decode === 'function') {
-        img
-          .decode()
-          .then(() => {
-            setIsLoaded(true)
-            setHasError(false)
-          })
-          .catch(() => {
-            // Wait for onLoad / onError
-          })
-      }
-    }
-
-    setIsLoaded(false)
+    setCurrentSrc(src)
     setHasError(false)
+
+    // Check if the DOM image node is already finished loading (e.g. from cache or SSR)
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      setIsLoaded(true)
+    }
   }, [src])
 
-  if (!src || hasError) {
+  const handleLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    setIsLoaded(true)
+    setHasError(false)
+    onLoad?.(e)
+  }
+
+  const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    // If a fallbackSrc is provided and not yet used, switch to it before declaring error
+    if (fallbackSrc && currentSrc !== fallbackSrc) {
+      setCurrentSrc(fallbackSrc)
+      setIsLoaded(false)
+      return
+    }
+    setHasError(true)
+    setIsLoaded(false)
+    onError?.(e)
+  }
+
+  if (!currentSrc || hasError) {
     return (
       <div
         className={cn(
@@ -118,39 +83,29 @@ export function LazyImage({
         containerClassName,
       )}
     >
-      {/* Animated Skeleton Placeholder while loading */}
+      {/* Animated Skeleton Placeholder behind image while loading */}
       {showSkeleton && !isLoaded && (
         <Skeleton
-          className="absolute inset-0 h-full w-full rounded-none bg-muted/60 dark:bg-zinc-800/60 z-0 animate-pulse pointer-events-none"
+          className="absolute inset-0 h-full w-full rounded-none bg-muted/50 dark:bg-zinc-800/50 z-0 animate-pulse pointer-events-none"
         />
       )}
 
-      {/* Image with progressive fade-in and proper stacking */}
+      {/* Image: ALWAYS rendered visible with z-10 over skeleton */}
       <img
-        ref={setImgRef}
-        src={src}
+        ref={(node) => {
+          imgRef.current = node
+          if (node && node.complete && node.naturalWidth > 0 && !isLoaded) {
+            setIsLoaded(true)
+          }
+        }}
+        src={currentSrc}
         alt={alt}
         loading={loading}
         decoding={decoding}
-        onLoad={(e) => {
-          setIsLoaded(true)
-          setHasError(false)
-          onLoad?.(e)
-        }}
-        onError={(e) => {
-          const target = e.currentTarget
-          if (target.complete && target.naturalWidth > 0) {
-            setIsLoaded(true)
-            setHasError(false)
-          } else {
-            setHasError(true)
-            setIsLoaded(false)
-            onError?.(e)
-          }
-        }}
+        onLoad={handleLoad}
+        onError={handleError}
         className={cn(
-          'h-full w-full transition-opacity duration-300 ease-out relative z-10',
-          isLoaded ? 'opacity-100' : 'opacity-0',
+          'h-full w-full object-contain relative z-10',
           className,
         )}
         {...props}

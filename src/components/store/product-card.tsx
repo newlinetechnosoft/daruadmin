@@ -153,6 +153,17 @@ function ProductCardComponent({
     product.brandName ??
     (product.catalogType === 'liquor' ? 'Beer & Spirits' : 'Food')
 
+  const fallbackImg =
+    product.catalogType === 'liquor'
+      ? 'https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=500&q=80'
+      : product.catalogType === 'food'
+        ? 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=80'
+        : product.catalogType === 'grocery'
+          ? 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=500&q=80'
+          : 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=500&q=80'
+
+  const displayImage = product.primaryImage?.trim() || fallbackImg
+
   const metaText = [
     activeVariant.volumeMl
       ? `${activeVariant.volumeMl}ml`
@@ -342,12 +353,13 @@ function ProductCardComponent({
 
           {/* Product Image with progressive lazy load and skeleton */}
           <LazyImage
-            src={product.primaryImage ?? undefined}
+            src={displayImage}
             alt={product.name}
             className="w-full h-full object-contain p-2 sm:p-2.5 transition-transform duration-500 ease-out group-hover:scale-105"
             containerClassName="w-full h-full"
             loading={priority ? 'eager' : 'lazy'}
             decoding={priority ? 'sync' : 'async'}
+            fallbackSrc={fallbackImg}
             fallbackIcon={
               product.catalogType === 'liquor' ? (
                 <Wine className="h-10 w-10 sm:h-12 sm:w-12 stroke-[1.25]" />
@@ -531,10 +543,11 @@ function ProductCardComponent({
               {/* Left Column: Image */}
               <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-zinc-900/40 border border-border/50 flex items-center justify-center p-4">
                 <LazyImage
-                  src={modalProduct.primaryImage ?? undefined}
+                  src={modalProduct.primaryImage?.trim() || fallbackImg}
                   alt={modalProduct.name}
                   className="w-full h-full object-contain"
                   containerClassName="w-full h-full"
+                  fallbackSrc={fallbackImg}
                   fallbackIcon={<Wine className="h-20 w-20 text-muted-foreground stroke-1" />}
                 />
 
@@ -719,10 +732,11 @@ function ProductCardComponent({
                     >
                       <div className="relative aspect-square w-full rounded-lg bg-zinc-900/30 overflow-hidden mb-2 flex items-center justify-center">
                         <LazyImage
-                          src={item.primaryImage ?? undefined}
+                          src={item.primaryImage?.trim() || fallbackImg}
                           alt={item.name}
                           className="w-full h-full object-contain group-hover/suggested:scale-105 transition-transform"
                           containerClassName="w-full h-full"
+                          fallbackSrc={fallbackImg}
                           fallbackIcon={<Wine className="h-8 w-8 text-muted-foreground stroke-1" />}
                         />
                       </div>
