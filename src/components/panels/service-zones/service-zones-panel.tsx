@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, lazy, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { zoneQueries } from '#/queries/zones'
 import {
@@ -13,8 +13,13 @@ import {
   leafletRingToGeoJson,
   validateZonePolygon,
 } from '#/lib/geo-utils'
-import { ZoneMapEditor } from './zone-map-editor'
+import { Skeleton } from '#/components/ui/skeleton'
 import { Button } from '#/components/ui/button'
+
+const ZoneMapEditor = lazy(() =>
+  import('./zone-map-editor').then((m) => ({ default: m.ZoneMapEditor })),
+)
+
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Switch } from '#/components/ui/switch'
@@ -268,16 +273,18 @@ export function ServiceZonesPanel() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Interactive Leaflet Map Editor */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-3">
-          <ZoneMapEditor
-            zones={zones}
-            selectedZone={selectedZone}
-            currentRing={currentRing}
-            onRingChange={setCurrentRing}
-            onSelectZone={handleSelectZone}
-            onStartNewZone={handleStartCreate}
-            isEditing={isEditing}
-            validationError={validationError}
-          />
+          <Suspense fallback={<Skeleton className="h-[480px] w-full rounded-lg" />}>
+            <ZoneMapEditor
+              zones={zones}
+              selectedZone={selectedZone}
+              currentRing={currentRing}
+              onRingChange={setCurrentRing}
+              onSelectZone={handleSelectZone}
+              onStartNewZone={handleStartCreate}
+              isEditing={isEditing}
+              validationError={validationError}
+            />
+          </Suspense>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground px-1">
             <HelpCircle className="h-3.5 w-3.5 text-primary shrink-0" />
             <span>
