@@ -1,12 +1,16 @@
+import * as React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
 import { can } from '#/server/auth/permissions-shared'
-import type { ModuleKey } from '#/server/operations/types'
+import type { ModuleKey, Settlement } from '#/server/operations/types'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
 import { PageHeader } from '#/components/shared/page-header'
+import { AsyncBoundary } from '#/components/shared/async-boundary'
+import { TabSkeleton, type SkeletonVariant } from '#/components/shared/loading'
 import {
   postManualJournalVoucherFn,
   recordDealerDisbursementFn,
@@ -51,33 +55,120 @@ import {
   Users,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { BatchDealerSettlementDialog } from './batch-dealer-settlement-dialog'
-import { RiderPayrollRunDialog } from './rider-payroll-run-dialog'
-import { RiderSettlementApprovalDialog } from './rider-settlement-approval-dialog'
-import { RiderSettlementRequests } from './rider-settlement-requests'
-import { FinancialReportsTab } from './financial-reports-tab'
-import { AccountDefaultsTab } from './account-defaults-tab'
-import { AccountsOverview } from './accounts-overview'
-import { GeneralLedgerTab } from './tabs/general-ledger-tab'
-import { DealerReportTab } from './tabs/dealer-report-tab'
-import { RiderReportTab } from './tabs/rider-report-tab'
-import { TransactionsTab } from './tabs/transactions-tab'
-import { SalesAccountTab } from './tabs/sales-account-tab'
-import { SalaryAccountTab } from './tabs/salary-account-tab'
-import { ChartOfAccountsTab } from './tabs/chart-of-accounts-tab'
-import { BranchesTab } from './tabs/branches-tab'
-import { VouchersTab } from './tabs/vouchers-tab'
-import { PartyAccountsTab } from './tabs/party-accounts-tab'
-import { BankCashTab } from './tabs/bank-cash-tab'
-import { ExpensesTab } from './tabs/expenses-tab'
-import { ReconciliationTab } from './tabs/reconciliation-tab'
-import { ExportCenterTab } from './tabs/export-center-tab'
-import { PeriodCloseTab } from './tabs/period-close-tab'
-import { AuditTrailTab } from './tabs/audit-trail-tab'
-import { AccountingSettingsTab } from './tabs/accounting-settings-tab'
 import { accountsRouteApi, normalizeAccountsTab } from './accounts-route'
 import type { AccountsTab } from './accounts-route'
-import type { Settlement } from '#/server/operations/types'
+
+// Lazy-loaded tab components for component-scoped code splitting
+const AccountsOverview = React.lazy(() =>
+  import('./accounts-overview').then((m) => ({ default: m.AccountsOverview })),
+)
+const GeneralLedgerTab = React.lazy(() =>
+  import('./tabs/general-ledger-tab').then((m) => ({
+    default: m.GeneralLedgerTab,
+  })),
+)
+const TransactionsTab = React.lazy(() =>
+  import('./tabs/transactions-tab').then((m) => ({
+    default: m.TransactionsTab,
+  })),
+)
+const VouchersTab = React.lazy(() =>
+  import('./tabs/vouchers-tab').then((m) => ({ default: m.VouchersTab })),
+)
+const PartyAccountsTab = React.lazy(() =>
+  import('./tabs/party-accounts-tab').then((m) => ({
+    default: m.PartyAccountsTab,
+  })),
+)
+const BankCashTab = React.lazy(() =>
+  import('./tabs/bank-cash-tab').then((m) => ({ default: m.BankCashTab })),
+)
+const ExpensesTab = React.lazy(() =>
+  import('./tabs/expenses-tab').then((m) => ({ default: m.ExpensesTab })),
+)
+const ReconciliationTab = React.lazy(() =>
+  import('./tabs/reconciliation-tab').then((m) => ({
+    default: m.ReconciliationTab,
+  })),
+)
+const ExportCenterTab = React.lazy(() =>
+  import('./tabs/export-center-tab').then((m) => ({
+    default: m.ExportCenterTab,
+  })),
+)
+const PeriodCloseTab = React.lazy(() =>
+  import('./tabs/period-close-tab').then((m) => ({
+    default: m.PeriodCloseTab,
+  })),
+)
+const AuditTrailTab = React.lazy(() =>
+  import('./tabs/audit-trail-tab').then((m) => ({ default: m.AuditTrailTab })),
+)
+const AccountingSettingsTab = React.lazy(() =>
+  import('./tabs/accounting-settings-tab').then((m) => ({
+    default: m.AccountingSettingsTab,
+  })),
+)
+const AccountDefaultsTab = React.lazy(() =>
+  import('./account-defaults-tab').then((m) => ({
+    default: m.AccountDefaultsTab,
+  })),
+)
+const DealerReportTab = React.lazy(() =>
+  import('./tabs/dealer-report-tab').then((m) => ({
+    default: m.DealerReportTab,
+  })),
+)
+const RiderReportTab = React.lazy(() =>
+  import('./tabs/rider-report-tab').then((m) => ({
+    default: m.RiderReportTab,
+  })),
+)
+const RiderSettlementRequests = React.lazy(() =>
+  import('./rider-settlement-requests').then((m) => ({
+    default: m.RiderSettlementRequests,
+  })),
+)
+const SalesAccountTab = React.lazy(() =>
+  import('./tabs/sales-account-tab').then((m) => ({
+    default: m.SalesAccountTab,
+  })),
+)
+const SalaryAccountTab = React.lazy(() =>
+  import('./tabs/salary-account-tab').then((m) => ({
+    default: m.SalaryAccountTab,
+  })),
+)
+const ChartOfAccountsTab = React.lazy(() =>
+  import('./tabs/chart-of-accounts-tab').then((m) => ({
+    default: m.ChartOfAccountsTab,
+  })),
+)
+const BranchesTab = React.lazy(() =>
+  import('./tabs/branches-tab').then((m) => ({ default: m.BranchesTab })),
+)
+const FinancialReportsTab = React.lazy(() =>
+  import('./financial-reports-tab').then((m) => ({
+    default: m.FinancialReportsTab,
+  })),
+)
+
+// Lazy-loaded heavy dialogs
+const BatchDealerSettlementDialog = React.lazy(() =>
+  import('./batch-dealer-settlement-dialog').then((m) => ({
+    default: m.BatchDealerSettlementDialog,
+  })),
+)
+const RiderPayrollRunDialog = React.lazy(() =>
+  import('./rider-payroll-run-dialog').then((m) => ({
+    default: m.RiderPayrollRunDialog,
+  })),
+)
+const RiderSettlementApprovalDialog = React.lazy(() =>
+  import('./rider-settlement-approval-dialog').then((m) => ({
+    default: m.RiderSettlementApprovalDialog,
+  })),
+)
 
 type ManualVoucherType = 'JV' | 'PV' | 'RV' | 'CV'
 type DealerPaymentMethod =
@@ -121,6 +212,181 @@ export const TAB_MODULE_MAP: Record<AccountsTab, ModuleKey> = {
   'account-defaults': 'accounts_settings',
   'sales-account': 'accounts_sales_account',
   'salary-account': 'accounts_salary_account',
+}
+
+export const TAB_PREFETCH: Record<
+  AccountsTab,
+  {
+    importTab: () => Promise<unknown>
+    prefetchQueries: (qc: QueryClient) => void
+  }
+> = {
+  overview: {
+    importTab: () => import('./accounts-overview'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.ledger())
+    },
+  },
+  'chart-of-accounts': {
+    importTab: () => import('./tabs/chart-of-accounts-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.coaTree())
+    },
+  },
+  branches: {
+    importTab: () => import('./tabs/branches-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.branches())
+    },
+  },
+  ledger: {
+    importTab: () => import('./tabs/general-ledger-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.ledger())
+      void qc.prefetchQuery(adminQueries.coaTree())
+    },
+  },
+  transactions: {
+    importTab: () => import('./tabs/transactions-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.journalTransactions({}))
+    },
+  },
+  vouchers: {
+    importTab: () => import('./tabs/vouchers-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.vouchersList({}))
+    },
+  },
+  'party-accounts': {
+    importTab: () => import('./tabs/party-accounts-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.dealers())
+      void qc.prefetchQuery(adminQueries.riders())
+    },
+  },
+  'dealer-ledger': {
+    importTab: () => import('./tabs/dealer-report-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.dealers())
+    },
+  },
+  'rider-ledger': {
+    importTab: () => import('./tabs/rider-report-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.riders())
+    },
+  },
+  'customer-ledger': {
+    importTab: () => import('./tabs/party-accounts-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.customers())
+    },
+  },
+  'supplier-ledger': {
+    importTab: () => import('./tabs/party-accounts-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.dealers())
+    },
+  },
+  'employee-ledger': {
+    importTab: () => import('./tabs/party-accounts-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.staff())
+    },
+  },
+  'bank-cash': {
+    importTab: () => import('./tabs/bank-cash-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.bankAccounts())
+      void qc.prefetchQuery(adminQueries.cashAccounts())
+    },
+  },
+  expenses: {
+    importTab: () => import('./tabs/expenses-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.expenseCategories())
+      void qc.prefetchQuery(adminQueries.expenses({}))
+      void qc.prefetchQuery(adminQueries.branches())
+      void qc.prefetchQuery(adminQueries.bankAccounts())
+      void qc.prefetchQuery(adminQueries.cashAccounts())
+    },
+  },
+  reconciliation: {
+    importTab: () => import('./tabs/reconciliation-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.bankAccounts())
+      void qc.prefetchQuery(adminQueries.cashAccounts())
+    },
+  },
+  'financial-reports': {
+    importTab: () => import('./financial-reports-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.coaTree())
+    },
+  },
+  'export-center': {
+    importTab: () => import('./tabs/export-center-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.coaTree())
+    },
+  },
+  'period-close': {
+    importTab: () => import('./tabs/period-close-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.accountingPeriods())
+    },
+  },
+  'audit-trail': {
+    importTab: () => import('./tabs/audit-trail-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.financialAuditLogs({}))
+    },
+  },
+  settings: {
+    importTab: () => import('./tabs/accounting-settings-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.accountingConfig())
+    },
+  },
+  'account-defaults': {
+    importTab: () => import('./account-defaults-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.accountingConfig())
+    },
+  },
+  'sales-account': {
+    importTab: () => import('./tabs/sales-account-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.orders())
+    },
+  },
+  'salary-account': {
+    importTab: () => import('./tabs/salary-account-tab'),
+    prefetchQueries: (qc) => {
+      void qc.prefetchQuery(adminQueries.riders())
+    },
+  },
+}
+
+export function getTabSkeletonVariant(tab: AccountsTab): SkeletonVariant {
+  switch (tab) {
+    case 'overview':
+    case 'bank-cash':
+    case 'expenses':
+    case 'dealer-ledger':
+    case 'rider-ledger':
+      return 'stats-table'
+    case 'financial-reports':
+      return 'report'
+    case 'settings':
+    case 'account-defaults':
+      return 'form'
+    case 'export-center':
+      return 'cards'
+    default:
+      return 'table'
+  }
 }
 
 export function AccountsPanel() {
@@ -224,10 +490,14 @@ export function AccountsPanel() {
   const [isDealerPayoutOpen, setIsDealerPayoutOpen] = useState(false)
   const [isBatchDealerSettlementOpen, setIsBatchDealerSettlementOpen] =
     useState(false)
+  const [hasOpenedBatchSettlement, setHasOpenedBatchSettlement] =
+    useState(false)
   const [batchDealerId, setBatchDealerId] = useState('')
   const [isRiderPayrollRunOpen, setIsRiderPayrollRunOpen] = useState(false)
+  const [hasOpenedPayrollRun, setHasOpenedPayrollRun] = useState(false)
   const [isRiderApprovalModalOpen, setIsRiderApprovalModalOpen] =
     useState(false)
+  const [hasOpenedApprovalModal, setHasOpenedApprovalModal] = useState(false)
   const [selectedRiderSettlement, setSelectedRiderSettlement] =
     useState<Settlement | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -401,12 +671,19 @@ export function AccountsPanel() {
 
   const handleOpenBatchSettlement = useCallback((dealerId?: string) => {
     setBatchDealerId(dealerId ?? '')
+    setHasOpenedBatchSettlement(true)
     setIsBatchDealerSettlementOpen(true)
   }, [])
 
   const handleOpenSettlementApproval = useCallback((settlement: Settlement) => {
     setSelectedRiderSettlement(settlement)
+    setHasOpenedApprovalModal(true)
     setIsRiderApprovalModalOpen(true)
+  }, [])
+
+  const handleOpenRiderPayrollRun = useCallback(() => {
+    setHasOpenedPayrollRun(true)
+    setIsRiderPayrollRunOpen(true)
   }, [])
 
   const handlePostManualVoucher = async (event: React.FormEvent) => {
@@ -677,6 +954,20 @@ export function AccountsPanel() {
                         key={item.value}
                         value={item.value}
                         className={TAB_TRIGGER_CLASS}
+                        onPointerEnter={() => {
+                          const prefetch = TAB_PREFETCH[item.value]
+                          if (prefetch) {
+                            void prefetch.importTab()
+                            prefetch.prefetchQueries(queryClient)
+                          }
+                        }}
+                        onFocus={() => {
+                          const prefetch = TAB_PREFETCH[item.value]
+                          if (prefetch) {
+                            void prefetch.importTab()
+                            prefetch.prefetchQueries(queryClient)
+                          }
+                        }}
                       >
                         <Icon className="h-3.5 w-3.5" />
                         <span>{item.label}</span>
@@ -693,12 +984,18 @@ export function AccountsPanel() {
             </Tabs>
 
             <div className="pt-4">
-              {activeTab === 'overview' && (
+              <AsyncBoundary
+                key={activeTab}
+                fallback={
+                  <TabSkeleton variant={getTabSkeletonVariant(activeTab)} />
+                }
+              >
+                {activeTab === 'overview' && (
                 <AccountsOverview
                   onPostVoucher={() => setIsAddVoucherOpen(true)}
                   onCashHandover={() => handleOpenCashHandover()}
                   onDealerSettlement={() => handleOpenBatchSettlement()}
-                  onRiderPayroll={() => setIsRiderPayrollRunOpen(true)}
+                  onRiderPayroll={handleOpenRiderPayrollRun}
                   onNavigateTab={setActiveTab}
                 />
               )}
@@ -755,7 +1052,7 @@ export function AccountsPanel() {
 
               {activeTab === 'salary-account' && (
                 <SalaryAccountTab
-                  onRunPayroll={() => setIsRiderPayrollRunOpen(true)}
+                  onRunPayroll={handleOpenRiderPayrollRun}
                   onApproveSettlement={handleOpenSettlementApproval}
                 />
               )}
@@ -785,6 +1082,7 @@ export function AccountsPanel() {
               )}
 
               {activeTab === 'account-defaults' && <AccountDefaultsTab />}
+              </AsyncBoundary>
             </div>
           </>
         )}
@@ -1206,38 +1504,50 @@ export function AccountsPanel() {
         </DialogContent>
       </Dialog>
 
-      <BatchDealerSettlementDialog
-        open={isBatchDealerSettlementOpen}
-        onOpenChange={setIsBatchDealerSettlementOpen}
-        dealers={batchDealers}
-        initialDealerId={batchDealerId || undefined}
-        onSettled={() => {
-          void invalidateLedger()
-        }}
-      />
+      {hasOpenedBatchSettlement && (
+        <React.Suspense fallback={null}>
+          <BatchDealerSettlementDialog
+            open={isBatchDealerSettlementOpen}
+            onOpenChange={setIsBatchDealerSettlementOpen}
+            dealers={batchDealers}
+            initialDealerId={batchDealerId || undefined}
+            onSettled={() => {
+              void invalidateLedger()
+            }}
+          />
+        </React.Suspense>
+      )}
 
-      <RiderPayrollRunDialog
-        open={isRiderPayrollRunOpen}
-        onOpenChange={setIsRiderPayrollRunOpen}
-        riders={payrollRiders}
-        onSuccess={() => {
-          void invalidateLedger()
-        }}
-      />
+      {hasOpenedPayrollRun && (
+        <React.Suspense fallback={null}>
+          <RiderPayrollRunDialog
+            open={isRiderPayrollRunOpen}
+            onOpenChange={setIsRiderPayrollRunOpen}
+            riders={payrollRiders}
+            onSuccess={() => {
+              void invalidateLedger()
+            }}
+          />
+        </React.Suspense>
+      )}
 
-      <RiderSettlementApprovalDialog
-        open={isRiderApprovalModalOpen}
-        onOpenChange={(open) => {
-          setIsRiderApprovalModalOpen(open)
-          if (!open) setSelectedRiderSettlement(null)
-        }}
-        settlement={selectedRiderSettlement}
-        onSuccess={(voucherNo) => {
-          toast.success(`Settlement voucher ${voucherNo} posted.`)
-          setSelectedRiderSettlement(null)
-          void invalidateLedger()
-        }}
-      />
+      {hasOpenedApprovalModal && (
+        <React.Suspense fallback={null}>
+          <RiderSettlementApprovalDialog
+            open={isRiderApprovalModalOpen}
+            onOpenChange={(open) => {
+              setIsRiderApprovalModalOpen(open)
+              if (!open) setSelectedRiderSettlement(null)
+            }}
+            settlement={selectedRiderSettlement}
+            onSuccess={(voucherNo) => {
+              toast.success(`Settlement voucher ${voucherNo} posted.`)
+              setSelectedRiderSettlement(null)
+              void invalidateLedger()
+            }}
+          />
+        </React.Suspense>
+      )}
     </div>
   )
 }

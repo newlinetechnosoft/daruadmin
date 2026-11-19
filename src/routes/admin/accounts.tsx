@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { guardModule } from '#/server/auth/guards'
 import { AccountsPanel } from '#/components/panels/accounts'
 import { adminQueries } from '#/queries/admin'
+import { AdminContentSkeleton } from '#/components/shared/loading'
 
 const accountsSearchSchema = z.object({
   tab: z
@@ -48,5 +49,6 @@ export const Route = createFileRoute('/admin/accounts')({
   loader: async ({ context }) => {
     return context.queryClient.ensureQueryData(adminQueries.ledger())
   },
+  pendingComponent: () => <AdminContentSkeleton variant="stats-table" />,
   component: AccountsPanel,
 })

@@ -20,6 +20,7 @@ import {
   CardTitle,
 } from '#/components/ui/card'
 import { toast } from 'sonner'
+import { TabSkeleton } from '#/components/shared/loading'
 import {
   CheckCircle2,
   HelpCircle,
@@ -188,16 +189,7 @@ export function AccountDefaultsTab() {
   }, [data])
 
   if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-xs text-muted-foreground">
-            Loading accounting defaults...
-          </p>
-        </div>
-      </div>
-    )
+    return <TabSkeleton variant="form" />
   }
 
   if (error || !data) {
