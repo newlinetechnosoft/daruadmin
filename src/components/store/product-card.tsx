@@ -68,6 +68,7 @@ export interface ProductCardProps {
   product: ProductProps
   suggestedProducts?: ProductProps[]
   className?: string
+  priority?: boolean
 }
 
 /**
@@ -86,6 +87,7 @@ function ProductCardComponent({
   product,
   suggestedProducts,
   className = '',
+  priority = false,
 }: ProductCardProps) {
   const { addItem, updateQuantity, getItemQuantity } = useCart()
   const isWishlisted = useIsFavorite(product.id)
@@ -327,7 +329,7 @@ function ProductCardComponent({
                 ? `Remove ${product.name} from favorites`
                 : `Add ${product.name} to favorites`
             }
-            className="absolute right-2 top-2 sm:right-2.5 sm:top-2.5 z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-black/60 hover:bg-black/85 text-white/80 hover:text-white backdrop-blur-md transition-all active:scale-90 border border-white/10 shadow-xs cursor-pointer"
+            className="absolute right-2 top-2 sm:right-2.5 sm:top-2.5 z-20 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-black/60 hover:bg-black/85 text-white/80 hover:text-white backdrop-blur-md transition-all active:scale-90 border border-white/10 shadow-xs cursor-pointer"
           >
             <Heart
               className={`h-3.5 w-3.5 sm:h-4 sm:w-4 transition-colors ${
@@ -344,8 +346,8 @@ function ProductCardComponent({
             alt={product.name}
             className="w-full h-full object-contain p-2 sm:p-2.5 transition-transform duration-500 ease-out group-hover:scale-105"
             containerClassName="w-full h-full"
-            loading="lazy"
-            decoding="async"
+            loading={priority ? 'eager' : 'lazy'}
+            decoding={priority ? 'sync' : 'async'}
             fallbackIcon={
               product.catalogType === 'liquor' ? (
                 <Wine className="h-10 w-10 sm:h-12 sm:w-12 stroke-[1.25]" />

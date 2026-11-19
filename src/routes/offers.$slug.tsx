@@ -317,8 +317,8 @@ function OfferDetailPage() {
             />
           ) : (
             <div className="grid grid-cols-2 gap-2 sm:gap-3.5 md:gap-4 lg:grid-cols-3">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {products.map((product, idx) => (
+                <ProductCard key={product.id} product={product} priority={idx < 4} />
               ))}
             </div>
           )}

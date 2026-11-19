@@ -484,10 +484,11 @@ function DrinksPage() {
               <section>
                 {filteredProducts.length > 0 ? (
                   <div className="grid grid-cols-2 gap-2 sm:gap-3.5 md:gap-4 lg:grid-cols-3">
-                    {filteredProducts.map((product) => (
+                    {filteredProducts.map((product, idx) => (
                       <ProductCard
                         key={product.id}
                         product={product as ProductProps}
+                        priority={idx < 6}
                       />
                     ))}
                   </div>

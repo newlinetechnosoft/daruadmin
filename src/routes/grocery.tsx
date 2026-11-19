@@ -446,9 +446,10 @@ function GroceryPage() {
                     {filteredProducts.length === 1 ? '' : 's'}
                   </div>
                   <div className="grid grid-cols-2 gap-2 sm:gap-3.5 md:gap-4 lg:grid-cols-3">
-                    {filteredProducts.map((p) => (
+                    {filteredProducts.map((p, idx) => (
                       <ProductCard
                         key={p.id}
+                        priority={idx < 6}
                         product={{
                           ...p,
                           catalogType: 'grocery',
