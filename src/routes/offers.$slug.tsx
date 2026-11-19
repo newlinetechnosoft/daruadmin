@@ -18,7 +18,7 @@ import {
   BreadcrumbSeparator,
 } from '#/components/ui/breadcrumb'
 import { EmptyState } from '#/components/shared/empty-state'
-import { CatalogPageSkeleton } from '#/components/shared/loading'
+import { OfferPageSkeleton } from '#/components/store/skeletons'
 import {
   AlertCircle,
   ArrowRight,
@@ -94,7 +94,7 @@ export const Route = createFileRoute('/offers/$slug')({
       },
     ],
   }),
-  pendingComponent: CatalogPageSkeleton,
+  pendingComponent: OfferPageSkeleton,
   component: OfferDetailPage,
 })
 
