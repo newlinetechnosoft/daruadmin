@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { useState, useMemo, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -20,9 +21,15 @@ import { RelatedRecords } from '#/components/shared/form-view/related-records'
 import { ChildTable } from '#/components/shared/child-table'
 import type { ChildTableColumn } from '#/components/shared/child-table'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
-import { LocationPicker } from '#/components/shared/location-picker'
+import { Skeleton } from '#/components/ui/skeleton'
 import { DEFAULT_MAP_CENTER } from '#/lib/map-config'
 import type { GeoPoint } from '#/lib/map-config'
+
+const LocationPicker = React.lazy(() =>
+  import('#/components/shared/location-picker').then((m) => ({
+    default: m.LocationPicker,
+  })),
+)
 import {
   Form,
   FormControl,
@@ -742,20 +749,24 @@ export function DealerForm({ dealerId }: DealerFormProps) {
               </div>
             </CardHeader>
             <CardContent className="pt-4">
-              <LocationPicker
-                value={selectedPoint}
-                onChange={handleLocationChange}
-                defaultCenter={
-                  existingDealer?.city.toLowerCase().includes('kathmandu')
-                    ? [27.7172, 85.324]
-                    : existingDealer?.city.toLowerCase().includes('lalitpur')
-                      ? [27.671, 85.321]
-                      : DEFAULT_MAP_CENTER
-                }
-                height="h-72 sm:h-80"
-                helperText="Click the map or drag the pin to the dealer's exact shop location."
-                showCoordinatesInputs={true}
-              />
+              <React.Suspense
+                fallback={<Skeleton className="h-72 sm:h-80 w-full rounded-md" />}
+              >
+                <LocationPicker
+                  value={selectedPoint}
+                  onChange={handleLocationChange}
+                  defaultCenter={
+                    existingDealer?.city.toLowerCase().includes('kathmandu')
+                      ? [27.7172, 85.324]
+                      : existingDealer?.city.toLowerCase().includes('lalitpur')
+                        ? [27.671, 85.321]
+                        : DEFAULT_MAP_CENTER
+                  }
+                  height="h-72 sm:h-80"
+                  helperText="Click the map or drag the pin to the dealer's exact shop location."
+                  showCoordinatesInputs={true}
+                />
+              </React.Suspense>
             </CardContent>
           </Card>
 
