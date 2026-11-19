@@ -219,7 +219,7 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
             className="hidden h-10 w-10 rounded-full text-muted-foreground hover:text-foreground sm:inline-flex"
             aria-label="Your favorites"
           >
-            <Link to="/favorites" preload="intent">
+            <Link to="/favorites">
               <Heart className="h-[18px] w-[18px]" />
             </Link>
           </Button>
@@ -256,13 +256,13 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/orders" preload="intent">
+                  <Link to="/orders">
                     <ShoppingBag className="mr-2 h-4 w-4" />
                     My orders
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/track" preload="intent">
+                  <Link to="/track">
                     <Truck className="mr-2 h-4 w-4" />
                     Track by code
                   </Link>
@@ -447,7 +447,6 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                   </Link>
                   <Link
                     to="/track"
-                    preload="intent"
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-medium transition-colors hover:bg-muted"
                   >
@@ -463,7 +462,6 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                     <>
                       <Link
                         to="/orders"
-                        preload="intent"
                         onClick={() => setMobileMenuOpen(false)}
                         className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm hover:bg-muted"
                       >
@@ -472,7 +470,6 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                       </Link>
                       <Link
                         to="/favorites"
-                        preload="intent"
                         onClick={() => setMobileMenuOpen(false)}
                         className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm hover:bg-muted"
                       >
