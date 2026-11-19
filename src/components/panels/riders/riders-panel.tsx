@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { useState, useMemo } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import {
@@ -16,11 +17,23 @@ import { formatNPR, fromPaisa } from '#/lib/money'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
-import { RiderDialog } from './rider-dialog'
-import { RiderSettlementDialog } from './rider-settlement-dialog'
-import { RiderTelemetryMap } from './rider-telemetry-map'
+import { Skeleton } from '#/components/ui/skeleton'
 import { adminQueries } from '#/queries/admin'
 import { can } from '#/server/auth/permissions-shared'
+
+const RiderDialog = React.lazy(() =>
+  import('./rider-dialog').then((m) => ({ default: m.RiderDialog })),
+)
+const RiderSettlementDialog = React.lazy(() =>
+  import('./rider-settlement-dialog').then((m) => ({
+    default: m.RiderSettlementDialog,
+  })),
+)
+const RiderTelemetryMap = React.lazy(() =>
+  import('./rider-telemetry-map').then((m) => ({
+    default: m.RiderTelemetryMap,
+  })),
+)
 import {
   Bike,
   Search,
@@ -103,6 +116,7 @@ export function RidersPanel() {
 
   // Rider Dialog state (for both Create & Edit)
   const [isRiderDialogOpen, setIsRiderDialogOpen] = useState(false)
+  const [hasOpenedRiderDialog, setHasOpenedRiderDialog] = useState(false)
   const [selectedRider, setSelectedRider] = useState<Rider | null>(null)
 
   // Delete Confirm Dialog state
@@ -112,6 +126,8 @@ export function RidersPanel() {
 
   // Rider settlement request review dialog
   const [settleTarget, setSettleTarget] = useState<Rider | null>(null)
+  const [hasOpenedSettlementDialog, setHasOpenedSettlementDialog] =
+    useState(false)
   const riderCashHandovers = ridersData.ops.riderCashHandovers
   const canReviewSettlements =
     access?.user?.role === 'admin' || access?.user?.role === 'manager'
@@ -172,11 +188,13 @@ export function RidersPanel() {
 
   const handleOpenCreate = () => {
     setSelectedRider(null)
+    setHasOpenedRiderDialog(true)
     setIsRiderDialogOpen(true)
   }
 
   const handleOpenEdit = (rider: Rider) => {
     setSelectedRider(rider)
+    setHasOpenedRiderDialog(true)
     setIsRiderDialogOpen(true)
   }
 
@@ -231,6 +249,8 @@ export function RidersPanel() {
   }
 
   const handleReviewRiderSettlement = (rider: Rider) => {
+    setSelectedRider(null)
+    setHasOpenedSettlementDialog(true)
     setSettleTarget(rider)
   }
 
@@ -335,11 +355,15 @@ export function RidersPanel() {
           </span>
         </div>
 
-        <RiderTelemetryMap
-          riders={ops.riders}
-          onRefresh={() => void refetch()}
-          isRefreshing={isFetching}
-        />
+        <React.Suspense
+          fallback={<Skeleton className="h-[360px] w-full rounded-b-lg" />}
+        >
+          <RiderTelemetryMap
+            riders={ops.riders}
+            onRefresh={() => void refetch()}
+            isRefreshing={isFetching}
+          />
+        </React.Suspense>
       </Card>
 
       {/* Filter and Search Bar */}
@@ -717,11 +741,15 @@ export function RidersPanel() {
       </DataSection>
 
       {/* Shared Rider Modal Dialog (Create & Edit) */}
-      <RiderDialog
-        open={isRiderDialogOpen}
-        onOpenChange={setIsRiderDialogOpen}
-        rider={selectedRider}
-      />
+      {hasOpenedRiderDialog && (
+        <React.Suspense fallback={null}>
+          <RiderDialog
+            open={isRiderDialogOpen}
+            onOpenChange={setIsRiderDialogOpen}
+            rider={selectedRider}
+          />
+        </React.Suspense>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
@@ -743,16 +771,20 @@ export function RidersPanel() {
         onConfirm={handleDeleteRider}
       />
 
-      <RiderSettlementDialog
-        open={Boolean(settleTarget)}
-        onOpenChange={(open) => {
-          if (!open) setSettleTarget(null)
-        }}
-        rider={settleTarget}
-        requests={riderCashHandovers}
-        canReview={canReviewSettlements}
-        onUpdated={refreshAfterSettlement}
-      />
+      {hasOpenedSettlementDialog && (
+        <React.Suspense fallback={null}>
+          <RiderSettlementDialog
+            open={Boolean(settleTarget)}
+            onOpenChange={(open) => {
+              if (!open) setSettleTarget(null)
+            }}
+            rider={settleTarget}
+            requests={riderCashHandovers}
+            canReview={canReviewSettlements}
+            onUpdated={refreshAfterSettlement}
+          />
+        </React.Suspense>
+      )}
     </div>
   )
 }
