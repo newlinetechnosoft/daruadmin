@@ -7,13 +7,6 @@ import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { LazySection } from '#/components/store/lazy-section'
 import { LandingPageSkeleton } from '#/components/shared/loading'
-
-const LandingPopup = lazy(() =>
-  import('#/components/store/landing-popup').then((m) => ({
-    default: m.LandingPopup,
-  })),
-)
-
 import {
   ArrowRight,
   ShieldCheck,
@@ -23,6 +16,12 @@ import {
   Utensils,
   Wine,
 } from 'lucide-react'
+
+const LandingPopup = lazy(() =>
+  import('#/components/store/landing-popup').then((m) => ({
+    default: m.LandingPopup,
+  })),
+)
 
 export const Route = createFileRoute('/')({
   loader: async ({ context }) => {

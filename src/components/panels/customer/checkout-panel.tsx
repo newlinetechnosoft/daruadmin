@@ -32,10 +32,6 @@ import { StoreCountdownTimer } from '#/components/store/countdown-timer'
 import { getPaymentGatewayLogo } from '#/components/checkout/payment-icons'
 import { DEFAULT_MAP_CENTER, isWithinButwalArea } from '#/lib/map-config'
 
-const DeliveryMap = lazy(() =>
-  import('./delivery-map').then((m) => ({ default: m.DeliveryMap })),
-)
-
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -72,6 +68,10 @@ import {
   Navigation,
 } from 'lucide-react'
 import { toast } from 'sonner'
+
+const DeliveryMap = lazy(() =>
+  import('./delivery-map').then((m) => ({ default: m.DeliveryMap })),
+)
 
 function getTodayDateString(): string {
   const d = new Date()
