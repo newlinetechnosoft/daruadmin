@@ -37,7 +37,7 @@ export function DeliveryMap({ value, onChange, disabled }: DeliveryMapProps) {
           disabled={disabled}
           restrictToZone={true}
           boundsWarningMessage="This location is outside our service area."
-          helperText="Tap map or drag pin to your delivery address"
+          helperText="Select your delivery Location"
           showCoordinatesInputs={false}
         />
       </React.Suspense>

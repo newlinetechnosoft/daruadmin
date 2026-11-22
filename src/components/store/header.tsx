@@ -22,6 +22,7 @@ import { ChangePasswordDialog } from '#/components/auth/change-password-dialog'
 import { toast } from 'sonner'
 
 import { useCart } from '#/lib/cart-context'
+import { trackSearchQuery } from '#/lib/user-interaction-tracker'
 import { authClient } from '#/lib/auth-client'
 import { clearAllLocalData } from '#/lib/idb'
 import { ThemeToggle } from '#/components/shared/theme-toggle'
@@ -70,6 +71,8 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
     event.preventDefault()
     const query = searchVal.trim()
     if (!query) return
+
+    trackSearchQuery(query)
 
     if (onSearch) {
       onSearch(query)

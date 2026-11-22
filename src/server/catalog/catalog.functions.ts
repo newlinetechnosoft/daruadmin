@@ -56,6 +56,7 @@ import {
   getAdminUsersQuery,
   updateUserRoleQuery,
   getProductsByIdsQuery,
+  getPairingRecommendationsQuery,
 } from './catalog.queries'
 import {
   requirePermission,
@@ -166,6 +167,22 @@ export const getProductsByIdsFn = createServerFn({ method: 'GET' })
   )
   .handler(async ({ data }) => {
     return getProductsByIdsQuery(data.ids)
+  })
+
+export const getPairingRecommendationsFn = createServerFn({ method: 'GET' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        catalogType: z
+          .enum(['liquor', 'food', 'grocery', 'ddc'])
+          .default('liquor'),
+        currentProductId: z.string().optional(),
+        limit: z.number().optional().default(24),
+      })
+      .parse(d ?? {}),
+  )
+  .handler(async ({ data }) => {
+    return getPairingRecommendationsQuery(data)
   })
 
 // -------------------------------------------------------------

@@ -226,13 +226,6 @@ export function CustomerProfilePanel() {
               <div className="h-32 sm:h-36 w-full bg-gradient-to-r from-amber-500/25 via-primary/20 to-orange-500/25 border-b border-border/40 relative overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-400/20 via-transparent to-transparent opacity-80 pointer-events-none" />
                 <div className="absolute right-4 top-4 flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className="bg-background/80 backdrop-blur-md border-primary/30 text-primary font-semibold text-xs px-3 py-1 shadow-sm gap-1.5"
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    <span>Mezmani Member</span>
-                  </Badge>
                 </div>
               </div>
 
@@ -289,7 +282,7 @@ export function CustomerProfilePanel() {
                         </h1>
                       </div>
                       <p className="truncate text-sm font-semibold text-foreground font-mono">
-                        {(user as any).phone ? `+977 ${(user as any).phone}` : 'No phone linked'}
+                        {(user as any).phone ? ` ${(user as any).phone}` : 'No phone linked'}
                       </p>
                     </div>
                   </div>

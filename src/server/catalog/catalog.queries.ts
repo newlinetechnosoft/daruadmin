@@ -26,6 +26,7 @@ import {
   dealerItems,
   dealers,
   user,
+  orderItems,
 } from '#/db/schema'
 import {
   and,
@@ -3121,4 +3122,105 @@ export async function deleteProductImageQuery(
     await db.delete(ddcImages).where(eq(ddcImages.id, imageId))
   }
   return { success: true }
+}
+
+export async function getTopSellingProductStatsQuery(): Promise<Record<string, number>> {
+  const cacheKey = 'top_selling_product_stats'
+  const cached = getCatalogCached<Record<string, number>>(cacheKey)
+  if (cached) return cached
+
+  try {
+    const rows = await db
+      .select({
+        productId: orderItems.productId,
+        totalSold: sql<number>`COALESCE(SUM(${orderItems.qty}), 0)::int`,
+      })
+      .from(orderItems)
+      .groupBy(orderItems.productId)
+      .orderBy(sql`SUM(${orderItems.qty}) DESC`)
+      .limit(100)
+
+    const map: Record<string, number> = {}
+    for (const row of rows) {
+      if (row.productId) {
+        map[row.productId] = Number(row.totalSold) || 0
+      }
+    }
+    return setCatalogCached(cacheKey, map, 5 * 60 * 1000)
+  } catch (err) {
+    console.error('Error fetching top selling product stats:', err)
+    return {}
+  }
+}
+
+export async function getPairingRecommendationsQuery({
+  catalogType = 'liquor',
+  currentProductId,
+  limit = 24,
+}: {
+  catalogType?: 'liquor' | 'food' | 'grocery' | 'ddc'
+  currentProductId?: string
+  limit?: number
+}) {
+  const cacheKey = `pairing_recs_${catalogType}_${currentProductId || 'all'}`
+  const cached = getCatalogCached<any[]>(cacheKey)
+  if (cached) return cached
+
+  const salesStats = await getTopSellingProductStatsQuery()
+
+  let primaryPool: any[] = []
+  let crossPool: any[] = []
+
+  if (catalogType === 'liquor') {
+    // When viewing drinks: recommend high-selling food items + complementary drinks
+    const [foodList, liquorList] = await Promise.all([
+      getFoodProductsQuery({ limit: 25 }),
+      getLiquorProductsQuery({ limit: 25 }),
+    ])
+    crossPool = foodList
+    primaryPool = liquorList
+  } else if (catalogType === 'food') {
+    // When viewing food: recommend high-selling drink items + complementary food
+    const [liquorList, foodList] = await Promise.all([
+      getLiquorProductsQuery({ limit: 25 }),
+      getFoodProductsQuery({ limit: 25 }),
+    ])
+    crossPool = liquorList
+    primaryPool = foodList
+  } else if (catalogType === 'grocery') {
+    const [groceryList, foodList] = await Promise.all([
+      getGroceryProductsQuery({ limit: 25 }),
+      getFoodProductsQuery({ limit: 15 }),
+    ])
+    primaryPool = groceryList
+    crossPool = foodList
+  } else {
+    const [ddcList, groceryList] = await Promise.all([
+      getDdcProductsQuery({ limit: 25 }),
+      getGroceryProductsQuery({ limit: 15 }),
+    ])
+    primaryPool = ddcList
+    crossPool = groceryList
+  }
+
+  const combined = [...crossPool, ...primaryPool]
+  const seenIds = new Set<string>()
+
+  // Strict In-Stock Filter: Drop any product that is out of stock or equals currentProductId
+  const inStockList = combined.filter((p) => {
+    if (!p || !p.id) return false
+    if (currentProductId && p.id === currentProductId) return false
+    if (seenIds.has(p.id)) return false
+    seenIds.add(p.id)
+
+    // MUST have at least one active variant with stock > 0
+    return p.variants?.some((v: any) => v && v.isActive && Number(v.stock) > 0)
+  })
+
+  const enriched = inStockList.map((p) => ({
+    ...p,
+    totalSold: salesStats[p.id] || 0,
+  }))
+
+  return setCatalogCached(cacheKey, enriched, 3 * 60 * 1000)
 }

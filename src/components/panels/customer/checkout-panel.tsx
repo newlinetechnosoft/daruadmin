@@ -554,20 +554,11 @@ export function CheckoutPanel() {
           {/* Checkout Header */}
           <div className="border-b border-border pb-6 mb-8">
             <div className="flex items-center gap-2">
-              <Badge
-                variant="default"
-                className="text-xs uppercase tracking-wider"
-              >
-                Express 30-Min Dispatch
-              </Badge>
             </div>
             <h1 className="mt-2 text-2xl sm:text-3xl font-black uppercase tracking-tight text-foreground">
               Fast Checkout
             </h1>
-            <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-              Pin your location, confirm payment method, and dispatch your
-              order.
-            </p>
+            
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
@@ -613,10 +604,7 @@ export function CheckoutPanel() {
                     <CardTitle className="text-base font-bold">
                       1. Delivery Location
                     </CardTitle>
-                    <CardDescription className="text-xs">
-                      Drop a precise pin on OpenStreetMap for Butwal / Rupandehi
-                      express rider routing.
-                    </CardDescription>
+                    
                   </div>
                 </div>
               </CardHeader>
@@ -763,9 +751,6 @@ export function CheckoutPanel() {
                       </NativeSelectOption>
                     ))}
                   </NativeSelect>
-                  <p className="text-[11px] text-muted-foreground">
-                    Choose from the areas set by admin in Service Zones, then fine-tune your exact pin on the map.
-                  </p>
                 </div>
 
                 <Controller
@@ -1244,9 +1229,6 @@ export function CheckoutPanel() {
                     <CardTitle className="text-base font-bold">
                       4. Payment Method
                     </CardTitle>
-                    <CardDescription className="text-xs">
-                      Select from active payment gateways configured in admin operations.
-                    </CardDescription>
                   </div>
                 </div>
               </CardHeader>

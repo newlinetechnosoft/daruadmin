@@ -24,12 +24,15 @@ import {
   DialogTitle,
   DialogDescription,
 } from '#/components/ui/dialog'
+import { storefrontQueries } from '#/queries/storefront'
 import {
-  getFoodProductsFn,
-  getGroceryProductsFn,
-  getDdcProductsFn,
-  getLiquorProductsFn,
-} from '#/server/catalog/catalog.functions'
+  trackProductClick,
+  getUserInteractions,
+} from '#/lib/user-interaction-tracker'
+import {
+  getRecommendedPairings,
+  type ScoredProduct,
+} from '#/lib/recommendation-engine'
 
 export interface Variant {
   id: string
@@ -87,7 +90,7 @@ function ProductCardComponent({
   className = '',
   priority = false,
 }: ProductCardProps) {
-  const { addItem, updateQuantity, getItemQuantity } = useCart()
+  const { addItem, updateQuantity, getItemQuantity, items: cartItems } = useCart()
   const isWishlisted = useIsFavorite(product.id)
 
   // Card variant state
@@ -207,6 +210,7 @@ function ProductCardComponent({
 
   // Open Detail Modal
   const handleCardClick = () => {
+    trackProductClick(product)
     setModalProduct(product)
     setModalVariantId(selectedVariantId || product.variants[0]?.id || '')
     setModalQty(1)
@@ -214,40 +218,33 @@ function ProductCardComponent({
   }
 
   // Fetch dynamic suggestions if modal is open and no custom suggestedProducts passed
-  const { data: dynamicProducts } = useQuery<ProductProps[]>({
-    queryKey: ['storefront', 'suggestions', modalProduct.catalogType],
-    queryFn: async () => {
-      if (modalProduct.catalogType === 'food') {
-        return getFoodProductsFn({ data: {} })
-      }
-      if (modalProduct.catalogType === 'grocery') {
-        return getGroceryProductsFn({ data: {} })
-      }
-      if (modalProduct.catalogType === 'ddc') {
-        return getDdcProductsFn({ data: {} })
-      }
-      return getLiquorProductsFn({ data: {} })
-    },
-    enabled: isDetailOpen && !suggestedProducts,
-    staleTime: 1000 * 60 * 5,
+  const { data: dynamicPairings } = useQuery({
+    ...storefrontQueries.pairingRecommendations({
+      catalogType: modalProduct.catalogType,
+      currentProductId: modalProduct.id,
+    }),
+    enabled: isDetailOpen && (!suggestedProducts || suggestedProducts.length === 0),
   })
 
-  // Filter suggested items
-  const suggestedList: ProductProps[] = useMemo(() => {
-    if (suggestedProducts && suggestedProducts.length > 0) {
-      return suggestedProducts
-        .filter((p) => p.id !== modalProduct.id)
-        .slice(0, 4)
-    }
+  // Rank suggested items based on high-selling, search-clicks, user need, and strictly in-stock items
+  const suggestedList: ScoredProduct[] = useMemo(() => {
+    const pool =
+      suggestedProducts && suggestedProducts.length > 0
+        ? suggestedProducts
+        : (dynamicPairings as (ProductProps & { totalSold?: number })[]) || []
 
-    if (dynamicProducts && dynamicProducts.length > 0) {
-      return dynamicProducts
-        .filter((p) => p.id !== modalProduct.id)
-        .slice(0, 4)
-    }
+    if (!pool || pool.length === 0) return []
 
-    return []
-  }, [suggestedProducts, dynamicProducts, modalProduct.id])
+    const userInteractions = getUserInteractions()
+
+    return getRecommendedPairings({
+      candidates: pool,
+      currentProduct: modalProduct,
+      cartItems,
+      userInteractions,
+      limit: 4,
+    })
+  }, [suggestedProducts, dynamicPairings, modalProduct, cartItems])
 
   const handleModalAddToCart = (quantity = 1) => {
     if (modalActiveVariant.stock <= 0) return false
@@ -273,11 +270,23 @@ function ProductCardComponent({
   }
 
   const quickAddSuggested = (item: ProductProps) => {
-    const v = item.variants[0]
-    if (v.stock <= 0) {
+    // Find the primary active in-stock variant
+    const v =
+      item.variants.find((x) => x.isActive && Number(x.stock) > 0) ||
+      item.variants[0]
+    if (!v || v.stock <= 0) {
       toast.error('Item is out of stock', { id: 'cart-action' })
       return
     }
+
+    trackProductClick(item)
+
+    const label =
+      item.customDiscountLabel?.trim() ||
+      (v.compareAtPrice && v.compareAtPrice > v.price
+        ? `${Math.round(((v.compareAtPrice - v.price) / v.compareAtPrice) * 100)}% OFF`
+        : null)
+
     addItem({
       id: v.id,
       productId: item.id,
@@ -289,9 +298,12 @@ function ProductCardComponent({
       price: v.price,
       mrp: v.mrp,
       imageUrl: item.primaryImage || fallbackImg,
+      customBadge: item.customBadge,
+      customDiscountLabel: label,
       volumeMl: v.volumeMl,
       abv: v.abv,
     })
+    toast.success(`Added ${item.name} to cart!`, { id: 'cart-action' })
   }
 
   return (
@@ -717,61 +729,86 @@ function ProductCardComponent({
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {suggestedList.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => {
-                        setModalProduct(item)
-                        setModalVariantId(item.variants[0]?.id ?? '')
-                        setModalQty(1)
-                      }}
-                      className="group/suggested p-2.5 rounded-xl border border-border/60 bg-muted/20 hover:border-amber-500/40 hover:bg-muted/40 transition-all flex flex-col justify-between cursor-pointer"
-                    >
-                      <div className="relative aspect-square w-full rounded-lg bg-zinc-900/30 overflow-hidden mb-2 flex items-center justify-center">
-                        <LazyImage
-                          src={item.primaryImage?.trim() || fallbackImg}
-                          alt={item.name}
-                          className="w-full h-full object-contain group-hover/suggested:scale-105 transition-transform"
-                          containerClassName="w-full h-full"
-                          fallbackSrc={fallbackImg}
-                          fallbackIcon={
-                            <img
-                              src={fallbackImg}
-                              alt={item.name}
-                              className="w-full h-full object-contain p-2 opacity-80"
-                            />
-                          }
-                        />
-                      </div>
+                  {suggestedList.map((item) => {
+                    const activeVar =
+                      item.activeInStockVariant ||
+                      item.variants.find((v) => v.isActive && Number(v.stock) > 0) ||
+                      item.variants[0]
 
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-semibold text-foreground line-clamp-1 group-hover/suggested:text-amber-500">
-                          {item.name}
-                        </h4>
-                        <p className="text-[10px] text-muted-foreground line-clamp-1">
-                          {item.variants[0]?.volumeMl
-                            ? `${item.variants[0].volumeMl}ml`
-                            : item.variants[0]?.name}
-                        </p>
-                      </div>
+                    const pairingBadge =
+                      item.catalogType === 'food' && modalProduct.catalogType === 'liquor'
+                        ? 'Food Pairing'
+                        : item.catalogType === 'liquor' && modalProduct.catalogType === 'food'
+                          ? 'Drink Pairing'
+                          : (item.totalSold && item.totalSold > 0) || item.isFeatured
+                            ? 'Top Seller'
+                            : null
 
-                      <div className="mt-2 pt-1.5 border-t border-border/40 flex items-center justify-between">
-                        <span className="text-xs font-bold font-mono">
-                          {formatNPR(item.variants[0].price)}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            quickAddSuggested(item)
-                          }}
-                          className="h-6 px-2 rounded-md bg-amber-500 hover:bg-amber-600 text-zinc-950 text-[10px] font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
-                        >
-                          + Add
-                        </button>
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => {
+                          trackProductClick(item)
+                          setModalProduct(item)
+                          setModalVariantId(activeVar?.id ?? '')
+                          setModalQty(1)
+                        }}
+                        className="group/suggested relative p-2.5 rounded-xl border border-border/60 bg-muted/20 hover:border-amber-500/40 hover:bg-muted/40 transition-all flex flex-col justify-between cursor-pointer"
+                      >
+                        {pairingBadge && (
+                          <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold tracking-tight bg-background/90 backdrop-blur-xs text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-2xs">
+                              {pairingBadge}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="relative aspect-square w-full rounded-lg bg-zinc-900/30 overflow-hidden mb-2 flex items-center justify-center">
+                          <LazyImage
+                            src={item.primaryImage?.trim() || fallbackImg}
+                            alt={item.name}
+                            className="w-full h-full object-contain group-hover/suggested:scale-105 transition-transform"
+                            containerClassName="w-full h-full"
+                            fallbackSrc={fallbackImg}
+                            fallbackIcon={
+                              <img
+                                src={fallbackImg}
+                                alt={item.name}
+                                className="w-full h-full object-contain p-2 opacity-80"
+                              />
+                            }
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-semibold text-foreground line-clamp-1 group-hover/suggested:text-amber-500">
+                            {item.name}
+                          </h4>
+                          <p className="text-[10px] text-muted-foreground line-clamp-1">
+                            {activeVar?.volumeMl
+                              ? `${activeVar.volumeMl}ml`
+                              : activeVar?.name}
+                          </p>
+                        </div>
+
+                        <div className="mt-2 pt-1.5 border-t border-border/40 flex items-center justify-between">
+                          <span className="text-xs font-bold font-mono">
+                            {formatNPR(activeVar?.price ?? 0)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              quickAddSuggested(item)
+                            }}
+                            className="h-6 px-2 rounded-md bg-amber-500 hover:bg-amber-600 text-zinc-950 text-[10px] font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
+                          >
+                            + Add
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}

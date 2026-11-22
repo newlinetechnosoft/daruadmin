@@ -414,7 +414,9 @@ function GroceryPage() {
           <div className="lg:grid lg:grid-cols-[220px_1fr] lg:gap-8">
             {/* Desktop Filter Sidebar */}
             <aside className="hidden lg:block shrink-0">
-              <div className="sticky top-20">{filterPanel}</div>
+              <div className="sticky top-20 lg:top-24 max-h-[calc(100dvh-5.5rem)] overflow-y-auto pr-2 pb-6 custom-scrollbar overscroll-contain">
+                {filterPanel}
+              </div>
             </aside>
 
             {/* Product Grid / Empty State */}
