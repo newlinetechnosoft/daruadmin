@@ -383,7 +383,7 @@ export async function getLiquorProductsQuery(input: ListLiquorInput) {
 
   const productIds = productsList.map((p) => p.id)
 
-  const [variants, images] = await Promise.all([
+  const [variants, images, salesStats] = await Promise.all([
     db
       .select()
       .from(liquorVariants)
@@ -397,6 +397,7 @@ export async function getLiquorProductsQuery(input: ListLiquorInput) {
       .select()
       .from(liquorImages)
       .where(inArray(liquorImages.productId, productIds)),
+    getTopSellingProductStatsQuery(),
   ])
 
   const variantsMap = new Map<string, typeof variants>()
@@ -416,6 +417,7 @@ export async function getLiquorProductsQuery(input: ListLiquorInput) {
   return productsList.map((p) => ({
     ...p,
     catalogType: 'liquor' as const,
+    totalSold: salesStats[p.id] || 0,
     primaryImage:
       imagesMap.get(p.id) || getProductFallbackImage(p.name, 'liquor'),
     variants: (variantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
@@ -514,7 +516,7 @@ export async function getFoodProductsQuery(input: ListFoodInput) {
 
   const productIds = productsList.map((p) => p.id)
 
-  const [variants, images] = await Promise.all([
+  const [variants, images, salesStats] = await Promise.all([
     db
       .select()
       .from(foodVariants)
@@ -528,6 +530,7 @@ export async function getFoodProductsQuery(input: ListFoodInput) {
       .select()
       .from(foodImages)
       .where(inArray(foodImages.productId, productIds)),
+    getTopSellingProductStatsQuery(),
   ])
 
   const variantsMap = new Map<string, typeof variants>()
@@ -547,6 +550,7 @@ export async function getFoodProductsQuery(input: ListFoodInput) {
   return productsList.map((p) => ({
     ...p,
     catalogType: 'food' as const,
+    totalSold: salesStats[p.id] || 0,
     primaryImage: imagesMap.get(p.id) || getProductFallbackImage(p.name, 'food'),
     variants: (variantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
   }))
@@ -644,7 +648,7 @@ export async function getGroceryProductsQuery(input: ListGroceryInput) {
 
   const productIds = productsList.map((p) => p.id)
 
-  const [variants, images] = await Promise.all([
+  const [variants, images, salesStats] = await Promise.all([
     db
       .select()
       .from(groceryVariants)
@@ -658,6 +662,7 @@ export async function getGroceryProductsQuery(input: ListGroceryInput) {
       .select()
       .from(groceryImages)
       .where(inArray(groceryImages.productId, productIds)),
+    getTopSellingProductStatsQuery(),
   ])
 
   const variantsMap = new Map<string, typeof variants>()
@@ -677,6 +682,7 @@ export async function getGroceryProductsQuery(input: ListGroceryInput) {
   return productsList.map((p) => ({
     ...p,
     catalogType: 'grocery' as const,
+    totalSold: salesStats[p.id] || 0,
     primaryImage:
       imagesMap.get(p.id) || getProductFallbackImage(p.name, 'grocery'),
     variants: (variantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
@@ -775,7 +781,7 @@ export async function getDdcProductsQuery(input: ListDdcInput) {
 
   const productIds = productsList.map((p) => p.id)
 
-  const [variants, images] = await Promise.all([
+  const [variants, images, salesStats] = await Promise.all([
     db
       .select()
       .from(ddcVariants)
@@ -789,6 +795,7 @@ export async function getDdcProductsQuery(input: ListDdcInput) {
       .select()
       .from(ddcImages)
       .where(inArray(ddcImages.productId, productIds)),
+    getTopSellingProductStatsQuery(),
   ])
 
   const variantsMap = new Map<string, typeof variants>()
@@ -808,6 +815,7 @@ export async function getDdcProductsQuery(input: ListDdcInput) {
   return productsList.map((p) => ({
     ...p,
     catalogType: 'ddc' as const,
+    totalSold: salesStats[p.id] || 0,
     primaryImage: imagesMap.get(p.id) || getProductFallbackImage(p.name, 'ddc'),
     variants: (variantsMap.get(p.id) ?? []).sort((a, b) => a.price - b.price),
   }))

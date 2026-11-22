@@ -5,6 +5,8 @@ import { storefrontQueries } from '#/queries/storefront'
 import { Header } from '#/components/store/header'
 import { Footer } from '#/components/store/footer'
 import { ProductCard } from '#/components/store/product-card'
+import type { ProductProps } from '#/components/store/product-card'
+import { sortCatalogProducts } from '#/lib/recommendation-engine'
 import { Package, RotateCcw, SlidersHorizontal } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { Checkbox } from '#/components/ui/checkbox'
@@ -162,22 +164,10 @@ function DdcPage() {
       })
     }
 
-    // Sort order
-    if (sortBy === 'price-low') {
-      list.sort(
-        (a, b) => (a.variants[0]?.price ?? 0) - (b.variants[0]?.price ?? 0),
-      )
-    } else if (sortBy === 'price-high') {
-      list.sort(
-        (a, b) => (b.variants[0]?.price ?? 0) - (a.variants[0]?.price ?? 0),
-      )
-    } else if (sortBy === 'newest') {
-      list.sort((a, b) => b.name.localeCompare(a.name))
-    } else {
-      list.sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0))
-    }
-
-    return list
+    return sortCatalogProducts({
+      products: list as (ProductProps & { totalSold?: number })[],
+      sortBy,
+    })
   }, [products, selectedPriceRange, sortBy])
 
   const activeCategoryObj = useMemo(
