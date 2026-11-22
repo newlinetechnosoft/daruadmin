@@ -129,7 +129,7 @@ export function ChangePasswordDialog({
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary border border-primary/20">
               <KeyRound className="h-4 w-4" />
             </div>
-            <span>Change Password</span>
+            <span>Change Passwoord</span>
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
             Update your account password.

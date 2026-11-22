@@ -27,7 +27,7 @@ import { clearAllLocalData } from '#/lib/idb'
 import { ThemeToggle } from '#/components/shared/theme-toggle'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { storeQueries } from '#/queries/admin'
-import { Avatar, AvatarFallback } from '#/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -234,6 +234,13 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                   aria-label="Open account menu"
                 >
                   <Avatar className="h-7 w-7">
+                    {user.image && (
+                      <AvatarImage
+                        src={user.image}
+                        alt={user.name || 'User'}
+                        className="object-cover"
+                      />
+                    )}
                     <AvatarFallback className="bg-primary/15 text-xs font-semibold text-foreground">
                       {user.name?.charAt(0).toUpperCase() || 'U'}
                     </AvatarFallback>

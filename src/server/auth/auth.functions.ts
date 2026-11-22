@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { eq, and, ne } from 'drizzle-orm'
 import { db } from '#/db'
-import { account, session } from '#/db/schema'
+import { account, session, user } from '#/db/schema'
 import { getSessionUser, logAudit } from '#/server/auth/permissions'
 import { getServerSession } from '#/server/middleware/auth'
 import { hashPassword, verifyPassword } from 'better-auth/crypto'
@@ -126,5 +126,72 @@ export const changeUserPasswordFn = createServerFn({ method: 'POST' })
     return {
       success: true,
       message: 'Password changed successfully',
+    }
+  })
+
+export const updateUserProfileImageFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        imageUrl: z.string(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const sessionUser = await getSessionUser()
+    if (!sessionUser?.id) {
+      throw new Error('401: Unauthorized: Please sign in to update your profile picture')
+    }
+
+    let finalImageUrl: string | null = data.imageUrl.trim() || null
+
+    // If it's a base64 image data URL and S3/Storage is configured, upload to storage
+    if (finalImageUrl && finalImageUrl.startsWith('data:image/')) {
+      try {
+        const matches = finalImageUrl.match(/^data:([A-Za-z-+/]+);base64,(.+)$/)
+        if (matches && matches.length === 3) {
+          const contentType = matches[1]
+          const buffer = Buffer.from(matches[2], 'base64')
+          const ext = contentType.split('/')[1] || 'png'
+          const key = `avatars/${sessionUser.id}-${Date.now()}.${ext}`
+
+          // Check if S3 / storage is configured
+          if (
+            process.env.AWS_ACCESS_KEY_ID ||
+            process.env.S3_ACCESS_KEY_ID ||
+            process.env.STORAGE_BUCKET
+          ) {
+            const { putObject, getPublicUrl } = await import('#/lib/storage')
+            await putObject(key, buffer, { contentType })
+            finalImageUrl = getPublicUrl(key)
+          }
+        }
+      } catch (err) {
+        console.warn('[Avatar Upload] S3 upload skipped, saving direct image data:', err)
+      }
+    }
+
+    await db
+      .update(user)
+      .set({
+        image: finalImageUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(user.id, sessionUser.id))
+
+    // Audit log
+    await logAudit(
+      sessionUser.name || sessionUser.email || sessionUser.id,
+      'auth',
+      'profile_image_update',
+      `User ${sessionUser.name} (${sessionUser.email || sessionUser.id}) updated profile picture`,
+    )
+
+    return {
+      success: true,
+      imageUrl: finalImageUrl || '',
+      message: finalImageUrl
+        ? 'Profile picture updated successfully!'
+        : 'Profile picture removed successfully!',
     }
   })

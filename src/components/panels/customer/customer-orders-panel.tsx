@@ -283,10 +283,6 @@ export function CustomerOrdersPanel() {
                 My Orders
               </h1>
             </div>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              Review your purchase history, download invoices, track live
-              deliveries, or reorder favorite items in 1 click.
-            </p>
           </div>
 
           <Button

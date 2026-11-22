@@ -2,28 +2,20 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { Header } from '#/components/store/header'
-import { Footer } from '#/components/store/footer'
 import { authClient } from '#/lib/auth-client'
 import { clearAllLocalData } from '#/lib/idb'
 import { getCustomerOrdersFn } from '#/server/orders/order.functions'
 import type { Order } from '#/server/operations/types'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '#/components/ui/card'
+import { Card } from '#/components/ui/card'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Separator } from '#/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from '#/components/ui/table'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { ChangePasswordDialog } from '#/components/auth/change-password-dialog'
 import { EditPhoneDialog } from './edit-phone-dialog'
+import { ChangePhotoDialog } from './change-photo-dialog'
 import {
   Mail,
   Phone,
@@ -35,11 +27,11 @@ import {
   XCircle,
   Clock,
   ArrowRight,
-  ShieldCheck,
   Sparkles,
   ChevronRight,
   LogIn,
   Package,
+  Camera,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -52,6 +44,7 @@ export function CustomerProfilePanel() {
   const [isOrdersLoading, setIsOrdersLoading] = useState(true)
 
   const [isEditPhoneOpen, setIsEditPhoneOpen] = useState(false)
+  const [isChangePhotoOpen, setIsChangePhotoOpen] = useState(false)
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
   const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -109,6 +102,7 @@ export function CustomerProfilePanel() {
       successful,
       cancelled,
       inTransit,
+      inProgress: inTransit,
       failed,
       successRate,
     }
@@ -132,6 +126,11 @@ export function CustomerProfilePanel() {
   }
 
   const handlePhoneUpdated = async () => {
+    await refetchSession()
+    queryClient.invalidateQueries()
+  }
+
+  const handlePhotoUpdated = async () => {
     await refetchSession()
     queryClient.invalidateQueries()
   }
@@ -242,9 +241,13 @@ export function CustomerProfilePanel() {
                 {/* Avatar & Main Identity Row */}
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 -mt-14 sm:-mt-16 mb-6">
                   <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-left">
-                    {/* Profile Picture */}
-                    <div className="relative group">
-                      <Avatar className="h-24 w-24 sm:h-28 sm:w-28 rounded-full border-4 border-card shadow-2xl ring-2 ring-primary/40 bg-card">
+                    {/* Profile Picture with Change Photo Trigger */}
+                    <div
+                      className="relative group cursor-pointer"
+                      onClick={() => setIsChangePhotoOpen(true)}
+                      title="Click to change profile picture"
+                    >
+                      <Avatar className="h-24 w-24 sm:h-28 sm:w-28 rounded-full border-4 border-card shadow-2xl ring-2 ring-primary/40 bg-card overflow-hidden">
                         {user.image && (
                           <AvatarImage
                             src={user.image}
@@ -257,13 +260,25 @@ export function CustomerProfilePanel() {
                         </AvatarFallback>
                       </Avatar>
 
-                      {/* Verified Badge Icon on Avatar */}
-                      <div
-                        className="absolute bottom-1 right-1 h-7 w-7 rounded-full bg-emerald-500 text-white flex items-center justify-center border-2 border-card shadow-md"
-                        title="Verified Account"
-                      >
-                        <ShieldCheck className="h-4 w-4" />
+                      {/* Hover Overlay with Camera Icon */}
+                      <div className="absolute inset-0 rounded-full bg-black/50 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[2px]">
+                        <Camera className="h-5 w-5 drop-shadow" />
+                        <span className="text-[9px] font-semibold mt-0.5 tracking-tight">Change</span>
                       </div>
+
+                      {/* Quick Edit Camera Button at Bottom Right */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setIsChangePhotoOpen(true)
+                        }}
+                        className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-primary text-primary-foreground shadow-md flex items-center justify-center border-2 border-card hover:scale-110 active:scale-95 transition-transform"
+                        title="Change profile picture"
+                        aria-label="Change profile picture"
+                      >
+                        <Camera className="h-3.5 w-3.5" />
+                      </button>
                     </div>
 
                     {/* Name & Basic Details */}
@@ -272,15 +287,9 @@ export function CustomerProfilePanel() {
                         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
                           {user.name || 'Valued Customer'}
                         </h1>
-                        <Badge
-                          variant="secondary"
-                          className="bg-primary/10 text-primary border-primary/20 text-xs px-2.5 py-0.5 capitalize font-semibold"
-                        >
-                          {(user as any).role || 'Customer'}
-                        </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Customer Account ID: <span className="font-mono">{user.id.slice(0, 12)}...</span>
+                      <p className="truncate text-sm font-semibold text-foreground font-mono">
+                        {(user as any).phone ? `+977 ${(user as any).phone}` : 'No phone linked'}
                       </p>
                     </div>
                   </div>
@@ -333,9 +342,7 @@ export function CustomerProfilePanel() {
                       <p className="truncate text-sm font-semibold text-foreground font-mono">
                         {user.email || 'No email registered'}
                       </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        Used for order confirmations and receipts
-                      </p>
+                      
                     </div>
                   </div>
 
@@ -387,10 +394,8 @@ export function CustomerProfilePanel() {
                         <p className="truncate text-sm font-semibold text-foreground font-mono">
                           {(user as any).phone ? `+977 ${(user as any).phone}` : 'No phone linked'}
                         </p>
+                        
                       </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        Click pencil icon to update mobile number with OTP verification
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -405,9 +410,6 @@ export function CustomerProfilePanel() {
                     <ShoppingBag className="h-5 w-5 text-primary" />
                     <span>Orders & Purchase Summary</span>
                   </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Live overview of your delivery orders, successful fulfillments, and purchase records
-                  </p>
                 </div>
                 <Button
                   asChild
@@ -422,213 +424,112 @@ export function CustomerProfilePanel() {
                 </Button>
               </div>
 
-              {/* 3 Metric Highlight Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {/* Total Orders */}
-                <Card className="rounded-2xl border-border/80 shadow-md bg-card transition-all hover:shadow-lg">
-                  <CardContent className="p-5 flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {/* 4 Metric Highlight Cards: 2 on Mobile View, 4 in One Row on PC View */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 min-w-0 w-full">
+                {/* 1. Total Orders */}
+                <Card className="rounded-2xl border-border/80 shadow-sm hover:shadow-md bg-card transition-all p-3.5 sm:p-4 lg:p-5 flex flex-col justify-between min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                      <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">
                         Total Orders
                       </p>
-                      <p className="text-3xl font-extrabold text-foreground tracking-tight">
+                      <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight">
                         {isOrdersLoading ? (
-                          <Skeleton className="h-9 w-14" />
+                          <Skeleton className="h-7 sm:h-9 w-10 sm:w-12" />
                         ) : (
                           stats.total
                         )}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        All-time purchase requests
+                      </div>
+                      <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
+                        All-time orders
                       </p>
                     </div>
-                    <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shadow-inner">
-                      <Package className="h-6 w-6" />
+                    <div className="h-8 w-8 sm:h-9 sm:w-9 lg:h-11 lg:w-11 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shadow-inner shrink-0">
+                      <Package className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
                     </div>
-                  </CardContent>
+                  </div>
                 </Card>
 
-                {/* Successful / Delivered Orders */}
-                <Card className="rounded-2xl border-border/80 shadow-md bg-card transition-all hover:shadow-lg">
-                  <CardContent className="p-5 flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                        Successful Orders
+                {/* 2. In Progress Orders (Light Blue Color & Real Value!) */}
+                <Card className="rounded-2xl border-sky-500/25 bg-card hover:border-sky-500/40 shadow-sm hover:shadow-md transition-all p-3.5 sm:p-4 lg:p-5 flex flex-col justify-between min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                      <p className="text-[10px] sm:text-xs font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wider truncate">
+                        In Progress
                       </p>
-                      <p className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight">
+                      <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-sky-600 dark:text-sky-400 tracking-tight">
                         {isOrdersLoading ? (
-                          <Skeleton className="h-9 w-14" />
+                          <Skeleton className="h-7 sm:h-9 w-10 sm:w-12" />
+                        ) : (
+                          stats.inProgress
+                        )}
+                      </div>
+                      <p className="text-[10px] sm:text-[11px] text-sky-600/80 dark:text-sky-400/80 truncate">
+                        Active deliveries
+                      </p>
+                    </div>
+                    <div className="h-8 w-8 sm:h-9 sm:w-9 lg:h-11 lg:w-11 rounded-xl bg-sky-500/10 text-sky-500 border border-sky-500/25 flex items-center justify-center shadow-inner shrink-0">
+                      <Clock className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
+                    </div>
+                  </div>
+                </Card>
+
+                {/* 3. Successful Orders */}
+                <Card className="rounded-2xl border-border/80 hover:border-emerald-500/30 shadow-sm hover:shadow-md bg-card transition-all p-3.5 sm:p-4 lg:p-5 flex flex-col justify-between min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                      <p className="text-[10px] sm:text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider truncate">
+                        Successful
+                      </p>
+                      <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight">
+                        {isOrdersLoading ? (
+                          <Skeleton className="h-7 sm:h-9 w-10 sm:w-12" />
                         ) : (
                           stats.successful
                         )}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {stats.total > 0 ? `${stats.successRate}% delivery completion` : 'Delivered to your address'}
+                      </div>
+                      <p className="text-[10px] sm:text-[11px] text-emerald-600/80 dark:text-emerald-400/80 truncate">
+                        {stats.total > 0 ? `${stats.successRate}% completion` : 'Delivered'}
                       </p>
                     </div>
-                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center shadow-inner">
-                      <CheckCircle2 className="h-6 w-6" />
+                    <div className="h-8 w-8 sm:h-9 sm:w-9 lg:h-11 lg:w-11 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center shadow-inner shrink-0">
+                      <CheckCircle2 className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
                     </div>
-                  </CardContent>
+                  </div>
                 </Card>
 
-                {/* Cancelled Orders */}
-                <Card className="rounded-2xl border-border/80 shadow-md bg-card transition-all hover:shadow-lg">
-                  <CardContent className="p-5 flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold text-destructive uppercase tracking-wider">
-                        Cancelled Orders
+                {/* 4. Cancelled Orders */}
+                <Card className="rounded-2xl border-border/80 hover:border-destructive/30 shadow-sm hover:shadow-md bg-card transition-all p-3.5 sm:p-4 lg:p-5 flex flex-col justify-between min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                      <p className="text-[10px] sm:text-xs font-semibold text-destructive uppercase tracking-wider truncate">
+                        Cancelled
                       </p>
-                      <p className="text-3xl font-extrabold text-destructive tracking-tight">
+                      <div className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-destructive tracking-tight">
                         {isOrdersLoading ? (
-                          <Skeleton className="h-9 w-14" />
+                          <Skeleton className="h-7 sm:h-9 w-10 sm:w-12" />
                         ) : (
                           stats.cancelled
                         )}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        Cancelled by store or customer
+                      </div>
+                      <p className="text-[10px] sm:text-[11px] text-destructive/80 truncate">
+                        Cancelled orders
                       </p>
                     </div>
-                    <div className="h-12 w-12 rounded-2xl bg-destructive/10 text-destructive border border-destructive/20 flex items-center justify-center shadow-inner">
-                      <XCircle className="h-6 w-6" />
+                    <div className="h-8 w-8 sm:h-9 sm:w-9 lg:h-11 lg:w-11 rounded-xl bg-destructive/10 text-destructive border border-destructive/20 flex items-center justify-center shadow-inner shrink-0">
+                      <XCircle className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
                     </div>
-                  </CardContent>
+                  </div>
                 </Card>
               </div>
 
-              {/* Complete Order Breakdown Table */}
-              <Card className="rounded-2xl border-border/80 shadow-md overflow-hidden bg-card">
-                <CardHeader className="bg-muted/20 border-b border-border/60 py-4 px-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-sm font-bold text-foreground">
-                        Order Status Breakdown Table
-                      </CardTitle>
-                      <CardDescription className="text-xs text-muted-foreground">
-                        Detailed breakdown of all lifetime customer order statuses
-                      </CardDescription>
-                    </div>
-                    <Badge variant="outline" className="text-xs font-mono">
-                      {stats.total} Total
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader className="bg-muted/30">
-                      <TableRow>
-                        <TableHead className="text-xs font-bold w-[220px]">
-                          Category / Status
-                        </TableHead>
-                        <TableHead className="text-xs font-bold text-center w-[120px]">
-                          Order Count
-                        </TableHead>
-                        <TableHead className="text-xs font-bold text-center w-[140px]">
-                          Status Indicator
-                        </TableHead>
-                        <TableHead className="text-xs font-bold">
-                          Description
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {/* Total Orders Row */}
-                      <TableRow className="hover:bg-muted/30 font-medium">
-                        <TableCell className="font-semibold flex items-center gap-2">
-                          <Package className="h-4 w-4 text-primary" />
-                          <span>Total Orders</span>
-                        </TableCell>
-                        <TableCell className="text-center font-mono font-bold text-base">
-                          {isOrdersLoading ? '...' : stats.total}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="secondary" className="text-[11px] px-2 py-0.5">
-                            All Time
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          All orders registered with this account
-                        </TableCell>
-                      </TableRow>
-
-                      {/* Successful Orders Row */}
-                      <TableRow className="hover:bg-muted/30 font-medium">
-                        <TableCell className="font-semibold flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                          <span>Successful Orders</span>
-                        </TableCell>
-                        <TableCell className="text-center font-mono font-bold text-base text-emerald-600 dark:text-emerald-400">
-                          {isOrdersLoading ? '...' : stats.successful}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant="outline"
-                            className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 text-[11px] px-2 py-0.5"
-                          >
-                            Delivered
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          Orders successfully fulfilled and received
-                        </TableCell>
-                      </TableRow>
-
-                      {/* Cancelled Orders Row */}
-                      <TableRow className="hover:bg-muted/30 font-medium">
-                        <TableCell className="font-semibold flex items-center gap-2">
-                          <XCircle className="h-4 w-4 text-destructive" />
-                          <span>Cancelled Orders</span>
-                        </TableCell>
-                        <TableCell className="text-center font-mono font-bold text-base text-destructive">
-                          {isOrdersLoading ? '...' : stats.cancelled}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant="outline"
-                            className="border-destructive/40 text-destructive bg-destructive/10 text-[11px] px-2 py-0.5"
-                          >
-                            Cancelled
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          Orders cancelled before or during fulfillment
-                        </TableCell>
-                      </TableRow>
-
-                      {/* Active / In Transit Orders Row */}
-                      {stats.inTransit > 0 && (
-                        <TableRow className="hover:bg-muted/30 font-medium">
-                          <TableCell className="font-semibold flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-blue-500" />
-                            <span>In Progress / Transit</span>
-                          </TableCell>
-                          <TableCell className="text-center font-mono font-bold text-base text-blue-600 dark:text-blue-400">
-                            {stats.inTransit}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge
-                              variant="outline"
-                              className="border-blue-500/40 text-blue-600 dark:text-blue-400 bg-blue-500/10 text-[11px] px-2 py-0.5"
-                            >
-                              Live
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            Orders currently being prepared or on the road
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+              
+    
             </div>
           </div>
         )}
       </main>
 
-      <Footer />
 
       {/* Edit Phone Number Dialog with OTP */}
       <EditPhoneDialog
@@ -636,6 +537,15 @@ export function CustomerProfilePanel() {
         onOpenChange={setIsEditPhoneOpen}
         currentPhone={(user as any)?.phone}
         onSuccess={handlePhoneUpdated}
+      />
+
+      {/* Change Profile Photo Dialog */}
+      <ChangePhotoDialog
+        open={isChangePhotoOpen}
+        onOpenChange={setIsChangePhotoOpen}
+        currentImage={user?.image}
+        userName={user?.name}
+        onSuccess={handlePhotoUpdated}
       />
 
       {/* Change Password Dialog */}
