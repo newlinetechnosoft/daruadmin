@@ -344,7 +344,7 @@ function FoodPage() {
             {/* Sidebar + Grid */}
             <div className="grid grid-cols-1 gap-4 pt-3 sm:pt-5 md:grid-cols-[200px_1fr] lg:grid-cols-[220px_1fr] lg:gap-8 xl:grid-cols-[240px_1fr]">
               <aside className="hidden md:block">
-                <div className="sticky top-20">
+                <div className="sticky top-20 lg:top-24 max-h-[calc(100dvh-5.5rem)] overflow-y-auto pr-2 pb-6 custom-scrollbar overscroll-contain">
                   {filterPanel}
 
                   {hasActiveFilters && (

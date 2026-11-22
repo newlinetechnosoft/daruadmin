@@ -92,10 +92,6 @@ export function FavoritesPanel() {
                   My Favorites
                 </h1>
               </div>
-              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-                Your saved drinks and late-night essentials stored on this
-                device.
-              </p>
             </div>
 
             {visibleProducts.length > 0 && (

@@ -333,7 +333,7 @@ export function CartSheet() {
                 </div>
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                   <ShieldCheck className="h-3.5 w-3.5 text-success" />
-                  <span>COD / Fonepay</span>
+                  <span>Order Now</span>
                 </div>
               </div>
 

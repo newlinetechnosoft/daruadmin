@@ -239,8 +239,6 @@
 
   html {
     scrollbar-gutter: stable;
-    overflow-x: hidden;
-    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -252,8 +250,7 @@
     line-height: 1.5;
     font-size: 0.9375rem;
     letter-spacing: -0.011em;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow-x: clip;
     max-width: 100vw;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -292,14 +289,18 @@
      ========================================================================== */
   [data-slot='table-container'],
   .click-scroll,
-  .table-scroll,
-  .custom-scrollbar {
+  .table-scroll {
     position: relative;
     width: 100%;
     max-width: 100%;
     overflow: auto;
     max-height: inherit;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
   }

@@ -15,6 +15,7 @@ import {
   getLiquorBrandsFn,
   getLiquorCategoriesFn,
   getLiquorProductsFn,
+  getPairingRecommendationsFn,
 } from '#/server/catalog/catalog.functions'
 
 export const storefrontQueries = {
@@ -109,6 +110,22 @@ export const storefrontQueries = {
     queryOptions({
       queryKey: ['catalog', 'ddc', 'products', filters],
       queryFn: () => getDdcProductsFn({ data: filters }),
+      staleTime: 1000 * 60 * 5,
+      placeholderData: keepPreviousData,
+    }),
+
+  pairingRecommendations: (params: {
+    catalogType: 'liquor' | 'food' | 'grocery' | 'ddc'
+    currentProductId?: string
+  }) =>
+    queryOptions({
+      queryKey: [
+        'storefront',
+        'pairing-recommendations',
+        params.catalogType,
+        params.currentProductId || 'all',
+      ],
+      queryFn: () => getPairingRecommendationsFn({ data: params }),
       staleTime: 1000 * 60 * 5,
       placeholderData: keepPreviousData,
     }),

@@ -216,6 +216,9 @@ export function Footer({ className, forceVisibleOnMobile }: FooterProps = {}) {
               <a href="/#about" className={linkClass}>
                 Delivery areas
               </a>
+              <Link to="/privacy" preload="intent" className={linkClass}>
+                Privacy Policy
+              </Link>
               <a href={`tel:${digits(phone)}`} className={linkClass}>
                 Contact us
               </a>
@@ -301,8 +304,16 @@ export function Footer({ className, forceVisibleOnMobile }: FooterProps = {}) {
         {/* ------------------------------ Bottom bar ------------------------------ */}
         <div className="mt-8 flex flex-col gap-4 border-t border-sidebar-border pt-5 md:mt-10 md:flex-row md:items-start md:justify-between">
           <div className="space-y-1 text-xs text-sidebar-foreground/60">
-            <p>
-              © {new Date().getFullYear()} {legalName}. All rights reserved.
+            <p className="flex flex-wrap items-center gap-x-2">
+              <span>© {new Date().getFullYear()} {legalName}. All rights reserved.</span>
+              <span className="hidden sm:inline">•</span>
+              <Link
+                to="/privacy"
+                preload="intent"
+                className="underline underline-offset-2 transition-colors hover:text-sidebar-primary"
+              >
+                Privacy Policy
+              </Link>
             </p>
             <p className="text-[11px] text-sidebar-foreground/50">
               Develop By:{' '}
