@@ -70,6 +70,7 @@ import { Route as AdminDealersIndexRouteImport } from './routes/admin/dealers/in
 import { Route as AdminDealersIdRouteImport } from './routes/admin/dealers/$id'
 import { Route as AdminDealersNewRouteImport } from './routes/admin/dealers/new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiRiderSplatRouteImport } from './routes/api/rider/$'
 import { Route as ApiWebhooksNepalotpRouteImport } from './routes/api/webhooks/nepalotp'
 import { Route as ApiWebhooksOtpRouteImport } from './routes/api/webhooks/otp'
 import { Route as ZonesIdActiveRouteImport } from './routes/zones.$id.active'
@@ -385,6 +386,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiRiderSplatRoute = ApiRiderSplatRouteImport.update({
+  id: '/api/rider/$',
+  path: '/api/rider/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWebhooksNepalotpRoute = ApiWebhooksNepalotpRouteImport.update({
   id: '/api/webhooks/nepalotp',
   path: '/api/webhooks/nepalotp',
@@ -490,6 +496,7 @@ export interface FileRoutesByFullPath {
   '/admin/dealers/$id': typeof AdminDealersIdRoute
   '/admin/dealers/new': typeof AdminDealersNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/rider/$': typeof ApiRiderSplatRoute
   '/api/webhooks/nepalotp': typeof ApiWebhooksNepalotpRoute
   '/api/webhooks/otp': typeof ApiWebhooksOtpRoute
   '/zones/$id/active': typeof ZonesIdActiveRoute
@@ -557,6 +564,7 @@ export interface FileRoutesByTo {
   '/admin/dealers/$id': typeof AdminDealersIdRoute
   '/admin/dealers/new': typeof AdminDealersNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/rider/$': typeof ApiRiderSplatRoute
   '/api/webhooks/nepalotp': typeof ApiWebhooksNepalotpRoute
   '/api/webhooks/otp': typeof ApiWebhooksOtpRoute
   '/zones/$id/active': typeof ZonesIdActiveRoute
@@ -629,6 +637,7 @@ export interface FileRoutesById {
   '/admin/dealers/$id': typeof AdminDealersIdRoute
   '/admin/dealers/new': typeof AdminDealersNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/rider/$': typeof ApiRiderSplatRoute
   '/api/webhooks/nepalotp': typeof ApiWebhooksNepalotpRoute
   '/api/webhooks/otp': typeof ApiWebhooksOtpRoute
   '/zones/$id/active': typeof ZonesIdActiveRoute
@@ -702,6 +711,7 @@ export interface FileRouteTypes {
     | '/admin/dealers/$id'
     | '/admin/dealers/new'
     | '/api/auth/$'
+    | '/api/rider/$'
     | '/api/webhooks/nepalotp'
     | '/api/webhooks/otp'
     | '/zones/$id/active'
@@ -769,6 +779,7 @@ export interface FileRouteTypes {
     | '/admin/dealers/$id'
     | '/admin/dealers/new'
     | '/api/auth/$'
+    | '/api/rider/$'
     | '/api/webhooks/nepalotp'
     | '/api/webhooks/otp'
     | '/zones/$id/active'
@@ -840,6 +851,7 @@ export interface FileRouteTypes {
     | '/admin/dealers/$id'
     | '/admin/dealers/new'
     | '/api/auth/$'
+    | '/api/rider/$'
     | '/api/webhooks/nepalotp'
     | '/api/webhooks/otp'
     | '/zones/$id/active'
@@ -880,6 +892,7 @@ export interface RootRouteChildren {
   TrackIndexRoute: typeof TrackIndexRoute
   ZonesIndexRoute: typeof ZonesIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiRiderSplatRoute: typeof ApiRiderSplatRoute
   ApiWebhooksNepalotpRoute: typeof ApiWebhooksNepalotpRoute
   ApiWebhooksOtpRoute: typeof ApiWebhooksOtpRoute
   ApiJobsCampaignsExpireRoute: typeof ApiJobsCampaignsExpireRoute
@@ -1316,6 +1329,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/rider/$': {
+      id: '/api/rider/$'
+      path: '/api/rider/$'
+      fullPath: '/api/rider/$'
+      preLoaderRoute: typeof ApiRiderSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/webhooks/nepalotp': {
       id: '/api/webhooks/nepalotp'
       path: '/api/webhooks/nepalotp'
@@ -1535,6 +1555,7 @@ const rootRouteChildren: RootRouteChildren = {
   TrackIndexRoute: TrackIndexRoute,
   ZonesIndexRoute: ZonesIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiRiderSplatRoute: ApiRiderSplatRoute,
   ApiWebhooksNepalotpRoute: ApiWebhooksNepalotpRoute,
   ApiWebhooksOtpRoute: ApiWebhooksOtpRoute,
   ApiJobsCampaignsExpireRoute: ApiJobsCampaignsExpireRoute,
