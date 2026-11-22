@@ -462,3 +462,153 @@ export async function resendOtp(
 ): Promise<SendOtpResult> {
   return sendOtp(phoneRaw, ip, d)
 }
+
+/**
+ * Verifies an OTP code for a new mobile number and updates the specified user's phone in the database.
+ */
+export async function verifyChangePhoneOtp(
+  userId: string,
+  newPhoneRaw: string,
+  code: string,
+  d: any = db,
+): Promise<VerifyOtpResult> {
+  const normalizedPhone = normalizeNepaliPhone(newPhoneRaw)
+  if (!normalizedPhone) {
+    return {
+      success: false,
+      reason: 'invalid_code',
+      message: 'Please provide a valid 10-digit Nepali mobile number starting with 98 or 97.',
+    }
+  }
+
+  const cleanCode = code.trim()
+  if (!/^\d{6}$/.test(cleanCode)) {
+    return {
+      success: false,
+      reason: 'invalid_code',
+      message: 'Please enter a valid 6-digit code.',
+    }
+  }
+
+  const identifier = getVerificationIdentifier(normalizedPhone)
+  const rows = await d
+    .select()
+    .from(verification)
+    .where(eq(verification.identifier, identifier))
+    .limit(1)
+
+  if (rows.length === 0) {
+    return {
+      success: false,
+      reason: 'not_found',
+      message: 'No verification code found. Please request a new code.',
+    }
+  }
+
+  const row = rows[0]
+  const now = new Date()
+
+  // Check expiration
+  if (row.expiresAt < now) {
+    await d.delete(verification).where(eq(verification.id, row.id))
+    return {
+      success: false,
+      reason: 'expired',
+      message: 'Verification code has expired. Please request a new code.',
+    }
+  }
+
+  const [storedHash, attemptsStr, remoteOtpId] = row.value.split(':')
+  const attempts = Number.parseInt(attemptsStr || '0', 10)
+
+  // Check max attempts
+  if (attempts >= MAX_ATTEMPTS) {
+    await d.delete(verification).where(eq(verification.id, row.id))
+    return {
+      success: false,
+      reason: 'max_attempts',
+      message: 'Too many incorrect attempts. Please request a new code.',
+    }
+  }
+
+  const isDevMock =
+    process.env.NODE_ENV !== 'production' &&
+    (process.env.SMS_PROVIDER || 'mock').toLowerCase() === 'mock'
+  const isDevFixedCodeMatch = isDevMock && cleanCode === DEV_FIXED_OTP
+  const isHashMatch = hashOtp(cleanCode) === storedHash
+
+  let isVerified = isHashMatch || isDevFixedCodeMatch
+
+  const smsProvider = getSmsProvider()
+  if (
+    !isVerified &&
+    smsProvider.name === 'nepalotp' &&
+    process.env.NEPALOTP_API_KEY &&
+    smsProvider.verifyOtpRemote
+  ) {
+    try {
+      const remoteResult = await smsProvider.verifyOtpRemote(
+        normalizedPhone,
+        cleanCode,
+        remoteOtpId,
+      )
+      if (remoteResult.success) {
+        isVerified = true
+      } else {
+        console.warn(
+          `[OTP Service] NepalOTP verification declined for ${normalizedPhone}:`,
+          remoteResult.error,
+        )
+      }
+    } catch (err) {
+      console.error('[OTP Service] Remote verify exception:', err)
+    }
+  }
+
+  if (!isVerified) {
+    const nextAttempts = attempts + 1
+    if (nextAttempts >= MAX_ATTEMPTS) {
+      await d.delete(verification).where(eq(verification.id, row.id))
+      return {
+        success: false,
+        reason: 'max_attempts',
+        message: 'Too many incorrect attempts. Please request a new code.',
+      }
+    }
+
+    await d
+      .update(verification)
+      .set({
+        value: `${storedHash}:${nextAttempts}:${remoteOtpId || ''}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(verification.id, row.id))
+
+    const remaining = MAX_ATTEMPTS - nextAttempts
+    return {
+      success: false,
+      reason: 'invalid_code',
+      attemptsRemaining: remaining,
+      message: `Invalid verification code. ${remaining} attempt(s) remaining.`,
+    }
+  }
+
+  // Success! Clean up verification row and update user's phone number
+  await d.delete(verification).where(eq(verification.id, row.id))
+
+  const updatedUsers = await d
+    .update(user)
+    .set({
+      phone: normalizedPhone,
+      phoneVerified: true,
+      updatedAt: new Date(),
+    })
+    .where(eq(user.id, userId))
+    .returning({ id: user.id })
+
+  return {
+    success: true,
+    message: 'Mobile number updated and verified successfully.',
+    userId: updatedUsers[0]?.id,
+  }
+}

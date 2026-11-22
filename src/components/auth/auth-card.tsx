@@ -25,6 +25,7 @@ import {
   prepareSignupFn,
 } from '#/server/otp/otp.functions'
 import { setPendingSignup } from '#/lib/pending-auth'
+import { AuthPreloader } from '#/components/auth/auth-preloader'
 
 interface AuthCardProps {
   initialMode?: 'login' | 'signup'
@@ -44,6 +45,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
   const [loginPassword, setLoginPassword] = useState('')
   const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [isLoginLoading, setIsLoginLoading] = useState(false)
+  const [loginStage, setLoginStage] = useState('Verifying credentials...')
 
   // Signup form state
   const [signupGender, setSignupGender] = useState<'male' | 'female' | 'other'>(
@@ -59,6 +61,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
     useState(false)
   const [isAgeConfirmed, setIsAgeConfirmed] = useState(false)
   const [isSignupLoading, setIsSignupLoading] = useState(false)
+  const [signupStage, setSignupStage] = useState('Validating details...')
 
   // Real-time email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -100,6 +103,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
     }
 
     setIsLoginLoading(true)
+    setLoginStage('Verifying account credentials...')
     try {
       const resolution = await resolveLoginIdentifierFn({
         data: { identifier: trimmedId },
@@ -116,6 +120,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
 
       // STRICT: If phone is NOT verified, DO NOT ALLOW LOGIN!
       if (!resolution.phoneVerified) {
+        setLoginStage('Sending mobile verification code...')
         const phoneToVerify = resolution.phone
         if (phoneToVerify) {
           try {
@@ -154,6 +159,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
         }
       }
 
+      setLoginStage('Securing session & signing in...')
       const res = await authClient.signIn.email({
         email: resolution.email,
         password: loginPassword,
@@ -176,6 +182,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
       )
 
       if (userRole === 'customer' && !isPhoneVerified) {
+        setLoginStage('Verifying mobile number requirement...')
         await authClient.signOut()
         queryClient.clear()
         await router.invalidate()
@@ -201,6 +208,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
         }
       }
 
+      setLoginStage('Preparing your dashboard & redirecting...')
       queryClient.clear()
       await router.invalidate()
 
@@ -274,6 +282,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
     }
 
     setIsSignupLoading(true)
+    setSignupStage('Validating registration details...')
     try {
       const emailToUse =
         signupEmail && signupEmail.trim().length > 0
@@ -297,6 +306,7 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
         return
       }
 
+      setSignupStage('Setting up your Mezmani account...')
       // 2. Clear any lingering session before creating the account
       try {
         await authClient.signOut()
@@ -334,11 +344,13 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
         image: `/images/gender/${signupGender}.png`,
       })
 
+      setSignupStage('Sending 6-digit verification code...')
       // 5. Send OTP code to verify mobile number
       await sendPhoneOtpFn({
         data: { phone: normalizedPhone },
       })
 
+      setSignupStage('Redirecting to mobile verification...')
       toast.success(
         'Account created! A 6-digit verification code has been sent to your mobile number.',
       )
@@ -374,6 +386,13 @@ export function AuthCard({ initialMode = 'login', redirect }: AuthCardProps) {
 
   return (
     <div className="w-full max-w-[960px] mx-auto relative z-10">
+      {/* Full Preloader Overlay for Login & Sign Up */}
+      <AuthPreloader
+        isOpen={isLoginLoading || isSignupLoading}
+        mode={isLoginLoading ? 'login' : 'signup'}
+        stage={isLoginLoading ? loginStage : signupStage}
+      />
+
       {/* Decorative ambient background glows aligned to system theme */}
       <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
         <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full bg-primary/10 dark:bg-primary/5 blur-3xl" />

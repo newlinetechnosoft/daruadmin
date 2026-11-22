@@ -21,6 +21,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as GroceryRouteImport } from './routes/grocery'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OrdersRouteImport } from './routes/orders'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as RiderRouteRouteImport } from './routes/rider/route'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SuperadminRouteRouteImport } from './routes/superadmin/route'
@@ -135,6 +136,11 @@ const LoginRoute = LoginRouteImport.update({
 const OrdersRoute = OrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RiderRouteRoute = RiderRouteRouteImport.update({
@@ -432,6 +438,7 @@ export interface FileRoutesByFullPath {
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
+  '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/admin/accounts': typeof AdminAccountsRoute
@@ -498,6 +505,7 @@ export interface FileRoutesByTo {
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
+  '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/admin/accounts': typeof AdminAccountsRoute
@@ -567,6 +575,7 @@ export interface FileRoutesById {
   '/grocery': typeof GroceryRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
+  '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/verify-phone': typeof VerifyPhoneRoute
   '/admin/accounts': typeof AdminAccountsRoute
@@ -638,6 +647,7 @@ export interface FileRouteTypes {
     | '/grocery'
     | '/login'
     | '/orders'
+    | '/profile'
     | '/signup'
     | '/verify-phone'
     | '/admin/accounts'
@@ -704,6 +714,7 @@ export interface FileRouteTypes {
     | '/grocery'
     | '/login'
     | '/orders'
+    | '/profile'
     | '/signup'
     | '/verify-phone'
     | '/admin/accounts'
@@ -772,6 +783,7 @@ export interface FileRouteTypes {
     | '/grocery'
     | '/login'
     | '/orders'
+    | '/profile'
     | '/signup'
     | '/verify-phone'
     | '/admin/accounts'
@@ -842,6 +854,7 @@ export interface RootRouteChildren {
   GroceryRoute: typeof GroceryRoute
   LoginRoute: typeof LoginRoute
   OrdersRoute: typeof OrdersRoute
+  ProfileRoute: typeof ProfileRoute
   SignupRoute: typeof SignupRoute
   VerifyPhoneRoute: typeof VerifyPhoneRoute
   ApiNeonHealthRoute: typeof ApiNeonHealthRoute
@@ -945,6 +958,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/orders'
       preLoaderRoute: typeof OrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rider': {
@@ -1481,6 +1501,7 @@ const rootRouteChildren: RootRouteChildren = {
   GroceryRoute: GroceryRoute,
   LoginRoute: LoginRoute,
   OrdersRoute: OrdersRoute,
+  ProfileRoute: ProfileRoute,
   SignupRoute: SignupRoute,
   VerifyPhoneRoute: VerifyPhoneRoute,
   ApiNeonHealthRoute: ApiNeonHealthRoute,

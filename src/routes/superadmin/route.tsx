@@ -229,11 +229,11 @@ function SuperAdminLayout() {
                   <Link to="/superadmin" search={{ tab: 'customers' }} className="flex items-center gap-2.5">
                     <div className="flex shrink-0 items-center">
                       <img
-                        src="https://mezmani.com/mezmani_logo.webp"
+                        src="/mezmani_logo_bg.svg"
                         onError={(e) => {
                           const target = e.currentTarget
-                          if (target.src !== `${window.location.origin}/mezmani_logo.webp`) {
-                            target.src = '/mezmani_logo.webp'
+                          if (target.src !== 'https://mezmani.com/mezmani_logo_bg.svg') {
+                            target.src = 'https://mezmani.com/mezmani_logo_bg.svg'
                           }
                         }}
                         alt="Mezmani"
@@ -241,22 +241,7 @@ function SuperAdminLayout() {
                         height="32"
                         loading="lazy"
                         decoding="async"
-                        className="h-7 w-auto object-contain dark:hidden"
-                      />
-                      <img
-                        src="https://mezmani.com/mezmani_logo_bg.svg"
-                        onError={(e) => {
-                          const target = e.currentTarget
-                          if (target.src !== `${window.location.origin}/mezmani_logo_bg.svg`) {
-                            target.src = '/mezmani_logo_bg.svg'
-                          }
-                        }}
-                        alt="Mezmani"
-                        width="110"
-                        height="32"
-                        loading="lazy"
-                        decoding="async"
-                        className="h-7 w-auto object-contain hidden dark:block"
+                        className="h-7 w-auto object-contain"
                       />
                     </div>
                     <div className="grid min-w-0 flex-1 text-left leading-tight">

@@ -324,54 +324,10 @@ export async function getAllDdcBrandsQuery() {
 }
 
 export function getProductFallbackImage(
-  name: string,
-  catalogType: 'liquor' | 'food' | 'grocery' | 'ddc',
+  _name?: string,
+  _catalogType?: 'liquor' | 'food' | 'grocery' | 'ddc',
 ): string {
-  if (catalogType === 'food') {
-    return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
-  }
-  if (catalogType === 'grocery') {
-    return 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80'
-  }
-  if (catalogType === 'ddc') {
-    return 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=600&q=80'
-  }
-  const lower = name.toLowerCase()
-  if (
-    lower.includes('beer') ||
-    lower.includes('can') ||
-    lower.includes('tuborg') ||
-    lower.includes('carlsberg') ||
-    lower.includes('gorkha') ||
-    lower.includes('arna')
-  ) {
-    return 'https://images.unsplash.com/photo-1608270586620-248524c67de9?auto=format&fit=crop&w=600&q=80'
-  }
-  if (lower.includes('wine') || lower.includes('manang')) {
-    return 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?auto=format&fit=crop&w=600&q=80'
-  }
-  if (lower.includes('rum') || lower.includes('khuk')) {
-    return 'https://br-fancy-cloud-azk8me61.storage.c-3.ap-southeast-1.aws.neon.tech/assets/products/liquor/1795067870661-pabgldgiro.png'
-  }
-  if (
-    lower.includes('vodka') ||
-    lower.includes('8848') ||
-    lower.includes('nude') ||
-    lower.includes('ruslan')
-  ) {
-    return 'https://br-fancy-cloud-azk8me61.storage.c-3.ap-southeast-1.aws.neon.tech/assets/products/liquor/1794742434839-lt146tqqclo.jpg'
-  }
-  if (
-    lower.includes('oak') ||
-    lower.includes('whiskey') ||
-    lower.includes('whisky') ||
-    lower.includes('black') ||
-    lower.includes('durbar') ||
-    lower.includes('jack')
-  ) {
-    return 'https://br-fancy-cloud-azk8me61.storage.c-3.ap-southeast-1.aws.neon.tech/assets/products/liquor/1794826313786-78467uva4k3.webp'
-  }
-  return 'https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=600&q=80'
+  return '/images/default-product.png'
 }
 
 export async function getLiquorProductsQuery(input: ListLiquorInput) {

@@ -4,8 +4,6 @@ import { toast } from 'sonner'
 import { LazyImage } from '#/components/store/lazy-image'
 import {
   Heart,
-  Wine,
-  Package,
   Plus,
   Minus,
   Sparkles,
@@ -131,7 +129,7 @@ function ProductCardComponent({
       catalogType: product.catalogType,
       price: activeVariant.price,
       mrp: activeVariant.mrp,
-      imageUrl: product.primaryImage,
+      imageUrl: displayImage,
       customBadge: badgeLabel,
       customDiscountLabel: discountLabel,
       volumeMl: activeVariant.volumeMl,
@@ -153,14 +151,7 @@ function ProductCardComponent({
     product.brandName ??
     (product.catalogType === 'liquor' ? 'Beer & Spirits' : 'Food')
 
-  const fallbackImg =
-    product.catalogType === 'liquor'
-      ? 'https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=500&q=80'
-      : product.catalogType === 'food'
-        ? 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=80'
-        : product.catalogType === 'grocery'
-          ? 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=500&q=80'
-          : 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=500&q=80'
+  const fallbackImg = '/images/default-product.png'
 
   const displayImage = product.primaryImage?.trim() || fallbackImg
 
@@ -271,7 +262,7 @@ function ProductCardComponent({
         catalogType: modalProduct.catalogType,
         price: modalActiveVariant.price,
         mrp: modalActiveVariant.mrp,
-        imageUrl: modalProduct.primaryImage,
+        imageUrl: modalProduct.primaryImage || fallbackImg,
         customBadge: modalProduct.customBadge,
         customDiscountLabel: modalDiscountLabel,
         volumeMl: modalActiveVariant.volumeMl,
@@ -297,7 +288,7 @@ function ProductCardComponent({
       catalogType: item.catalogType,
       price: v.price,
       mrp: v.mrp,
-      imageUrl: item.primaryImage,
+      imageUrl: item.primaryImage || fallbackImg,
       volumeMl: v.volumeMl,
       abv: v.abv,
     })
@@ -361,11 +352,11 @@ function ProductCardComponent({
             decoding={priority ? 'sync' : 'async'}
             fallbackSrc={fallbackImg}
             fallbackIcon={
-              product.catalogType === 'liquor' ? (
-                <Wine className="h-10 w-10 sm:h-12 sm:w-12 stroke-[1.25]" />
-              ) : (
-                <Package className="h-10 w-10 sm:h-12 sm:w-12 stroke-[1.25]" />
-              )
+              <img
+                src={fallbackImg}
+                alt={product.name}
+                className="w-full h-full object-contain p-4 opacity-80"
+              />
             }
           />
         </div>
@@ -548,7 +539,13 @@ function ProductCardComponent({
                   className="w-full h-full object-contain"
                   containerClassName="w-full h-full"
                   fallbackSrc={fallbackImg}
-                  fallbackIcon={<Wine className="h-20 w-20 text-muted-foreground stroke-1" />}
+                  fallbackIcon={
+                    <img
+                      src={fallbackImg}
+                      alt={modalProduct.name}
+                      className="w-full h-full object-contain p-6 opacity-80"
+                    />
+                  }
                 />
 
                 {modalDiscountLabel && (
@@ -737,7 +734,13 @@ function ProductCardComponent({
                           className="w-full h-full object-contain group-hover/suggested:scale-105 transition-transform"
                           containerClassName="w-full h-full"
                           fallbackSrc={fallbackImg}
-                          fallbackIcon={<Wine className="h-8 w-8 text-muted-foreground stroke-1" />}
+                          fallbackIcon={
+                            <img
+                              src={fallbackImg}
+                              alt={item.name}
+                              className="w-full h-full object-contain p-2 opacity-80"
+                            />
+                          }
                         />
                       </div>
 

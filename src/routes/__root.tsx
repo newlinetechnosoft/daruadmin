@@ -14,6 +14,7 @@ import { CartProvider } from '#/lib/cart-context'
 import { CartSheet } from '#/components/store/cart-sheet'
 import { AgeGate } from '#/components/store/age-gate'
 import { StoreClosedPopup } from '#/components/store/store-closed-popup'
+import { MobileBottomNav } from '#/components/store/mobile-bottom-nav'
 import { Toaster } from '#/components/ui/sonner'
 import { adminQueries } from '#/queries/admin'
 import { storefrontQueries } from '#/queries/storefront'
@@ -93,6 +94,32 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       ],
       links: [
         {
+          rel: 'icon',
+          type: 'image/png',
+          sizes: '32x32',
+          href: '/favicon-32x32.png',
+        },
+        {
+          rel: 'icon',
+          type: 'image/png',
+          sizes: '16x16',
+          href: '/favicon-16x16.png',
+        },
+        {
+          rel: 'icon',
+          type: 'image/png',
+          href: '/favicon.png',
+        },
+        {
+          rel: 'shortcut icon',
+          href: '/favicon.ico',
+        },
+        {
+          rel: 'apple-touch-icon',
+          sizes: '180x180',
+          href: '/apple-touch-icon.png',
+        },
+        {
           rel: 'preconnect',
           href: 'https://images.unsplash.com',
         },
@@ -128,6 +155,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <CartSheet />
             <AgeGate />
             <StoreClosedPopup />
+            <MobileBottomNav />
             <Toaster position="bottom-right" richColors visibleToasts={1} />
           </CartProvider>
         </ThemeProvider>

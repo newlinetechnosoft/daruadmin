@@ -34,6 +34,7 @@ import { normalizeNepaliPhone } from '#/server/orders/order.schemas'
 import { verifyPhoneOtpFn, resendPhoneOtpFn } from '#/server/otp/otp.functions'
 import { authClient } from '#/lib/auth-client'
 import { getPendingSignup, clearPendingSignup } from '#/lib/pending-auth'
+import { AuthPreloader } from '#/components/auth/auth-preloader'
 
 const verifyPhoneSearchSchema = z.object({
   phone: z
@@ -95,6 +96,7 @@ function VerifyPhonePage() {
 
   const [otp, setOtp] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
+  const [verifyStage, setVerifyStage] = useState('Verifying 6-digit code...')
   const [isResending, setIsResending] = useState(false)
   const [countdown, setCountdown] = useState(60)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -115,6 +117,7 @@ function VerifyPhonePage() {
       if (codeToVerify.length !== 6 || isVerifying) return
 
       setIsVerifying(true)
+      setVerifyStage('Verifying 6-digit code...')
       setErrorMessage(null)
 
       try {
@@ -126,6 +129,7 @@ function VerifyPhonePage() {
         })
 
         if (result.success) {
+          setVerifyStage('Activating account & signing in...')
           const pending = getPendingSignup()
           clearPendingSignup()
 
@@ -257,6 +261,13 @@ function VerifyPhonePage() {
       <Header />
 
       <main className="flex-1 flex items-center justify-center py-8 sm:py-12 md:py-16 px-4 w-full overflow-x-hidden">
+        {/* Verification Preloader */}
+        <AuthPreloader
+          isOpen={isVerifying}
+          mode="verify"
+          stage={verifyStage}
+        />
+
         <div className="w-full max-w-[960px] mx-auto relative z-10">
           {/* Decorative ambient background glows aligned to system theme */}
           <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">

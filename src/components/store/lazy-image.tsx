@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Skeleton } from '#/components/ui/skeleton'
 import { cn } from '#/lib/utils'
-import { ImageOff } from 'lucide-react'
 
 export interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   containerClassName?: string
@@ -10,10 +9,13 @@ export interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement
   fallbackSrc?: string
 }
 
+export const DEFAULT_PRODUCT_IMAGE = '/images/default-product.png'
+
 /**
  * LazyImage component provides reliable, bulletproof image rendering.
  * Keeps images visible at all times, preventing white/blank cards during SSR,
  * hydration, fast navigation, or page refresh.
+ * Uses default-product.png as the fallback whenever an image is unavailable.
  */
 export function LazyImage({
   src,
@@ -21,7 +23,7 @@ export function LazyImage({
   className,
   containerClassName,
   fallbackIcon,
-  fallbackSrc,
+  fallbackSrc = DEFAULT_PRODUCT_IMAGE,
   showSkeleton = true,
   loading = 'lazy',
   decoding = 'async',
@@ -31,19 +33,19 @@ export function LazyImage({
 }: LazyImageProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [hasError, setHasError] = useState(false)
-  const [currentSrc, setCurrentSrc] = useState(src)
+  const [currentSrc, setCurrentSrc] = useState(src || fallbackSrc)
   const imgRef = useRef<HTMLImageElement | null>(null)
 
   // Sync internal src with prop
   useEffect(() => {
-    setCurrentSrc(src)
+    setCurrentSrc(src || fallbackSrc)
     setHasError(false)
 
     // Check if the DOM image node is already finished loading (e.g. from cache or SSR)
     if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
       setIsLoaded(true)
     }
-  }, [src])
+  }, [src, fallbackSrc])
 
   const handleLoad = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     setIsLoaded(true)
@@ -67,11 +69,17 @@ export function LazyImage({
     return (
       <div
         className={cn(
-          'flex h-full w-full items-center justify-center bg-muted/40 text-muted-foreground/40',
+          'flex h-full w-full items-center justify-center bg-muted/20 p-2',
           containerClassName,
         )}
       >
-        {fallbackIcon || <ImageOff className="size-6 stroke-[1.5]" />}
+        {fallbackIcon || (
+          <img
+            src={fallbackSrc}
+            alt={alt || 'Product placeholder'}
+            className="h-full w-full object-contain p-2"
+          />
+        )}
       </div>
     )
   }

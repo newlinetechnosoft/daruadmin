@@ -15,6 +15,7 @@ import {
   ShoppingCart,
   Truck,
   UserRound,
+  User,
   KeyRound,
 } from 'lucide-react'
 import { ChangePasswordDialog } from '#/components/auth/change-password-dialog'
@@ -256,6 +257,12 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
+                  <Link to="/profile">
+                    <User className="mr-2 h-4 w-4" />
+                    My profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
                   <Link to="/orders">
                     <ShoppingBag className="mr-2 h-4 w-4" />
                     My orders
@@ -460,6 +467,14 @@ export function Header({ onSearch }: { onSearch?: (query: string) => void }) {
                   </p>
                   {user ? (
                     <>
+                      <Link
+                        to="/profile"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm hover:bg-muted"
+                      >
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        My profile
+                      </Link>
                       <Link
                         to="/orders"
                         onClick={() => setMobileMenuOpen(false)}

@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import { z } from 'zod'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, ne } from 'drizzle-orm'
 import { randomBytes } from 'node:crypto'
 import { hashPassword } from 'better-auth/crypto'
 import { db } from '#/db'
@@ -12,8 +12,10 @@ import {
   verifyOtp,
   resendOtp,
   prepareSignupQuery,
+  verifyChangePhoneOtp,
 } from './otp.service'
 import { storeUserCredentialHelper } from '#/server/superadmin/superadmin.functions'
+import { getSessionUser, logAudit } from '#/server/auth/permissions'
 
 function getClientIp(): string | undefined {
   try {
@@ -445,4 +447,104 @@ export const resendPasswordResetOtpFn = createServerFn({ method: 'POST' })
 
     const ip = getClientIp()
     return resendOtp(normalized, ip)
+  })
+
+export const requestChangePhoneOtpFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        newPhone: z.string().min(1, 'New mobile number is required'),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const sessionUser = await getSessionUser()
+    if (!sessionUser?.id) {
+      throw new Error('401: Unauthorized: Please sign in to update your mobile number.')
+    }
+    const normalized = normalizeNepaliPhone(data.newPhone)
+    if (!normalized) {
+      return {
+        success: false,
+        message:
+          'Please enter a valid 10-digit Nepali mobile number starting with 98 or 97.',
+      }
+    }
+    if (normalized === sessionUser.phone && sessionUser.phoneVerified) {
+      return {
+        success: false,
+        message: 'This mobile number is already verified on your account.',
+      }
+    }
+    // Check if another account is already linked to this phone
+    const existing = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(and(eq(user.phone, normalized), ne(user.id, sessionUser.id)))
+      .limit(1)
+    if (existing.length > 0) {
+      return {
+        success: false,
+        message: 'This mobile number is already registered to another account.',
+      }
+    }
+    const ip = getClientIp()
+    return sendOtp(normalized, ip)
+  })
+
+export const verifyChangePhoneOtpFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        newPhone: z.string().min(1, 'New mobile number is required'),
+        code: z.string().length(6, 'Verification code must be 6 digits'),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const sessionUser = await getSessionUser()
+    if (!sessionUser?.id) {
+      throw new Error('401: Unauthorized: Please sign in to update your mobile number.')
+    }
+    const normalized = normalizeNepaliPhone(data.newPhone)
+    if (!normalized) {
+      return {
+        success: false,
+        message:
+          'Please enter a valid 10-digit Nepali mobile number starting with 98 or 97.',
+      }
+    }
+    // Ensure no other user registered this phone
+    const existing = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(and(eq(user.phone, normalized), ne(user.id, sessionUser.id)))
+      .limit(1)
+    if (existing.length > 0) {
+      return {
+        success: false,
+        message: 'This mobile number is already registered to another account.',
+      }
+    }
+
+    const result = await verifyChangePhoneOtp(
+      sessionUser.id,
+      normalized,
+      data.code,
+    )
+
+    if (result.success) {
+      try {
+        await logAudit(
+          sessionUser.name || sessionUser.email || sessionUser.id,
+          'customer',
+          'update_phone',
+          `Updated mobile number to +977 ${normalized}`,
+        )
+      } catch {
+        // non-blocking
+      }
+    }
+
+    return result
   })
