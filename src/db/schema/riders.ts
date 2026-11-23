@@ -38,6 +38,7 @@ export const riders = pgTable(
     rating: numeric('rating', { precision: 3, scale: 2 })
       .notNull()
       .default('5.00'),
+    fcmToken: text('fcm_token'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -158,6 +159,29 @@ export const riderShifts = pgTable(
   ],
 )
 
+export const riderDeviceTokens = pgTable(
+  'rider_device_tokens',
+  {
+    id: text('id').primaryKey(),
+    riderId: text('rider_id')
+      .notNull()
+      .references(() => riders.id, { onDelete: 'cascade' }),
+    token: text('token').notNull().unique(),
+    deviceType: text('device_type').notNull().default('android'), // 'android' | 'ios'
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('rider_device_tokens_rider_id_idx').on(table.riderId),
+    index('rider_device_tokens_token_idx').on(table.token),
+  ],
+)
+
 export const ridersRelations = relations(riders, ({ one, many }) => ({
   user: one(user, {
     fields: [riders.userId],
@@ -166,7 +190,18 @@ export const ridersRelations = relations(riders, ({ one, many }) => ({
   handovers: many(riderCashHandovers),
   settlements: many(settlements),
   shifts: many(riderShifts),
+  deviceTokens: many(riderDeviceTokens),
 }))
+
+export const riderDeviceTokensRelations = relations(
+  riderDeviceTokens,
+  ({ one }) => ({
+    rider: one(riders, {
+      fields: [riderDeviceTokens.riderId],
+      references: [riders.id],
+    }),
+  }),
+)
 
 export const riderCashHandoversRelations = relations(
   riderCashHandovers,

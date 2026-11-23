@@ -59,6 +59,7 @@
     "date-fns": "^4.4.0",
     "drizzle-kit": "^0.31.11",
     "drizzle-orm": "^0.45.4",
+    "firebase-admin": "^14.5.1",
     "idb-keyval": "^6.3.0",
     "input-otp": "^1.5.0",
     "leaflet": "^1.9.4",

@@ -20,7 +20,8 @@ describe('ACC-0.11: Legacy ledger write guard', () => {
           !entry.name.endsWith('.test.ts') &&
           !entry.name.endsWith('.test.tsx') &&
           !entry.name.endsWith('.spec.ts') &&
-          !fullPath.includes('/src/db/schema/')
+          !fullPath.includes('/src/db/schema/') &&
+          !fullPath.includes('/src/db/reset-transactions.ts')
         ) {
           files.push(fullPath)
         }

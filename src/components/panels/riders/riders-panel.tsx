@@ -11,6 +11,7 @@ import { DataSection } from '#/components/shared/data-section'
 import {
   upsertRiderFn,
   deleteRiderFn,
+  sendRiderTestPushFn,
 } from '#/server/operations/operations.functions'
 import type { Rider } from '#/server/operations/types'
 import { formatNPR, fromPaisa } from '#/lib/money'
@@ -50,6 +51,7 @@ import {
   MoreHorizontal,
   MessageCircle,
   Phone,
+  BellRing,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
@@ -217,8 +219,35 @@ export function RidersPanel() {
     }
   }
 
-  const handleToggleKyc = async (rider: Rider) => {
+  const handleSendTestPush = async (rider: Rider) => {
     try {
+      setIsSubmitting(true)
+      const result = await sendRiderTestPushFn({
+        data: { riderId: rider.id },
+      })
+      if (result.success) {
+        toast.success(
+          `Test push delivered to ${rider.name} (${result.sentCount} device${result.sentCount === 1 ? '' : 's'})`,
+        )
+      } else {
+        const reason =
+          result.reason === 'no_registered_tokens'
+            ? 'No device token yet — ask the rider to open the app and sign in.'
+            : result.reason === 'firebase_not_configured'
+              ? 'Firebase credentials are missing on the server.'
+              : result.reason || 'Unknown error'
+        toast.error(`Push not delivered: ${reason}`)
+      }
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to send test push',
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleToggleKyc = async (rider: Rider) => {    try {
       setIsSubmitting(true)
       await upsertRiderFn({
         data: {
@@ -684,6 +713,16 @@ export function RidersPanel() {
                                   <span>Call courier</span>
                                 </DropdownMenuItem>
                               </>
+                            )}
+
+                            {canEdit && (
+                              <DropdownMenuItem
+                                onSelect={() => handleSendTestPush(rider)}
+                                className="text-xs gap-2 cursor-pointer"
+                              >
+                                <BellRing className="size-3.5 text-amber-600" />
+                                <span>Send test push</span>
+                              </DropdownMenuItem>
                             )}
 
                             <DropdownMenuItem

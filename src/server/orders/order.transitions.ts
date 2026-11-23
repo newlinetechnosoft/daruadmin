@@ -10,6 +10,7 @@ import { logAudit } from '#/server/auth/permissions'
 import { getGoogleMapsUrl } from '#/lib/map-config'
 import { postOrderDeliveredTx } from '#/server/finance/double-entry'
 import { getStoreSettingsQuery } from '#/server/platform/platform.queries'
+import { sendOrderAssignmentNotification } from '#/lib/firebase-admin'
 
 export function nid(prefix = 'id') {
   return `${prefix}_${crypto.randomUUID().slice(0, 8)}`
@@ -22,6 +23,35 @@ export interface TransitionOrderInput {
   options?: TransitionOptions
 }
 
+type DeferredTask = () => Promise<unknown>
+
+/**
+ * Runs post-commit side effects (e.g. FCM push delivery). Push delivery is
+ * best-effort and must never fail or roll back the order transaction.
+ */
+function runDeferred(tasks: DeferredTask[]) {
+  for (const task of tasks) {
+    void task().catch((err) =>
+      console.error('[order.transitions] Deferred task failed:', err),
+    )
+  }
+}
+
+function enqueueDeferred(
+  tasks: DeferredTask[] | undefined,
+  task: DeferredTask,
+) {
+  if (tasks) {
+    tasks.push(task)
+    return
+  }
+  // Direct transitionOrderTx callers (e.g. rider status updates) have no
+  // post-commit hook; run best-effort immediately.
+  void task().catch((err) =>
+    console.error('[order.transitions] Deferred task failed:', err),
+  )
+}
+
 /**
  * Executes an order transition in a database transaction with role/ownership enforcement,
  * status history audit, and side-effect processing.
@@ -29,14 +59,20 @@ export interface TransitionOrderInput {
 export async function transitionOrder(
   input: TransitionOrderInput,
 ): Promise<{ order: Order; noop: boolean }> {
-  return dbTx.transaction(async (tx) => {
-    return transitionOrderTx(tx, input)
+  const deferred: DeferredTask[] = []
+  const result = await dbTx.transaction(async (tx) => {
+    return transitionOrderTx(tx, input, deferred)
   })
+
+  // Only notify riders once the assignment has actually been committed.
+  runDeferred(deferred)
+  return result
 }
 
 export async function transitionOrderTx(
   tx: Parameters<Parameters<typeof dbTx.transaction>[0]>[0],
   input: TransitionOrderInput,
+  deferred?: DeferredTask[],
 ): Promise<{ order: Order; noop: boolean }> {
   const { orderId, toStatus, user, options = {} } = input
 
@@ -185,6 +221,8 @@ export async function transitionOrderTx(
     options.riderId !== existingOrder.riderId
   ) {
     const rider = await getRiderByIdQuery(options.riderId)
+    const assignedRiderId = options.riderId
+
     if (rider?.userId) {
       const mapUrl = getGoogleMapsUrl(existingOrder)
       await tx.insert(notifications).values({
@@ -198,6 +236,32 @@ export async function transitionOrderTx(
         createdAt: now,
       })
     }
+
+    // Send the real-time FCM push only after the assignment is committed.
+    enqueueDeferred(deferred, () =>
+      sendOrderAssignmentNotification({
+        riderId: assignedRiderId,
+        order: {
+          id: existingOrder.id,
+          number: existingOrder.number,
+          customerName: existingOrder.customerName,
+          address: existingOrder.address,
+          total: existingOrder.total,
+          paymentMethod: existingOrder.paymentMethod,
+          items: existingOrder.items.map((item) => ({
+            name: item.name,
+            qty: item.qty,
+            dealerName: item.dealer?.name ?? null,
+            dealerAddress: item.dealer
+              ? [item.dealer.address, item.dealer.city]
+                  .filter(Boolean)
+                  .join(', ')
+              : null,
+            dealerPhone: item.dealer?.contact ?? null,
+          })),
+        },
+      }),
+    )
   }
 
   // C. Handle Rider status and earnings

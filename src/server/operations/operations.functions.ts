@@ -2,6 +2,10 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { db, dbTx } from '#/db'
 import {
+  sendOrderAssignmentNotification,
+  sendRiderPushNotification,
+} from '#/lib/firebase-admin'
+import {
   orders,
   orderItems,
   orderStatusHistory,
@@ -947,6 +951,31 @@ export const getOpsBundleFn = createServerFn({ method: 'GET' }).handler(
 // OPERATIONS MUTATIONS WITH REAL POSTGRESQL TABLES
 // -------------------------------------------------------------
 
+type OrderWithDealers = NonNullable<
+  Awaited<ReturnType<typeof getOrderByIdQuery>>
+>
+
+/** Flatten an order (plus its assigned dealers) into an FCM-ready payload. */
+function buildOrderPushPayload(order: OrderWithDealers) {
+  return {
+    id: order.id,
+    number: order.number,
+    customerName: order.customerName,
+    address: order.address,
+    total: order.total,
+    paymentMethod: order.paymentMethod,
+    items: order.items.map((item) => ({
+      name: item.name,
+      qty: item.qty,
+      dealerName: item.dealer?.name ?? null,
+      dealerAddress: item.dealer
+        ? [item.dealer.address, item.dealer.city].filter(Boolean).join(', ')
+        : null,
+      dealerPhone: item.dealer?.contact ?? null,
+    })),
+  }
+}
+
 export const updateOrderFn = createServerFn({ method: 'POST' })
   .validator((d: unknown) =>
     z
@@ -1315,6 +1344,57 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
       }
     })
 
+    // -------------------------------------------------------------
+    // POST-COMMIT: PUSH NOTIFICATIONS (best-effort, never blocks the order)
+    // -------------------------------------------------------------
+    try {
+      if (isRiderAssignment && newRider) {
+        const committedOrder =
+          (await getOrderByIdQuery(data.id)) ?? order
+        void sendOrderAssignmentNotification({
+          riderId: newRider.id,
+          kind: 'assignment',
+          order: buildOrderPushPayload(committedOrder),
+        }).catch((err) => {
+          console.error(
+            '[FCM] Error dispatching rider-assignment push from updateOrderFn:',
+            err,
+          )
+        })
+      } else if (
+        !isRiderUnassign &&
+        data.itemDealers &&
+        data.itemDealers.length > 0 &&
+        order.riderId
+      ) {
+        // Dealers were (re)assigned on an order that already has a rider.
+        // Notify once the full pickup plan is ready so the rider knows all
+        // pickup locations.
+        const committedOrder = await getOrderByIdQuery(data.id)
+        const pickupPlanReady =
+          !!committedOrder &&
+          committedOrder.items.length > 0 &&
+          committedOrder.items.every(
+            (item) => item.dealerId && item.sourcingStatus === 'assigned',
+          )
+
+        if (committedOrder?.riderId && pickupPlanReady) {
+          void sendOrderAssignmentNotification({
+            riderId: committedOrder.riderId,
+            kind: 'pickup_update',
+            order: buildOrderPushPayload(committedOrder),
+          }).catch((err) => {
+            console.error(
+              '[FCM] Error dispatching dealer-assignment push from updateOrderFn:',
+              err,
+            )
+          })
+        }
+      }
+    } catch (err) {
+      console.error('[FCM] Post-commit notification error:', err)
+    }
+
     await logAudit(
       user.name,
       'orders',
@@ -1393,6 +1473,35 @@ export const assignOrderItemDealerFn = createServerFn({ method: 'POST' })
       'edit',
       `Assigned dealer ${data.dealerId || 'none'} to item ${data.orderItemId} on order ${order.number}`,
     )
+
+    // If this order already has a rider, let them know as soon as every item
+    // has a dealer so they can plan the pickup route.
+    if (data.dealerId) {
+      try {
+        const committedOrder = await getOrderByIdQuery(data.orderId)
+        const pickupPlanReady =
+          !!committedOrder &&
+          committedOrder.items.length > 0 &&
+          committedOrder.items.every(
+            (item) => item.dealerId && item.sourcingStatus === 'assigned',
+          )
+
+        if (committedOrder?.riderId && pickupPlanReady) {
+          void sendOrderAssignmentNotification({
+            riderId: committedOrder.riderId,
+            kind: 'pickup_update',
+            order: buildOrderPushPayload(committedOrder),
+          }).catch((err) => {
+            console.error(
+              '[FCM] Error dispatching dealer-assignment push:',
+              err,
+            )
+          })
+        }
+      } catch (err) {
+        console.error('[FCM] Dealer-assignment notification error:', err)
+      }
+    }
 
     return { success: true }
   })
@@ -1607,6 +1716,24 @@ export const autoAssignNearestDealersForOrderFn = createServerFn({
       `Auto-assigned nearest dealers to ${updatedCount} items on order ${order.number}`,
     )
 
+    if (freshOrder?.riderId && updatedCount > 0) {
+      try {
+        const latestOrder = (await getOrderByIdQuery(data.orderId)) ?? freshOrder
+        void sendOrderAssignmentNotification({
+          riderId: freshOrder.riderId,
+          kind: 'pickup_update',
+          order: buildOrderPushPayload(latestOrder),
+        }).catch((err) => {
+          console.error(
+            '[FCM] Error dispatching dealer-assignment push from autoAssignNearestDealersForOrderFn:',
+            err,
+          )
+        })
+      } catch (err) {
+        console.error('[FCM] Auto-assign notification error:', err)
+      }
+    }
+
     return { success: true, updatedCount }
   })
 
@@ -1706,6 +1833,26 @@ export const substituteOrderItemDealerFn = createServerFn({ method: 'POST' })
       'edit',
       `Substituted dealer for item ${item.name} to ${newDealer.name} on order ${order.number}`,
     )
+
+    if (order.riderId) {
+      try {
+        const latestOrder = await getOrderByIdQuery(data.orderId)
+        if (latestOrder && latestOrder.riderId) {
+          void sendOrderAssignmentNotification({
+            riderId: latestOrder.riderId,
+            kind: 'pickup_update',
+            order: buildOrderPushPayload(latestOrder),
+          }).catch((err) => {
+            console.error(
+              '[FCM] Error dispatching dealer-substitution push:',
+              err,
+            )
+          })
+        }
+      } catch (err) {
+        console.error('[FCM] Dealer substitution notification error:', err)
+      }
+    }
 
     return { success: true }
   })
@@ -2294,6 +2441,36 @@ export const upsertRiderFn = createServerFn({ method: 'POST' })
     )
 
     return true
+  })
+
+export const sendRiderTestPushFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z.object({ riderId: z.string().min(1, 'Rider ID is required') }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const { user: actor } = await requirePermission('riders', 'edit')
+    const rider = await getRiderByIdQuery(data.riderId)
+    if (!rider) throw new Error('Rider not found')
+
+    const result = await sendRiderPushNotification({
+      riderId: rider.id,
+      title: 'Mezmani Rider test notification',
+      body: 'Push notifications are working. New delivery assignments will appear here.',
+      data: { type: 'test', riderId: rider.id },
+    })
+
+    await logAudit(
+      actor.name,
+      'riders',
+      'edit',
+      `Sent FCM test push to ${rider.name}: ${
+        result.success
+          ? `delivered to ${result.sentCount} device(s)`
+          : result.reason || 'failed'
+      }`,
+    )
+
+    return result
   })
 
 export const deleteRiderFn = createServerFn({ method: 'POST' })

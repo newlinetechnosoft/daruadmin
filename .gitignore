@@ -15,3 +15,5 @@ __unconfig*
 todos.json
 stats.html
 .neon
+*-firebase-adminsdk-*.json
+firebase-service-account.json

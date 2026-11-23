@@ -3,14 +3,17 @@ import { auth } from '#/lib/auth'
 import { db, dbTx } from '#/db'
 import {
   riders,
+  riderDeviceTokens,
   riderShifts,
   riderCashHandovers,
+  orders,
   orderItems,
   orderStatusHistory,
 } from '#/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, and, ne } from 'drizzle-orm'
 import { nid } from '#/server/orders/order.transitions'
 import type { Order } from '#/server/operations/types'
+import { sendRiderPushNotification } from '#/lib/firebase-admin'
 import {
   getRiderByUserIdQuery,
   getAllRidersQuery,
@@ -107,7 +110,7 @@ export const Route = createFileRoute('/api/rider/$')({
           status: 204,
           headers: {
             'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           },
         })
@@ -435,6 +438,223 @@ export const Route = createFileRoute('/api/rider/$')({
             const publicUrl = getPublicUrl(key)
 
             return jsonResponse({ uploadUrl, publicUrl, key })
+          }
+
+          // 7. REGISTER OR UPDATE FCM DEVICE TOKEN
+          if (subPath === 'fcm-token') {
+            const { token, deviceType } = body
+            if (!token || typeof token !== 'string') {
+              return jsonResponse({ error: 'Valid FCM token is required' }, 400)
+            }
+
+            const now = new Date()
+            const cleanToken = token.trim()
+
+            // A device token is tied to the phone, not the rider. When a
+            // different rider signs in on the same device, make sure the old
+            // rider's legacy column no longer points at it, otherwise they
+            // would keep receiving push alerts on this phone.
+            await db
+              .update(riders)
+              .set({ fcmToken: null, updatedAt: now })
+              .where(
+                and(
+                  eq(riders.fcmToken, cleanToken),
+                  ne(riders.id, rider.id),
+                ),
+              )
+
+            // Update single fcmToken on riders table
+            await db
+              .update(riders)
+              .set({ fcmToken: cleanToken, updatedAt: now })
+              .where(eq(riders.id, rider.id))
+
+            // Upsert or insert into riderDeviceTokens
+            const existing = await db
+              .select({ id: riderDeviceTokens.id })
+              .from(riderDeviceTokens)
+              .where(eq(riderDeviceTokens.token, cleanToken))
+              .limit(1)
+
+            if (existing.length > 0) {
+              await db
+                .update(riderDeviceTokens)
+                .set({
+                  riderId: rider.id,
+                  deviceType: deviceType || 'android',
+                  updatedAt: now,
+                })
+                .where(eq(riderDeviceTokens.id, existing[0].id))
+            } else {
+              await db.insert(riderDeviceTokens).values({
+                id: nid('rdt'),
+                riderId: rider.id,
+                token: cleanToken,
+                deviceType: deviceType || 'android',
+                createdAt: now,
+                updatedAt: now,
+              })
+            }
+
+            return jsonResponse({ success: true, riderId: rider.id, token: cleanToken })
+          }
+
+          // 7b. SEND A TEST PUSH (diagnostics for the mobile app)
+          if (subPath === 'test-push') {
+            const result = await sendRiderPushNotification({
+              riderId: rider.id,
+              title: 'Mezmani Rider test notification',
+              body: 'Push notifications are working. You will receive new delivery alerts here.',
+              data: { type: 'test', riderId: rider.id },
+            })
+            return jsonResponse(result, result.success ? 200 : 502)
+          }
+
+          // 8. RIDER ACCEPT OR DECLINE ORDER ASSIGNMENT
+          if (subPath === 'order-response') {
+            const { orderId, action, reason } = body
+            if (!orderId || !action) {
+              return jsonResponse({ error: 'Missing orderId or action' }, 400)
+            }
+
+            if (action !== 'accept' && action !== 'decline') {
+              return jsonResponse({ error: 'Action must be accept or decline' }, 400)
+            }
+
+            const order = await getOrderByIdQuery(orderId)
+            if (!order) return jsonResponse({ error: 'Order not found' }, 404)
+
+            if (order.riderId !== rider.id && user.role !== 'admin' && user.role !== 'manager') {
+              return jsonResponse({ error: 'Forbidden: You are not assigned to this delivery' }, 403)
+            }
+
+            const now = new Date()
+
+            if (action === 'accept') {
+              if (['picked_up', 'out_for_delivery'].includes(order.status)) {
+                return jsonResponse({
+                  success: true,
+                  orderId,
+                  status: order.status,
+                  message: 'Already accepted and in progress',
+                })
+              }
+
+              await dbTx.transaction(async (tx) => {
+                await tx
+                  .update(riders)
+                  .set({ status: 'busy', updatedAt: now })
+                  .where(eq(riders.id, rider.id))
+
+                await tx.insert(orderStatusHistory).values({
+                  id: nid('ev'),
+                  orderId,
+                  fromStatus: order.status,
+                  toStatus: order.status,
+                  status: order.status,
+                  note: `Rider ${rider.name} accepted delivery assignment.`,
+                  actor: rider.name,
+                  actorId: user.id,
+                  actorRole: 'rider',
+                })
+              })
+
+              return jsonResponse({ success: true, orderId, action: 'accept', status: order.status })
+            }
+
+            if (action === 'decline') {
+              if (['picked_up', 'out_for_delivery', 'delivered'].includes(order.status)) {
+                return jsonResponse(
+                  { error: `Cannot decline order in '${order.status}' status` },
+                  400,
+                )
+              }
+
+              await dbTx.transaction(async (tx) => {
+                await tx
+                  .update(orders)
+                  .set({
+                    riderId: null,
+                    status: 'dealer_assigned',
+                    updatedAt: now,
+                  })
+                  .where(eq(orders.id, orderId))
+
+                await tx
+                  .update(riders)
+                  .set({
+                    status: rider.available ? 'available' : 'offline',
+                    updatedAt: now,
+                  })
+                  .where(eq(riders.id, rider.id))
+
+                await tx.insert(orderStatusHistory).values({
+                  id: nid('ev'),
+                  orderId,
+                  fromStatus: order.status,
+                  toStatus: 'dealer_assigned',
+                  status: 'dealer_assigned',
+                  note: `Rider ${rider.name} declined delivery assignment: ${reason || 'Declined from mobile app'}`,
+                  actor: rider.name,
+                  actorId: user.id,
+                  actorRole: 'rider',
+                })
+              })
+
+              return jsonResponse({
+                success: true,
+                orderId,
+                action: 'decline',
+                status: 'dealer_assigned',
+              })
+            }
+          }
+
+          return jsonResponse({ error: `Not found: /api/rider/${subPath}` }, 404)
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : 'Server error'
+          return jsonResponse({ error: msg }, 500)
+        }
+      },
+
+      DELETE: async ({ request, params }) => {
+        const subPath = params._splat || ''
+        const authResult = await authenticateRider(request)
+        if ('error' in authResult) {
+          return jsonResponse({ error: authResult.error }, authResult.status)
+        }
+
+        const { rider } = authResult
+
+        try {
+          if (subPath === 'fcm-token') {
+            let body: any = {}
+            try {
+              body = await request.json()
+            } catch {
+              body = {}
+            }
+            const token = body.token
+            if (token && typeof token === 'string') {
+              await db
+                .delete(riderDeviceTokens)
+                .where(
+                  and(
+                    eq(riderDeviceTokens.token, token.trim()),
+                    eq(riderDeviceTokens.riderId, rider.id),
+                  ),
+                )
+            } else {
+              await db
+                .delete(riderDeviceTokens)
+                .where(eq(riderDeviceTokens.riderId, rider.id))
+            }
+            await db
+              .update(riders)
+              .set({ fcmToken: null })
+              .where(eq(riders.id, rider.id))
+            return jsonResponse({ success: true, unregistered: true })
           }
 
           return jsonResponse({ error: `Not found: /api/rider/${subPath}` }, 404)
