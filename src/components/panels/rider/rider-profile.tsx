@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { toggleRiderAvailabilityFn } from '#/server/operations/operations.functions'
 import type { Rider } from '#/server/operations/types'
+import { formatNPR } from '#/lib/money'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
@@ -18,14 +19,36 @@ import {
   Mail,
   Power,
   LogOut,
+  Wallet,
+  BookOpen,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-interface RiderProfileProps {
-  rider: Rider
+interface RiderLedgerEntry {
+  lineId: string
+  voucherNo: string | null
+  voucherType: string
+  postingDate: string
+  accountCode: string
+  accountName: string
+  debit: number
+  credit: number
+  narration: string | null
 }
 
-export function RiderProfile({ rider }: RiderProfileProps) {
+interface RiderProfileProps {
+  rider: Rider
+  ledger?: {
+    balance: {
+      commissionPayable: number
+      undepositedCodCash: number
+      outstandingAdvances: number
+    }
+    entries: RiderLedgerEntry[]
+  }
+}
+
+export function RiderProfile({ rider, ledger }: RiderProfileProps) {
   const router = useRouter()
   const [isTogglingAvail, setIsTogglingAvail] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -60,53 +83,46 @@ export function RiderProfile({ rider }: RiderProfileProps) {
   }
 
   return (
-    <div className="space-y-6 pb-12 max-w-2xl mx-auto">
-      <div>
-        <h2 className="text-base font-semibold text-foreground">
-          Rider Profile
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          View your driver credentials, vehicle details, and active status
-        </p>
-      </div>
+    <div className="space-y-4 pb-10 max-w-2xl mx-auto">
+      <h2 className="text-base font-semibold text-foreground">Rider Profile</h2>
 
       {/* Main Profile Info Card */}
       <Card className="border-border bg-card">
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary text-lg font-bold shrink-0">
               {rider.name.charAt(0)}
             </div>
 
-            <div className="space-y-1 flex-1">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <h3 className="text-base font-semibold text-foreground">
+            <div className="space-y-0.5 flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <h3 className="text-sm font-semibold text-foreground">
                   {rider.name}
                 </h3>
-                <div className="flex items-center justify-center sm:justify-start gap-1.5">
-                  <Badge
-                    variant={rider.available ? 'success' : 'secondary'}
-                    className="text-xs"
-                  >
-                    {rider.status.toUpperCase()}
+                <Badge
+                  variant={rider.available ? 'success' : 'secondary'}
+                  className="text-[11px]"
+                >
+                  {rider.status.toUpperCase()}
+                </Badge>
+                {rider.verified && (
+                  <Badge variant="success" className="text-[11px] gap-1">
+                    <ShieldCheck className="h-3 w-3" />
+                    Verified
                   </Badge>
-                  {rider.verified && (
-                    <Badge variant="success" className="text-xs gap-1">
-                      <ShieldCheck className="h-3 w-3" />
-                      Verified
-                    </Badge>
-                  )}
-                </div>
+                )}
               </div>
 
-              <p className="text-xs text-muted-foreground flex items-center justify-center sm:justify-start gap-1">
-                <Mail className="h-3.5 w-3.5" />
-                {rider.email}
-              </p>
-              <p className="text-xs text-muted-foreground flex items-center justify-center sm:justify-start gap-1">
-                <Phone className="h-3.5 w-3.5" />
-                {rider.phone}
-              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Mail className="h-3 w-3" />
+                  {rider.email}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Phone className="h-3 w-3" />
+                  {rider.phone}
+                </span>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -153,6 +169,83 @@ export function RiderProfile({ rider }: RiderProfileProps) {
               {rider.deliveries} trips completed
             </span>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Read-only ledger */}
+      <Card className="border-border bg-card">
+        <CardHeader className="p-4 pb-3 border-b border-border">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+            My Ledger (read-only)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 space-y-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="rounded-md border border-border bg-muted/30 p-2.5">
+              <span className="block text-muted-foreground">
+                Commission payable
+              </span>
+              <span className="font-mono font-semibold text-success">
+                {formatNPR(ledger?.balance.commissionPayable ?? 0)}
+              </span>
+            </div>
+            <div className="rounded-md border border-border bg-muted/30 p-2.5">
+              <span className="block text-muted-foreground">COD cash held</span>
+              <span className="font-mono font-semibold text-warning">
+                {formatNPR(ledger?.balance.undepositedCodCash ?? 0)}
+              </span>
+            </div>
+            <div className="rounded-md border border-border bg-muted/30 p-2.5">
+              <span className="block text-muted-foreground">Advances</span>
+              <span className="font-mono font-semibold text-foreground">
+                {formatNPR(ledger?.balance.outstandingAdvances ?? 0)}
+              </span>
+            </div>
+          </div>
+
+          {!ledger || ledger.entries.length === 0 ? (
+            <p className="text-muted-foreground">
+              No ledger entries yet. Entries appear after deliveries and
+              settlements are posted.
+            </p>
+          ) : (
+            <div className="divide-y divide-border rounded-md border border-border overflow-hidden">
+              {ledger.entries.slice(0, 8).map((entry) => (
+                <div
+                  key={entry.lineId}
+                  className="flex items-start justify-between gap-2 p-2.5"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <BookOpen className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span className="font-mono font-semibold text-foreground">
+                        {entry.voucherNo ?? entry.voucherType}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {new Date(entry.postingDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-muted-foreground truncate">
+                      {entry.narration ||
+                        `${entry.accountCode} · ${entry.accountName}`}
+                    </p>
+                  </div>
+                  <span
+                    className={`font-mono font-semibold shrink-0 ${
+                      entry.debit > 0 ? 'text-success' : 'text-destructive'
+                    }`}
+                  >
+                    {entry.debit > 0 ? '+' : '-'}
+                    {formatNPR(entry.debit > 0 ? entry.debit : entry.credit)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="text-muted-foreground">
+            Ledger entries are posted by accounts and cannot be edited here.
+          </p>
         </CardContent>
       </Card>
 

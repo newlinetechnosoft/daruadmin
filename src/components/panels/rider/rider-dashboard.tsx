@@ -6,6 +6,7 @@ import {
   updateRiderDeliveryStatusFn,
   toggleRiderAvailabilityFn,
   updateRiderLiveFn,
+  respondToRiderAssignmentFn,
 } from '#/server/operations/operations.functions'
 import type { getRiderPortalFn } from '#/server/operations/operations.functions'
 import {
@@ -16,7 +17,9 @@ import {
 import { useOnlineStatus, isNetworkError } from '#/hooks/use-online-status'
 import type { Rider, Order } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
+import { formatOrderDeliveryTime } from '#/lib/delivery-time'
 import { getGoogleMapsUrl } from '#/lib/map-config'
+import { DeliveryCountdown } from './delivery-countdown'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
@@ -40,6 +43,8 @@ import {
   Wifi,
   AlertTriangle,
   Radio,
+  Check,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { RiderDealerPickups } from './rider-dealer-pickups'
@@ -94,10 +99,12 @@ export interface RiderDashboardProps {
     rider: Rider
     orders: Order[]
     activeOrders: Order[]
+    pendingAssignments?: Order[]
     completedOrders: Order[]
     stats: {
       totalAssigned: number
       activeCount: number
+      pendingCount?: number
       completedCount: number
       cashOnHand: number
       earnings: number
@@ -146,6 +153,7 @@ export function RiderDashboard({
   }, [pendingActions])
 
   const { rider, orders } = portalData
+  const pendingAssignments = portalData.pendingAssignments ?? []
 
   // Set initial sync date from rider.updatedAt if available
   useEffect(() => {
@@ -156,14 +164,20 @@ export function RiderDashboard({
 
   // Derive active and completed orders STRICTLY for the current logged-in rider
   const activeOrders = useMemo(() => {
-    return orders.filter((o) =>
-      o.riderId === rider.id &&
-      ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status),
+    return orders.filter(
+      (o) =>
+        o.riderId === rider.id &&
+        ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(
+          o.status,
+        ) &&
+        o.riderAssignmentStatus !== 'pending',
     )
   }, [orders, rider.id])
 
   const completedOrders = useMemo(() => {
-    return orders.filter((o) => o.riderId === rider.id && o.status === 'delivered')
+    return orders.filter(
+      (o) => o.riderId === rider.id && o.status === 'delivered',
+    )
   }, [orders, rider.id])
 
   // Derive stats directly from cache data so numbers never drift from the order list
@@ -208,7 +222,9 @@ export function RiderDashboard({
         console.warn('Periodic GPS sync warning:', err)
         if (!silent) {
           toast.error(
-            err instanceof Error ? err.message : 'Failed to update GPS location',
+            err instanceof Error
+              ? err.message
+              : 'Failed to update GPS location',
           )
         }
       } finally {
@@ -348,6 +364,39 @@ export function RiderDashboard({
     }
   }
 
+  const handleRespondToAssignment = async (
+    orderId: string,
+    action: 'accept' | 'decline',
+  ) => {
+    if (pendingOrderIds.has(orderId)) return
+    setPendingOrderIds((prev) => new Set(prev).add(orderId))
+    try {
+      await respondToRiderAssignmentFn({
+        data: { orderId, action },
+      })
+      toast.success(
+        action === 'accept'
+          ? 'Delivery accepted. Head to the dealer for pickup.'
+          : 'Delivery declined. Dispatch has been notified.',
+      )
+      await queryClient.invalidateQueries({
+        queryKey: riderQueries.portal().queryKey,
+      })
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${action} the delivery request`,
+      )
+    } finally {
+      setPendingOrderIds((prev) => {
+        const next = new Set(prev)
+        next.delete(orderId)
+        return next
+      })
+    }
+  }
+
   // Delivery status transitions: Start Delivery and Mark Delivered
   const handleUpdateStatus = async (
     orderId: string,
@@ -364,6 +413,11 @@ export function RiderDashboard({
 
     const currentOrder = orders.find((o) => o.id === orderId)
     if (!currentOrder) return
+
+    if (currentOrder.riderAssignmentStatus === 'pending') {
+      toast.error('Accept the delivery request before updating order status.')
+      return
+    }
 
     // Guard against duplicate or invalid transitions
     if (
@@ -427,7 +481,9 @@ export function RiderDashboard({
             ...old,
             orders: updatedOrders,
             activeOrders: updatedOrders.filter((o) =>
-              ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status),
+              ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(
+                o.status,
+              ),
             ),
             rider: {
               ...old.rider,
@@ -448,7 +504,9 @@ export function RiderDashboard({
             ...old,
             orders: updatedOrders,
             activeOrders: updatedOrders.filter((o) =>
-              ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status),
+              ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(
+                o.status,
+              ),
             ),
             rider: {
               ...old.rider,
@@ -480,7 +538,9 @@ export function RiderDashboard({
               : o,
           )
           const newActive = updatedOrders.filter((o) =>
-            ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status),
+            ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(
+              o.status,
+            ),
           )
           const newCompleted = updatedOrders.filter(
             (o) => o.status === 'delivered',
@@ -727,15 +787,15 @@ export function RiderDashboard({
                 )}
               </div>
               {/* <p className="text-xs text-muted-foreground mt-1"> */}
-                {/* Zone:{' '} */}
-                {/* <span className="text-foreground font-medium"> */}
-                  {/* {rider.zone} */}
-                {/* </span>{' '} */}
-                {/* • Vehicle:{' '} */}
-                {/* <span className="text-foreground font-medium capitalize"> */}
-                  {/* {rider.vehicle} */}
-                {/* </span>{' '} */}
-                {/* ({rider.licenseNo}) */}
+              {/* Zone:{' '} */}
+              {/* <span className="text-foreground font-medium"> */}
+              {/* {rider.zone} */}
+              {/* </span>{' '} */}
+              {/* • Vehicle:{' '} */}
+              {/* <span className="text-foreground font-medium capitalize"> */}
+              {/* {rider.vehicle} */}
+              {/* </span>{' '} */}
+              {/* ({rider.licenseNo}) */}
               {/* </p> */}
               <div className="flex flex-wrap items-center gap-2 mt-1.5">
                 {portalData.activeShift ? (
@@ -768,7 +828,11 @@ export function RiderDashboard({
                       Live GPS
                       {lastLocationSync ? (
                         <span className="font-mono ml-1 text-emerald-600 dark:text-emerald-400">
-                          • {lastLocationSync.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          •{' '}
+                          {lastLocationSync.toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </span>
                       ) : null}
                     </span>
@@ -830,85 +894,146 @@ export function RiderDashboard({
         </CardContent>
       </Card>
 
-      {/* KPI Stats Grid with Tabular Numbers and Consistent Copy */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Card 1: Active Deliveries */}
-        <Card className="border-border bg-card transition-colors hover:border-info/30">
-          <CardContent className="p-4">
+      {/* KPI Stats Grid — compact */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        <Card className="border-border bg-card">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground font-medium">
-                Active Deliveries
+                Active
               </span>
-              <div className="h-7 w-7 rounded-md bg-info/10 text-info flex items-center justify-center">
-                <Truck className="h-4 w-4" />
-              </div>
+              <Truck className="h-3.5 w-3.5 text-info" />
             </div>
-            <div className="mt-2 text-2xl font-bold tracking-tight text-foreground font-mono tabular-nums transition-all">
+            <div className="mt-1 text-xl font-bold tracking-tight text-foreground font-mono tabular-nums">
               {derivedStats.activeCount}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              In transit & assigned
-            </p>
           </CardContent>
         </Card>
-        {/* Card 2: Completed Deliveries */}
-        <Card className="border-border bg-card transition-colors hover:border-success/30">
-          <CardContent className="p-4">
+        <Card className="border-border bg-card">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground font-medium">
-                Completed Deliveries
+                Done
               </span>
-              <div className="h-7 w-7 rounded-md bg-success/10 text-success flex items-center justify-center">
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
+              <CheckCircle2 className="h-3.5 w-3.5 text-success" />
             </div>
-            <div className="mt-2 text-2xl font-bold tracking-tight text-foreground font-mono tabular-nums transition-all">
+            <div className="mt-1 text-xl font-bold tracking-tight text-foreground font-mono tabular-nums">
               {derivedStats.completedCount}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Total completed
-            </p>
           </CardContent>
         </Card>
-        {/* Card 3: Cash in Hand (COD) */}
-        <Card className="border-border bg-card transition-colors hover:border-warning/30">
-          <CardContent className="p-4">
+        <Card className="border-border bg-card">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground font-medium">
-                Cash in Hand (COD)
+                Cash (COD)
               </span>
-              <div className="h-7 w-7 rounded-md bg-warning/10 text-warning flex items-center justify-center">
-                <Wallet className="h-4 w-4" />
-              </div>
+              <Wallet className="h-3.5 w-3.5 text-warning" />
             </div>
-            <div className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono tabular-nums transition-all">
+            <div className="mt-1 text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono tabular-nums">
               {formatNPR(derivedStats.cashOnHand)}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Pending handover
-            </p>
           </CardContent>
         </Card>
-        {/* Card 4: Earned Commission */}
-        <Card className="border-border bg-card transition-colors hover:border-success/30">
-          <CardContent className="p-4">
+        <Card className="border-border bg-card">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground font-medium">
-                Earned Commission
+                Earnings ({rider.commissionRate}%)
               </span>
-              <div className="h-7 w-7 rounded-md bg-success/10 text-success flex items-center justify-center">
-                <Coins className="h-4 w-4" />
-              </div>
+              <Coins className="h-3.5 w-3.5 text-success" />
             </div>
-            <div className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono tabular-nums transition-all">
+            <div className="mt-1 text-lg sm:text-xl font-bold tracking-tight text-foreground font-mono tabular-nums">
               {formatNPR(derivedStats.earnings)}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {rider.commissionRate}% commission rate
-            </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Pending delivery requests: dispatch may offer several, but only one
+          can be accepted at a time. */}
+      {pendingAssignments.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-foreground">
+              Delivery Requests ({pendingAssignments.length})
+            </h3>
+            <span className="text-[11px] text-muted-foreground">
+              Accept 1 at a time
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {pendingAssignments.map((order) => {
+              const isResponding = pendingOrderIds.has(order.id)
+              return (
+                <Card
+                  key={order.id}
+                  className="border-amber-500/40 bg-amber-500/[0.03]"
+                >
+                  <CardContent className="p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-foreground">
+                            {order.number}
+                          </span>
+                          <Badge variant="warning" className="text-xs">
+                            Awaiting response
+                          </Badge>
+                        </div>
+                        <p className="mt-1 text-sm font-semibold text-foreground">
+                          {order.customerName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {order.address}, {order.city}
+                        </p>
+                      </div>
+                      <span className="font-mono text-sm font-bold text-foreground">
+                        {formatNPR(order.total)}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className="text-xs font-normal gap-1"
+                      >
+                        <Clock className="h-3 w-3" />
+                        {formatOrderDeliveryTime(order)}
+                      </Badge>
+                      <DeliveryCountdown order={order} />
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          void handleRespondToAssignment(order.id, 'accept')
+                        }
+                        disabled={isResponding}
+                        className="h-9 flex-1 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+                      >
+                        <Check className="h-4 w-4" />
+                        Accept
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          void handleRespondToAssignment(order.id, 'decline')
+                        }
+                        disabled={isResponding}
+                        className="h-9 flex-1 gap-1.5 text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                        Decline
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Active Orders Section */}
       <div className="space-y-3">
@@ -1057,7 +1182,9 @@ function OrderDeliveryCard({
               </span>
               {/* Status Badge */}
               <Badge
-                variant={isOut ? 'default' : isPickedUp ? 'default' : 'secondary'}
+                variant={
+                  isOut ? 'default' : isPickedUp ? 'default' : 'secondary'
+                }
                 className={`text-xs uppercase tracking-wider font-semibold ${
                   isOut
                     ? 'bg-info hover:bg-info/90 text-info-foreground'
@@ -1115,6 +1242,13 @@ function OrderDeliveryCard({
             <p className="text-sm font-semibold text-foreground mt-1.5">
               {order.customerName}
             </p>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                {formatOrderDeliveryTime(order)}
+              </span>
+              <DeliveryCountdown order={order} />
+            </div>
           </div>
           {/* Amount & COD vs Prepaid Treatment */}
           <div className="text-right shrink-0">

@@ -24,12 +24,6 @@ import { ConfirmDialog } from '#/components/shared/confirm-dialog'
 import { Skeleton } from '#/components/ui/skeleton'
 import { DEFAULT_MAP_CENTER } from '#/lib/map-config'
 import type { GeoPoint } from '#/lib/map-config'
-
-const LocationPicker = React.lazy(() =>
-  import('#/components/shared/location-picker').then((m) => ({
-    default: m.LocationPicker,
-  })),
-)
 import {
   Form,
   FormControl,
@@ -77,7 +71,14 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { toPaisa, fromPaisa } from '#/lib/money'
+import { DEALER_COST_PRICE_LABEL } from '#/lib/dealer-pricing'
 import type { CatalogItemSummary } from '#/server/inventory/inventory.queries'
+
+const LocationPicker = React.lazy(() =>
+  import('#/components/shared/location-picker').then((m) => ({
+    default: m.LocationPicker,
+  })),
+)
 
 export interface SourcingItemRow extends Record<string, unknown> {
   productId: string
@@ -86,6 +87,7 @@ export interface SourcingItemRow extends Record<string, unknown> {
   categoryName?: string | null
   brandName?: string | null
   costPriceNpr: number
+  mrpPaisa?: number | null
   isAvailable: boolean
 }
 
@@ -113,6 +115,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
 
   // Items table state
   const [items, setItems] = useState<SourcingItemRow[]>([])
+  const [itemsDirty, setItemsDirty] = useState(false)
   const [isAddItemOpen, setIsAddItemOpen] = useState(false)
   const [itemSearchQuery, setItemSearchQuery] = useState('')
   const [itemCatalogFilter, setItemCatalogFilter] = useState<
@@ -228,10 +231,12 @@ export function DealerForm({ dealerId }: DealerFormProps) {
           categoryName: ai.categoryName,
           brandName: ai.brandName,
           costPriceNpr: ai.costPrice ? fromPaisa(ai.costPrice) : 0,
+          mrpPaisa: ai.mrp ?? null,
           isAvailable: ai.isAvailable !== false,
         }),
       )
       setItems(rows)
+      setItemsDirty(false)
     } else {
       form.reset({
         name: '',
@@ -251,6 +256,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
         isActive: true,
       })
       setItems([])
+      setItemsDirty(false)
     }
   }, [existingDealer, form])
 
@@ -281,16 +287,17 @@ export function DealerForm({ dealerId }: DealerFormProps) {
       categoryName: catItem.categoryName,
       brandName: catItem.brandName,
       costPriceNpr: 0,
+      mrpPaisa: catItem.mrp ?? null,
       isAvailable: true,
     }
     setItems((prev) => [...prev, newRow])
-    form.setValue('name', form.getValues('name'), { shouldDirty: true })
+    setItemsDirty(true)
     toast.success(`Added ${catItem.name} to sourcing list`)
   }
 
   const handleDeleteItem = (index: number) => {
     setItems((prev) => prev.filter((_, i) => i !== index))
-    form.setValue('name', form.getValues('name'), { shouldDirty: true })
+    setItemsDirty(true)
   }
 
   const onSubmit = async (values: UpsertDealerInput) => {
@@ -315,6 +322,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
       await queryClient.invalidateQueries({
         queryKey: adminQueries.dealers().queryKey,
       })
+      setItemsDirty(false)
 
       if (!dealerId && res.id) {
         navigate({ to: '/admin/dealers/$id', params: { id: res.id } })
@@ -360,8 +368,21 @@ export function DealerForm({ dealerId }: DealerFormProps) {
       ),
     },
     {
+      id: 'mrp',
+      header: 'MRP (NPR)',
+      width: '110px',
+      align: 'right',
+      renderCell: (row) => (
+        <span className="font-mono text-xs tabular-nums text-muted-foreground">
+          {row.mrpPaisa != null && row.mrpPaisa > 0
+            ? `Rs. ${fromPaisa(row.mrpPaisa).toLocaleString('en-IN')}`
+            : '—'}
+        </span>
+      ),
+    },
+    {
       id: 'costPrice',
-      header: 'Cost Price (NPR)',
+      header: `${DEALER_COST_PRICE_LABEL} (NPR)`,
       width: '160px',
       renderCell: (row, _index, updateField) => (
         <div className="flex items-center gap-1.5">
@@ -374,9 +395,6 @@ export function DealerForm({ dealerId }: DealerFormProps) {
             onChange={(e) => {
               const val = parseFloat(e.target.value) || 0
               updateField('costPriceNpr', val)
-              form.setValue('name', form.getValues('name'), {
-                shouldDirty: true,
-              })
             }}
             placeholder="0"
             className="h-7 text-xs font-mono tabular-nums w-28"
@@ -395,9 +413,6 @@ export function DealerForm({ dealerId }: DealerFormProps) {
             checked={row.isAvailable}
             onCheckedChange={(checked) => {
               updateField('isAvailable', !!checked)
-              form.setValue('name', form.getValues('name'), {
-                shouldDirty: true,
-              })
             }}
             aria-label="Item availability toggle"
           />
@@ -517,7 +532,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
             : 'inactive'
           : undefined
       }
-      isDirty={form.formState.isDirty}
+      isDirty={form.formState.isDirty || itemsDirty}
       isSubmitting={form.formState.isSubmitting}
       onSave={form.handleSubmit(onSubmit)}
       saveLabel={existingDealer ? 'Save Dealer' : 'Register Dealer'}
@@ -750,7 +765,9 @@ export function DealerForm({ dealerId }: DealerFormProps) {
             </CardHeader>
             <CardContent className="pt-4">
               <React.Suspense
-                fallback={<Skeleton className="h-72 sm:h-80 w-full rounded-md" />}
+                fallback={
+                  <Skeleton className="h-72 sm:h-80 w-full rounded-md" />
+                }
               >
                 <LocationPicker
                   value={selectedPoint}
@@ -938,6 +955,7 @@ export function DealerForm({ dealerId }: DealerFormProps) {
                   copy[idx] = updated
                   return copy
                 })
+                setItemsDirty(true)
               }}
               onRowDelete={handleDeleteItem}
               emptyMessage="No catalog items configured for this dealer hub yet. Click 'Add Item' to link products."
@@ -1013,6 +1031,11 @@ export function DealerForm({ dealerId }: DealerFormProps) {
                       <div className="text-xs text-muted-foreground">
                         {p.catalogType.toUpperCase()} ·{' '}
                         {p.categoryName || 'General'}
+                        {p.mrp != null && p.mrp > 0 ? (
+                          <span className="ml-1.5 font-mono text-[10px]">
+                            · MRP Rs. {fromPaisa(p.mrp).toLocaleString('en-IN')}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                     <Button

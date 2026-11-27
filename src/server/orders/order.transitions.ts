@@ -139,6 +139,22 @@ export async function transitionOrderTx(
     updates.riderId = options.riderId
   }
 
+  if (toStatus === 'confirmed') {
+    updates.confirmedAt = now
+  }
+
+  if (toStatus === 'delivered') {
+    updates.deliveredAt = now
+  }
+
+  // Every fresh rider assignment starts as an offer the rider must accept.
+  if (toStatus === 'rider_assigned') {
+    updates.riderAssignmentStatus = 'pending'
+    updates.riderAssignedAt = now
+    updates.riderRespondedAt = null
+    updates.riderDeclineReason = null
+  }
+
   // Handle COD auto-mark paid when delivered
   if (
     toStatus === 'delivered' &&

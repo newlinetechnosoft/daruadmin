@@ -37,6 +37,7 @@ import type { PaymentMethod, Order } from '#/server/operations/types'
 import { checkoutFormSchema, validatePromoSchema } from './order.schemas'
 import { fromPaisa } from '#/lib/money'
 import { validateCoupon, calculateOrderTotals } from '#/lib/pricing'
+import { resolveDeliverySchedule } from '#/lib/delivery-time'
 import {
   transitionOrder,
   transitionOrderTx,
@@ -694,6 +695,15 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
     const deliveryOtp = String(Math.floor(1000 + Math.random() * 9000))
     const now = new Date()
 
+    // Persist the customer's delivery window as structured data so dispatch,
+    // riders and accounting can all show the same schedule.
+    const deliverySchedule = resolveDeliverySchedule({
+      deliverySlot: data.deliverySlot,
+      customDeliveryDate: data.customDeliveryDate,
+      customDeliveryTime: data.customDeliveryTime,
+      now,
+    })
+
     // Execute atomic creation in transaction with dbTx
     await dbTx.transaction(async (tx) => {
       // 1. Atomic coupon redemption with row-level lock
@@ -753,6 +763,8 @@ export const createCustomerOrderFn = createServerFn({ method: 'POST' })
         tax: totals.vatPaisa, // 13% Nepal VAT component computed by pricing engine
         total: totals.totalPaisa,
         riderId: null,
+        deliverySlot: deliverySchedule.deliverySlot,
+        deliveryScheduledFor: deliverySchedule.deliveryScheduledFor,
         trackingCode,
         deliveryOtp,
         notes: [

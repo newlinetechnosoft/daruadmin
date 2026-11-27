@@ -22,7 +22,7 @@ import {
   riderShifts,
 } from '#/db/schema'
 import { auth } from '#/lib/auth'
-import { and, count, eq, isNull, or } from 'drizzle-orm'
+import { and, count, eq, inArray, isNull, ne, or } from 'drizzle-orm'
 import {
   requirePermission,
   requireRole,
@@ -79,6 +79,7 @@ import {
   getDealerPayablesSummaryQuery,
   getRiderAccountsSummaryQuery,
   getRiderLedgerBalanceQuery,
+  getPartyStatementQuery,
   getAllDealerSettlementsQuery,
 } from '#/server/finance/finance.queries'
 import {
@@ -1220,7 +1221,15 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
 
         await tx
           .update(orders)
-          .set({ riderId: newRider.id, status: newStatus, updatedAt: now })
+          .set({
+            riderId: newRider.id,
+            status: newStatus,
+            riderAssignmentStatus: 'pending',
+            riderAssignedAt: now,
+            riderRespondedAt: null,
+            riderDeclineReason: null,
+            updatedAt: now,
+          })
           .where(eq(orders.id, data.id))
 
         await tx.insert(orderStatusHistory).values({
@@ -1241,8 +1250,8 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
             id: nid('notif'),
             userId: newRider.userId,
             type: 'rider',
-            title: `New Delivery: Order #${order.number}`,
-            body: `You have been assigned to order ${order.number}.`,
+            title: `Delivery request: Order #${order.number}`,
+            body: `You have a new delivery request for order ${order.number}. Open the rider app to accept or decline.`,
             href: '/rider',
             read: false,
             createdAt: now,
@@ -1273,7 +1282,13 @@ export const updateOrderFn = createServerFn({ method: 'POST' })
 
         await tx
           .update(orders)
-          .set({ riderId: null, status: newStatus, updatedAt: now })
+          .set({
+            riderId: null,
+            status: newStatus,
+            riderAssignmentStatus: null,
+            riderRespondedAt: now,
+            updatedAt: now,
+          })
           .where(eq(orders.id, data.id))
 
         await tx.insert(orderStatusHistory).values({
@@ -2209,6 +2224,7 @@ export const createOrderFn = createServerFn({ method: 'POST' })
         total,
         trackingCode,
         deliveryOtp,
+        confirmedAt: new Date(),
         notes: data.notes || '',
       })
 
@@ -3894,24 +3910,52 @@ export const getRiderPortalFn = createServerFn({ method: 'GET' }).handler(
 
     const currentRider = rider
     const orderList = await getAllOrdersQuery()
-    const assignedOrders = orderList.filter(
-      (o) => o.riderId === currentRider.id,
-    )
+    const assignedOrders = orderList
+      .filter((o) => o.riderId === currentRider.id)
+      // Riders work the earliest delivery window first.
+      .sort((a, b) => {
+        const aTime = new Date(
+          a.deliveryScheduledFor ?? a.confirmedAt ?? a.createdAt,
+        ).getTime()
+        const bTime = new Date(
+          b.deliveryScheduledFor ?? b.confirmedAt ?? b.createdAt,
+        ).getTime()
+        return aTime - bTime
+      })
 
-    const activeOrders = assignedOrders.filter((o) =>
-      ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status),
+    const pendingAssignments = assignedOrders.filter(
+      (o) =>
+        o.status === 'rider_assigned' &&
+        o.riderAssignmentStatus === 'pending',
+    )
+    const activeOrders = assignedOrders.filter(
+      (o) =>
+        ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status) &&
+        o.riderAssignmentStatus !== 'pending',
     )
     const completedOrders = assignedOrders.filter(
       (o) => o.status === 'delivered',
     )
 
-    const [activeShift, attendanceStats, riderSettlements, cashHandovers] =
-      await Promise.all([
-        getActiveRiderShiftQuery(currentRider.id),
-        getRiderAttendanceStatsQuery(currentRider.id),
-        getSettlementsByRiderIdQuery(currentRider.id),
-        getRiderCashHandoversByRiderIdQuery(currentRider.id),
-      ])
+    const [
+      activeShift,
+      attendanceStats,
+      riderSettlements,
+      cashHandovers,
+      ledgerBalance,
+      ledgerEntries,
+    ] = await Promise.all([
+      getActiveRiderShiftQuery(currentRider.id),
+      getRiderAttendanceStatsQuery(currentRider.id),
+      getSettlementsByRiderIdQuery(currentRider.id),
+      getRiderCashHandoversByRiderIdQuery(currentRider.id),
+      getRiderLedgerBalanceQuery(db, currentRider.id),
+      getPartyStatementQuery({
+        partyType: 'rider',
+        partyId: currentRider.id,
+        limit: 25,
+      }),
+    ])
     const riderNotifications = await getUserNotificationsQuery(user.id, 20)
     const pendingSettlementAmount = cashHandovers
       .filter((h) => h.status === 'pending')
@@ -3921,6 +3965,7 @@ export const getRiderPortalFn = createServerFn({ method: 'GET' }).handler(
       rider: currentRider,
       orders: assignedOrders,
       activeOrders,
+      pendingAssignments,
       completedOrders,
       notifications: riderNotifications,
       activeShift,
@@ -3928,9 +3973,14 @@ export const getRiderPortalFn = createServerFn({ method: 'GET' }).handler(
       settlements: riderSettlements,
       cashHandovers,
       pendingSettlementAmount,
+      ledger: {
+        balance: ledgerBalance,
+        entries: ledgerEntries,
+      },
       stats: {
         totalAssigned: assignedOrders.length,
         activeCount: activeOrders.length,
+        pendingCount: pendingAssignments.length,
         completedCount: completedOrders.length,
         cashOnHand: currentRider.cashOnHand,
         earnings: currentRider.earnings,
@@ -3999,6 +4049,183 @@ export const updateRiderDeliveryStatusFn = createServerFn({ method: 'POST' })
     })
 
     return true
+  })
+
+export const respondToRiderAssignmentFn = createServerFn({ method: 'POST' })
+  .validator((d: unknown) =>
+    z
+      .object({
+        orderId: z.string(),
+        action: z.enum(['accept', 'decline']),
+        reason: z.string().max(300).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const user = await getSessionUser()
+    if (!user.isActive || user.banned) {
+      throw new Error('Forbidden: Account suspended')
+    }
+    if (user.role !== 'rider') {
+      throw new Error('Forbidden: Rider access required')
+    }
+
+    const rider = await getRiderByUserIdQuery(user.id)
+    if (!rider) throw new Error('Rider profile not found')
+
+    const order = await getOrderByIdQuery(data.orderId)
+    if (!order) throw new Error('Order not found')
+    if (order.riderId !== rider.id) {
+      throw new Error('Forbidden: This delivery is not assigned to you')
+    }
+    if (order.status !== 'rider_assigned') {
+      throw new Error(
+        `This delivery is already "${order.status.replace(/_/g, ' ')}" and can no longer be accepted or declined.`,
+      )
+    }
+    if (order.riderAssignmentStatus === 'accepted' && data.action === 'accept') {
+      return { success: true, action: 'accepted' as const }
+    }
+    if (order.riderAssignmentStatus === 'declined') {
+      throw new Error('This delivery request has already been declined.')
+    }
+    if (
+      order.riderAssignmentStatus !== 'pending' &&
+      order.riderAssignmentStatus != null
+    ) {
+      throw new Error('This delivery request is no longer open.')
+    }
+
+    const now = new Date()
+    const revertStatus: OrderStatus =
+      order.items.length > 0 &&
+      order.items.every((item) => item.dealerId && item.sourcingStatus === 'assigned')
+        ? 'dealer_assigned'
+        : 'confirmed'
+
+    await dbTx.transaction(async (tx) => {
+      if (data.action === 'accept') {
+        // A rider may only hold one accepted active delivery at a time, even
+        // though dispatch can offer several orders in parallel.
+        const otherActive = await tx
+          .select({ id: orders.id, number: orders.number })
+          .from(orders)
+          .where(
+            and(
+              eq(orders.riderId, rider.id),
+              ne(orders.id, order.id),
+              inArray(orders.status, [
+                'rider_assigned',
+                'picked_up',
+                'out_for_delivery',
+              ]),
+              or(
+                eq(orders.riderAssignmentStatus, 'accepted'),
+                isNull(orders.riderAssignmentStatus),
+              ),
+            ),
+          )
+          .limit(1)
+
+        if (otherActive[0]) {
+          throw new Error(
+            `You already accepted delivery ${otherActive[0].number}. Complete or hand it back before accepting another order.`,
+          )
+        }
+
+        await tx
+          .update(orders)
+          .set({
+            riderAssignmentStatus: 'accepted',
+            riderRespondedAt: now,
+            updatedAt: now,
+          })
+          .where(eq(orders.id, order.id))
+
+        await tx.insert(orderStatusHistory).values({
+          id: nid('evt'),
+          orderId: order.id,
+          status: 'rider_assigned',
+          fromStatus: 'rider_assigned',
+          toStatus: 'rider_assigned',
+          note: `Delivery request accepted by ${rider.name}`,
+          actor: rider.name,
+          actorId: user.id,
+          actorRole: 'rider',
+          createdAt: now,
+        })
+
+        await tx.insert(notifications).values({
+          id: nid('notif'),
+          type: 'rider',
+          title: `Rider accepted order ${order.number}`,
+          body: `${rider.name} accepted the delivery request for order ${order.number}.`,
+          href: '/admin/orders',
+          read: false,
+          createdAt: now,
+        })
+
+        await tx
+          .update(riders)
+          .set({ status: 'busy', updatedAt: now })
+          .where(eq(riders.id, rider.id))
+      } else {
+        await tx
+          .update(orders)
+          .set({
+            riderId: null,
+            status: revertStatus,
+            riderAssignmentStatus: 'declined',
+            riderRespondedAt: now,
+            riderDeclineReason: data.reason?.trim() || 'Declined by rider',
+            updatedAt: now,
+          })
+          .where(eq(orders.id, order.id))
+
+        await tx.insert(orderStatusHistory).values({
+          id: nid('evt'),
+          orderId: order.id,
+          status: revertStatus,
+          fromStatus: order.status,
+          toStatus: revertStatus,
+          note: `Delivery request declined by ${rider.name}${data.reason ? `: ${data.reason.trim()}` : ''}. Order returned to dispatch.`,
+          actor: rider.name,
+          actorId: user.id,
+          actorRole: 'rider',
+          createdAt: now,
+        })
+
+        await tx.insert(notifications).values({
+          id: nid('notif'),
+          type: 'rider',
+          title: `Rider declined order ${order.number}`,
+          body: `${rider.name} declined the delivery request for order ${order.number}${data.reason ? `: ${data.reason.trim()}` : ''}. Reassign a rider.`,
+          href: '/admin/orders',
+          read: false,
+          createdAt: now,
+        })
+
+        await tx
+          .update(riders)
+          .set({
+            status: rider.available ? 'available' : 'offline',
+            updatedAt: now,
+          })
+          .where(eq(riders.id, rider.id))
+      }
+    })
+
+    await logAudit(
+      rider.name,
+      'orders',
+      'edit',
+      `Rider ${rider.name} ${data.action === 'accept' ? 'accepted' : 'declined'} delivery request for order ${order.number}${data.reason ? ` (${data.reason.trim()})` : ''}`,
+    )
+
+    return {
+      success: true,
+      action: data.action === 'accept' ? ('accepted' as const) : ('declined' as const),
+    }
   })
 
 export const createDeliveryProofUploadFn = createServerFn({ method: 'POST' })
@@ -4218,6 +4445,18 @@ export const depositRiderCashFn = createServerFn({ method: 'POST' })
         title: 'Rider settlement request pending',
         body: `${lockedRider.name} requested settlement of Rs. ${(data.amount / 100).toFixed(2)} via ${RIDER_SETTLEMENT_METHOD_LABELS[data.paymentMethod]}.`,
         href: '/admin/accounts?tab=salary-account',
+        read: false,
+        createdAt: now,
+      })
+
+      // Confirm to the rider that their request reached the admin queue.
+      await tx.insert(notifications).values({
+        id: nid('notif'),
+        userId: user.id,
+        type: 'finance',
+        title: 'Settlement request sent to admin',
+        body: `Your settlement request of Rs. ${(data.amount / 100).toFixed(2)} via ${RIDER_SETTLEMENT_METHOD_LABELS[data.paymentMethod]} is pending admin approval.`,
+        href: '/rider/earnings',
         read: false,
         createdAt: now,
       })

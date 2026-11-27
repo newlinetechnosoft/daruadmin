@@ -12,5 +12,5 @@ export const Route = createFileRoute('/rider/profile')({
 
 function RiderProfilePage() {
   const { data } = useSuspenseQuery(riderQueries.portal())
-  return <RiderProfile rider={data.rider} />
+  return <RiderProfile rider={data.rider} ledger={data.ledger} />
 }

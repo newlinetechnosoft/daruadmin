@@ -22,6 +22,7 @@ import type {
   PaymentMethod,
 } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
+import { formatOrderDeliveryTime } from '#/lib/delivery-time'
 import { getGoogleMapsUrl } from '#/lib/map-config'
 import {
   calculateHaversineDistanceKm,
@@ -818,6 +819,10 @@ export function OrdersPanel() {
                           <span className="text-xs text-muted-foreground font-mono">
                             {new Date(order.createdAt).toLocaleDateString()}
                           </span>
+                          <span className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <Clock className="h-2.5 w-2.5" />
+                            {formatOrderDeliveryTime(order)}
+                          </span>
                         </TableCell>
 
                         <TableCell>
@@ -891,6 +896,22 @@ export function OrdersPanel() {
                               <div className="flex items-center gap-1.5 text-xs text-foreground font-medium">
                                 <Bike className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                                 <span>{assignedRider.name}</span>
+                                {order.riderAssignmentStatus === 'pending' && (
+                                  <Badge
+                                    variant="warning"
+                                    className="h-4 px-1 text-[10px]"
+                                  >
+                                    Pending
+                                  </Badge>
+                                )}
+                                {order.riderAssignmentStatus === 'accepted' && (
+                                  <Badge
+                                    variant="success"
+                                    className="h-4 px-1 text-[10px]"
+                                  >
+                                    Accepted
+                                  </Badge>
+                                )}
                               </div>
                               <div className="text-xs text-muted-foreground font-mono flex items-center gap-1">
                                 <span>
@@ -905,6 +926,23 @@ export function OrdersPanel() {
                                   </span>
                                 )}
                               </div>
+                            </div>
+                          ) : order.riderAssignmentStatus === 'declined' ? (
+                            <div className="space-y-0.5">
+                              <Badge
+                                variant="destructive"
+                                className="h-4 px-1.5 text-[10px]"
+                              >
+                                Rider declined
+                              </Badge>
+                              {order.riderDeclineReason && (
+                                <span
+                                  className="block max-w-[160px] truncate text-[10px] text-muted-foreground"
+                                  title={order.riderDeclineReason}
+                                >
+                                  {order.riderDeclineReason}
+                                </span>
+                              )}
                             </div>
                           ) : (
                             <span className="text-xs text-muted-foreground italic block">
@@ -1151,6 +1189,15 @@ export function OrdersPanel() {
                         {selectedOrder.address}, {selectedOrder.city}
                       </a>
                     </div>
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Clock className="h-3 w-3 text-muted-foreground" />
+                      <span>
+                        Customer delivery time:{' '}
+                        <strong className="font-medium text-foreground">
+                          {formatOrderDeliveryTime(selectedOrder)}
+                        </strong>
+                      </span>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -1321,6 +1368,34 @@ export function OrdersPanel() {
                         }
                         return null
                       })()}
+                      {selectedOrder.riderAssignmentStatus && (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+                          <Badge
+                            variant={
+                              selectedOrder.riderAssignmentStatus === 'accepted'
+                                ? 'success'
+                                : selectedOrder.riderAssignmentStatus ===
+                                    'declined'
+                                  ? 'destructive'
+                                  : 'warning'
+                            }
+                            className="text-[10px]"
+                          >
+                            {selectedOrder.riderAssignmentStatus === 'accepted'
+                              ? 'Accepted by rider'
+                              : selectedOrder.riderAssignmentStatus ===
+                                  'declined'
+                                ? 'Declined by rider — reassign'
+                                : 'Pending rider acceptance'}
+                          </Badge>
+                          {selectedOrder.riderAssignmentStatus === 'declined' &&
+                            selectedOrder.riderDeclineReason && (
+                              <span className="text-xs text-muted-foreground">
+                                Reason: {selectedOrder.riderDeclineReason}
+                              </span>
+                            )}
+                        </div>
+                      )}
                     </div>
                     <div className="text-muted-foreground pt-1">
                       Payment Mode:{' '}
@@ -2064,7 +2139,9 @@ export function OrdersPanel() {
                     {/* Store Header */}
                     <div className="text-center space-y-0.5 pb-2 border-b border-dashed border-border">
                       <div className="font-bold text-sm tracking-tight">
-                        {ops.settings.legalName || ops.settings.storeName || 'MEZMANI'}
+                        {ops.settings.legalName ||
+                          ops.settings.storeName ||
+                          'MEZMANI'}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {ops.settings.address || 'Traffic Chowk, Butwal'}
@@ -2072,10 +2149,15 @@ export function OrdersPanel() {
                       </div>
                       <div className="text-xs text-muted-foreground">
                         PAN / VAT:{' '}
-                        <strong>{ops.settings.pan || ops.settings.vat || '—'}</strong>
+                        <strong>
+                          {ops.settings.pan || ops.settings.vat || '—'}
+                        </strong>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Tel: {ops.settings.phone || ops.settings.supportPhone || '+977-9800000000'}
+                        Tel:{' '}
+                        {ops.settings.phone ||
+                          ops.settings.supportPhone ||
+                          '+977-9800000000'}
                       </div>
                     </div>
 
@@ -2315,10 +2397,15 @@ export function OrdersPanel() {
                       </p>
                       <p className="text-muted-foreground font-mono">
                         PAN / VAT Reg:{' '}
-                        <strong>{ops.settings.pan || ops.settings.vat || '—'}</strong>
+                        <strong>
+                          {ops.settings.pan || ops.settings.vat || '—'}
+                        </strong>
                       </p>
                       <p className="text-muted-foreground">
-                        Contact: {ops.settings.phone || ops.settings.supportPhone || '+977-9800000000'}
+                        Contact:{' '}
+                        {ops.settings.phone ||
+                          ops.settings.supportPhone ||
+                          '+977-9800000000'}
                       </p>
                     </div>
                     <div className="text-right">
@@ -2579,9 +2666,7 @@ export function OrdersPanel() {
                     onChange={(e) => setSelectedCatalogItem(e.target.value)}
                     className="flex-1"
                   >
-                    <option value="">
-                      Select Liquor or Food Product...
-                    </option>
+                    <option value="">Select Liquor or Food Product...</option>
                     {allCatalogProducts.map((p) => (
                       <option
                         key={`${p.type}::${p.id}::${p.variantId}`}

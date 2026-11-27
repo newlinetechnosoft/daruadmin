@@ -38,6 +38,19 @@ export const orders = pgTable(
     total: integer('total').notNull(), // paisa
     riderId: text('rider_id'),
     dealerId: text('dealer_id'),
+    // Rider assignment acceptance: 'pending' | 'accepted' | 'declined'.
+    // Legacy rows are backfilled as 'accepted' (null is treated as accepted).
+    riderAssignmentStatus: text('rider_assignment_status'),
+    riderAssignedAt: timestamp('rider_assigned_at', { withTimezone: true }),
+    riderRespondedAt: timestamp('rider_responded_at', { withTimezone: true }),
+    riderDeclineReason: text('rider_decline_reason'),
+    // Customer-selected delivery window and lifecycle timestamps.
+    deliverySlot: text('delivery_slot'),
+    deliveryScheduledFor: timestamp('delivery_scheduled_for', {
+      withTimezone: true,
+    }),
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
     trackingCode: text('tracking_code').notNull(),
     notes: text('notes').notNull().default(''),
     couponCode: text('coupon_code'),
@@ -64,6 +77,10 @@ export const orders = pgTable(
     index('orders_rider_id_idx').on(table.riderId),
     index('orders_dealer_id_idx').on(table.dealerId),
     index('orders_created_at_idx').on(table.createdAt),
+    index('orders_delivery_scheduled_for_idx').on(table.deliveryScheduledFor),
+    index('orders_rider_assignment_status_idx').on(
+      table.riderAssignmentStatus,
+    ),
     index('orders_number_idx').on(table.number),
     index('orders_idempotency_idx').on(table.idempotencyKey),
     index('orders_delivery_otp_idx').on(table.deliveryOtp),

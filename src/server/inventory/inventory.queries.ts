@@ -7,6 +7,8 @@ import {
   stockMovements,
   liquorProducts,
   foodProducts,
+  liquorVariants,
+  foodVariants,
   liquorCategories,
   foodCategories,
   liquorBrands,
@@ -29,6 +31,8 @@ export interface AssignedItemDto {
   categoryName?: string | null
   brandName?: string | null
   costPrice?: number
+  /** Representative MRP (minimum active variant MRP) in paisa. */
+  mrp?: number | null
   isAvailable?: boolean
   effectiveFrom?: string
 }
@@ -85,51 +89,96 @@ export interface CatalogItemSummary {
   name: string
   categoryName?: string | null
   brandName?: string | null
+  /** Representative MRP (minimum active variant MRP) in paisa. */
+  mrp?: number | null
+}
+
+type VariantMrpRow = { productId: string; mrp: number | null }
+
+/** Pick the lowest positive MRP across a product's active variants. */
+function pickProductMrp(rows: VariantMrpRow[]): number | null {
+  let min: number | null = null
+  for (const row of rows) {
+    if (row.mrp == null || row.mrp <= 0) continue
+    if (min == null || row.mrp < min) min = row.mrp
+  }
+  return min
+}
+
+function buildMrpMap(rows: VariantMrpRow[]): Map<string, number | null> {
+  const grouped = new Map<string, VariantMrpRow[]>()
+  for (const row of rows) {
+    const list = grouped.get(row.productId)
+    if (list) list.push(row)
+    else grouped.set(row.productId, [row])
+  }
+  const map = new Map<string, number | null>()
+  for (const [productId, list] of grouped) {
+    map.set(productId, pickProductMrp(list))
+  }
+  return map
 }
 
 export async function getAllDealersQuery(): Promise<DealerDto[]> {
-  const [dealerRows, itemRows, liquorList, foodList, orderItemRows] =
-    await Promise.all([
-      db.select().from(dealers).orderBy(desc(dealers.createdAt)),
-      db.select().from(dealerItems),
-      db
-        .select({
-          id: liquorProducts.id,
-          name: liquorProducts.name,
-          categoryName: liquorCategories.name,
-          brandName: liquorBrands.name,
-        })
-        .from(liquorProducts)
-        .leftJoin(
-          liquorCategories,
-          eq(liquorProducts.categoryId, liquorCategories.id),
-        )
-        .leftJoin(liquorBrands, eq(liquorProducts.brandId, liquorBrands.id)),
-      db
-        .select({
-          id: foodProducts.id,
-          name: foodProducts.name,
-          categoryName: foodCategories.name,
-          brandName: foodBrands.name,
-        })
-        .from(foodProducts)
-        .leftJoin(
-          foodCategories,
-          eq(foodProducts.categoryId, foodCategories.id),
-        )
-        .leftJoin(foodBrands, eq(foodProducts.brandId, foodBrands.id)),
-      db
-        .select({
-          dealerId: orderItems.dealerId,
-          sourcingStatus: orderItems.sourcingStatus,
-        })
-        .from(orderItems)
-        .where(isNotNull(orderItems.dealerId)),
-    ])
+  const [
+    dealerRows,
+    itemRows,
+    liquorList,
+    foodList,
+    orderItemRows,
+    liquorMrpRows,
+    foodMrpRows,
+  ] = await Promise.all([
+    db.select().from(dealers).orderBy(desc(dealers.createdAt)),
+    db.select().from(dealerItems),
+    db
+      .select({
+        id: liquorProducts.id,
+        name: liquorProducts.name,
+        categoryName: liquorCategories.name,
+        brandName: liquorBrands.name,
+      })
+      .from(liquorProducts)
+      .leftJoin(
+        liquorCategories,
+        eq(liquorProducts.categoryId, liquorCategories.id),
+      )
+      .leftJoin(liquorBrands, eq(liquorProducts.brandId, liquorBrands.id)),
+    db
+      .select({
+        id: foodProducts.id,
+        name: foodProducts.name,
+        categoryName: foodCategories.name,
+        brandName: foodBrands.name,
+      })
+      .from(foodProducts)
+      .leftJoin(
+        foodCategories,
+        eq(foodProducts.categoryId, foodCategories.id),
+      )
+      .leftJoin(foodBrands, eq(foodProducts.brandId, foodBrands.id)),
+    db
+      .select({
+        dealerId: orderItems.dealerId,
+        sourcingStatus: orderItems.sourcingStatus,
+      })
+      .from(orderItems)
+      .where(isNotNull(orderItems.dealerId)),
+    db
+      .select({ productId: liquorVariants.productId, mrp: liquorVariants.mrp })
+      .from(liquorVariants)
+      .where(eq(liquorVariants.isActive, true)),
+    db
+      .select({ productId: foodVariants.productId, mrp: foodVariants.mrp })
+      .from(foodVariants)
+      .where(eq(foodVariants.isActive, true)),
+  ])
 
   // Map product metadata lookup
   const liquorMap = new Map(liquorList.map((p) => [p.id, p]))
   const foodMap = new Map(foodList.map((p) => [p.id, p]))
+  const liquorMrpMap = buildMrpMap(liquorMrpRows)
+  const foodMrpMap = buildMrpMap(foodMrpRows)
 
   // Group items by dealerId
   const itemsByDealer = new Map<string, AssignedItemDto[]>()
@@ -138,6 +187,7 @@ export async function getAllDealersQuery(): Promise<DealerDto[]> {
     let productName = 'Unknown Product'
     let categoryName: string | null = null
     let brandName: string | null = null
+    let mrp: number | null = null
 
     if (item.catalogType === 'liquor') {
       const p = liquorMap.get(item.productId)
@@ -146,6 +196,7 @@ export async function getAllDealersQuery(): Promise<DealerDto[]> {
         categoryName = p.categoryName ?? null
         brandName = p.brandName ?? null
       }
+      mrp = liquorMrpMap.get(item.productId) ?? null
     } else {
       const p = foodMap.get(item.productId)
       if (p) {
@@ -153,6 +204,7 @@ export async function getAllDealersQuery(): Promise<DealerDto[]> {
         categoryName = p.categoryName ?? null
         brandName = p.brandName ?? null
       }
+      mrp = foodMrpMap.get(item.productId) ?? null
     }
 
     list.push({
@@ -163,6 +215,7 @@ export async function getAllDealersQuery(): Promise<DealerDto[]> {
       categoryName,
       brandName,
       costPrice: item.costPrice,
+      mrp,
       isAvailable: item.isAvailable !== false,
       effectiveFrom: item.effectiveFrom.toISOString(),
     })
@@ -227,47 +280,62 @@ export async function getDealerByIdQuery(
   tx?: DbTx,
 ): Promise<DealerDto | null> {
   const client = tx ?? db
-  const [dealerRows, itemRows, liquorList, foodList] = await Promise.all([
-    client.select().from(dealers).where(eq(dealers.id, id)).limit(1),
-    client.select().from(dealerItems).where(eq(dealerItems.dealerId, id)),
-    client
-      .select({
-        id: liquorProducts.id,
-        name: liquorProducts.name,
-        categoryName: liquorCategories.name,
-        brandName: liquorBrands.name,
-      })
-      .from(liquorProducts)
-      .leftJoin(
-        liquorCategories,
-        eq(liquorProducts.categoryId, liquorCategories.id),
-      )
-      .leftJoin(liquorBrands, eq(liquorProducts.brandId, liquorBrands.id)),
-    client
-      .select({
-        id: foodProducts.id,
-        name: foodProducts.name,
-        categoryName: foodCategories.name,
-        brandName: foodBrands.name,
-      })
-      .from(foodProducts)
-      .leftJoin(
-        foodCategories,
-        eq(foodProducts.categoryId, foodCategories.id),
-      )
-      .leftJoin(foodBrands, eq(foodProducts.brandId, foodBrands.id)),
-  ])
+  const [dealerRows, itemRows, liquorList, foodList, liquorMrpRows, foodMrpRows] =
+    await Promise.all([
+      client.select().from(dealers).where(eq(dealers.id, id)).limit(1),
+      client.select().from(dealerItems).where(eq(dealerItems.dealerId, id)),
+      client
+        .select({
+          id: liquorProducts.id,
+          name: liquorProducts.name,
+          categoryName: liquorCategories.name,
+          brandName: liquorBrands.name,
+        })
+        .from(liquorProducts)
+        .leftJoin(
+          liquorCategories,
+          eq(liquorProducts.categoryId, liquorCategories.id),
+        )
+        .leftJoin(liquorBrands, eq(liquorProducts.brandId, liquorBrands.id)),
+      client
+        .select({
+          id: foodProducts.id,
+          name: foodProducts.name,
+          categoryName: foodCategories.name,
+          brandName: foodBrands.name,
+        })
+        .from(foodProducts)
+        .leftJoin(
+          foodCategories,
+          eq(foodProducts.categoryId, foodCategories.id),
+        )
+        .leftJoin(foodBrands, eq(foodProducts.brandId, foodBrands.id)),
+      client
+        .select({
+          productId: liquorVariants.productId,
+          mrp: liquorVariants.mrp,
+        })
+        .from(liquorVariants)
+        .where(eq(liquorVariants.isActive, true)),
+      client
+        .select({ productId: foodVariants.productId, mrp: foodVariants.mrp })
+        .from(foodVariants)
+        .where(eq(foodVariants.isActive, true)),
+    ])
 
   if (!dealerRows[0]) return null
   const d = dealerRows[0]
 
   const liquorMap = new Map(liquorList.map((p) => [p.id, p]))
   const foodMap = new Map(foodList.map((p) => [p.id, p]))
+  const liquorMrpMap = buildMrpMap(liquorMrpRows)
+  const foodMrpMap = buildMrpMap(foodMrpRows)
 
   const assigned: AssignedItemDto[] = itemRows.map((item) => {
     let productName = 'Unknown Product'
     let categoryName: string | null = null
     let brandName: string | null = null
+    let mrp: number | null = null
 
     if (item.catalogType === 'liquor') {
       const p = liquorMap.get(item.productId)
@@ -276,6 +344,7 @@ export async function getDealerByIdQuery(
         categoryName = p.categoryName ?? null
         brandName = p.brandName ?? null
       }
+      mrp = liquorMrpMap.get(item.productId) ?? null
     } else {
       const p = foodMap.get(item.productId)
       if (p) {
@@ -283,6 +352,7 @@ export async function getDealerByIdQuery(
         categoryName = p.categoryName ?? null
         brandName = p.brandName ?? null
       }
+      mrp = foodMrpMap.get(item.productId) ?? null
     }
 
     return {
@@ -293,6 +363,7 @@ export async function getDealerByIdQuery(
       categoryName,
       brandName,
       costPrice: item.costPrice,
+      mrp,
       isAvailable: item.isAvailable !== false,
       effectiveFrom: item.effectiveFrom.toISOString(),
     }
@@ -574,39 +645,54 @@ export async function getDealersByItemQuery(
 }
 
 export async function getAdminDealersWithCatalogQuery() {
-  const [dealersList, liquorList, foodList] = await Promise.all([
-    getAllDealersQuery(),
-    db
-      .select({
-        id: liquorProducts.id,
-        name: liquorProducts.name,
-        categoryName: liquorCategories.name,
-        brandName: liquorBrands.name,
-      })
-      .from(liquorProducts)
-      .leftJoin(
-        liquorCategories,
-        eq(liquorProducts.categoryId, liquorCategories.id),
-      )
-      .leftJoin(liquorBrands, eq(liquorProducts.brandId, liquorBrands.id))
-      .where(eq(liquorProducts.isActive, true))
-      .orderBy(liquorProducts.name),
-    db
-      .select({
-        id: foodProducts.id,
-        name: foodProducts.name,
-        categoryName: foodCategories.name,
-        brandName: foodBrands.name,
-      })
-      .from(foodProducts)
-      .leftJoin(
-        foodCategories,
-        eq(foodProducts.categoryId, foodCategories.id),
-      )
-      .leftJoin(foodBrands, eq(foodProducts.brandId, foodBrands.id))
-      .where(eq(foodProducts.isActive, true))
-      .orderBy(foodProducts.name),
-  ])
+  const [dealersList, liquorList, foodList, liquorMrpRows, foodMrpRows] =
+    await Promise.all([
+      getAllDealersQuery(),
+      db
+        .select({
+          id: liquorProducts.id,
+          name: liquorProducts.name,
+          categoryName: liquorCategories.name,
+          brandName: liquorBrands.name,
+        })
+        .from(liquorProducts)
+        .leftJoin(
+          liquorCategories,
+          eq(liquorProducts.categoryId, liquorCategories.id),
+        )
+        .leftJoin(liquorBrands, eq(liquorProducts.brandId, liquorBrands.id))
+        .where(eq(liquorProducts.isActive, true))
+        .orderBy(liquorProducts.name),
+      db
+        .select({
+          id: foodProducts.id,
+          name: foodProducts.name,
+          categoryName: foodCategories.name,
+          brandName: foodBrands.name,
+        })
+        .from(foodProducts)
+        .leftJoin(
+          foodCategories,
+          eq(foodProducts.categoryId, foodCategories.id),
+        )
+        .leftJoin(foodBrands, eq(foodProducts.brandId, foodBrands.id))
+        .where(eq(foodProducts.isActive, true))
+        .orderBy(foodProducts.name),
+      db
+        .select({
+          productId: liquorVariants.productId,
+          mrp: liquorVariants.mrp,
+        })
+        .from(liquorVariants)
+        .where(eq(liquorVariants.isActive, true)),
+      db
+        .select({ productId: foodVariants.productId, mrp: foodVariants.mrp })
+        .from(foodVariants)
+        .where(eq(foodVariants.isActive, true)),
+    ])
+
+  const liquorMrpMap = buildMrpMap(liquorMrpRows)
+  const foodMrpMap = buildMrpMap(foodMrpRows)
 
   const catalogItems: CatalogItemSummary[] = [
     ...liquorList.map((l) => ({
@@ -615,6 +701,7 @@ export async function getAdminDealersWithCatalogQuery() {
       name: l.name,
       categoryName: l.categoryName ?? null,
       brandName: l.brandName ?? null,
+      mrp: liquorMrpMap.get(l.id) ?? null,
     })),
     ...foodList.map((g) => ({
       id: g.id,
@@ -622,6 +709,7 @@ export async function getAdminDealersWithCatalogQuery() {
       name: g.name,
       categoryName: g.categoryName ?? null,
       brandName: g.brandName ?? null,
+      mrp: foodMrpMap.get(g.id) ?? null,
     })),
   ]
 
