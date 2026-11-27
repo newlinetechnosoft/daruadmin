@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { formatNPR } from '#/lib/money'
+import { downloadCsvFile, escapeCsvField } from '#/lib/csv-helper'
 import {
   Flame,
   TrendingDown,
@@ -55,7 +56,7 @@ export function exportProductVelocityCSV(
 
   // Section 1: Summary
   csv += `--- EXECUTIVE SOURCING SUMMARY ---\n`
-  csv += `Total Net Merchandise Revenue (NPR),${report.summary.totalRevenue}\n`
+  csv += `Total Net Merchandise Revenue (NPR),${(report.summary.totalRevenue / 100).toFixed(2)}\n`
   csv += `Total Units Sold,${report.summary.totalUnitsSold}\n`
   csv += `Top Selling Product,"${report.summary.topProductByRevenue ?? 'N/A'}"\n`
   csv += `Slow Moving Items Count,${report.summary.slowMoversCount}\n`
@@ -69,7 +70,7 @@ export function exportProductVelocityCSV(
   csv += `--- 1. TOP PRODUCTS BY GROSS REVENUE ---\n`
   csv += `Rank,ProductName,CatalogType,UnitsSold,OrdersCount,GrossRevenueNPR,DealerCostNPR,GrossProfitNPR,GrossMarginPercent,AvgSellingPriceNPR\n`
   report.topProducts.forEach((p, idx) => {
-    csv += `${idx + 1},"${p.name}","${p.catalogType}",${p.unitsSold},${p.ordersCount},${p.grossRevenue},${p.totalDealerCost},${p.grossProfit},"${p.marginPercent}%",${p.avgSellingPrice}\n`
+    csv += `${idx + 1},${escapeCsvField(p.name)},${escapeCsvField(p.catalogType)},${p.unitsSold},${p.ordersCount},${(p.grossRevenue / 100).toFixed(2)},${(p.totalDealerCost / 100).toFixed(2)},${(p.grossProfit / 100).toFixed(2)},"${p.marginPercent}%",${(p.avgSellingPrice / 100).toFixed(2)}\n`
   })
   csv += `\n`
 
@@ -77,7 +78,7 @@ export function exportProductVelocityCSV(
   csv += `--- 2. SLOW MOVERS & DEAD STOCK RISK ---\n`
   csv += `ProductName,CatalogType,Category,Status,UnitsSold,GrossRevenueNPR,DaysSinceLastOrder,ActiveDealersCarrying,BasePriceNPR\n`
   report.slowMovers.forEach((s) => {
-    csv += `"${s.name}","${s.catalogType}","${s.categoryName}","${s.status === 'zero_sales' ? 'Dead Stock Risk (0 Sales)' : 'Slow Mover (<=2 Units)'}",${s.unitsSold},${s.grossRevenue},"${s.daysSinceLastOrder != null ? s.daysSinceLastOrder : 'Never sold'}",${s.dealerCarryingCount},${s.basePrice}\n`
+    csv += `${escapeCsvField(s.name)},${escapeCsvField(s.catalogType)},${escapeCsvField(s.categoryName)},"${s.status === 'zero_sales' ? 'Dead Stock Risk (0 Sales)' : 'Slow Mover (<=2 Units)'}",${s.unitsSold},${(s.grossRevenue / 100).toFixed(2)},"${s.daysSinceLastOrder != null ? s.daysSinceLastOrder : 'Never sold'}",${s.dealerCarryingCount},${(s.basePrice / 100).toFixed(2)}\n`
   })
   csv += `\n`
 
@@ -85,7 +86,7 @@ export function exportProductVelocityCSV(
   csv += `--- 3. MOST-UNAVAILABLE ITEMS (SOURCING BOTTLENECKS) ---\n`
   csv += `ProductName,CatalogType,TotalTimesRequested,UnavailableCount,FulfilledCount,UnavailabilityRatePercent,AffectedDealers\n`
   report.mostUnavailable.forEach((u) => {
-    csv += `"${u.name}","${u.catalogType}",${u.totalRequested},${u.unavailableCount},${u.fulfilledCount},"${u.unavailabilityRatePercent}%","${u.affectedDealerNames.join('; ')}"\n`
+    csv += `${escapeCsvField(u.name)},${escapeCsvField(u.catalogType)},${u.totalRequested},${u.unavailableCount},${u.fulfilledCount},"${u.unavailabilityRatePercent}%",${escapeCsvField(u.affectedDealerNames.join('; '))}\n`
   })
   csv += `\n`
 
@@ -93,15 +94,13 @@ export function exportProductVelocityCSV(
   csv += `--- 4. DEALER SUBSTITUTION & FULFILMENT SLA ---\n`
   csv += `DealerName,Contact,City,TotalAssignedLines,FulfilledLines,SubstitutedLines,SubstitutionRatePercent,FulfilmentSLAPercent,SeverityAlert\n`
   report.dealerSubstitutionRates.forEach((d) => {
-    csv += `"${d.dealerName}","${d.contact}","${d.city}",${d.totalAssigned},${d.fulfilled},${d.substituted},"${d.substitutionRatePercent}%","${d.fulfilmentRatePercent}%","${d.severity.toUpperCase()}"\n`
+    csv += `${escapeCsvField(d.dealerName)},${escapeCsvField(d.contact)},${escapeCsvField(d.city)},${d.totalAssigned},${d.fulfilled},${d.substituted},"${d.substitutionRatePercent}%","${d.fulfilmentRatePercent}%","${d.severity.toUpperCase()}"\n`
   })
 
-  const blob = new Blob([csv], { type: 'text/csv' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `sourcing-velocity-intelligence-${periodLabel}-${timestamp}.csv`
-  a.click()
+  downloadCsvFile(
+    `sourcing-velocity-intelligence-${periodLabel}-${timestamp}.csv`,
+    csv,
+  )
   toast.success('Product velocity & sourcing audit CSV downloaded')
 }
 

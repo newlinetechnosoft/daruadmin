@@ -21,6 +21,7 @@ import {
   deleteReviewFn,
 } from '#/server/operations/operations.functions'
 import { formatNPR } from '#/lib/money'
+import { downloadCsvFile, escapeCsvField } from '#/lib/csv-helper'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
@@ -334,30 +335,22 @@ export function MarketingPanel() {
       'Date (AD)',
     ]
 
-    const rows = filteredRedemptions.map((r) => [
-      `"${r.customerName.replace(/"/g, '""')}"`,
-      `"${r.customerEmail.replace(/"/g, '""')}"`,
-      `"${r.customerPhone.replace(/"/g, '""')}"`,
-      `"${r.couponCode.replace(/"/g, '""')}"`,
-      (r.orderTotal / 100).toFixed(2),
-      (r.discountAmount / 100).toFixed(2),
-      `"${new Date(r.createdAt).toISOString()}"`,
-    ])
-
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n')
-
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement('a')
-    link.setAttribute('href', encodedUri)
-    link.setAttribute(
-      'download',
-      `promo_redemptions_${new Date().toISOString().slice(0, 10)}.csv`,
+    const rows = filteredRedemptions.map((r) =>
+      [
+        escapeCsvField(r.customerName),
+        escapeCsvField(r.customerEmail),
+        escapeCsvField(r.customerPhone),
+        escapeCsvField(r.couponCode),
+        (r.orderTotal / 100).toFixed(2),
+        (r.discountAmount / 100).toFixed(2),
+        escapeCsvField(new Date(r.createdAt).toISOString()),
+      ].join(','),
     )
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+
+    downloadCsvFile(
+      `promo_redemptions_${new Date().toISOString().slice(0, 10)}.csv`,
+      [headers.join(','), ...rows].join('\n'),
+    )
     toast.success('Promo redemptions CSV downloaded')
   }
 

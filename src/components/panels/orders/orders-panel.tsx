@@ -23,6 +23,8 @@ import type {
 } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
 import { formatOrderDeliveryTime } from '#/lib/delivery-time'
+import { isOrderConfirmed, getOrderInvoiceNumber } from '#/lib/order-status'
+import { downloadCsvFile, escapeCsvField } from '#/lib/csv-helper'
 import { getGoogleMapsUrl } from '#/lib/map-config'
 import {
   calculateHaversineDistanceKm,
@@ -599,17 +601,26 @@ export function OrdersPanel() {
     const headers =
       'OrderNumber,Customer,Phone,City,Status,PaymentMethod,Subtotal,DeliveryCharge,Tax,Total,CreatedAt\n'
     const rows = filteredOrders
-      .map(
-        (o) =>
-          `"${o.number}","${o.customerName}","${o.customerPhone}","${o.city}","${o.status}","${o.paymentMethod}",${o.subtotal},${o.deliveryCharge},${o.tax},${o.total},"${o.createdAt}"`,
+      .map((o) =>
+        [
+          escapeCsvField(o.number),
+          escapeCsvField(o.customerName),
+          escapeCsvField(o.customerPhone),
+          escapeCsvField(o.city),
+          escapeCsvField(o.status),
+          escapeCsvField(o.paymentMethod),
+          (o.subtotal / 100).toFixed(2),
+          (o.deliveryCharge / 100).toFixed(2),
+          (o.tax / 100).toFixed(2),
+          (o.total / 100).toFixed(2),
+          escapeCsvField(o.createdAt),
+        ].join(','),
       )
       .join('\n')
-    const blob = new Blob([headers + rows], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `orders-export-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
+    downloadCsvFile(
+      `orders-export-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers + rows,
+    )
     toast.success('Orders exported to CSV')
   }
 
@@ -983,12 +994,22 @@ export function OrdersPanel() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                              disabled={!isOrderConfirmed(order.status)}
+                              className={cn(
+                                'h-8 w-8',
+                                !isOrderConfirmed(order.status)
+                                  ? 'text-muted-foreground/30 cursor-not-allowed opacity-40'
+                                  : 'text-muted-foreground hover:text-foreground',
+                              )}
                               onClick={() => {
                                 setSelectedOrder(order)
                                 setIsInvoiceOpen(true)
                               }}
-                              title="Print Tax Invoice"
+                              title={
+                                !isOrderConfirmed(order.status)
+                                  ? 'Invoice number not generated yet (order confirmation required)'
+                                  : 'Print Tax Invoice'
+                              }
                             >
                               <Receipt className="h-4 w-4" />
                             </Button>
@@ -1021,10 +1042,25 @@ export function OrdersPanel() {
         {selectedOrder && (
           <DialogContent className="sm:max-w-4xl md:max-w-5xl w-[calc(100%-2rem)] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl">
             <DialogHeader className="p-4 sm:p-6 pb-3 border-b border-border shrink-0 bg-muted/10">
-              <DialogTitle>Order {selectedOrder.number}</DialogTitle>
-              <DialogDescription>
-                Placed on {new Date(selectedOrder.createdAt).toLocaleString()}
-              </DialogDescription>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <DialogTitle className="flex items-center gap-2">
+                    <span>Order {selectedOrder.number}</span>
+                    {isOrderConfirmed(selectedOrder.status) ? (
+                      <span className="font-mono text-xs px-2 py-0.5 rounded bg-muted text-foreground border border-border font-normal">
+                        Inv: {getOrderInvoiceNumber(selectedOrder, ops.settings.invoicePrefix)}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-normal px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                        Invoice: Pending Confirmation
+                      </span>
+                    )}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Placed on {new Date(selectedOrder.createdAt).toLocaleString()}
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
 
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-4 text-xs click-scroll">
@@ -1965,10 +2001,18 @@ export function OrdersPanel() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsInvoiceOpen(true)}
+                disabled={!isOrderConfirmed(selectedOrder.status)}
                 className="gap-1.5"
+                title={
+                  !isOrderConfirmed(selectedOrder.status)
+                    ? 'Invoice number will only be generated after confirming the order'
+                    : 'Print Tax Invoice'
+                }
               >
                 <Printer className="h-4 w-4" />
-                Print Invoice
+                {!isOrderConfirmed(selectedOrder.status)
+                  ? 'Invoice (Pending Confirmation)'
+                  : 'Print Invoice'}
               </Button>
               <Button size="sm" onClick={() => setSelectedOrder(null)}>
                 Done
@@ -2073,12 +2117,24 @@ export function OrdersPanel() {
                 <div>
                   <DialogTitle>
                     {invoiceMode === 'a4'
-                      ? 'Tax Invoice Preview'
+                      ? isOrderConfirmed(selectedOrder.status)
+                        ? 'Tax Invoice Preview'
+                        : 'Pro-Forma Order Estimate (Pending Confirmation)'
                       : '80mm POS Thermal Slip'}
                   </DialogTitle>
                   <DialogDescription className="font-mono">
                     Order {selectedOrder.number} &bull;{' '}
                     {selectedOrder.customerName}
+                    {isOrderConfirmed(selectedOrder.status) && (
+                      <>
+                        {' '}
+                        &bull; Inv:{' '}
+                        {getOrderInvoiceNumber(
+                          selectedOrder,
+                          ops.settings.invoicePrefix,
+                        )}
+                      </>
+                    )}
                   </DialogDescription>
                 </div>
 
@@ -2124,6 +2180,12 @@ export function OrdersPanel() {
                     onClick={() => window.print()}
                     className="gap-1.5"
                     size="sm"
+                    disabled={!isOrderConfirmed(selectedOrder.status) && invoiceMode === 'a4'}
+                    title={
+                      !isOrderConfirmed(selectedOrder.status)
+                        ? 'Confirm order to generate and print official tax invoice'
+                        : undefined
+                    }
                   >
                     <Printer className="h-4 w-4" />
                     Print / Save PDF
@@ -2133,6 +2195,29 @@ export function OrdersPanel() {
             </DialogHeader>
 
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 click-scroll">
+              {!isOrderConfirmed(selectedOrder.status) && (
+                <div className="no-print p-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs mb-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <div>
+                      <strong>Official Tax Invoice Not Generated:</strong> In accordance with billing rules, an official tax invoice number is generated only after an admin or manager confirms this order.
+                    </div>
+                  </div>
+                  {selectedOrder.status === 'pending' && (
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium gap-1 self-start sm:self-auto shrink-0 cursor-pointer"
+                      disabled={isUpdating}
+                      onClick={async () => {
+                        await handleUpdateStatus(selectedOrder.id, 'confirmed')
+                      }}
+                    >
+                      <Check className="size-3" />
+                      Confirm Order & Generate Invoice
+                    </Button>
+                  )}
+                </div>
+              )}
               {invoiceMode === 'thermal' ? (
                 <div className="p-4 flex justify-center bg-muted/20">
                   <div className="w-[80mm] max-w-full bg-card text-foreground border border-dashed border-border p-4 rounded shadow-sm text-xs font-mono space-y-3 leading-relaxed">
@@ -2177,6 +2262,17 @@ export function OrdersPanel() {
                           {selectedOrder.number}
                         </strong>
                       </div>
+                      {isOrderConfirmed(selectedOrder.status) && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Invoice #:</span>
+                          <strong className="font-bold">
+                            {getOrderInvoiceNumber(
+                              selectedOrder,
+                              ops.settings.invoicePrefix,
+                            )}
+                          </strong>
+                        </div>
+                      )}
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Date:</span>
                         <span>
@@ -2409,12 +2505,32 @@ export function OrdersPanel() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <span className="text-sm font-semibold text-primary block">
-                        TAX INVOICE
+                      <span
+                        className={`text-sm font-semibold block ${
+                          isOrderConfirmed(selectedOrder.status)
+                            ? 'text-primary'
+                            : 'text-amber-600 dark:text-amber-400'
+                        }`}
+                      >
+                        {isOrderConfirmed(selectedOrder.status)
+                          ? 'TAX INVOICE'
+                          : 'PRO-FORMA INVOICE / ORDER ESTIMATE'}
                       </span>
-                      <div className="font-mono font-bold text-foreground mt-1">
-                        {ops.settings.invoicePrefix || 'MEZ-INV-'}
-                        {selectedOrder.number.replace(/[^0-9]/g, '')}
+                      <div className="mt-1">
+                        {isOrderConfirmed(selectedOrder.status) ? (
+                          <span className="font-mono font-bold text-foreground">
+                            {getOrderInvoiceNumber(
+                              selectedOrder,
+                              ops.settings.invoicePrefix,
+                            )}
+                          </span>
+                        ) : (
+                          <span className="inline-block text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">
+                            {selectedOrder.status === 'pending'
+                              ? 'Invoice No: Pending Confirmation'
+                              : 'Cancelled (No Invoice)'}
+                          </span>
+                        )}
                       </div>
                       <div className="text-muted-foreground font-mono">
                         Date:{' '}

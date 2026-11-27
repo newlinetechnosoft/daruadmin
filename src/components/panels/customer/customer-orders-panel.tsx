@@ -712,6 +712,11 @@ export function CustomerOrdersPanel() {
                 <DialogTitle className="text-base font-extrabold tracking-wider uppercase">
                   {storeSettings.storeName || 'MEZMANI NEPAL'}
                 </DialogTitle>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                  {selectedReceiptOrder.status === 'pending'
+                    ? 'ORDER ACKNOWLEDGEMENT (PENDING CONFIRMATION)'
+                    : 'RETAIL TAX INVOICE / RECEIPT'}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {storeSettings.legalName || 'Express Sourcing & Delivery'} &bull; {storeSettings.address ? `${storeSettings.address}, ${storeSettings.city}` : 'Butwal, Rupandehi'}
                 </p>
@@ -722,7 +727,11 @@ export function CustomerOrdersPanel() {
 
               <div className="py-3 space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span>Invoice / Order:</span>
+                  <span>
+                    {selectedReceiptOrder.status === 'pending'
+                      ? 'Order Number:'
+                      : 'Invoice / Order:'}
+                  </span>
                   <span className="font-bold font-mono">
                     #{selectedReceiptOrder.number}
                   </span>

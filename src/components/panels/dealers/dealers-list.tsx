@@ -36,6 +36,7 @@ import {
   Navigation,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { downloadCsvFile, escapeCsvField } from '#/lib/csv-helper'
 import { getGoogleMapsUrl } from '#/lib/map-config'
 import type { DealerDto } from '#/server/inventory/inventory.queries'
 
@@ -142,24 +143,22 @@ export function DealersList() {
     const headers =
       'DealerName,City,PAN_VAT,Contact,TotalAssignedItems,FulfilmentRatePercent,AvgPrepTimeMin\n'
     const rows = filteredDealers
-      .map(
-        (d) =>
-          `"${d.name}","${d.city}","${d.pan || ''}","${d.contact}",${d.assignedItemCount},${
-            d.performance?.fulfilmentRatePercent ?? 100
-          },${d.performance?.avgPrepTimeMinutes ?? 15}`,
+      .map((d) =>
+        [
+          escapeCsvField(d.name),
+          escapeCsvField(d.city),
+          escapeCsvField(d.pan || ''),
+          escapeCsvField(d.contact),
+          d.assignedItemCount,
+          d.performance?.fulfilmentRatePercent ?? 100,
+          d.performance?.avgPrepTimeMinutes ?? 15,
+        ].join(','),
       )
       .join('\n')
-    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute(
-      'download',
+    downloadCsvFile(
       `dealers_export_${new Date().toISOString().split('T')[0]}.csv`,
+      headers + rows,
     )
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
     toast.success('Dealer directory exported to CSV')
   }
 

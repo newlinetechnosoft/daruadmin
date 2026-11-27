@@ -8,6 +8,7 @@ import { DataSection } from '#/components/shared/data-section'
 import { updateComplaintFn } from '#/server/operations/operations.functions'
 import type { Complaint } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
+import { downloadCsvFile, escapeCsvField } from '#/lib/csv-helper'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
 import { StatusBadge } from '#/components/shared/status-badge'
@@ -149,17 +150,22 @@ export function CustomersPanel() {
     const headers =
       'ID,Name,Email,Role,TotalOrders,TotalSpentNPR,LastOrderDate\n'
     const rows = filteredCustomers
-      .map(
-        (c) =>
-          `"${c.id}","${c.name}","${c.email}","${c.role}",${c.totalOrders},${c.totalSpent},"${c.lastOrder}"`,
+      .map((c) =>
+        [
+          escapeCsvField(c.id),
+          escapeCsvField(c.name),
+          escapeCsvField(c.email),
+          escapeCsvField(c.role),
+          c.totalOrders,
+          (c.totalSpent / 100).toFixed(2),
+          escapeCsvField(c.lastOrder),
+        ].join(','),
       )
       .join('\n')
-    const blob = new Blob([headers + rows], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `customers-directory-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
+    downloadCsvFile(
+      `customers-directory-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers + rows,
+    )
     toast.success('Customer directory exported to CSV')
   }
 

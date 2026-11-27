@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { adminQueries } from '#/queries/admin'
 import { formatNPR } from '#/lib/money'
+import { downloadCsvFile, escapeCsvField } from '#/lib/csv-helper'
 import { PageHeader } from '#/components/shared/page-header'
 import { DataRefreshButton } from '#/components/shared/data-refresh-button'
 import { DataSection } from '#/components/shared/data-section'
@@ -133,17 +134,23 @@ export function InventoryPanel() {
     const headers =
       'SKU,ProductName,CatalogType,Brand,Category,Variant,StockOnHand,RetailPriceNPR\n'
     const rows = filteredItems
-      .map(
-        (i) =>
-          `"${i.sku}","${i.name}","${i.type}","${i.brand}","${i.category}","${i.variantName}",${i.stock},${i.price}`,
+      .map((i) =>
+        [
+          escapeCsvField(i.sku),
+          escapeCsvField(i.name),
+          escapeCsvField(i.type),
+          escapeCsvField(i.brand),
+          escapeCsvField(i.category),
+          escapeCsvField(i.variantName),
+          i.stock,
+          (i.price / 100).toFixed(2),
+        ].join(','),
       )
       .join('\n')
-    const blob = new Blob([headers + rows], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `inventory-stock-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
+    downloadCsvFile(
+      `inventory-stock-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers + rows,
+    )
     toast.success('Inventory stock report exported to CSV')
   }
 

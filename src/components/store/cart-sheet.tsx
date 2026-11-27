@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { authClient } from '#/lib/auth-client'
 import {
   Sheet,
   SheetContent,
@@ -45,6 +47,7 @@ export function CartSheet() {
 
   const { data: deliverySettings } = useQuery(storeQueries.deliveryPricing())
   const { data: storeStatus } = useQuery(storeQueries.operatingStatus())
+  const { data: session } = authClient.useSession()
   const deliveryFeePaisa = deliverySettings?.deliveryFee ?? 0
   const freeThresholdPaisa = deliverySettings?.freeDeliveryThreshold ?? 0
   const isGrowthFreeDelivery = deliveryFeePaisa === 0
@@ -371,6 +374,16 @@ export function CartSheet() {
                 className="w-full h-10 text-xs font-medium gap-2 cursor-pointer disabled:cursor-not-allowed"
                 onClick={() => {
                   setIsOpen(false)
+                  if (!session?.user) {
+                    toast.info('Please sign in to complete your checkout', {
+                      id: 'checkout-auth-required',
+                    })
+                    navigate({
+                      to: '/login',
+                      search: { redirect: '/checkout' },
+                    })
+                    return
+                  }
                   navigate({ to: '/checkout' })
                 }}
               >

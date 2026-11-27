@@ -14,6 +14,7 @@ import {
 } from '#/server/operations/operations.functions'
 import type { PaymentMethod } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
+import { downloadCsvFile, escapeCsvField } from '#/lib/csv-helper'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
 import {
@@ -228,17 +229,22 @@ export function PaymentsPanel() {
   const handleExportCSV = () => {
     const headers = 'ID,OrderID,Gateway,AmountNPR,Reference,Status,CreatedAt\n'
     const rows = filteredPayments
-      .map(
-        (p) =>
-          `"${p.id}","${p.orderId}","${p.gateway}",${p.amount},"${p.reference}","${p.status}","${p.createdAt}"`,
+      .map((p) =>
+        [
+          escapeCsvField(p.id),
+          escapeCsvField(p.orderId),
+          escapeCsvField(p.gateway),
+          (p.amount / 100).toFixed(2),
+          escapeCsvField(p.reference),
+          escapeCsvField(p.status),
+          escapeCsvField(p.createdAt),
+        ].join(','),
       )
       .join('\n')
-    const blob = new Blob([headers + rows], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `payment-reconciliation-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
+    downloadCsvFile(
+      `payment-reconciliation-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers + rows,
+    )
     toast.success('Payment reconciliation exported to CSV')
   }
 

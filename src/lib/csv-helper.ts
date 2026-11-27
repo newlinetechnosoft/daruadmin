@@ -21,9 +21,10 @@ export function downloadCsvFile(filename: string, csvContent: string): void {
 
 export function escapeCsvField(val: unknown): string {
   if (val === null || val === undefined) return ''
+  if (typeof val === 'number') return String(val)
   let str = String(val)
-  // Neutralize formula injection
-  if (/^[=+\-@\t\r]/.test(str)) {
+  // Neutralize formula injection for text strings starting with =, +, -, @, \t, \r (skip valid numeric strings)
+  if (/^[=+\-@\t\r]/.test(str) && !/^-?\d+(\.\d+)?$/.test(str)) {
     str = `'${str}`
   }
   if (/[",\n\r]/.test(str)) {

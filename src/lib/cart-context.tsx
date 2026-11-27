@@ -111,34 +111,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return itemMap.get(variantId) ?? 0
   }
 
-  const checkAuth = (): boolean => {
-    if (!session?.user) {
-      const redirect =
-        typeof window !== 'undefined'
-          ? window.location.pathname + window.location.search
-          : '/drinks'
-      toast.info('Please sign in to add items to your cart', {
-        id: 'auth-required',
-      })
-      navigate({
-        to: '/login',
-        search: { redirect },
-      })
-      return false
-    }
-    return true
-  }
-
   const addItem = (
     item: Omit<CartItem, 'quantity'>,
     quantity = 1,
     options?: { silent?: boolean },
   ): boolean => {
-    // 1. LOGIN REQUIRED TO ADD TO CART
-    if (!checkAuth()) {
-      return false
-    }
-
     setItems((prev) => {
       const existing = prev.find((i) => i.variantId === item.variantId)
       if (existing) {
@@ -170,13 +147,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     quantity: number,
     maxStock?: number,
   ): boolean => {
-    const currentQty = getItemQuantity(variantId)
-
-    // If increasing quantity, require auth
-    if (quantity > currentQty && !checkAuth()) {
-      return false
-    }
-
     if (quantity <= 0) {
       removeItem(variantId)
       return true

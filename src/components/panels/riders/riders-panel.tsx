@@ -15,6 +15,7 @@ import {
 } from '#/server/operations/operations.functions'
 import type { Rider } from '#/server/operations/types'
 import { formatNPR, fromPaisa } from '#/lib/money'
+import { downloadCsvFile, escapeCsvField } from '#/lib/csv-helper'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
 import { ConfirmDialog } from '#/components/shared/confirm-dialog'
@@ -287,19 +288,31 @@ export function RidersPanel() {
     const headers =
       'ID,Name,Phone,Email,Zone,Vehicle,Plate,Status,Verified,Available,Deliveries,Rating,CashOnHandNPR,BaseSalaryNPR,PerDropRateNPR,CommissionRatePct\n'
     const rows = filteredRiders
-      .map(
-        (r) =>
-          `"${r.id}","${r.name}","${r.phone}","${r.email}","${r.zone}","${r.vehicle}","${r.licenseNo || ''}",${r.status},${r.verified},${r.available},${r.deliveries},${r.rating},${(r.cashOnHand / 100).toFixed(2)},${r.baseSalary ? (r.baseSalary / 100).toFixed(2) : '0'},${r.perDropRate ? (r.perDropRate / 100).toFixed(2) : '50'},${r.commissionRate}`,
+      .map((r) =>
+        [
+          escapeCsvField(r.id),
+          escapeCsvField(r.name),
+          escapeCsvField(r.phone),
+          escapeCsvField(r.email),
+          escapeCsvField(r.zone),
+          escapeCsvField(r.vehicle),
+          escapeCsvField(r.licenseNo || ''),
+          r.status,
+          r.verified,
+          r.available,
+          r.deliveries,
+          r.rating,
+          (r.cashOnHand / 100).toFixed(2),
+          r.baseSalary ? (r.baseSalary / 100).toFixed(2) : '0.00',
+          r.perDropRate ? (r.perDropRate / 100).toFixed(2) : '50.00',
+          r.commissionRate,
+        ].join(','),
       )
       .join('\n')
-    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `riders-fleet-${new Date().toISOString().slice(0, 10)}.csv`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    downloadCsvFile(
+      `riders-fleet-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers + rows,
+    )
     toast.success('Rider fleet exported to CSV')
   }
 

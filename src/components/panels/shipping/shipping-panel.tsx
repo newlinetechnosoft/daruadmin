@@ -7,6 +7,7 @@ import { DataSection } from '#/components/shared/data-section'
 import { upsertZoneFn } from '#/server/operations/operations.functions'
 import type { Zone } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
+import { downloadCsvFile, escapeCsvField } from '#/lib/csv-helper'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
 import {
@@ -156,17 +157,24 @@ export function ShippingPanel() {
     const headers =
       'ID,ZoneName,AreasCovered,BaseFeeNPR,ETAMinutes,CourierPartner,Active\n'
     const rows = ops.zones
-      .map(
-        (z) =>
-          `"${z.id}","${z.name}","${z.areas.replace(/"/g, '""')}",${z.deliveryCharge},${z.etaMinutes},"${z.courier}",${z.active}`,
+      .map((z) =>
+        [
+          escapeCsvField(z.id),
+          escapeCsvField(z.name),
+          escapeCsvField(z.areas),
+          z.deliveryCharge > 1000
+            ? (z.deliveryCharge / 100).toFixed(2)
+            : Number(z.deliveryCharge).toFixed(2),
+          z.etaMinutes,
+          escapeCsvField(z.courier),
+          z.active,
+        ].join(','),
       )
       .join('\n')
-    const blob = new Blob([headers + rows], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `delivery-zones-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
+    downloadCsvFile(
+      `delivery-zones-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers + rows,
+    )
     toast.success('Delivery zones exported to CSV')
   }
 

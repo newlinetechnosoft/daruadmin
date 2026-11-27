@@ -499,3 +499,31 @@ export function getAvailableOrderTransitions(
     }
   })
 }
+
+/**
+ * Checks whether an order has been confirmed by an admin or manager.
+ * In the order lifecycle:
+ * - 'pending': unconfirmed (order placed, awaiting admin/manager confirmation; no invoice generated)
+ * - 'cancelled': cancelled (no tax invoice issued)
+ * - 'confirmed', 'dealer_assigned', 'rider_assigned', 'picked_up', 'out_for_delivery', 'delivered':
+ *    confirmed lifecycle states where an official tax invoice number is generated and valid.
+ */
+export function isOrderConfirmed(status: OrderStatus | string): boolean {
+  return status !== 'pending' && status !== 'cancelled'
+}
+
+/**
+ * Returns the official Tax Invoice number only after the order is confirmed by an admin or manager.
+ * Returns null if the order is still pending confirmation or cancelled.
+ */
+export function getOrderInvoiceNumber(
+  order: { number: string; status: OrderStatus | string },
+  invoicePrefix: string = 'MEZ-INV-',
+): string | null {
+  if (!isOrderConfirmed(order.status)) {
+    return null
+  }
+  const digits = order.number.replace(/[^0-9]/g, '')
+  return `${invoicePrefix || 'MEZ-INV-'}${digits}`
+}
+

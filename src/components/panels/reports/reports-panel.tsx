@@ -8,6 +8,8 @@ import {
   useDateFilter,
 } from '#/components/shared/date-range-filter'
 import { formatNPR } from '#/lib/money'
+import { isOrderConfirmed, getOrderInvoiceNumber } from '#/lib/order-status'
+import { downloadCsvFile, escapeCsvField } from '#/lib/csv-helper'
 import { PageHeader } from '#/components/shared/page-header'
 import { KpiCard } from '#/components/shared/kpi-card'
 import { calculateOrderMargins } from '#/server/orders/order.queries'
@@ -196,19 +198,30 @@ export function ReportsPanel() {
 
   const handleExportSalesCSV = () => {
     const headers =
-      'OrderNumber,CustomerName,Phone,City,ItemsCount,SubtotalNPR,DeliveryCharge,Discount,TaxVAT,TotalNPR,Status,PaymentMethod,CreatedAt\n'
+      'OrderNumber,CustomerName,Phone,City,ItemsCount,SubtotalNPR,DeliveryChargeNPR,DiscountNPR,TaxVATNPR,TotalNPR,Status,PaymentMethod,CreatedAt\n'
     const rows = ops.orders
-      .map(
-        (o) =>
-          `"${o.number}","${o.customerName}","${o.customerPhone}","${o.city}",${o.items.length},${o.subtotal},${o.deliveryCharge},${o.discount},${o.tax},${o.total},"${o.status}","${o.paymentMethod}","${o.createdAt}"`,
+      .map((o) =>
+        [
+          escapeCsvField(o.number),
+          escapeCsvField(o.customerName),
+          escapeCsvField(o.customerPhone),
+          escapeCsvField(o.city),
+          o.items.length,
+          (o.subtotal / 100).toFixed(2),
+          (o.deliveryCharge / 100).toFixed(2),
+          (o.discount / 100).toFixed(2),
+          (o.tax / 100).toFixed(2),
+          (o.total / 100).toFixed(2),
+          escapeCsvField(o.status),
+          escapeCsvField(o.paymentMethod),
+          escapeCsvField(o.createdAt),
+        ].join(','),
       )
       .join('\n')
-    const blob = new Blob([headers + rows], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `sales-revenue-audit-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
+    downloadCsvFile(
+      `sales-revenue-audit-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers + rows,
+    )
     toast.success('Sales & revenue CSV downloaded')
   }
 
@@ -216,54 +229,85 @@ export function ReportsPanel() {
     const headers =
       'RiderID,Name,Phone,Zone,Vehicle,Verified,Available,Deliveries,Rating,CashOnHandNPR,EarningsNPR\n'
     const rows = ops.riders
-      .map(
-        (r) =>
-          `"${r.id}","${r.name}","${r.phone}","${r.zone}","${r.vehicle}",${r.verified},${r.available},${r.deliveries},${r.rating},${r.cashOnHand},${r.earnings}`,
+      .map((r) =>
+        [
+          escapeCsvField(r.id),
+          escapeCsvField(r.name),
+          escapeCsvField(r.phone),
+          escapeCsvField(r.zone),
+          escapeCsvField(r.vehicle),
+          r.verified,
+          r.available,
+          r.deliveries,
+          r.rating,
+          (r.cashOnHand / 100).toFixed(2),
+          (r.earnings / 100).toFixed(2),
+        ].join(','),
       )
       .join('\n')
-    const blob = new Blob([headers + rows], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `fleet-logistics-report-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
+    downloadCsvFile(
+      `fleet-logistics-report-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers + rows,
+    )
     toast.success('Fleet logistics CSV downloaded')
   }
 
   const handleExportIrdVatCSV = () => {
     const prefix = ops.settings.invoicePrefix || 'MEZ-INV-'
     const headers =
-      'InvoiceNo,Date,CustomerName,CustomerPAN,TaxableSalesNPR,NonTaxableSales,VATRate,VATAmountNPR,TotalNPR\n'
-    const rows = dateFilteredOrders
+      'InvoiceNo,Date,CustomerName,CustomerPAN,TaxableSalesNPR,NonTaxableSalesNPR,VATRate,VATAmountNPR,TotalNPR\n'
+    // Under Nepal IRD VAT Annex 13, only confirmed orders with generated tax invoices are reportable
+    const confirmedOrders = dateFilteredOrders.filter((o) =>
+      isOrderConfirmed(o.status),
+    )
+    if (confirmedOrders.length === 0) {
+      toast.error('No confirmed orders with generated tax invoices in the selected date range')
+      return
+    }
+    const rows = confirmedOrders
       .map((o) => {
         const taxable = Math.round(o.subtotal - o.discount)
-        return `"${prefix}${o.number.replace(/[^0-9]/g, '')}","${o.createdAt.slice(0, 10)}","${o.customerName}","N/A",${taxable},0,"${ops.settings.taxRate}%",${o.tax},${o.total}`
+        const invoiceNo = getOrderInvoiceNumber(o, prefix) || ''
+        return [
+          escapeCsvField(invoiceNo),
+          escapeCsvField(o.createdAt.slice(0, 10)),
+          escapeCsvField(o.customerName),
+          'N/A',
+          (taxable / 100).toFixed(2),
+          '0.00',
+          escapeCsvField(`${ops.settings.taxRate}%`),
+          (o.tax / 100).toFixed(2),
+          (o.total / 100).toFixed(2),
+        ].join(',')
       })
       .join('\n')
-    const blob = new Blob([headers + rows], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `nepal-ird-vat-annex13-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    toast.success('Nepal IRD VAT Annex 13 CSV downloaded')
+    downloadCsvFile(
+      `nepal-ird-vat-annex13-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers + rows,
+    )
+    toast.success(`Exported ${confirmedOrders.length} confirmed VAT invoices to CSV`)
   }
 
   const handleExportProfitMarginCSV = () => {
     const headers =
       'ProductName,CatalogType,UnitsSold,GrossRevenueNPR,DealerCostNPR,GrossProfitNPR,GrossMarginPercent\n'
     const rows = productMarginsList
-      .map(
-        (p) =>
-          `"${p.name}","${p.catalogType}",${p.totalQty},${p.totalRevenue},${p.totalDealerCost},${p.grossProfit},"${p.marginPercent}%"`,
+      .map((p) =>
+        [
+          escapeCsvField(p.name),
+          escapeCsvField(p.catalogType),
+          p.totalQty,
+          (p.totalRevenue / 100).toFixed(2),
+          (p.totalDealerCost / 100).toFixed(2),
+          (p.grossProfit / 100).toFixed(2),
+          escapeCsvField(`${p.marginPercent}%`),
+        ].join(','),
       )
       .join('\n')
-    const blob = new Blob([headers + rows], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `profit-margin-audit-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
+    downloadCsvFile(
+      `profit-margin-audit-${new Date().toISOString().slice(0, 10)}.csv`,
+      headers + rows,
+    )
     toast.success('Profit & Margin audit CSV downloaded')
   }
 
@@ -983,8 +1027,15 @@ export function ReportsPanel() {
                     return (
                       <TableRow key={o.id}>
                         <TableCell className="font-mono text-xs">
-                          {ops.settings.invoicePrefix || 'MEZ-INV-'}
-                          {o.number.replace(/[^0-9]/g, '')}
+                          {isOrderConfirmed(o.status) ? (
+                            getOrderInvoiceNumber(o, ops.settings.invoicePrefix)
+                          ) : (
+                            <span className="text-amber-600 dark:text-amber-400 font-sans text-[11px] italic">
+                              {o.status === 'pending'
+                                ? 'Pending Confirmation'
+                                : 'Cancelled'}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs">
                           {o.createdAt.slice(0, 10)}
