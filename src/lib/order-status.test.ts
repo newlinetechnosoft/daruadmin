@@ -456,4 +456,34 @@ describe('Order State Machine (Module 1)', () => {
       expect(transitions).toContain('cancelled')
     })
   })
+
+  describe('Rider Assignment Acceptance Guard', () => {
+    it('blocks rider from picking up an order while riderAssignmentStatus is pending', () => {
+      const order = {
+        ...createOrder({ status: 'rider_assigned', riderId: 'rider_1' }),
+        riderAssignmentStatus: 'pending' as const,
+      }
+      expect(() =>
+        validateOrderTransition(order, 'picked_up', riderUser),
+      ).toThrow(OrderTransitionError)
+    })
+
+    it('allows rider to pick up when riderAssignmentStatus is accepted or null (legacy)', () => {
+      const acceptedOrder = {
+        ...createOrder({ status: 'rider_assigned', riderId: 'rider_1' }),
+        riderAssignmentStatus: 'accepted' as const,
+      }
+      expect(
+        validateOrderTransition(acceptedOrder, 'picked_up', riderUser),
+      ).toEqual({ ok: true, noop: false })
+
+      const legacyOrder = {
+        ...createOrder({ status: 'rider_assigned', riderId: 'rider_1' }),
+        riderAssignmentStatus: null,
+      }
+      expect(
+        validateOrderTransition(legacyOrder, 'picked_up', riderUser),
+      ).toEqual({ ok: true, noop: false })
+    })
+  })
 })

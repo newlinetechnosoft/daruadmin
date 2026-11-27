@@ -65,6 +65,19 @@ function mapOrderRecord(
   const orderLat = order.lat ? Number(order.lat) : null
   const orderLng = order.lng ? Number(order.lng) : null
 
+  // Legacy orders predate the structured timing columns; fall back to the
+  // status history so durations and countdowns still work.
+  const historyTimestamp = (target: OrderStatus) => {
+    const match = events.find(
+      (event) => (event.toStatus ?? event.status) === target,
+    )
+    return match?.createdAt.toISOString() ?? null
+  }
+  const confirmedAt =
+    order.confirmedAt?.toISOString() ?? historyTimestamp('confirmed')
+  const deliveredAt =
+    order.deliveredAt?.toISOString() ?? historyTimestamp('delivered')
+
   return {
     id: order.id,
     number: order.number,
@@ -86,6 +99,14 @@ function mapOrderRecord(
     tax: order.tax,
     total: order.total,
     riderId: order.riderId,
+    riderAssignmentStatus: (order.riderAssignmentStatus as any) ?? null,
+    riderAssignedAt: order.riderAssignedAt?.toISOString() ?? null,
+    riderRespondedAt: order.riderRespondedAt?.toISOString() ?? null,
+    riderDeclineReason: order.riderDeclineReason ?? null,
+    deliverySlot: order.deliverySlot ?? null,
+    deliveryScheduledFor: order.deliveryScheduledFor?.toISOString() ?? null,
+    confirmedAt,
+    deliveredAt,
     trackingCode: order.trackingCode,
     notes: order.notes,
     couponCode: order.couponCode,

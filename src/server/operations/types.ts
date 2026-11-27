@@ -473,6 +473,8 @@ export interface OrderEvent {
   metadata?: Record<string, any> | null
 }
 
+export type RiderAssignmentStatus = 'pending' | 'accepted' | 'declined'
+
 export interface Order {
   id: string
   number: string
@@ -494,6 +496,14 @@ export interface Order {
   tax: number
   total: number
   riderId: string | null
+  riderAssignmentStatus?: RiderAssignmentStatus | null
+  riderAssignedAt?: string | null
+  riderRespondedAt?: string | null
+  riderDeclineReason?: string | null
+  deliverySlot?: string | null
+  deliveryScheduledFor?: string | null
+  confirmedAt?: string | null
+  deliveredAt?: string | null
   trackingCode: string
   notes: string
   couponCode: string | null

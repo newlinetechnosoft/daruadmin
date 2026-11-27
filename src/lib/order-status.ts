@@ -71,7 +71,6 @@ export async function resolveRiderId(
   return order.riderId
 }
 
-
 /**
  * Validates whether an order can transition from its current status to `toStatus`.
  * Throws OrderTransitionError if invalid, or returns `{ ok: true, noop: boolean }`.
@@ -88,6 +87,7 @@ export function validateOrderTransition(
     | 'isLegacy'
     | 'deliveryOtp'
   > & {
+    riderAssignmentStatus?: 'pending' | 'accepted' | 'declined' | null
     items?: Array<Pick<OrderItem, 'id' | 'dealerId' | 'catalogType'>>
   },
   toStatus: OrderStatus,
@@ -248,6 +248,12 @@ export function validateOrderTransition(
           throw new OrderTransitionError(
             'You are not the assigned rider for this delivery.',
             'OWNERSHIP_MISMATCH',
+          )
+        }
+        if (order.riderAssignmentStatus === 'pending') {
+          throw new OrderTransitionError(
+            'Accept the delivery request before starting this order.',
+            'INVALID_TRANSITION',
           )
         }
       } else if (user.role !== 'admin' && user.role !== 'system') {

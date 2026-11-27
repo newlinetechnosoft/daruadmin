@@ -185,6 +185,7 @@ export async function sendRiderPushNotification(
   try {
     const { tokens, legacyRiderToken } = await getRiderTokens(riderId)
     if (tokens.length === 0) {
+      // console.warn(`[FCM] Rider ${riderId} has no registered device tokens; skipping push.`)
       return {
         success: false,
         sentCount: 0,
@@ -288,6 +289,10 @@ export async function sendRiderPushNotification(
           .catch((err) => console.error('[FCM] Error clearing rider fcmToken:', err))
       }
     }
+
+    // console.info(
+    //   `[FCM] Dispatched push to rider ${riderId} ("${title}"): ${sentCount} succeeded, ${failedCount} failed`,
+    // )
 
     return {
       success: sentCount > 0,

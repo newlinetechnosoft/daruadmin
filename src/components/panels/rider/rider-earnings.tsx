@@ -15,13 +15,7 @@ import type {
 } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
 import { Button } from '#/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '#/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -142,50 +136,36 @@ export function RiderEarnings({
   }
 
   return (
-    <div className="space-y-6 pb-12">
-      <div>
-        <h2 className="text-base font-semibold text-foreground">
-          Earnings & Cash in Hand
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          Track your delivery commissions and settle cash collected from COD
-          orders in full or in partial payments.
-        </p>
-      </div>
+    <div className="space-y-4 pb-10">
+      <h2 className="text-base font-semibold text-foreground">
+        Earnings &amp; Cash in Hand
+      </h2>
 
       {/* Main KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* Cash in Hand */}
         <Card className="border-border bg-card">
-          <CardHeader className="p-4 sm:p-6 pb-2">
+          <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground font-medium">
-                Cash in Hand (COD Float)
+                Cash in Hand (COD)
               </span>
-              <Wallet className="h-5 w-5 text-warning" />
+              <Wallet className="h-4 w-4 text-warning" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground font-mono mt-1">
+            <div className="text-2xl font-bold tracking-tight text-foreground font-mono mt-0.5">
               {formatNPR(rider.cashOnHand)}
             </div>
-            <CardDescription className="text-xs mt-1">
-              Total cash collected from COD customers that must be settled with
-              store accounts.
-            </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-2 space-y-3">
-            <div className="grid grid-cols-2 gap-2 rounded-md border border-border bg-muted/30 p-2.5 text-xs">
+          <CardContent className="p-4 pt-1 space-y-2.5">
+            <div className="grid grid-cols-2 gap-2 rounded-md border border-border bg-muted/30 p-2 text-xs">
               <div>
-                <span className="text-muted-foreground block">
-                  Pending approval
-                </span>
+                <span className="text-muted-foreground block">Pending</span>
                 <span className="font-mono font-semibold text-warning">
                   {formatNPR(pendingAmount)}
                 </span>
               </div>
               <div>
-                <span className="text-muted-foreground block">
-                  Available to settle
-                </span>
+                <span className="text-muted-foreground block">Available</span>
                 <span className="font-mono font-semibold text-foreground">
                   {formatNPR(availableToSettle)}
                 </span>
@@ -200,7 +180,7 @@ export function RiderEarnings({
                 setDepositOpen(true)
               }}
               disabled={availableToSettle <= 0}
-              className="w-full h-9 text-xs gap-1.5"
+              className="w-full h-8 text-xs gap-1.5"
             >
               <ArrowUpRight className="h-3.5 w-3.5" />
               Request Settlement
@@ -210,28 +190,24 @@ export function RiderEarnings({
 
         {/* Commission Earnings */}
         <Card className="border-border bg-card">
-          <CardHeader className="p-4 sm:p-6 pb-2">
+          <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground font-medium">
-                Total Earned Commission
+                Earned Commission
               </span>
-              <Coins className="h-5 w-5 text-success" />
+              <Coins className="h-4 w-4 text-success" />
             </div>
-            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground font-mono mt-1">
+            <div className="text-2xl font-bold tracking-tight text-foreground font-mono mt-0.5">
               {formatNPR(rider.earnings)}
             </div>
-            <CardDescription className="text-xs mt-1">
-              Earned based on {rider.commissionRate}% delivery fee share over{' '}
-              {rider.deliveries} total trips.
-            </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-2">
-            <div className="p-2.5 rounded-md bg-muted/40 border border-border text-xs flex justify-between items-center">
+          <CardContent className="p-4 pt-1">
+            <div className="p-2 rounded-md bg-muted/40 border border-border text-xs flex justify-between items-center">
               <span className="text-muted-foreground">
-                Your Commission Rate:
+                {rider.deliveries} trips · Rate
               </span>
               <Badge variant="outline" className="font-mono text-xs">
-                {rider.commissionRate}% of delivery fee
+                {rider.commissionRate}% of fee
               </Badge>
             </div>
           </CardContent>

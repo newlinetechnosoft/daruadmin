@@ -1,10 +1,15 @@
 import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
-import { updateRiderDeliveryStatusFn } from '#/server/operations/operations.functions'
+import {
+  updateRiderDeliveryStatusFn,
+  respondToRiderAssignmentFn,
+} from '#/server/operations/operations.functions'
 import { queueOutboxAction } from '#/lib/idb/outbox'
 import type { Order } from '#/server/operations/types'
 import { formatNPR } from '#/lib/money'
+import { formatOrderDeliveryTime } from '#/lib/delivery-time'
 import { getGoogleMapsUrl } from '#/lib/map-config'
+import { DeliveryCountdown } from './delivery-countdown'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
@@ -18,6 +23,8 @@ import {
   CheckCircle2,
   Truck,
   AlertTriangle,
+  Check,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { RiderDealerPickups } from './rider-dealer-pickups'
@@ -30,31 +37,46 @@ interface RiderDeliveriesProps {
 
 export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
   const router = useRouter()
-  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('active')
+  const [filter, setFilter] = useState<
+    'all' | 'requests' | 'active' | 'completed'
+  >('active')
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
   const [deliveringOrder, setDeliveringOrder] = useState<Order | null>(null)
   const [failedOrderTarget, setFailedOrderTarget] = useState<Order | null>(null)
   const [failedReason, setFailedReason] = useState('')
 
-  const activeOrders = orders.filter((o) =>
-    ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status),
+  const requestOrders = orders.filter(
+    (o) =>
+      o.status === 'rider_assigned' && o.riderAssignmentStatus === 'pending',
   )
-  const completedOrders = orders.filter((o) =>
-    ['delivered', 'delivery_failed'].includes(o.status),
+  const activeOrders = orders.filter(
+    (o) =>
+      ['rider_assigned', 'picked_up', 'out_for_delivery'].includes(o.status) &&
+      o.riderAssignmentStatus !== 'pending',
   )
+  // Failed deliveries are deliberately excluded from "Done".
+  const completedOrders = orders.filter((o) => o.status === 'delivered')
 
   const displayedOrders =
-    filter === 'active'
-      ? activeOrders
-      : filter === 'completed'
-        ? completedOrders
-        : orders
+    filter === 'requests'
+      ? requestOrders
+      : filter === 'active'
+        ? activeOrders
+        : filter === 'completed'
+          ? completedOrders
+          : orders
 
   const handleUpdateStatus = async (
     orderId: string,
     status: 'picked_up' | 'out_for_delivery' | 'delivered' | 'delivery_failed',
     deliveryFailureReason?: string,
   ) => {
+    const targetOrder = orders.find((o) => o.id === orderId)
+    if (targetOrder?.riderAssignmentStatus === 'pending') {
+      toast.error('Accept the delivery request before updating order status.')
+      return
+    }
+
     try {
       setUpdatingOrderId(orderId)
 
@@ -98,6 +120,26 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
       } else {
         toast.error(err?.message || 'Failed to update order status')
       }
+    } finally {
+      setUpdatingOrderId(null)
+    }
+  }
+
+  const handleRespond = async (
+    orderId: string,
+    action: 'accept' | 'decline',
+  ) => {
+    try {
+      setUpdatingOrderId(orderId)
+      await respondToRiderAssignmentFn({ data: { orderId, action } })
+      toast.success(
+        action === 'accept'
+          ? 'Delivery accepted. Head to the dealer for pickup.'
+          : 'Delivery declined. Dispatch has been notified.',
+      )
+      await router.invalidate()
+    } catch (err: any) {
+      toast.error(err?.message || `Failed to ${action} delivery request`)
     } finally {
       setUpdatingOrderId(null)
     }
@@ -149,23 +191,21 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
   }
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">
-            Delivery Orders
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            Manage your assigned parcels and complete customer deliveries
-          </p>
-        </div>
+    <div className="space-y-4 pb-10">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h2 className="text-base font-semibold text-foreground">
+          Delivery Orders
+        </h2>
 
         <Tabs
           value={filter}
           onValueChange={(v) => setFilter(v as any)}
           className="w-full sm:w-auto"
         >
-          <TabsList className="grid grid-cols-3 w-full sm:w-auto h-8">
+          <TabsList className="grid grid-cols-4 w-full sm:w-auto h-8">
+            <TabsTrigger value="requests" className="text-xs">
+              Requests ({requestOrders.length})
+            </TabsTrigger>
             <TabsTrigger value="active" className="text-xs">
               Active ({activeOrders.length})
             </TabsTrigger>
@@ -181,24 +221,23 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
 
       {displayedOrders.length === 0 ? (
         <Card className="border-border border-dashed bg-card/50">
-          <CardContent className="p-12 text-center space-y-2">
-            <Package className="h-8 w-8 text-muted-foreground mx-auto" />
+          <CardContent className="p-8 text-center space-y-1.5">
+            <Package className="h-6 w-6 text-muted-foreground mx-auto" />
             <h4 className="text-xs font-semibold text-foreground">
               No deliveries in this tab
             </h4>
-            <p className="text-xs text-muted-foreground">
-              New deliveries assigned to your rider profile will show up here.
-            </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {displayedOrders.map((order) => {
             const isDelivered = order.status === 'delivered'
             const isFailed = order.status === 'delivery_failed'
             const isOut = order.status === 'out_for_delivery'
             const isPickedUp = order.status === 'picked_up'
             const isRiderAssigned = order.status === 'rider_assigned'
+            const isRequest =
+              isRiderAssigned && order.riderAssignmentStatus === 'pending'
             const isCOD = order.paymentMethod === 'cod'
             const isUpdating = updatingOrderId === order.id
 
@@ -228,12 +267,21 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                           }
                           className="text-xs uppercase tracking-wider"
                         >
-                          {order.status.replace(/_/g, ' ')}
+                          {isRequest
+                            ? 'Awaiting response'
+                            : order.status.replace(/_/g, ' ')}
                         </Badge>
                       </div>
                       <p className="text-xs font-medium text-foreground mt-1">
                         {order.customerName}
                       </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <Package className="h-3 w-3" />
+                          {formatOrderDeliveryTime(order)}
+                        </span>
+                        <DeliveryCountdown order={order} />
+                      </div>
                     </div>
 
                     <div className="text-right">
@@ -340,7 +388,33 @@ export function RiderDeliveries({ orders }: RiderDeliveriesProps) {
                       </a>
                     </Button>
 
-                    {!isDelivered && !isFailed && (
+                    {isRequest && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => void handleRespond(order.id, 'accept')}
+                          disabled={isUpdating}
+                          className="h-8 text-xs flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                          <Check className="h-3.5 w-3.5 mr-1" />
+                          Accept
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            void handleRespond(order.id, 'decline')
+                          }
+                          disabled={isUpdating}
+                          className="h-8 text-xs flex-1 text-destructive"
+                        >
+                          <X className="h-3.5 w-3.5 mr-1" />
+                          Decline
+                        </Button>
+                      </>
+                    )}
+
+                    {!isRequest && !isDelivered && !isFailed && (
                       <>
                         {isRiderAssigned && (
                           <Button

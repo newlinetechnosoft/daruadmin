@@ -9,6 +9,10 @@ import {
 } from '#/components/shared/date-range-filter'
 import { DataTable } from '#/components/shared/data-table'
 import { MoneyText } from '#/components/shared/money-text'
+import {
+  DEALER_COST_PRICE_LABEL,
+  computeDealerMarginPaisa,
+} from '#/lib/dealer-pricing'
 import { StatusBadge } from '#/components/shared/status-badge'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
@@ -130,6 +134,11 @@ export function DealerReportTab({
     }),
     enabled: !!selectedDealer,
     placeholderData: (previous) => previous,
+  })
+
+  const { data: dealerDetail } = useQuery({
+    ...adminQueries.dealer(selectedDealer?.dealerId ?? '__none__'),
+    enabled: !!selectedDealer,
   })
 
   const totalProcured = filteredDealers.reduce(
@@ -755,6 +764,97 @@ export function DealerReportTab({
               />
             </div>
           </div>
+
+          {dealerDetail && dealerDetail.assignedItems.length > 0 && (
+            <div className="rounded-lg border border-border bg-card">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
+                <div>
+                  <span className="text-xs font-semibold text-foreground">
+                    Catalog Sourcing — Cost &amp; MRP
+                  </span>
+                  <span className="ml-2 text-[10px] text-muted-foreground">
+                    {dealerDetail.assignedItems.length} item
+                    {dealerDetail.assignedItems.length === 1 ? '' : 's'} ·
+                    negotiated dealer cost vs. catalog MRP
+                  </span>
+                </div>
+              </div>
+              <div className="max-h-64 overflow-y-auto click-scroll">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-muted/40 text-[10px] uppercase text-muted-foreground">
+                    <tr>
+                      <th className="px-3 py-1.5 text-left font-medium">
+                        Catalog Item
+                      </th>
+                      <th className="px-3 py-1.5 text-right font-medium">
+                        {DEALER_COST_PRICE_LABEL}
+                      </th>
+                      <th className="px-3 py-1.5 text-right font-medium">
+                        MRP
+                      </th>
+                      <th className="px-3 py-1.5 text-right font-medium">
+                        Margin
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {dealerDetail.assignedItems.map((item) => {
+                      const cost = item.costPrice ?? 0
+                      const mrp = item.mrp ?? null
+                      const margin = computeDealerMarginPaisa(mrp, cost)
+                      return (
+                        <tr key={item.id}>
+                          <td className="px-3 py-1.5">
+                            <span className="block font-medium text-foreground">
+                              {item.productName}
+                            </span>
+                            <span className="block text-[10px] text-muted-foreground">
+                              {item.catalogType.toUpperCase()} ·{' '}
+                              {item.categoryName || 'General'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-1.5 text-right">
+                            {cost > 0 ? (
+                              <MoneyText
+                                paisa={cost}
+                                className="text-xs font-semibold"
+                              />
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-1.5 text-right">
+                            {mrp != null && mrp > 0 ? (
+                              <MoneyText
+                                paisa={mrp}
+                                className="text-xs text-muted-foreground"
+                              />
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-1.5 text-right">
+                            {margin != null ? (
+                              <MoneyText
+                                paisa={margin}
+                                className={`text-xs font-semibold ${
+                                  margin >= 0
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'text-rose-600 dark:text-rose-400'
+                                }`}
+                              />
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           <DataTable
             columns={statementColumns}
